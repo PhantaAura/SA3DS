@@ -1,0 +1,14 @@
+SA3DS 0.0.9.1C validation (this session)
+PASS inherited White Zone 0G runtime/source and movement suite
+PASS Emerald Coast 1A root/structure/collision suite
+PASS Emerald Coast 1B visual/material/PVM suite
+PASS synthetic SET parser fixtures + malformed header/count/record/CRC/provenance/duplicate tests
+PASS exact owner-source SET parser for all 71 SETnnnnX.BIN files / 30085 placements
+PASS system.zip vs system 2.zip: all 71 SET file SHA256 hashes agree
+PASS owner-source 1C SET roundtrip / grouping and neutral SET chunk validation
+PASS EC acts 0,1,2 SET-only neutral packages
+PASS EC acts 0,1,2 integrated GEOMETRY/MATERIALS/TEXTURES/SET packages
+PASS generalized 45 numeric level-act group SET package generation
+PARTIAL: combined 1C inherited-and-new shell regression exceeded time limit after inherited 1B finished; its remaining 1C steps were validated separately.
+NOT RUN: devkitARM/Old 3DS compile and hardware boot for 1C (1C adds host-side importers, not a new runtime binary)
+UNPROVEN: SET object semantics, variant selection, actual gameplay spawning, full 1:1 physics

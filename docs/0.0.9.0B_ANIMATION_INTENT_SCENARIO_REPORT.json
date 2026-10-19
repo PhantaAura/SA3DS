@@ -1,0 +1,1307 @@
+{
+  "accel_flat": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 18,
+      "grounded_jog_to_run": 43,
+      "grounded_run_plus": 151,
+      "airborne_upright": 27,
+      "grounded_idle": 1
+    },
+    "air_phase_counts": {
+      "none": 213,
+      "falling": 27
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 129,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.128528
+      },
+      {
+        "frame": 136,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.5351826
+      },
+      {
+        "frame": 137,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.53825712
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      }
+    ]
+  },
+  "air_control": {
+    "frames": 240,
+    "intent_counts": {
+      "airborne_ball": 62,
+      "grounded_idle": 12,
+      "grounded_below_jog": 28,
+      "grounded_jog_to_run": 42,
+      "airborne_upright": 96
+    },
+    "air_phase_counts": {
+      "rising": 23,
+      "falling": 132,
+      "none": 82,
+      "apex": 3
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "airborne_ball",
+        "action_state": 1,
+        "ball_form": 1,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 26,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.19987774
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 26,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.19987774
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 26,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.19987774
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      }
+    ]
+  },
+  "bank_transition": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 18,
+      "grounded_jog_to_run": 45,
+      "grounded_run_plus": 144,
+      "airborne_upright": 32,
+      "grounded_idle": 1
+    },
+    "air_phase_counts": {
+      "none": 208,
+      "falling": 32
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0517853312
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50090313
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39987278
+      },
+      {
+        "frame": 71,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.08806336
+      },
+      {
+        "frame": 77,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.29486859
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 129,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.128528
+      }
+    ]
+  },
+  "brake_from_speed": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 9,
+      "grounded_jog_to_run": 26,
+      "grounded_run_plus": 41,
+      "airborne_upright": 31,
+      "grounded_idle": 133
+    },
+    "air_phase_counts": {
+      "none": 209,
+      "falling": 31
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 69,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.22482336
+      },
+      {
+        "frame": 77,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.97309643
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "coast_from_speed": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 164,
+      "grounded_jog_to_run": 28,
+      "grounded_run_plus": 48
+    },
+    "air_phase_counts": {
+      "none": 240
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 76,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.34492719
+      },
+      {
+        "frame": 86,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.433214545
+      }
+    ]
+  },
+  "fall_reset": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_idle": 240
+    },
+    "air_phase_counts": {
+      "none": 240
+    },
+    "transitions": [
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "gentle_downhill": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 40,
+      "grounded_jog_to_run": 61,
+      "grounded_run_plus": 43,
+      "airborne_upright": 76,
+      "grounded_idle": 20
+    },
+    "air_phase_counts": {
+      "none": 164,
+      "apex": 4,
+      "falling": 72
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0116395215
+      },
+      {
+        "frame": 11,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.467977196
+      },
+      {
+        "frame": 27,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.42095411
+      },
+      {
+        "frame": 70,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 3.24115801
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      }
+    ]
+  },
+  "gentle_uphill": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 20,
+      "grounded_jog_to_run": 43,
+      "grounded_run_plus": 163,
+      "airborne_upright": 13,
+      "grounded_idle": 1
+    },
+    "air_phase_counts": {
+      "none": 227,
+      "falling": 13
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.038355384
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.460264593
+      },
+      {
+        "frame": 37,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.41915035
+      },
+      {
+        "frame": 111,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 3.19158936
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      }
+    ]
+  },
+  "high_speed_turn": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 27,
+      "grounded_jog_to_run": 46,
+      "grounded_run_plus": 63,
+      "airborne_upright": 98,
+      "grounded_idle": 6
+    },
+    "air_phase_counts": {
+      "none": 142,
+      "apex": 3,
+      "falling": 95
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 91,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.76662445
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 26,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.19987774
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 12,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 26,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.19987774
+      }
+    ]
+  },
+  "jump_hold": {
+    "frames": 240,
+    "intent_counts": {
+      "airborne_ball": 50,
+      "grounded_idle": 190
+    },
+    "air_phase_counts": {
+      "rising": 25,
+      "falling": 25,
+      "none": 190
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "airborne_ball",
+        "action_state": 1,
+        "ball_form": 1,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 51,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "jump_tap": {
+    "frames": 240,
+    "intent_counts": {
+      "airborne_ball": 37,
+      "grounded_idle": 203
+    },
+    "air_phase_counts": {
+      "rising": 18,
+      "falling": 19,
+      "none": 203
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "airborne_ball",
+        "action_state": 1,
+        "ball_form": 1,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 38,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "loop_fast_wall_stick": {
+    "frames": 240,
+    "intent_counts": {
+      "roll": 12,
+      "grounded_jog_to_run": 17,
+      "grounded_run_plus": 10,
+      "grounded_below_jog": 201
+    },
+    "air_phase_counts": {
+      "none": 240
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "roll",
+        "action_state": 3,
+        "ball_form": 1,
+        "surface_tangent_speed": 1.8839016
+      },
+      {
+        "frame": 13,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.955310404
+      },
+      {
+        "frame": 15,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.45482564
+      },
+      {
+        "frame": 25,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.37619472
+      },
+      {
+        "frame": 40,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.447388917
+      }
+    ]
+  },
+  "loop_roll": {
+    "frames": 240,
+    "intent_counts": {
+      "roll": 16,
+      "grounded_jog_to_run": 13,
+      "grounded_run_plus": 12,
+      "grounded_below_jog": 199
+    },
+    "air_phase_counts": {
+      "none": 240
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "roll",
+        "action_state": 3,
+        "ball_form": 1,
+        "surface_tangent_speed": 4.2220192
+      },
+      {
+        "frame": 17,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.1157763
+      },
+      {
+        "frame": 19,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.63393307
+      },
+      {
+        "frame": 31,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.34313095
+      },
+      {
+        "frame": 42,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.448197395
+      }
+    ]
+  },
+  "loop_slow_wall_support": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_jog_to_run": 32,
+      "grounded_below_jog": 8,
+      "grounded_run_plus": 6,
+      "grounded_idle": 194
+    },
+    "air_phase_counts": {
+      "none": 240
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.811215937
+      },
+      {
+        "frame": 2,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.413665146
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.652528048
+      },
+      {
+        "frame": 8,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.44393587
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.37107599
+      },
+      {
+        "frame": 42,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.387861073
+      },
+      {
+        "frame": 47,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "low_speed_turn": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 205,
+      "airborne_upright": 32,
+      "grounded_idle": 3
+    },
+    "air_phase_counts": {
+      "none": 208,
+      "apex": 1,
+      "falling": 31
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.00112324988
+      },
+      {
+        "frame": 162,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.178130969
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 3,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.00112324988
+      }
+    ]
+  },
+  "reverse_from_speed": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 36,
+      "grounded_jog_to_run": 71,
+      "grounded_run_plus": 41,
+      "airborne_upright": 77,
+      "grounded_idle": 15
+    },
+    "air_phase_counts": {
+      "none": 163,
+      "falling": 74,
+      "apex": 3
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      },
+      {
+        "frame": 69,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.22482336
+      },
+      {
+        "frame": 77,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.97309643
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 5,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0500000007
+      },
+      {
+        "frame": 14,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.50000006
+      },
+      {
+        "frame": 29,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.24999988
+      }
+    ]
+  },
+  "spindash_action": {
+    "frames": 240,
+    "intent_counts": {
+      "spindash_charge": 20,
+      "roll": 16,
+      "airborne_ball": 38,
+      "grounded_idle": 166
+    },
+    "air_phase_counts": {
+      "none": 202,
+      "rising": 33,
+      "falling": 5
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "spindash_charge",
+        "action_state": 2,
+        "ball_form": 1,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 21,
+        "intent": "roll",
+        "action_state": 3,
+        "ball_form": 1,
+        "surface_tangent_speed": 9.59999943
+      },
+      {
+        "frame": 37,
+        "intent": "airborne_ball",
+        "action_state": 1,
+        "ball_form": 1,
+        "surface_tangent_speed": 7.91763067
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "spindash_shortcut": {
+    "frames": 240,
+    "intent_counts": {
+      "spindash_charge": 20,
+      "roll": 16,
+      "airborne_ball": 38,
+      "grounded_idle": 166
+    },
+    "air_phase_counts": {
+      "none": 202,
+      "rising": 33,
+      "falling": 5
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "spindash_charge",
+        "action_state": 2,
+        "ball_form": 1,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 21,
+        "intent": "roll",
+        "action_state": 3,
+        "ball_form": 1,
+        "surface_tangent_speed": 9.59999943
+      },
+      {
+        "frame": 37,
+        "intent": "airborne_ball",
+        "action_state": 1,
+        "ball_form": 1,
+        "surface_tangent_speed": 7.91763067
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      }
+    ]
+  },
+  "steep_uphill": {
+    "frames": 240,
+    "intent_counts": {
+      "grounded_below_jog": 30,
+      "grounded_jog_to_run": 69,
+      "grounded_run_plus": 120,
+      "airborne_upright": 20,
+      "grounded_idle": 1
+    },
+    "air_phase_counts": {
+      "none": 220,
+      "falling": 20
+    },
+    "transitions": [
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0188237056
+      },
+      {
+        "frame": 22,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.475233644
+      },
+      {
+        "frame": 71,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39759076
+      },
+      {
+        "frame": 74,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.3391434
+      },
+      {
+        "frame": 76,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.43913329
+      },
+      {
+        "frame": 117,
+        "intent": "airborne_upright",
+        "action_state": 1,
+        "ball_form": 0,
+        "surface_tangent_speed": 3.28823948
+      },
+      {
+        "frame": 0,
+        "intent": "grounded_idle",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0
+      },
+      {
+        "frame": 1,
+        "intent": "grounded_below_jog",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.0499949045
+      },
+      {
+        "frame": 10,
+        "intent": "grounded_jog_to_run",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 0.499949098
+      },
+      {
+        "frame": 28,
+        "intent": "grounded_run_plus",
+        "action_state": 0,
+        "ball_form": 0,
+        "surface_tangent_speed": 1.39985752
+      }
+    ]
+  }
+}

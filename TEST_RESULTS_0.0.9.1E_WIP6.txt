@@ -1,0 +1,11 @@
+SA3DS WIP6 — 2026-10-13 04:00 EDT
+Parent WIP5 SHA256: 1fe804ad91ad714b3641ef4d739da899ea1a301b1b9b54817768a30388c15657
+Parent ZIP integrity: PASS (unzip -t)
+Baseline command: bash tests/run_sa3ds_current_host.sh — PASS before changes
+New command: bash tests/run_sonic_geometry_preflight.sh — PASS
+Cumulative command: bash tests/run_sa3ds_current_host.sh — PASS after changes
+ASAN/UBSAN command: cc -std=c11 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -Wall -Wextra -Werror -Isrc/sa3c src/sa3c/sa3c_gpu_preflight.c src/sa3c/sa3t_texture.c tests/test_sonic_geometry_preflight.c -lm -o /mnt/data/sa3ds_work/geom_asan && ASAN_OPTIONS=detect_leaks=1 /mnt/data/sa3ds_work/geom_asan — PASS
+Native .3dsx compile: NOT ATTEMPTED (DEVKITARM unset; arm-none-eabi-gcc missing)
+Original owner SA3C/SA3T: NOT AVAILABLE IN CURRENT WORKSPACE
+Old 3DS hardware: NOT TESTED
+0.0.9.1E release gate: NOT PASSED

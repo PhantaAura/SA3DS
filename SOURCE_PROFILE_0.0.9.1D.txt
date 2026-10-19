@@ -1,0 +1,10 @@
+Sonic Adventure 3DS / SA3DS 0.0.9.1D
+Canonical behavior/executable basis: original PC SADX 2004 sonic.exe (user-owned)
+CAM input: owner SADX PC system folder or ZIP (127 CAM*.BIN files)
+CAM format observed: 0x40-byte header + N*0x40-byte source records
+CAM confidence: record counts/boundaries/hash provenance CONFIRMED; semantic fields UNKNOWN
+Dreamcast Conversion / modded alternatives are separate optional source profiles, not silently combined
+Data packages are generated owner-side only; no original Sega content in public/checkpoint ZIP
+Native 3DS build: source-only checkpoint, no new 3DSX claimed
+Old 3DS hardware validation: pending
+Global PHYSICS_1TO1: false

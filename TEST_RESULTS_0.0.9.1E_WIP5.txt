@@ -1,0 +1,8 @@
+SA3DS 0.0.9.1E-WIP5 — scheduled run 8, 2026-10-13 03:00 EDT
+Parent 0.0.9.1E-WIP4 SHA256 ad00a50be61d22ecbb0b60a82fd938ce7d2715520f5515f133799cd1724dcba2: sha256sum MATCH, unzip -t PASS.
+Commands:
+  bash tests/run_sa3ds_current_host.sh — PASS (0G movement, 1D CAM, WIP1 visual, WIP2 GPU arena, WIP3 timeline, WIP4/WIP5 ACTION)
+  bash tests/run_sonic_action_preflight.sh — PASS (synthetic hidden NaN/order/empty/range, portable CLI valid and corrupted fixtures)
+  gcc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/sa3c -Isrc/game src/sa3c/sa3c_pose.c src/game/sonic_action_preflight.c tests/test_sonic_action_preflight.c -lm -o <tmp> && ASAN_OPTIONS=detect_leaks=1 <tmp> — PASS
+Not executed: devkitARM/libctru native .3dsx build; owner-generated SA3C preflight; Old 3DS XL visual/hardware tests.
+No Sega assets included. WIP only; 0.0.9.1E release gate remains NOT PASSED.

@@ -1,0 +1,138 @@
+== inherited 0D gate ==
+== inherited suite skipped by SA3DS_SKIP_INHERITED=1 ==
+== 0.0.9.0D source rendering semantics ==
+PC2004 Sonic render semantics: PASS motions=146 linear=146 strips=941 quads=22 uv=[0,255]
+== generated owner-source packages ==
+== native SA3C pose/draw submission ==
+real Sonic white-space pose/render submission: PASS
+action0 root=72 visited=73 visible_nodes=28 draws=42 triangles=1993 bounds=[-2.503257 -5.392684 -3.214163]-[5.230134 4.462759 3.283108]
+== native SA3T texture package ==
+SA3T real Sonic RGBA8 texture package: PASS (16 textures, 232192 pixel bytes)
+== host textured white-space raster smoke ==
+host textured white-space render: PASS action=0 frame=0.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5938 alpha_rejects=66
+host textured white-space render: PASS action=9 frame=0.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5952 alpha_rejects=37
+host textured white-space render: PASS action=9 frame=5.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5904 alpha_rejects=44
+0.0.9.0D suite: PASS
+== owner RomFS generation ==
+== core preset sample/draw ==
+slot=1 root=72 draws=42 triangles=1993
+slot=3 root=72 draws=42 triangles=1993
+slot=6 root=72 draws=42 triangles=1993
+slot=14 root=146 draws=41 triangles=1001
+slot=10 root=72 draws=42 triangles=1993
+slot=11 root=72 draws=42 triangles=1993
+slot=7 root=72 draws=42 triangles=1993
+0.0.9.0E core animation presets: PASS
+== Citro3D source contract ==
+0.0.9.0E Citro3D runtime source contract: PASS
+0.0.9.0E suite: PASS
+
+== frozen 0.0.8.8.9 audit ==
+CHECKPOINT.md: OK
+README.md: OK
+SOURCE_PROFILE.txt: OK
+docs/0.0.8.7_TEST_REPORT.md: OK
+docs/0.0.8.8.5_TEST_REPORT.md: OK
+docs/0.0.8.8.7_TEST_REPORT.md: OK
+docs/0.0.8.8.8_TEST_REPORT.md: OK
+docs/0.0.8.8.9_TEST_REPORT.md: OK
+docs/0.0.8.8_TEST_REPORT.md: OK
+docs/ARCHITECTURE.md: OK
+docs/BASELINE_AUDIT.md: OK
+docs/CONTROL_MAP.md: OK
+docs/HARDWARE_TEST.md: OK
+docs/IMPORTER_ARCHITECTURE.md: OK
+docs/KNOWN_LIMITATIONS.md: OK
+docs/NEXT_CHAT_HANDOFF.md: OK
+docs/PC2004_BREAK_INERTIA_COLLISION_EVIDENCE.md: OK
+docs/PC2004_COLLISION_WORK_RECONSTRUCTION.md: OK
+docs/PC2004_SPINDASH_EVIDENCE.md: OK
+docs/PC2004_STEAM_PHYSICS_PARITY.md: OK
+docs/PC2004_SUPPORT_ORDER_EVIDENCE.md: OK
+docs/PHYSICS_TRACE.md: OK
+docs/SA3DSPAK.md: OK
+docs/STEAM_AIR_KERNEL.md: OK
+docs/STEAM_BALL_KERNEL.md: OK
+docs/STEAM_FLAT_KERNEL.md: OK
+docs/STEAM_PHYSICS_EVIDENCE.md: OK
+runtime/Makefile: OK
+runtime/include/lab_package.h: OK
+runtime/include/physics.h: OK
+runtime/source/lab_package.c: OK
+runtime/source/main.c: OK
+runtime/source/physics.c: OK
+sa3ds: OK
+src/game/character.h: OK
+src/game/resource_metrics.h: OK
+src/game/stage.c: OK
+src/game/stage.h: OK
+src/platform/3ds/input_adapter.c: OK
+src/platform/3ds/input_adapter.h: OK
+src/platform/3ds/resource_metrics.c: OK
+src/platform/3ds/resource_metrics_3ds.h: OK
+src/platform/host/README.md: OK
+src/sa1/physics/ground.c: OK
+src/sa1/physics/ground.h: OK
+src/sa1/physics/input.h: OK
+src/sa1/physics/movement.c: OK
+src/sa1/physics/movement.h: OK
+src/sa1/physics/pc2004_collision_work.c: OK
+src/sa1/physics/pc2004_collision_work.h: OK
+src/sa1/physics/pc2004_motion.c: OK
+src/sa1/physics/pc2004_motion.h: OK
+src/sa1/physics/physics_constants.c: OK
+src/sa1/physics/physics_constants.h: OK
+src/sa1/physics/physics_trace.c: OK
+src/sa1/physics/physics_trace.h: OK
+src/sa1/physics/player_state.h: OK
+src/sa1/physics/steam_air.c: OK
+src/sa1/physics/steam_air.h: OK
+src/sa1/physics/steam_ball.c: OK
+src/sa1/physics/steam_ball.h: OK
+src/sa1/physics/steam_flat.c: OK
+src/sa1/physics/steam_flat.h: OK
+src/sa1/physics/steam_input.c: OK
+src/sa1/physics/steam_input.h: OK
+src/sa1/physics/steam_player_parameters.c: OK
+src/sa1/physics/steam_player_parameters.h: OK
+src/sa1/physics/steam_spindash_evidence.c: OK
+src/sa1/physics/steam_spindash_evidence.h: OK
+src/sa1/physics/steam_surface.c: OK
+src/sa1/physics/steam_surface.h: OK
+src/sa1/physics/steam_surface_evidence.c: OK
+src/sa1/physics/steam_surface_evidence.h: OK
+src/sa1/physics/surface_frame.c: OK
+src/sa1/physics/surface_frame.h: OK
+src/sa3dspak/sa3dspak.c: OK
+src/sa3dspak/sa3dspak.h: OK
+tests/data/synthetic_collision.txt: OK
+tests/data/synthetic_geometry.txt: OK
+tests/physics_runner.c: OK
+tests/run_host_tests.sh: OK
+tests/test_pc2004_collision_work.c: OK
+tests/test_pc2004_motion.c: OK
+tests/test_physics.c: OK
+tests/test_sa3dspak.c: OK
+tests/test_sa3dspak.py: OK
+tests/test_scenarios.py: OK
+tests/test_steam_air.c: OK
+tests/test_steam_ball.c: OK
+tests/test_steam_flat.c: OK
+tests/test_surface_evidence.c: OK
+tests/test_surface_frame.c: OK
+tests/test_surface_runtime.c: OK
+tools/__pycache__/sa3dspak.cpython-313.pyc: OK
+tools/compare_traces.py: OK
+tools/extract_steam_player_params.py: OK
+tools/importers/__init__.py: OK
+tools/importers/base.py: OK
+tools/importers/neutral.py: OK
+tools/importers/profiles.py: OK
+tools/sa3dspak.py: OK
+tools/source_check.py: OK
+tools/verify_pc2004_break_inertia_collision.py: OK
+tools/verify_pc2004_collision_work.py: OK
+tools/verify_pc2004_spindash.py: OK
+tools/verify_pc2004_steam_physics.py: OK
+tools/verify_pc2004_support_order.py: OK
+tools/verify_steam_surface_branches.py: OK

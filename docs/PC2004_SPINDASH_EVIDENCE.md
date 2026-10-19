@@ -1,0 +1,93 @@
+# SADX 2004 Sonic Spin Dash evidence — 0.0.8.8.6
+
+This note records static evidence recovered directly from the exact supported
+SADX 2004 US `sonic.exe` profile:
+
+- size `55,549,952`
+- SHA-256 `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`
+
+No executable bytes are included in the SA3DS checkpoint.
+
+## Sonic action dispatch
+
+The Sonic main action dispatch at `0x0049AB1D` indexes the table at
+`0x0049BFBC`.
+
+- action `4` -> `0x0049AE2F` — Spin Dash
+- action `5` -> `0x0049AEBB` — Roll
+
+The public Sonic action enum independently names the same action IDs.
+
+## Exact Spin Dash entry
+
+The entry routine beginning at `0x00496EE0` proves the ordinary Spin Dash
+transition:
+
+- writes action `4`
+- enables the ball/attack status bits
+- resets `SonicSpinTimer` at player-work `+0x7E`
+- compares local forward speed `+0x38` with the f32 at `0x007DCB94`
+- that f32 is exactly `2.0f`
+- if forward speed is at least `2.0f`, it copies that speed to
+  `SpindashSpeed` at player-work `+0x00`
+- otherwise it writes immediate `2.0f`
+
+There is **no 10.0 clamp on entry**. A moving Sonic can therefore begin a
+charge above 10.0.
+
+## Exact charge / timeout / release
+
+The transition routine at `0x00495080` proves:
+
+- the ordinary timeout comparison is `300` frames (`0x12C`)
+- while the charge input is held, `SpindashSpeed` is compared with the f32 at
+  `0x007DCB34`, which is exactly `10.0f`
+- if charge is below `10.0f`, it adds the f32 at `0x007DD550`, which is
+  `0.4000000059604645f` (the f32 representation of 0.4)
+- the add is followed by a store; there is **no post-add clamp**
+
+That last detail matters. Starting from an arbitrary moving value such as 9.9
+can produce about 10.3. Even standing charge can cross the nominal 10.0 compare
+threshold because repeated f32 `+0.4` storage can leave the prior value just
+below 10.0; the next accepted increment produces about 10.4.
+
+On ordinary release the routine:
+
+- writes action `5` (Roll)
+- copies `SpindashSpeed` to local forward `Speed.x`
+- resets `SonicSpinTimer`
+- clears `SpindashSpeed`
+
+At the 300-frame timeout it leaves charge state and resets the timer. The
+observed timeout path does not clear `SpindashSpeed`; SA3DS preserves that stale
+internal value, although it is overwritten on the next Spin Dash entry.
+
+## Timer order
+
+The Sonic main loop around `0x0049AAF2` checks the ball-status bit and
+increments player-work `+0x7E` before the action dispatch. SA3DS therefore
+increments its neutral Spin Dash timer before checking the 300-frame timeout.
+
+## Exact action movement call order
+
+Action 4 at `0x0049AE2F` calls:
+
+`PGetRotation -> PGetBreak -> PGetSpeed -> PSetPosition -> PResetPosition`
+
+Action 5 at `0x0049AEBB` / shared continuation `0x0049BBE2` calls:
+
+`PGetRotation -> PGetInertia -> PGetSpeed -> PSetPosition -> PResetPosition`
+
+This is useful evidence for the next roll/surface parity pass. 0.0.8.8.6 does
+not claim that every collision side effect inside `PGetBreak`, `PGetInertia`,
+`PSetPosition`, and `PResetPosition` has already been reimplemented.
+
+## Reproducible verifier
+
+Run:
+
+```sh
+python3 tools/verify_pc2004_spindash.py /path/to/sonic.exe
+```
+
+`--json` emits a machine-readable evidence report.

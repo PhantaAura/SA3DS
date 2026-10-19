@@ -1,0 +1,115 @@
+{
+  "pc2004": {
+    "file": {
+      "size": 55549952,
+      "sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
+      "image_base": 4194304,
+      "entry_va": 6569878
+    },
+    "imports": {
+      "LoadLibraryA_iat_va": 8237120,
+      "GetProcAddress_iat_va": 8237124
+    },
+    "chrmodels_load": {
+      "path": "SYSTEM\\chrmodels.dll",
+      "path_va": 8243256,
+      "xref_vas": [
+        4201169
+      ],
+      "loader_function_va": 4201152
+    },
+    "sonic_exports": [
+      {
+        "name": "___SONIC_MODELS",
+        "name_va": 8242920,
+        "push_va": 4201461,
+        "receiving_global_va": 59731688
+      },
+      {
+        "name": "___SONIC_OBJECTS",
+        "name_va": 8242900,
+        "push_va": 4201476,
+        "receiving_global_va": 59731584
+      },
+      {
+        "name": "___SONIC_ACTIONS",
+        "name_va": 8242880,
+        "push_va": 4201491,
+        "receiving_global_va": 59731580
+      },
+      {
+        "name": "___SONIC_MOTIONS",
+        "name_va": 8242860,
+        "push_va": 4201506,
+        "receiving_global_va": 61386608
+      }
+    ],
+    "runtime_witnesses": {
+      "action_table_pointer_compare_va": 4801580,
+      "action_object_field_read_va": 4801574,
+      "action_motion_field_read_va": 4801636,
+      "sonic_motion_table_special_case_va": 4801960,
+      "validated_bytes": {
+        "action_object_field_read": "8b01",
+        "action_table_pointer_compare": "8b157c6e8f033b0a",
+        "action_motion_field_read": "8b5104",
+        "sonic_motion_table_special_case": "8b1570afa8038b4204"
+      }
+    }
+  },
+  "modloader_proxy": {
+    "file": {
+      "size": 1031680,
+      "sha256": "3293cf354dcfc62274c2ad25c09041606d6ad55483f070c233111cd9b47a97ba",
+      "image_base": 268435456
+    },
+    "normal_pe_export_directory": {
+      "rva": 0,
+      "size": 0,
+      "is_empty": true
+    },
+    "imports": {
+      "GetModuleHandleW_iat_va": 269275204,
+      "GetProcAddress_iat_va": 269275208
+    },
+    "original_module_name": {
+      "text": "CHRMODELS_orig",
+      "va": 269336516
+    },
+    "original_export_probe_witness_va": 268823127,
+    "validated_witness_bytes": {
+      "orig_probe": "68e4bf0d1068c4bf0d10",
+      "object_model_plus_04": "8b4e04",
+      "object_child_plus_2c": "8b4e2c",
+      "object_sibling_plus_30": "8b7630",
+      "sonic_objects_79": "6a016a4f",
+      "sonic_actions_149": "81fe95000000",
+      "sonic_models_11": "6a006a0b"
+    },
+    "proven_sonic_table_counts": {
+      "models": 11,
+      "objects": 79,
+      "actions": 149
+    },
+    "proven_object_layout": {
+      "model_ptr_offset": 4,
+      "child_ptr_offset": 44,
+      "sibling_ptr_offset": 48,
+      "minimum_size_bytes": 52
+    },
+    "proven_action_layout": {
+      "object_ptr_offset": 0,
+      "motion_ptr_offset": 4,
+      "minimum_size_bytes": 8
+    },
+    "original_dll_required_fingerprint": {
+      "size": 7647232,
+      "sha256": "76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5"
+    },
+    "notes": [
+      "Counts are code-backed by this exact SADXModLoader build when it processes CHRMODELS_orig exports.",
+      "MOTION table count is not proven here.",
+      "Transform offsets/order/angle units are not promoted by this pass."
+    ]
+  }
+}

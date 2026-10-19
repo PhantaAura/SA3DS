@@ -1,0 +1,171 @@
+{
+  "schema": "sa3ds-pc2004-sonic-pvm-report-v1",
+  "source": {
+    "size": 155776,
+    "sha256": "f8e30dfbebeb901a0ac210a61929c45fbcefcc1a2758cba400f959989b93ecbe"
+  },
+  "flags": 15,
+  "texture_count": 16,
+  "textures": [
+    {
+      "index": 0,
+      "name": "mtx_kuchinaka0",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 8,
+      "height": 8,
+      "global_index": 1000,
+      "pvrt_payload_size": 184
+    },
+    {
+      "index": 1,
+      "name": "mtx_kuchinaka1",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 8,
+      "height": 8,
+      "global_index": 1001,
+      "pvrt_payload_size": 184
+    },
+    {
+      "index": 2,
+      "name": "s_anakage1",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 32,
+      "height": 32,
+      "global_index": 1002,
+      "pvrt_payload_size": 2744
+    },
+    {
+      "index": 3,
+      "name": "s_hando2",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 32,
+      "height": 32,
+      "global_index": 1003,
+      "pvrt_payload_size": 2744
+    },
+    {
+      "index": 4,
+      "name": "s_hando3",
+      "pixel_format": 1,
+      "data_format": 9,
+      "width": 32,
+      "height": 32,
+      "global_index": 1004,
+      "pvrt_payload_size": 2744
+    },
+    {
+      "index": 5,
+      "name": "s_testhand",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 64,
+      "height": 64,
+      "global_index": 1005,
+      "pvrt_payload_size": 10936
+    },
+    {
+      "index": 6,
+      "name": "stx_btest1",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 64,
+      "height": 64,
+      "global_index": 1006,
+      "pvrt_payload_size": 10936
+    },
+    {
+      "index": 7,
+      "name": "stx_eye2",
+      "pixel_format": 1,
+      "data_format": 9,
+      "width": 16,
+      "height": 16,
+      "global_index": 1007,
+      "pvrt_payload_size": 696
+    },
+    {
+      "index": 8,
+      "name": "stx_ha",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 8,
+      "height": 8,
+      "global_index": 1008,
+      "pvrt_payload_size": 184
+    },
+    {
+      "index": 9,
+      "name": "stx_hara",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 64,
+      "height": 64,
+      "global_index": 1009,
+      "pvrt_payload_size": 10936
+    },
+    {
+      "index": 10,
+      "name": "stx_hoho",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 64,
+      "height": 64,
+      "global_index": 1010,
+      "pvrt_payload_size": 10936
+    },
+    {
+      "index": 11,
+      "name": "stx_itemring",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 16,
+      "height": 16,
+      "global_index": 1011,
+      "pvrt_payload_size": 696
+    },
+    {
+      "index": 12,
+      "name": "stx_itemshoos0",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 128,
+      "height": 128,
+      "global_index": 1012,
+      "pvrt_payload_size": 43704
+    },
+    {
+      "index": 13,
+      "name": "stx_kanagu",
+      "pixel_format": 2,
+      "data_format": 9,
+      "width": 32,
+      "height": 32,
+      "global_index": 1013,
+      "pvrt_payload_size": 2744
+    },
+    {
+      "index": 14,
+      "name": "stx_newspin",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 64,
+      "height": 64,
+      "global_index": 1014,
+      "pvrt_payload_size": 10936
+    },
+    {
+      "index": 15,
+      "name": "ym_sjppse",
+      "pixel_format": 0,
+      "data_format": 9,
+      "width": 128,
+      "height": 128,
+      "global_index": 1015,
+      "pvrt_payload_size": 43704
+    }
+  ]
+}

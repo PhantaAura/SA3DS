@@ -1,0 +1,242 @@
+{
+  "animation_tick_stability_wip3": {
+    "fix": "Memoized observer and selection per completed sim_frame; rewind invalidates timeline; zone reset immediately refreshes observation and selection; does not mutate physics",
+    "issue": "Landing presentation was consumed by repeated same-tick queries; reset_selected_zone retained old pose until next physics tick; rewinding without explicit reset retained old selection history",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "parent": "0.0.9.1E-WIP2 SHA256 7de3fe4dbfa146171cd9b8e6e688dd21312083de0a6d966df0790299c3c1c584",
+    "release_gate": "NOT PASSED; WIP only",
+    "retail_transition_timing": "UNVERIFIED",
+    "tests_passed": [
+      "128 deterministic replay loops with 10 duplicate queries per frame",
+      "same-tick landing, rewind and explicit reset",
+      "0G 12 deterministic movement protocols",
+      "1D CAM synthetic",
+      "WIP1 visual source contract",
+      "WIP2 GPU arena",
+      "inherited animation non-mutation stress"
+    ]
+  },
+  "baseline": "0.0.9.1D CAM Decode, SHA256 5409a6aa2d5776975389a4ec22ebadfb0acb1c58631ec1904eb0dacff0b67517",
+  "camera_decode": {
+    "emerald_coast_records": 326,
+    "emerald_coast_sources": 5,
+    "header_bytes": 64,
+    "neutral_chunk": "SA3DCAM v1.0",
+    "records": 4955,
+    "row_bytes": 64,
+    "runtime_camera_logic": false,
+    "sources": 127,
+    "unverified": "mode/area/trigger/priority semantics preserved raw",
+    "verified_copy_match": "127/127 between system.zip and system 2.zip"
+  },
+  "checkpoint": "0.0.9.1E-WIP9-MacFix2",
+  "environment_recovery": {
+    "ENV-001": "recovered container execution in 23:00 EDT run; root cause unknown"
+  },
+  "final_flight_run12": {
+    "implementation": "integer-phase 60Hz sim scheduler, input edge latching, 4-tick bounded catchup, pause, per-tick camera/trace, SD code-only isolated RomFS",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_original_packages_tested": false,
+    "parent": "0.0.9.1E-WIP8 SHA256 c9428d39e432378acaabf8f6fea22df15b4c2251a832ae35cc1833ad4edaa502",
+    "release_gate": "NOT PASSED; code-only host-tested WIP",
+    "run": "2026-10-13 07:00 America/New_York (overall Run 12 of 12)",
+    "tests": [
+      "WIP8 SHA256/ZIP integrity PASS",
+      "pre-edit cumulative host PASS",
+      "white_zone_tick C and integration PASS",
+      "UBSan C scheduler PASS",
+      "owner-pair loader and Make mode PASS",
+      "post-edit cumulative host PASS"
+    ]
+  },
+  "gpu_frame_arena_wip2": {
+    "issue": "Original GPU renderer and lab reused GPU vertex scratch memory across queued draw commands; potential geometry corruption before FrameEnd",
+    "lab": "Separate zones and marker batch vertex ranges, 1024-vertex capacity",
+    "native_3ds_build_this_run": false,
+    "old_3ds_hardware_test": false,
+    "owner_visual_tests_this_run": "not run; owner binaries not mounted in this execution",
+    "parent": "0.0.9.1E-WIP1 SHA256 94f9c681b8b04512c0c26e472f7f7beb071dbc041a4e314267f25a47fb295eb2",
+    "release_gate": "NOT PASSED; WIP only",
+    "sonic": "Conservative per-model-instance vertex capacity with disjoint per-draw spans and 8MiB bound",
+    "tests_passed": [
+      "GPU frame arena host synthetic C",
+      "GPU source integration contract",
+      "0G White Zone full host suite",
+      "1D CAM synthetic suite",
+      "WIP1 visual source contract"
+    ]
+  },
+  "hardware_blocker": "Old 3DS charger unavailable / battery low; source-side development continues.",
+  "mac_compat_hotfix_1": {
+    "changed_code": [
+      "tests/test_owner_pair_loader.c"
+    ],
+    "fix": "enable _DARWIN_C_SOURCE before any header on __APPLE__ only",
+    "issue": "macOS Clang mkdtemp implicit declaration with _XOPEN_SOURCE 700",
+    "native_3ds_compiled": false,
+    "old_3ds_tested": false,
+    "parent_sha256": "0b883615a46006cdff36179d787130234c7de350e5233a4eda6c84f0c3b5905a",
+    "release_gate": "NOT PASSED — WIP9 + host test hotfix"
+  },
+  "name": "0G White Zone Fixed-60Hz + Isolated SD Code-Only RomFS",
+  "native_0g_visual_reintegration_wip7": {
+    "fix": "Ported proven 0F guarded sonic_gpu.c/h and lab_gpu.c into 0G; merged visual, geometry, ACTION preflight, reset-time pose refresh and diagnostics into 0G main without discarding 0G parity HUD, reference camera, trace and input behavior.",
+    "issue": "WIP1-WIP6 guarded native GPU/loader/zone-reset changes had been integrated into runtime_0_0_9_0F, while later 0G White Zone validation runtime still used old shared scratch GPU draw, black-material coercion, missing visual/geometry/ACTION load-time guards, stale reset pose.",
+    "known_test_adjustment": "0G inherited source-contract banner assertion extended to accept new WIP7 banner; behavioral invariants retained. Initial post-merge run failed only this stale title assertion, then PASS.",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_asset_validation": "PENDING; no sonic.sa3c, sonic.sa3t, CHRMODELS_orig.dll or SONIC.PVM found in current mounts, Library/Conversation filename search or connected Drive search",
+    "parent": "0.0.9.1E-WIP6A SHA256 546761910f0cfb8281a288002e0c51ccc271bb0c0f7ebda6fdfdcd109e98e207",
+    "release_gate": "NOT PASSED; host/source-tested WIP only",
+    "run": "2026-10-13 05:00 America/New_York (overall Run 10)",
+    "source_evidence": "0G code lacked WIP1-6 safety changes; direct source diff established missing guarded paths; no claim of observed GPU corruption.",
+    "tests": [
+      "sha256sum and unzip -t WIP6A PASS",
+      "baseline bash tests/run_sa3ds_current_host.sh PASS",
+      "new tests/test_0g_visual_reintegration.py PASS",
+      "post-merge bash tests/run_sa3ds_current_host.sh PASS",
+      "GCC -fsanitize=undefined GPU batch and geometry C host tests PASS"
+    ]
+  },
+  "native_owner_pair_loader_wip8": {
+    "implementation": "0G atomic RomFS/SD owner SA3C+SA3T pair loading; 16MiB per-file limit, error cleanup, source HUD; make ASSET_SOURCE=sd and build script --sd without bundling Sega data",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_original_packages_tested": false,
+    "parent": "0.0.9.1E-WIP7 SHA256 a6975cca7b791be96848422438580316f6aa5eab083f97c730514904e1810332",
+    "release_gate": "NOT PASSED; host-tested loader only",
+    "run": "2026-10-13 06:00 America/New_York (overall Run 11)",
+    "source_evidence": "0G Makefile check-assets required owner RomFS at compile time and loader only used romfs paths; source verified. No hardware observations.",
+    "tests": [
+      "WIP7 parent sha256sum/unzip -t PASS",
+      "baseline cumulative host PASS",
+      "new owner pair C UBSan host PASS",
+      "new owner pair ASAN/UBSan PASS",
+      "SD/default Makefile mode tests PASS (stub 3ds_rules)",
+      "post-edit cumulative host PASS"
+    ]
+  },
+  "next": "Scheduled flight COMPLETE after overall Run 12; no automatic next run. Next engineering push requires Mac devkitARM compile, original owner-generated package preflight, Old 3DS XL visual/fps testing.",
+  "old_3ds_hardware_test": false,
+  "owner_visual_cli_wip6a": {
+    "implementation": "Portable read-only owner package CLI validates SA3C format/references, SA3T format, matching TEXS/SA3T metadata, PICA dimensions and material references, triangulation, index bounds, finite GPU vertex components. No proprietary bytes embedded.",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_asset_validation": "PENDING; owner-generated packages unavailable this run",
+    "parent": "0.0.9.1E-WIP6 SHA256 328098479c6a2fc751309bae81ed44fd8066f47809d261377d0ff8dedfc034a9",
+    "release_gate": "NOT PASSED; visual integration WIP",
+    "source_evidence": "SA3C source hash is CHRMODELS_orig.dll; SA3T source hash is SONIC.PVM. Hash equality is NOT a valid compatibility check; converter source inspected and incorrect proposed check rejected before release.",
+    "tests_passed": [
+      "bash tests/run_sonic_owner_visual_cli.sh (valid fixture, differing origin hashes, malformed UV/metadata/index, missing SA3T)",
+      "bash tests/run_sa3ds_current_host.sh (all inherited suites)",
+      "gcc -fsanitize=address,undefined owner CLI with valid synthetic fixture"
+    ]
+  },
+  "physics_1to1": false,
+  "project": "SA3DS",
+  "retail_live_capture": false,
+  "set_decode": {
+    "emerald_coast_placements": 3664,
+    "emerald_coast_sources": 6,
+    "numeric_groups": 45,
+    "placements": 30085,
+    "runtime_object_spawning": false,
+    "set_chunk": "SA3DSET v1.0",
+    "sources": 71
+  },
+  "sonic_action_key_integrity_wip5": {
+    "fidelity": "Safety/format check only; duplicate timestamps and out-of-clip keys accepted until retail behavior measured; original ACTION timing still provisional",
+    "implementation": "Native load-time preflight scans EVERY enabled position/rotation/scale key for nonfinite values, descending time, empty enabled tracks, out-of-range channel/key spans; keeps 3 sampled pose checks; prints channel/track/key diagnostics. Owner-side read-only CLI can run on user-generated SA3C.",
+    "native_3ds_compilation": false,
+    "new_host_tool": "tools/check_sonic_actions.c",
+    "old_3ds_hardware_test": false,
+    "owner_asset_validation": "PENDING; no owner-generated SA3C in this runtime",
+    "parent": "0.0.9.1E-WIP4 SHA256 ad00a50be61d22ecbb0b60a82fd938ce7d2715520f5515f133799cd1724dcba2",
+    "release_gate": "NOT PASSED; WIP only",
+    "synthetic_fixture_generator": "tests/make_synthetic_sonic_sa3c.py",
+    "tests_passed": [
+      "bash tests/run_sonic_action_preflight.sh",
+      "bash tests/run_sa3ds_current_host.sh",
+      "gcc -fsanitize=address,undefined tests/test_sonic_action_preflight.c (PASS)"
+    ]
+  },
+  "sonic_action_preflight_wip4": {
+    "implementation": "Native load-time preflight of all 17 dense-ID->ACTION bindings at start/mid/end; checks empty/out-of-range slots, interpolation errors, non-finite local/world matrices; finite frame guard in pose sampler; no physics changes",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_asset_validation": "PENDING (owner-generated SA3C unavailable in this execution)",
+    "parent": "0.0.9.1E-WIP3 SHA256 bae68d1971b1676c294680b1d4c0964ec1f7e8a9e1c2910241ea85bfb9dd6058",
+    "release_gate": "NOT PASSED; WIP only",
+    "test_commands": [
+      "bash tests/run_sonic_action_preflight.sh",
+      "bash tests/run_sa3ds_current_host.sh",
+      "ASAN_OPTIONS=detect_leaks=1 [ASAN/UBSAN compiled preflight test]"
+    ],
+    "test_status": "PASS host owner-free; ASAN/UBSAN PASS"
+  },
+  "sonic_geometry_gpu_preflight_wip6": {
+    "implementation": "Read-only mesh/index/vertex validation at owner SA3C load, with exact diagnostic; no physics or ACTION timing changes",
+    "issue": "Native GPU_TRIANGLES submission path had no finite vertex/triangle-list/source primitive preflight",
+    "native_3ds_compilation": false,
+    "old_3ds_hardware_test": false,
+    "owner_asset_validation": "PENDING; no owner-generated SA3C mounted",
+    "parent": "0.0.9.1E-WIP5 SHA256 1fe804ad91ad714b3641ef4d739da899ea1a301b1b9b54817768a30388c15657",
+    "release_gate": "NOT PASSED; WIP only",
+    "tests_passed": [
+      "baseline inherited host before editing",
+      "WIP6 geometry synthetic host",
+      "full cumulative host after editing",
+      "GCC ASAN/UBSAN geometry synthetic"
+    ]
+  },
+  "source_profile": "SADX_PC_2004_CANONICAL",
+  "tests": {
+    "combined_ec_stage_packages": "PASS",
+    "inherited_1C_suite": "PASS",
+    "new_cam_source_suite": "PASS"
+  },
+  "three_dsx_built_for_0G": true,
+  "three_dsx_hardware_candidate_sha256": "7dd32524b383f8f4768f6dbf03405a01752155f646010c0e3eec99b1c4a0b5dc",
+  "visual_decode": {
+    "emerald_coast_acts": [
+      0,
+      1,
+      2
+    ],
+    "geometry": "confirmed exact-source structural decode",
+    "materials": "confirmed exact 20-byte records; flags preserved raw",
+    "pvm_archives_validated": 6,
+    "pvrt_format9_largest_mip": "base-first confirmed by cross-archive witness",
+    "uv": "confirmed signed16 per-corner / 255.0"
+  },
+  "white_zone_visual_wip": {
+    "3ds_compilation": false,
+    "completed": false,
+    "gpu_runtime_source_integration": "PASS host source contract, not 3DS compiled",
+    "hardware_render": false,
+    "owner_material_alpha": "all 0xFF",
+    "owner_referenced_slots": 13,
+    "owner_rgba_bytes": 232192,
+    "owner_texture_count": 16,
+    "parent": "0.0.9.1D",
+    "test_suite_timeout": "full 1C SET owner decode after inherited 1B passed",
+    "test_suites_passed": [
+      "0G White Zone",
+      "0E owner data",
+      "0D host render",
+      "1D CAM synthetic",
+      "WIP1 visual preflight"
+    ],
+    "visual_preflight_host": "PASS"
+  },
+  "macfix2": {
+    "parent_sha256": "4e0dbe43f180048f79e90f24f585dfa12e63fdc5b1c8541fabfa1edf422f55ab",
+    "error": "BUILD-002 malformed native printf lines 176-180",
+    "fix": "restore Assets and 60Hz printfs as distinct valid C statements",
+    "regression": "tests/test_0g_native_hud_lexical.py",
+    "native_3ds_compilation": "pending Mac rerun",
+    "old_3ds_hardware_test": false
+  }
+}

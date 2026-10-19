@@ -1,0 +1,57 @@
+SA3DS 0.0.9.0C — Real Sonic Data Decode
+
+RESULT: PASS
+
+Inherited regression:
+- 0.0.8.8.9 frozen suite: PASS
+- 19 Movement Lab scenarios: PASS
+- native .sa3dspak reader: PASS
+- 8 malformed-package cases: PASS
+- 0.0.9.0A real-source loader gate: PASS
+- 0.0.9.0B physics-synced animation-intent gate: PASS
+
+Exact source decode:
+- CHRMODELS exact fingerprint: PASS
+- Sonic model table: 11 entries / 10 non-null
+- Sonic object table: 79 entries / 77 non-null
+- Sonic action table: 149 entries / 146 non-null
+- normal Action-0 hierarchy: 73 nodes
+- normal hierarchy geometry: 1,161 source points / 1,993 decoded primitive triangles
+- all 146 populated ACTION/MOTION records validated against hierarchy node counts
+- motion type distribution: 136 type-3, 10 type-7
+- motion node distribution: 126x73-node, 1x74-node, 19x1-node
+
+Exact SONIC.PVM:
+- fingerprint: PASS
+- 16/16 directory entries and PVRT chunks: PASS
+- all 16 base mip RGBA decodes: PASS
+- character material -> texture slot references: PASS (13/16 slots used)
+
+Pointer-free SA3C:
+- deterministic source -> SA3C build: PASS
+- NODE 223
+- MODL 87
+- MESH 124
+- VRTX 4,525
+- INDX 17,589
+- MATL 19
+- TEXS 16
+- ANIM 149
+- CHAN 3,715
+- KEYS 86,204
+- generated package size: 1,669,728 bytes
+- generated package SHA-256: 7def1c51ab4184d8a436e5a70cb87f0e117a20f8a0d27d7cdddd5c4b05026178
+- native C SA3C reader/cross-reference validation: PASS
+- generated Sega-derived SA3C deleted after test; not bundled
+
+Frozen-baseline audit:
+- 108 / 108 files from docs/0.0.8.8.9_FROZEN_FILE_HASHES.txt byte-identical
+- mismatches: 0
+
+Evidence gates still open:
+- final UV normalization/sampler convention
+- final strip front-face/culling convention
+- exact interpolation equations for source interpolation values 2/3
+- semantic names for source ACTION indices
+- real ACTION -> physics intent mapping
+- on-screen real Sonic Movement Lab render

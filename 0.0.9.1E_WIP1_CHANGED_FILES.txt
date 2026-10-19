@@ -1,0 +1,15 @@
+Parent: SA3DS_0.0.9.1D_CAMDecode.zip SHA256 5409a6aa2d5776975389a4ec22ebadfb0acb1c58631ec1904eb0dacff0b67517
+NEW src/sa3c/sa3c_gpu_preflight.h
+NEW src/sa3c/sa3c_gpu_preflight.c
+MOD runtime_0_0_9_0F/source/sonic_gpu.c
+MOD runtime_0_0_9_0F/source/main.c
+MOD tools/host_render_sa3c_white_space.c
+NEW tests/test_sa3c_gpu_preflight.c
+NEW tests/test_white_zone_visual_source.py
+NEW tests/run_white_zone_visual_preflight.sh
+MOD RUN_STATE.json
+MOD CURRENT_CHECKPOINT.md
+NEW CHECKPOINT_0.0.9.1E_WIP1.md
+NEW ERROR_HISTORY.md
+NEW PARITY_STATUS.json
+NEW 0.0.9.1E_WIP1_CHANGED_FILES.txt

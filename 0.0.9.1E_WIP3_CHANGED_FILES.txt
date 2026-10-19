@@ -1,0 +1,15 @@
+Parent: SA3DS_0.0.9.1E-WIP2_GPUFrameIsolation_CodeOnly.zip SHA256 7de3fe4dbfa146171cd9b8e6e688dd21312083de0a6d966df0790299c3c1c584
+MOD src/game/sonic_animation_sync.h
+MOD src/game/sonic_animation_sync.c
+MOD src/game/sonic_animation_runtime.h
+MOD src/game/sonic_animation_runtime.c
+MOD runtime_0_0_9_0F/source/main.c
+NEW tests/test_animation_tick_stability.c
+NEW tests/run_animation_tick_stability.sh
+NEW tests/run_sa3ds_current_host.sh
+MOD RUN_STATE.json
+MOD PARITY_STATUS.json
+MOD ERROR_HISTORY.md
+MOD CURRENT_CHECKPOINT.md
+NEW CHECKPOINT_0.0.9.1E_WIP3.md
+NEW 0.0.9.1E_WIP3_CHANGED_FILES.txt

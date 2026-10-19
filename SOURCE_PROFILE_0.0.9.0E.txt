@@ -1,0 +1,17 @@
+SA3DS 0.0.9.0E exact owner-supplied source profile
+
+sonic.exe
+size 55549952
+sha256 6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74
+
+system/CHRMODELS.DLL (clean original PC2004 character DLL)
+size 7647232
+sha256 76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5
+
+system/SONIC.PVM
+size 155776
+sha256 f8e30dfbebeb901a0ac210a61929c45fbcefcc1a2758cba400f959989b93ecbe
+
+0.0.9.0E locally converts CHRMODELS.DLL + SONIC.PVM into owner-derived SA3C
+and SA3T RomFS packages before the devkitARM build. Those source and generated
+payloads are not included in the checkpoint archive.

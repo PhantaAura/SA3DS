@@ -1,0 +1,15 @@
+Parent: 0.0.9.1E-WIP5 SHA256 1fe804ad91ad714b3641ef4d739da899ea1a301b1b9b54817768a30388c15657
+src/sa3c/sa3c_gpu_preflight.h
+src/sa3c/sa3c_gpu_preflight.c
+runtime_0_0_9_0F/source/main.c
+tests/test_sonic_geometry_preflight.c (NEW)
+tests/run_sonic_geometry_preflight.sh (NEW)
+tests/run_sa3ds_current_host.sh
+docs/0.0.9.1E_WIP6_GEOMETRY_PREFLIGHT.md (NEW)
+RUN_STATE.json
+PARITY_STATUS.json
+CURRENT_CHECKPOINT.md
+ERROR_HISTORY.md
+CHECKPOINT_0.0.9.1E_WIP6.md (NEW)
+0.0.9.1E_WIP6_CHANGED_FILES.txt (NEW)
+TEST_RESULTS_0.0.9.1E_WIP6.txt (NEW)

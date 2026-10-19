@@ -1,0 +1,116 @@
+PRIMARY SOURCE PROFILE — SADX 2004 US PC
+sonic.exe
+Size: 55,549,952 bytes
+SHA-256: 6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74
+Image base: 0x00400000
+Profile ID: sadx-2004-pc-6b0937ca
+Purpose: primary extraction + 2004 Mod Loader/mod ecosystem source.
+
+SECONDARY COMPARISON PROFILE — CLEAN STEAM SADX
+Sonic Adventure DX.exe
+Size: 90,922,000 bytes
+SHA-256: e4330c00d7ee3910ecc1acab789ffd2a2d571c506984b99a8de4d3663e697fd6
+Image base: 0x00400000
+Profile ID: sadx-steam-clean-e4330c00
+Purpose: independent comparison/reference; preserve existing Steam RE evidence.
+
+IMPORTANT
+- Never reuse executable-specific VAs between profiles without verification.
+- Both profiles feed neutral SA3DS representations; runtime code does not depend on Windows addresses.
+- No original executable bytes are bundled in SA3DS checkpoints.
+
+0.0.8.8.5 CORE PHYSICS PARITY AUDIT
+- Steam player parameter table VA: 0x025D9B90
+- 2004 player parameter table VA: 0x009154E8
+- record size: 0x84
+- record count: 8
+- total compared bytes: 0x420 / 1,056
+- byte differences: 0
+- shared table SHA-256: 3f69076118fcc6a77c55e600eb337944eb6562e5b0979104b58058ad64ba5107
+- Steam initializer: 0x004DAA00
+- 2004 initializer: 0x00442750
+- Steam PGetAcceleration equivalent: 0x004DBE50
+- 2004 PGetAcceleration: 0x0044C270
+- Steam PGetAccelerationAir equivalent: 0x004DDEC0
+- 2004 PGetAccelerationAir: 0x0044B9C0
+- selected ground semantic constants: 14/14 matched
+- selected air field/threshold semantics: 10/10 matched
+
+PARITY CONCLUSION
+The checked core movement parameter/ground/air baseline can remain shared.
+2004 PC becomes the primary mod-support/extraction source; Steam remains an
+independent reference.
+
+BOUNDARY
+This does not by itself certify release-identical collision support probes/order,
+input cadence, camera behavior, or every action-state code path. Spin Dash
+charge/release has since received a dedicated 2004 evidence lock below.
+
+
+0.0.8.8.6 PC-2004 SONIC SPIN DASH EVIDENCE LOCK
+- Sonic action dispatch table: 0x0049BFBC
+- Action 4 (Spin Dash): 0x0049AE2F
+- Action 5 (Roll): 0x0049AEBB
+- Spin Dash entry routine: 0x00496EE0
+- charge/timeout/release routine: 0x00495080
+- initial minimum: 2.0f (0x007DCB94)
+- held comparison threshold: 10.0f (0x007DCB34)
+- held increment: 0.4f (0x007DD550)
+- timeout: 300 timer frames
+- no entry clamp at 10.0 and no post-add clamp
+- release: Action 5, Speed.x=SpindashSpeed, timer=0, charge=0
+- Action 4 movement order: PGetRotation -> PGetBreak -> PGetSpeed -> PSetPosition -> PResetPosition
+- Action 5 movement order: PGetRotation -> PGetInertia -> PGetSpeed -> PSetPosition -> PResetPosition
+- verifier: tools/verify_pc2004_spindash.py
+
+0.0.8.8.7 PC-2004 COLLISION / SUPPORT ORDER EVIDENCE LOCK
+- PResetPosition: 0x0043EE70..0x0043F000
+- PGetInertia: 0x00443650..0x004437FF
+- PGetBreak: 0x00448E50..0x004491DF
+- PGetAcceleration: 0x0044C270..0x0044CDEF
+- PSetPosition: 0x0044CDF0..0x0044D49A
+- 1.16f absolute-reference count: PGetAcceleration=4, PSetPosition=0, PResetPosition=0
+- primary steep-un-stick thresholds: Up<0.1, abs(internal_cross_y)>0.6, Speed.x>1.16
+- additional >1.16 inverted biases: Up<-0.4 => -5*weight; Up<-0.3 => -0.8*weight; Up<-0.1 => -0.4*weight
+- PResetPosition normal path calls PConvertVector_G2P at 0x0043EEC4, writes local speed, then updates Up/support frame
+- old 0.3/1.16 forced support-loss heuristic is NOT treated as exact 2004 authority
+- verifier: tools/verify_pc2004_support_order.py
+
+
+0.0.8.8.8 PC-2004 BREAK / INERTIA + COLLISION WORK EVIDENCE PASS
+- PInitialize: 0x00442750
+- PGetInertia: 0x00443650
+- PGetSpeed: 0x00443F50
+- PGetBreak: 0x00448E50
+- PSetPosition: 0x0044CDF0
+- PResetPosition: 0x0043EE70
+- PGetBreak portable specialization now uses exact checked air-resist, run_break,
+  lim_frict, grd_frict, grd_frict_z and zero-cross behavior
+- PGetInertia portable specialization now uses exact checked -8.0 inverted-force
+  branch, status-0x100 / Up<=0.98 / 0.0002 branch, and ordinary drag terms
+- PInitialize separately allocates a 0x84 collision/support work block at
+  playerwk+0x64 in addition to the 0x84 physics record at playerwk+0x9C
+- both checked PSetPosition helper paths consume the work block and use
+  player height * 0.5f during collision-work setup
+- exact neutral body/probe geometry and pending dynamic-collision impulse
+  semantics remain unresolved
+- verifier: tools/verify_pc2004_break_inertia_collision.py
+
+0.0.8.8.9 PC-2004 RETAIL COLLISION WORK RECONSTRUCTION / CORE PHYSICS FREEZE
+- retail csts allocation size: 0x84
+- csts pointer: playerwk+0x64
+- portable field layout: radius@00, pos@04, spd@10, tnorm@1C,
+  find_count@28, selected_nmb@2A, yt@2C, yb@30, angx@34, angz@38,
+  normal@3C, normal2@48, onpoly@54, pshbk@60, anaspdh@6C, anaspdv@78
+- normal helper initializes tnorm=(0,1,0)
+- csts radius rule: player_parameter.height * 0.5f
+- Sonic height 10.0f -> csts radius 5.0f
+- candidate polygon routine: 0x00453820
+- arbitration A: 0x0043CCE0
+- arbitration B: 0x0043D180
+- HandleSurfaceFlags: 0x0043CB90
+- both arbitration paths read find_count at +0x28 and contain 0x2C00 cutoff
+- verifier: tools/verify_pc2004_collision_work.py
+- complete polygon solver remains a real-stage calibration gate; no fabricated
+  internal collision-vector semantics are promoted
+- decision: freeze core movement math/csts architecture and proceed to 0.0.8.9

@@ -1,0 +1,2 @@
+SA3DS SYNTHETIC COLLISION v1
+flat test plane: y=0, bounds x=-14..14 z=-48..48

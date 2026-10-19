@@ -1,0 +1,1568 @@
+{
+  "file": {
+    "size": 55549952,
+    "sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74"
+  },
+  "sonic_actions_global_va": 59731580,
+  "known_action_count": 149,
+  "raw_absolute_address_occurrences": 193,
+  "immediate_constant_slot_accesses": 190,
+  "direct_action_indices_seen": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    20,
+    77,
+    100,
+    122,
+    123
+  ],
+  "access_histogram": {
+    "0": 2,
+    "100": 2,
+    "1": 76,
+    "123": 41,
+    "4": 23,
+    "7": 6,
+    "6": 11,
+    "5": 15,
+    "122": 4,
+    "3": 6,
+    "2": 2,
+    "20": 1,
+    "77": 1
+  },
+  "accesses": [
+    {
+      "instruction_file_offset": 607276,
+      "instruction_va": 4801580,
+      "loaded_register": "edx",
+      "following_operation": "cmp_reg_mem",
+      "table_byte_offset": 0,
+      "action_index": 0
+    },
+    {
+      "instruction_file_offset": 607631,
+      "instruction_va": 4801935,
+      "loaded_register": "eax",
+      "following_operation": "cmp_reg_mem",
+      "table_byte_offset": 0,
+      "action_index": 0
+    },
+    {
+      "instruction_file_offset": 608288,
+      "instruction_va": 4802592,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 400,
+      "action_index": 100
+    },
+    {
+      "instruction_file_offset": 1062048,
+      "instruction_va": 5256352,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 400,
+      "action_index": 100
+    },
+    {
+      "instruction_file_offset": 2448643,
+      "instruction_va": 6642947,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2449536,
+      "instruction_va": 6643840,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2450768,
+      "instruction_va": 6645072,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2452556,
+      "instruction_va": 6646860,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2453971,
+      "instruction_va": 6648275,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2454720,
+      "instruction_va": 6649024,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2455925,
+      "instruction_va": 6650229,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2457657,
+      "instruction_va": 6651961,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2460511,
+      "instruction_va": 6654815,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2462752,
+      "instruction_va": 6657056,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2467380,
+      "instruction_va": 6661684,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2482538,
+      "instruction_va": 6676842,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2487371,
+      "instruction_va": 6681675,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2488493,
+      "instruction_va": 6682797,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2488912,
+      "instruction_va": 6683216,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 2489000,
+      "instruction_va": 6683304,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2489338,
+      "instruction_va": 6683642,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2491094,
+      "instruction_va": 6685398,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2491929,
+      "instruction_va": 6686233,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2492253,
+      "instruction_va": 6686557,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2505622,
+      "instruction_va": 6699926,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2506180,
+      "instruction_va": 6700484,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2506895,
+      "instruction_va": 6701199,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 2506993,
+      "instruction_va": 6701297,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2508736,
+      "instruction_va": 6703040,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2508997,
+      "instruction_va": 6703301,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2509263,
+      "instruction_va": 6703567,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2533083,
+      "instruction_va": 6727387,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2533346,
+      "instruction_va": 6727650,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 2533400,
+      "instruction_va": 6727704,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2533929,
+      "instruction_va": 6728233,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2535207,
+      "instruction_va": 6729511,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2535479,
+      "instruction_va": 6729783,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2575455,
+      "instruction_va": 6769759,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2579636,
+      "instruction_va": 6773940,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2580653,
+      "instruction_va": 6774957,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2583837,
+      "instruction_va": 6778141,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2651040,
+      "instruction_va": 6845344,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2652045,
+      "instruction_va": 6846349,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2653043,
+      "instruction_va": 6847347,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2673256,
+      "instruction_va": 6867560,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2675522,
+      "instruction_va": 6869826,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2677190,
+      "instruction_va": 6871494,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2681392,
+      "instruction_va": 6875696,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2683048,
+      "instruction_va": 6877352,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2683744,
+      "instruction_va": 6878048,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2688614,
+      "instruction_va": 6882918,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2717263,
+      "instruction_va": 6911567,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 488,
+      "action_index": 122
+    },
+    {
+      "instruction_file_offset": 2717363,
+      "instruction_va": 6911667,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2717576,
+      "instruction_va": 6911880,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2741885,
+      "instruction_va": 6936189,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2742775,
+      "instruction_va": 6937079,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2742965,
+      "instruction_va": 6937269,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2743306,
+      "instruction_va": 6937610,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2744179,
+      "instruction_va": 6938483,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2744443,
+      "instruction_va": 6938747,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 2744582,
+      "instruction_va": 6938886,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2745012,
+      "instruction_va": 6939316,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2745933,
+      "instruction_va": 6940237,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2747647,
+      "instruction_va": 6941951,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2752689,
+      "instruction_va": 6946993,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2754770,
+      "instruction_va": 6949074,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2755168,
+      "instruction_va": 6949472,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 2755401,
+      "instruction_va": 6949705,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 488,
+      "action_index": 122
+    },
+    {
+      "instruction_file_offset": 2755446,
+      "instruction_va": 6949750,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2758786,
+      "instruction_va": 6953090,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2788196,
+      "instruction_va": 6982500,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2788729,
+      "instruction_va": 6983033,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2790680,
+      "instruction_va": 6984984,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 8,
+      "action_index": 2
+    },
+    {
+      "instruction_file_offset": 2790767,
+      "instruction_va": 6985071,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 8,
+      "action_index": 2
+    },
+    {
+      "instruction_file_offset": 2790894,
+      "instruction_va": 6985198,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2791257,
+      "instruction_va": 6985561,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2792781,
+      "instruction_va": 6987085,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 2794381,
+      "instruction_va": 6988685,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2795641,
+      "instruction_va": 6989945,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2812802,
+      "instruction_va": 7007106,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2818536,
+      "instruction_va": 7012840,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2847634,
+      "instruction_va": 7041938,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2849457,
+      "instruction_va": 7043761,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2850342,
+      "instruction_va": 7044646,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2852473,
+      "instruction_va": 7046777,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2877932,
+      "instruction_va": 7072236,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2882076,
+      "instruction_va": 7076380,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2884247,
+      "instruction_va": 7078551,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2885909,
+      "instruction_va": 7080213,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2891363,
+      "instruction_va": 7085667,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2892066,
+      "instruction_va": 7086370,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2894889,
+      "instruction_va": 7089193,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2895232,
+      "instruction_va": 7089536,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2895646,
+      "instruction_va": 7089950,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2897970,
+      "instruction_va": 7092274,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2898266,
+      "instruction_va": 7092570,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2898646,
+      "instruction_va": 7092950,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 80,
+      "action_index": 20
+    },
+    {
+      "instruction_file_offset": 2898732,
+      "instruction_va": 7093036,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2899267,
+      "instruction_va": 7093571,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2899931,
+      "instruction_va": 7094235,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2900217,
+      "instruction_va": 7094521,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2910692,
+      "instruction_va": 7104996,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2916534,
+      "instruction_va": 7110838,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 2917490,
+      "instruction_va": 7111794,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2926756,
+      "instruction_va": 7121060,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2937445,
+      "instruction_va": 7131749,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2938491,
+      "instruction_va": 7132795,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2941942,
+      "instruction_va": 7136246,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2942349,
+      "instruction_va": 7136653,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2942996,
+      "instruction_va": 7137300,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2946645,
+      "instruction_va": 7140949,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2948067,
+      "instruction_va": 7142371,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2948589,
+      "instruction_va": 7142893,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2948953,
+      "instruction_va": 7143257,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2957836,
+      "instruction_va": 7152140,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2962594,
+      "instruction_va": 7156898,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2963430,
+      "instruction_va": 7157734,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2964013,
+      "instruction_va": 7158317,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2964255,
+      "instruction_va": 7158559,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2966765,
+      "instruction_va": 7161069,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2967952,
+      "instruction_va": 7162256,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2968654,
+      "instruction_va": 7162958,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2969941,
+      "instruction_va": 7164245,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2970837,
+      "instruction_va": 7165141,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2972730,
+      "instruction_va": 7167034,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2974684,
+      "instruction_va": 7168988,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2975889,
+      "instruction_va": 7170193,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2976083,
+      "instruction_va": 7170387,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2976373,
+      "instruction_va": 7170677,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2977332,
+      "instruction_va": 7171636,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2977611,
+      "instruction_va": 7171915,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 2977753,
+      "instruction_va": 7172057,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2978228,
+      "instruction_va": 7172532,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2979167,
+      "instruction_va": 7173471,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2981733,
+      "instruction_va": 7176037,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2982884,
+      "instruction_va": 7177188,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 2983654,
+      "instruction_va": 7177958,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2984717,
+      "instruction_va": 7179021,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 2986489,
+      "instruction_va": 7180793,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2994479,
+      "instruction_va": 7188783,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2995398,
+      "instruction_va": 7189702,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2996100,
+      "instruction_va": 7190404,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 2996642,
+      "instruction_va": 7190946,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 2997436,
+      "instruction_va": 7191740,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 2999548,
+      "instruction_va": 7193852,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3000200,
+      "instruction_va": 7194504,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3000744,
+      "instruction_va": 7195048,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 3003710,
+      "instruction_va": 7198014,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3005331,
+      "instruction_va": 7199635,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3008189,
+      "instruction_va": 7202493,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3008548,
+      "instruction_va": 7202852,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 488,
+      "action_index": 122
+    },
+    {
+      "instruction_file_offset": 3009487,
+      "instruction_va": 7203791,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3011070,
+      "instruction_va": 7205374,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3011915,
+      "instruction_va": 7206219,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3012637,
+      "instruction_va": 7206941,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3014977,
+      "instruction_va": 7209281,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3017318,
+      "instruction_va": 7211622,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3018811,
+      "instruction_va": 7213115,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 24,
+      "action_index": 6
+    },
+    {
+      "instruction_file_offset": 3023049,
+      "instruction_va": 7217353,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3024522,
+      "instruction_va": 7218826,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3025220,
+      "instruction_va": 7219524,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3027932,
+      "instruction_va": 7222236,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3028451,
+      "instruction_va": 7222755,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 28,
+      "action_index": 7
+    },
+    {
+      "instruction_file_offset": 3028491,
+      "instruction_va": 7222795,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3029003,
+      "instruction_va": 7223307,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 488,
+      "action_index": 122
+    },
+    {
+      "instruction_file_offset": 3029046,
+      "instruction_va": 7223350,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3029373,
+      "instruction_va": 7223677,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3029924,
+      "instruction_va": 7224228,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3039823,
+      "instruction_va": 7234127,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 16,
+      "action_index": 4
+    },
+    {
+      "instruction_file_offset": 3045427,
+      "instruction_va": 7239731,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 3046355,
+      "instruction_va": 7240659,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3047710,
+      "instruction_va": 7242014,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3052095,
+      "instruction_va": 7246399,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3052493,
+      "instruction_va": 7246797,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3053126,
+      "instruction_va": 7247430,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3053695,
+      "instruction_va": 7247999,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3053914,
+      "instruction_va": 7248218,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3055371,
+      "instruction_va": 7249675,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3055965,
+      "instruction_va": 7250269,
+      "loaded_register": "edx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 3056186,
+      "instruction_va": 7250490,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 12,
+      "action_index": 3
+    },
+    {
+      "instruction_file_offset": 3057988,
+      "instruction_va": 7252292,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3060802,
+      "instruction_va": 7255106,
+      "loaded_register": "ecx",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3061197,
+      "instruction_va": 7255501,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 3061975,
+      "instruction_va": 7256279,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 492,
+      "action_index": 123
+    },
+    {
+      "instruction_file_offset": 3992720,
+      "instruction_va": 8187024,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 4004528,
+      "instruction_va": 8198832,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 308,
+      "action_index": 77
+    },
+    {
+      "instruction_file_offset": 4007104,
+      "instruction_va": 8201408,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 20,
+      "action_index": 5
+    },
+    {
+      "instruction_file_offset": 4007712,
+      "instruction_va": 8202016,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 4009984,
+      "instruction_va": 8204288,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    },
+    {
+      "instruction_file_offset": 4020240,
+      "instruction_va": 8214544,
+      "loaded_register": "eax",
+      "following_operation": "mov_load",
+      "table_byte_offset": 4,
+      "action_index": 1
+    }
+  ],
+  "evidence_scope": [
+    "These are direct constant slot accesses immediately after loading ___SONIC_ACTIONS.",
+    "They prove code references those table slots in this exact executable.",
+    "They do NOT identify an action as idle/walk/run/jump/etc.",
+    "Dynamic/indexed accesses are not decoded by this narrow scanner."
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "acts": [
+    {
+      "act": 0,
+      "aux_count": 0,
+      "collision_count": 480,
+      "collision_list_va": "0x00e95938",
+      "landtable_va": "0x00e99cb8",
+      "load_flags": "0x000c",
+      "load_refcount": 0,
+      "materials": 627,
+      "meshsets": 578,
+      "radius": 3000.0,
+      "source_points": 13323,
+      "texture_archive": "BEACH01",
+      "texture_list_va": "0x00f812ac",
+      "triangles": 19598,
+      "unique_models": 183,
+      "unique_objects": 480
+    },
+    {
+      "act": 1,
+      "aux_count": 0,
+      "collision_count": 169,
+      "collision_list_va": "0x010386d8",
+      "landtable_va": "0x01039e9c",
+      "load_flags": "0x000c",
+      "load_refcount": 0,
+      "materials": 586,
+      "meshsets": 557,
+      "radius": 3000.0,
+      "source_points": 10515,
+      "texture_archive": "BEACH02",
+      "texture_list_va": "0x00ef553c",
+      "triangles": 16450,
+      "unique_models": 142,
+      "unique_objects": 169
+    },
+    {
+      "act": 2,
+      "aux_count": 0,
+      "collision_count": 199,
+      "collision_list_va": "0x01036ab8",
+      "landtable_va": "0x010386b4",
+      "load_flags": "0x000c",
+      "load_refcount": 0,
+      "materials": 341,
+      "meshsets": 314,
+      "radius": 3000.0,
+      "source_points": 7072,
+      "texture_archive": "BEACH03",
+      "texture_list_va": "0x00e9a4cc",
+      "triangles": 10855,
+      "unique_models": 101,
+      "unique_objects": 199
+    }
+  ],
+  "emerald_coast_level_id": 1,
+  "exe_sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
+  "landtable_pointer_table_va": "0x0097da08",
+  "level_stride": 8,
+  "source_profile": "SADX_PC_2004_CANONICAL",
+  "totals": {
+    "collision_instances": 848,
+    "materials": 1554,
+    "meshsets": 1449,
+    "primitive_classes": {
+      "0xc000": 1449
+    },
+    "source_points": 30910,
+    "triangles": 46903,
+    "unique_models": 426,
+    "unique_objects": 848
+  }
+}

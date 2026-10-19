@@ -1,0 +1,24 @@
+== inherited 0.0.9.0G regression ==
+== White Zone 10-section geometry + selected reset ==
+White Zone parity-lab fixture tests: PASS
+== HUD snapshot + FOLLOW/REFERENCE camera ==
+White Zone parity HUD/camera tests: PASS
+== animation observer non-mutation stress ==
+animation observer 1024-state non-mutation stress: PASS
+== extended White Zone deterministic protocols ==
+12 deterministic White Zone protocol behavior checks: PASS
+jump_tap apex_index=18 landing_index=38
+jump_hold apex_index=57 landing_index=92
+== strict retail comparator ==
+White Zone trace comparator tests: PASS
+== 0G runtime source contract ==
+0.0.9.0G 3DS runtime/source contract: PASS
+0.0.9.0G White Zone validation suite: PASS
+== exact PC2004 Emerald Coast root/code witnesses ==
+== exact PC2004 Emerald Coast structural decode ==
+PC2004 Emerald Coast exact-source decode tests: PASS
+== source-neutral collision chunk ==
+Emerald Coast pointer-free collision chunk tests: PASS
+valid .sa3dspak v1.0: 2 chunks, 735904 bytes
+== Emerald Coast system companion inventory ==
+0.0.9.1 Emerald Coast source-decode suite: PASS

@@ -1,0 +1,24 @@
+{
+  "schema": "sa3ds-white-zone-parity-protocol-v2",
+  "purpose": "Controlled pre-Emerald-Coast behavior comparison; no global 1:1 claim",
+  "trace_format": "sa3ds-parity-trace-v1",
+  "marker_spacing_world_units": 10.0,
+  "course_width_world_units": 24.0,
+  "camera_modes": ["FOLLOW", "REFERENCE"],
+  "tests": [
+    {"id":"flat_accel","zone":"ACCELERATION","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"coast","zone":"BRAKE / COAST","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"brake","zone":"BRAKE / COAST","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"turn_low","zone":"TURN","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"turn_high","zone":"TURN","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"jump_tap","zone":"JUMP","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"jump_hold","zone":"JUMP","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"spindash","zone":"ROLL / SPINDASH","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"roll_exit","zone":"ROLL / SPINDASH","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"uphill","zone":"SLOPE UP","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"downhill","zone":"SLOPE DOWN","status":"SOURCE_BACKED_PARTIAL"},
+    {"id":"air_control","zone":"AIR CONTROL / LANDING","status":"SOURCE_BACKED_PARTIAL"}
+  ],
+  "evidence_labels": ["VERIFIED 1:1", "MATCHES MEASURED FIELDS", "NOT VERIFIED", "LIVE CAPTURE PENDING"],
+  "acceptance_rule": "VERIFIED 1:1 requires an exact match against a reference explicitly identified as a live retail SADX capture. Tolerance-only or synthetic agreement is MATCHES MEASURED FIELDS. Global PHYSICS_1TO1 remains false."
+}

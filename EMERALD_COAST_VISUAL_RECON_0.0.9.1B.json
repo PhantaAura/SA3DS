@@ -1,0 +1,240 @@
+{
+  "acts": [
+    {
+      "act": 0,
+      "landtable_va": "0x00e99cb8",
+      "materials_deduplicated": 237,
+      "meshes_without_uv": 61,
+      "texture_archive": "BEACH01",
+      "texture_count": 103,
+      "uv": {
+        "divisor": 255.0,
+        "raw_max": [
+          10200,
+          276
+        ],
+        "raw_min": [
+          -49,
+          -5100
+        ],
+        "runtime_storage": "float32 source/255.0; values intentionally may tile outside [0,1]",
+        "source_storage": "signed int16 per corner"
+      },
+      "visual": {
+        "bytes": 892212,
+        "indices": 58794,
+        "instances": 480,
+        "meshes": 578,
+        "models": 183,
+        "triangles": 19598,
+        "vertices": 22237
+      }
+    },
+    {
+      "act": 1,
+      "landtable_va": "0x01039e9c",
+      "materials_deduplicated": 120,
+      "meshes_without_uv": 25,
+      "texture_archive": "BEACH02",
+      "texture_count": 91,
+      "uv": {
+        "divisor": 255.0,
+        "raw_max": [
+          15197,
+          767
+        ],
+        "raw_min": [
+          -688,
+          -5100
+        ],
+        "runtime_storage": "float32 source/255.0; values intentionally may tile outside [0,1]",
+        "source_storage": "signed int16 per corner"
+      },
+      "visual": {
+        "bytes": 659884,
+        "indices": 49350,
+        "instances": 169,
+        "meshes": 557,
+        "models": 142,
+        "triangles": 16450,
+        "vertices": 16460
+      }
+    },
+    {
+      "act": 2,
+      "landtable_va": "0x010386b4",
+      "materials_deduplicated": 122,
+      "meshes_without_uv": 14,
+      "texture_archive": "BEACH03",
+      "texture_count": 89,
+      "uv": {
+        "divisor": 255.0,
+        "raw_max": [
+          15300,
+          296
+        ],
+        "raw_min": [
+          -384,
+          -5100
+        ],
+        "runtime_storage": "float32 source/255.0; values intentionally may tile outside [0,1]",
+        "source_storage": "signed int16 per corner"
+      },
+      "visual": {
+        "bytes": 427674,
+        "indices": 32565,
+        "instances": 199,
+        "meshes": 314,
+        "models": 101,
+        "triangles": 10855,
+        "vertices": 10418
+      }
+    }
+  ],
+  "exe_sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
+  "format9_base_order_evidence": {
+    "base_only_archive": "BEACH01.PVM",
+    "decoded_rgba_equal": true,
+    "largest_mip": "first",
+    "mipped_archive": "BEACH03.PVM",
+    "same_name_comparable_textures": 52,
+    "same_name_equal_base_images": 41,
+    "witness_texture": "m128_cos002"
+  },
+  "limits": {
+    "material_flags": "preserved raw; bit semantics not assigned",
+    "sa3t_rgba8": "neutral validation/import representation; final Old-3DS texture residency format pending",
+    "set_cam_objects": "not part of 0.0.9.1B"
+  },
+  "pvm_archives": [
+    {
+      "data_formats": {
+        "9": 103
+      },
+      "dimensions": {
+        "128x128": 34,
+        "256x256": 1,
+        "32x32": 11,
+        "64x64": 55,
+        "8x8": 2
+      },
+      "flags": "0x010f",
+      "name": "BEACH01.PVM",
+      "neutral_rgba8_bytes": 3437056,
+      "pixel_formats": {
+        "0": 64,
+        "1": 19,
+        "2": 20
+      },
+      "sha256": "fb6fa479787fb29e57688ea56cf21da6952142d9ebb98665895d9c1372105a07",
+      "size": 1725760,
+      "texture_count": 103
+    },
+    {
+      "data_formats": {
+        "9": 91
+      },
+      "dimensions": {
+        "128x128": 55,
+        "256x256": 1,
+        "64x64": 34,
+        "8x8": 1
+      },
+      "flags": "0x010f",
+      "name": "BEACH02.PVM",
+      "neutral_rgba8_bytes": 4423936,
+      "pixel_formats": {
+        "0": 64,
+        "1": 11,
+        "2": 16
+      },
+      "sha256": "d871b7a7e78d8ea96c93a77e77290a7a2da3630942e40fcd7c744875d8a8e866",
+      "size": 2218336,
+      "texture_count": 91
+    },
+    {
+      "data_formats": {
+        "9": 89
+      },
+      "dimensions": {
+        "128x128": 54,
+        "256x256": 1,
+        "32x32": 6,
+        "64x64": 27,
+        "8x8": 1
+      },
+      "flags": "0x000f",
+      "name": "BEACH03.PVM",
+      "neutral_rgba8_bytes": 4268288,
+      "pixel_formats": {
+        "0": 50,
+        "1": 19,
+        "2": 20
+      },
+      "sha256": "01fc98834be904a173a7aba7a3f18ef88418f9460bb78c4cfd9aba99864e6fb3",
+      "size": 2850848,
+      "texture_count": 89
+    },
+    {
+      "data_formats": {
+        "9": 90
+      },
+      "dimensions": {
+        "128x128": 9,
+        "16x16": 8,
+        "32x32": 43,
+        "64x64": 28,
+        "8x8": 2
+      },
+      "flags": "0x010f",
+      "name": "OBJ_BEACH.PVM",
+      "neutral_rgba8_bytes": 1233408,
+      "pixel_formats": {
+        "0": 45,
+        "1": 25,
+        "2": 20
+      },
+      "sha256": "8b64b5b454dc7fac3474932dde42d749a46e406c4e756865b21e7d134227d50c",
+      "size": 623008,
+      "texture_count": 90
+    },
+    {
+      "data_formats": {
+        "9": 17
+      },
+      "dimensions": {
+        "128x128": 17
+      },
+      "flags": "0x000f",
+      "name": "BEACH_SEA.PVM",
+      "neutral_rgba8_bytes": 1114112,
+      "pixel_formats": {
+        "0": 17
+      },
+      "sha256": "0b9ee8d893cdb5b3d3f8a8e9d035292559159295d2b0bdd8683e7a190b67668d",
+      "size": 743776,
+      "texture_count": 17
+    },
+    {
+      "data_formats": {
+        "9": 3
+      },
+      "dimensions": {
+        "256x256": 1,
+        "8x8": 2
+      },
+      "flags": "0x000f",
+      "name": "BG_BEACH.PVM",
+      "neutral_rgba8_bytes": 262656,
+      "pixel_formats": {
+        "0": 3
+      },
+      "sha256": "6ee04c83f990066cec8cad4763e3ee8176bf05ebb277ad9d337e996488d718a4",
+      "size": 175264,
+      "texture_count": 3
+    }
+  ],
+  "schema": "sa3ds-emerald-coast-visual-recon-v1",
+  "source_profile": "SADX_PC_2004_CANONICAL",
+  "version": "0.0.9.1B"
+}

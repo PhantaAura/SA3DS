@@ -1,0 +1,19 @@
+SA3DS 0.0.9.0F test results
+
+Owner-source hashes used for validation:
+CHRMODELS.DLL 76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5
+SONIC.PVM     f8e30dfbebeb901a0ac210a61929c45fbcefcc1a2758cba400f959989b93ecbe
+
+PASS inherited 0D real Sonic render semantics / generated package tests
+PASS inherited 0E real Sonic preset + Citro3D source contract
+PASS White Zone parity-lab fixture tests
+PASS physics-synced Sonic runtime animation resolver tests
+PASS deterministic eight-scenario White Zone trace protocol
+PASS 0F 3DS runtime source contract
+PASS inherited Movement Lab host suite
+PASS 19 Movement Lab scenarios
+PASS 8 malformed .sa3dspak cases
+
+NOT RUN: devkitARM/libctru compilation (toolchain unavailable here)
+NOT RUN: Old 3DS hardware visual/performance verification
+NOT RUN: retail-reference trace comparison; no 1:1 scenario is newly claimed by 0F

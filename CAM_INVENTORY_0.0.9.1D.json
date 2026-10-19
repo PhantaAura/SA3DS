@@ -1,0 +1,1015 @@
+{
+  "data_origin": "owner supplied system 2.zip; inventory metadata only, no asset records",
+  "known_semantics": "count and 64-byte record boundaries only, no camera modes inferred",
+  "sources": [
+    {
+      "name": "CAM0000A.BIN",
+      "numeric_group": [
+        0,
+        0,
+        "A"
+      ],
+      "record_count": 2,
+      "sha256": "825cf06bcb20b5de6455b6477ff53dcf72e314cb789515267006e292e8e58dd4"
+    },
+    {
+      "name": "CAM0000S.BIN",
+      "numeric_group": [
+        0,
+        0,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM0100E.BIN",
+      "numeric_group": [
+        1,
+        0,
+        "E"
+      ],
+      "record_count": 93,
+      "sha256": "815742f8cce42354808a954c9b28c97adbe80562bd78224f993177dc95f1f203"
+    },
+    {
+      "name": "CAM0100S.BIN",
+      "numeric_group": [
+        1,
+        0,
+        "S"
+      ],
+      "record_count": 96,
+      "sha256": "9920294d5ef5b0b7ce8ebee14661c489234668c16a7da3c405589101899ec5d3"
+    },
+    {
+      "name": "CAM0101S.BIN",
+      "numeric_group": [
+        1,
+        1,
+        "S"
+      ],
+      "record_count": 133,
+      "sha256": "080e4188d5c38474a4da482f87f4d56875a190161f726fa16f57f615b1310f49"
+    },
+    {
+      "name": "CAM0102B.BIN",
+      "numeric_group": [
+        1,
+        2,
+        "B"
+      ],
+      "record_count": 3,
+      "sha256": "7b2913d924601a7e6b87341e776c3f1e0314a983d8b11828c1326af1685d0885"
+    },
+    {
+      "name": "CAM0102S.BIN",
+      "numeric_group": [
+        1,
+        2,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM0200E.BIN",
+      "numeric_group": [
+        2,
+        0,
+        "E"
+      ],
+      "record_count": 59,
+      "sha256": "19b8083f15f18e2b46c028211bf8ccc6c1cbcfd711614057ebb370e922454a74"
+    },
+    {
+      "name": "CAM0200S.BIN",
+      "numeric_group": [
+        2,
+        0,
+        "S"
+      ],
+      "record_count": 55,
+      "sha256": "d7e582c234ee2ebb6aa5c7ce5813e0a083b4f2ba7fb10f2736703e7858c5edbe"
+    },
+    {
+      "name": "CAM0201S.BIN",
+      "numeric_group": [
+        2,
+        1,
+        "S"
+      ],
+      "record_count": 20,
+      "sha256": "2ef795eaf53457b238b35eb7aa3e9ac60f3178fcda984fc1df17f0275e100f7f"
+    },
+    {
+      "name": "CAM0202M.BIN",
+      "numeric_group": [
+        2,
+        2,
+        "M"
+      ],
+      "record_count": 143,
+      "sha256": "b90a4e3a420f6897a9d65599f361a7cc85ad9664b044ca7b9bac7e10a92e500a"
+    },
+    {
+      "name": "CAM0202S.BIN",
+      "numeric_group": [
+        2,
+        2,
+        "S"
+      ],
+      "record_count": 129,
+      "sha256": "2a80e01fecae1c5d5b886a6f8298dc92a26aa5a9f9243bda2b338ea7daa8d3cf"
+    },
+    {
+      "name": "CAM0300S.BIN",
+      "numeric_group": [
+        3,
+        0,
+        "S"
+      ],
+      "record_count": 55,
+      "sha256": "eaac33aa778f6834eaefc70c1f9800cfd67c271de37eb629b754c679e7f0c924"
+    },
+    {
+      "name": "CAM0301A.BIN",
+      "numeric_group": [
+        3,
+        1,
+        "A"
+      ],
+      "record_count": 91,
+      "sha256": "f65e82cfa6173803c826335a227867afe727ad5bb5602143b61df3a535e1f6a9"
+    },
+    {
+      "name": "CAM0301B.BIN",
+      "numeric_group": [
+        3,
+        1,
+        "B"
+      ],
+      "record_count": 65,
+      "sha256": "287c224d0423d04af100954be77fec8c568fcf57f9900b0c67099d75bc43f321"
+    },
+    {
+      "name": "CAM0301S.BIN",
+      "numeric_group": [
+        3,
+        1,
+        "S"
+      ],
+      "record_count": 203,
+      "sha256": "ab6cf40f44965ab2b976448c3df83ad3e279288b4a1f444d58dd3adddcb0cfc2"
+    },
+    {
+      "name": "CAM0302A.BIN",
+      "numeric_group": [
+        3,
+        2,
+        "A"
+      ],
+      "record_count": 108,
+      "sha256": "0e2205a227aa9abef437580cbe6ac4927a589852705ecdb74e6e5f410648838f"
+    },
+    {
+      "name": "CAM0302S.BIN",
+      "numeric_group": [
+        3,
+        2,
+        "S"
+      ],
+      "record_count": 55,
+      "sha256": "51a46f23dc7c97010044e030781d9af9339596f18d91cd6f8b16f88ecba6b032"
+    },
+    {
+      "name": "CAM0400M.BIN",
+      "numeric_group": [
+        4,
+        0,
+        "M"
+      ],
+      "record_count": 171,
+      "sha256": "bdfb3bc8c13f239202f2d6056658b93a9515d37e5c58aea724ba528b795ec23b"
+    },
+    {
+      "name": "CAM0400S.BIN",
+      "numeric_group": [
+        4,
+        0,
+        "S"
+      ],
+      "record_count": 108,
+      "sha256": "824f401bb4aa77c1ba5a6ac313597c7fa9ea8d6fc80ec21e25e5d62c346fb49a"
+    },
+    {
+      "name": "CAM0401S.BIN",
+      "numeric_group": [
+        4,
+        1,
+        "S"
+      ],
+      "record_count": 15,
+      "sha256": "287cb897fa30e646bfc7cf75876b57be6f5639ba162a292085ba0cc04b983f7d"
+    },
+    {
+      "name": "CAM0402K.BIN",
+      "numeric_group": [
+        4,
+        2,
+        "K"
+      ],
+      "record_count": 64,
+      "sha256": "297cae0e376bbbb6be785b25f6db6b41052ef91d58a558d9daf7ea423f4be644"
+    },
+    {
+      "name": "CAM0402S.BIN",
+      "numeric_group": [
+        4,
+        2,
+        "S"
+      ],
+      "record_count": 81,
+      "sha256": "ec25523b7687570c96fa47735432d3ee058b6657dbfda06d9bf8e3f542026c7c"
+    },
+    {
+      "name": "CAM0500S.BIN",
+      "numeric_group": [
+        5,
+        0,
+        "S"
+      ],
+      "record_count": 143,
+      "sha256": "77463f4f67be207be9a890f0089d1b39f2e1463a9b3e0e0656b6e54e2e644014"
+    },
+    {
+      "name": "CAM0501E.BIN",
+      "numeric_group": [
+        5,
+        1,
+        "E"
+      ],
+      "record_count": 77,
+      "sha256": "7462aceb5a59f16d5fc45a23d44e5ce74585fc0f5d8f5788f7e2828f7e640826"
+    },
+    {
+      "name": "CAM0501S.BIN",
+      "numeric_group": [
+        5,
+        1,
+        "S"
+      ],
+      "record_count": 99,
+      "sha256": "6b1ec14f370cb66fc633f0623249b5eb7b3f8ca328da48ddb4dfc21247f1b789"
+    },
+    {
+      "name": "CAM0502K.BIN",
+      "numeric_group": [
+        5,
+        2,
+        "K"
+      ],
+      "record_count": 47,
+      "sha256": "6e8767c79eeb74551f411e80b18d4e4f6bd6730392246364c2a047af4934e3ae"
+    },
+    {
+      "name": "CAM0600M.BIN",
+      "numeric_group": [
+        6,
+        0,
+        "M"
+      ],
+      "record_count": 142,
+      "sha256": "12d9133b35f0490d282e9cdba5a2f8272c3d3dad2e57d48e0178f0d77331bbf1"
+    },
+    {
+      "name": "CAM0600S.BIN",
+      "numeric_group": [
+        6,
+        0,
+        "S"
+      ],
+      "record_count": 144,
+      "sha256": "555015c90583fe07983a755950fe59d32638a8cd88e3fd0f91c011cc855a029f"
+    },
+    {
+      "name": "CAM0601S.BIN",
+      "numeric_group": [
+        6,
+        1,
+        "S"
+      ],
+      "record_count": 41,
+      "sha256": "3f74794e1e809bed006fdd7a14fee520f77b46b3816b60372e47640d5ebb6376"
+    },
+    {
+      "name": "CAM0602K.BIN",
+      "numeric_group": [
+        6,
+        2,
+        "K"
+      ],
+      "record_count": 44,
+      "sha256": "747a3507899356b8d25a44d530aa24a42a57714305a75094964187059fcbe26e"
+    },
+    {
+      "name": "CAM0602S.BIN",
+      "numeric_group": [
+        6,
+        2,
+        "S"
+      ],
+      "record_count": 48,
+      "sha256": "7bf06c2cb8b73bff8063029e8a869c59638a7991f07cb8c904bbc50a2643f537"
+    },
+    {
+      "name": "CAM0700S.BIN",
+      "numeric_group": [
+        7,
+        0,
+        "S"
+      ],
+      "record_count": 96,
+      "sha256": "72c8be41b1516b6c72d8bd0ed661921aee89b02fc1e995006af1b4f168e47f12"
+    },
+    {
+      "name": "CAM0701K.BIN",
+      "numeric_group": [
+        7,
+        1,
+        "K"
+      ],
+      "record_count": 118,
+      "sha256": "d90d3d57e6207fdb4c080baa3129202d08aa79055e6863c809b8ea78eab74431"
+    },
+    {
+      "name": "CAM0701S.BIN",
+      "numeric_group": [
+        7,
+        1,
+        "S"
+      ],
+      "record_count": 185,
+      "sha256": "a207aca1673ac3067a34b9d35728b0946e68432b062cb36a647f81fe85213436"
+    },
+    {
+      "name": "CAM0702S.BIN",
+      "numeric_group": [
+        7,
+        2,
+        "S"
+      ],
+      "record_count": 16,
+      "sha256": "159ee7299126aab44f06723569ab6a57abf2d9c6d514c4920879e0f519456d93"
+    },
+    {
+      "name": "CAM0800S.BIN",
+      "numeric_group": [
+        8,
+        0,
+        "S"
+      ],
+      "record_count": 43,
+      "sha256": "2fb6308edaafe2479210eb724c12d2c35fe063920becd6580af2d0f10e8019e9"
+    },
+    {
+      "name": "CAM0801S.BIN",
+      "numeric_group": [
+        8,
+        1,
+        "S"
+      ],
+      "record_count": 52,
+      "sha256": "7d3f448486a10a0acaafe1fdd59b4dfcaab32c342cfdea95be2f9889a582c887"
+    },
+    {
+      "name": "CAM0802S.BIN",
+      "numeric_group": [
+        8,
+        2,
+        "S"
+      ],
+      "record_count": 26,
+      "sha256": "f5a9f88e0098657416565a57c8629ae0e23f4a12074355f38335c78350dfef29"
+    },
+    {
+      "name": "CAM0803B.BIN",
+      "numeric_group": [
+        8,
+        3,
+        "B"
+      ],
+      "record_count": 69,
+      "sha256": "261f6b40db69e0afbccfd43bb46f8a35b3af2311f54da57624cb4b4eb3870ae8"
+    },
+    {
+      "name": "CAM0900K.BIN",
+      "numeric_group": [
+        9,
+        0,
+        "K"
+      ],
+      "record_count": 80,
+      "sha256": "9ab04d5c23fe2fbead12dce86fd923df2e0dd87008f124cec9dcf1c1b3500799"
+    },
+    {
+      "name": "CAM0900S.BIN",
+      "numeric_group": [
+        9,
+        0,
+        "S"
+      ],
+      "record_count": 42,
+      "sha256": "05d5c0c8a84af0b52c92e23ea64b629ee60603484e83de849243690d5b6043d2"
+    },
+    {
+      "name": "CAM0901M.BIN",
+      "numeric_group": [
+        9,
+        1,
+        "M"
+      ],
+      "record_count": 31,
+      "sha256": "f59444274d24bb59408fe53ff8460fdbfce4456dc0747c4c854bb97213b39496"
+    },
+    {
+      "name": "CAM0901S.BIN",
+      "numeric_group": [
+        9,
+        1,
+        "S"
+      ],
+      "record_count": 53,
+      "sha256": "6c69f9a91ba6306ba21deef543b7a5cfe8896a230f95d5db67fbe1ab7e55fb4d"
+    },
+    {
+      "name": "CAM0902S.BIN",
+      "numeric_group": [
+        9,
+        2,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM0903S.BIN",
+      "numeric_group": [
+        9,
+        3,
+        "S"
+      ],
+      "record_count": 11,
+      "sha256": "5b9e3d1f789b845420b50988240a2fbe8688a229096a3f8f0dc34acd47da92cb"
+    },
+    {
+      "name": "CAM1000A.BIN",
+      "numeric_group": [
+        10,
+        0,
+        "A"
+      ],
+      "record_count": 58,
+      "sha256": "48fa7d10cb405fa2b20911bbe2ede2d6305d68703198eee821dca46634380486"
+    },
+    {
+      "name": "CAM1000S.BIN",
+      "numeric_group": [
+        10,
+        0,
+        "S"
+      ],
+      "record_count": 90,
+      "sha256": "24cd43103ab897d63764377f0322f006be9d191407a5d08528545f77ce7ee53b"
+    },
+    {
+      "name": "CAM1001S.BIN",
+      "numeric_group": [
+        10,
+        1,
+        "S"
+      ],
+      "record_count": 101,
+      "sha256": "8831d65ec31e77a80cd45449c2e53dcd264fcaf01dbeff81f8571c23fedb2119"
+    },
+    {
+      "name": "CAM1002E.BIN",
+      "numeric_group": [
+        10,
+        2,
+        "E"
+      ],
+      "record_count": 39,
+      "sha256": "36c4ec64c77965fa5ae1f0720f5154fe223422bd05371a96d808465082451b1f"
+    },
+    {
+      "name": "CAM1002S.BIN",
+      "numeric_group": [
+        10,
+        2,
+        "S"
+      ],
+      "record_count": 137,
+      "sha256": "79e2062d76cf2bef02bd9a02f5e0af3ca5a9481d7dfe6c9917e402e9cd1a4dfc"
+    },
+    {
+      "name": "CAM1003S.BIN",
+      "numeric_group": [
+        10,
+        3,
+        "S"
+      ],
+      "record_count": 20,
+      "sha256": "4361ce8618109cd6c2e37bfa2724961eeddfba248dca86d90824e5b3ea40d686"
+    },
+    {
+      "name": "CAM1200A.BIN",
+      "numeric_group": [
+        12,
+        0,
+        "A"
+      ],
+      "record_count": 53,
+      "sha256": "3209afac6811ca8295fbfee7e70745576f21c02f68cec4911aaf6b5d5163c9d0"
+    },
+    {
+      "name": "CAM1200B.BIN",
+      "numeric_group": [
+        12,
+        0,
+        "B"
+      ],
+      "record_count": 57,
+      "sha256": "792cfc6b8e805f49bc02540f57916267b9d69872a4c2d131631a14d481a1bc1f"
+    },
+    {
+      "name": "CAM1200S.BIN",
+      "numeric_group": [
+        12,
+        0,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM1201A.BIN",
+      "numeric_group": [
+        12,
+        1,
+        "A"
+      ],
+      "record_count": 76,
+      "sha256": "3fad5306529d6421f284b181c2c6bda3e2bec68fcfcb3d719b589bb6cdc95a71"
+    },
+    {
+      "name": "CAM1201S.BIN",
+      "numeric_group": [
+        12,
+        1,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM1202E.BIN",
+      "numeric_group": [
+        12,
+        2,
+        "E"
+      ],
+      "record_count": 115,
+      "sha256": "657ff085b23f8474b830f4323197ee68efaa8054949b05990fce76303f7712f0"
+    },
+    {
+      "name": "CAM1202S.BIN",
+      "numeric_group": [
+        12,
+        2,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM1203S.BIN",
+      "numeric_group": [
+        12,
+        3,
+        "S"
+      ],
+      "record_count": 1,
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd"
+    },
+    {
+      "name": "CAM1900S.BIN",
+      "numeric_group": [
+        19,
+        0,
+        "S"
+      ],
+      "record_count": 12,
+      "sha256": "2ff7fda738ff9fd852ae406fbb3600d845eb6dda3c466475a9543153094f4f86"
+    },
+    {
+      "name": "CAMAL_RACE00S.BIN",
+      "numeric_group": null,
+      "record_count": 20,
+      "sha256": "6a7c5c1cea8473d06e13f12bd68f4c7e59fbd9d50aec69d0c092e31bfe6b5e1c"
+    },
+    {
+      "name": "CAMAL_RACE01S.BIN",
+      "numeric_group": null,
+      "record_count": 20,
+      "sha256": "6a7c5c1cea8473d06e13f12bd68f4c7e59fbd9d50aec69d0c092e31bfe6b5e1c"
+    },
+    {
+      "name": "CAMEC00S.BIN",
+      "numeric_group": null,
+      "record_count": 45,
+      "sha256": "0e55b3537e5f51ec0bda3c0398d7b9f072cf2614df02e42abb06206109dcf25f"
+    },
+    {
+      "name": "CAMEC01S.BIN",
+      "numeric_group": null,
+      "record_count": 34,
+      "sha256": "5bac01b79a3ce9811a2d7a4cc26a740e438254a6dd0a1d7e87259d47f29bbeea"
+    },
+    {
+      "name": "CAMEC02S.BIN",
+      "numeric_group": null,
+      "record_count": 16,
+      "sha256": "f23c5e3ab43fe55f28d2bdd0c89e5944e6107ba6ce1b148c89c640c7dc632889"
+    },
+    {
+      "name": "CAMEC03S.BIN",
+      "numeric_group": null,
+      "record_count": 5,
+      "sha256": "835bd5933fb9a353d2a502815159c753ebcafd5adc847c28076eff91a27cec14"
+    },
+    {
+      "name": "CAMEC04S.BIN",
+      "numeric_group": null,
+      "record_count": 14,
+      "sha256": "4886eb00722666469cae0cb50efda92eb7d448598d95ff181722ccec5bcd258b"
+    },
+    {
+      "name": "CAMEC05S.BIN",
+      "numeric_group": null,
+      "record_count": 14,
+      "sha256": "7f67bb287aeb0ad5a331012a520af8645ce4006159e9d1ae732d3ba719a78213"
+    },
+    {
+      "name": "CAMEC30S.BIN",
+      "numeric_group": null,
+      "record_count": 7,
+      "sha256": "55e88c577ee69f34d71ce5ee97b04090d92986c808b2cf88fd04bf8898829b51"
+    },
+    {
+      "name": "CAMEC31S.BIN",
+      "numeric_group": null,
+      "record_count": 28,
+      "sha256": "1ea298c02d66e39219dace90e7d2c3f52bf42755a0f5bb1e3735a99567e3f641"
+    },
+    {
+      "name": "CAMEC32S.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "ebd2faf697507417de469ca5975cb1d6ef31615864ec6acc54bea6483bdf8ee7"
+    },
+    {
+      "name": "CAMEC33S.BIN",
+      "numeric_group": null,
+      "record_count": 3,
+      "sha256": "367d89ec54373473f3441f27aeb80cb87d411cfc1c350e4c8082635566645f22"
+    },
+    {
+      "name": "CAMEC34S.BIN",
+      "numeric_group": null,
+      "record_count": 3,
+      "sha256": "2363e4b39f105ae9779b3d04ca58094518355b0a82201726d42ba0015b828412"
+    },
+    {
+      "name": "CAMEC35S.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "4c3247f3376736d13efbe1aa146ef5b6821c35c8138169678fbc85dae3550ba6"
+    },
+    {
+      "name": "CAMGARDEN00S.BIN",
+      "numeric_group": null,
+      "record_count": 33,
+      "sha256": "c05cee68dae045cec714ef9d257f9424f68cfddf45c4b37f867196eb91b103fb"
+    },
+    {
+      "name": "CAMGARDEN01S.BIN",
+      "numeric_group": null,
+      "record_count": 14,
+      "sha256": "94424ecc111cc15bf18c76b7f6f248421b78484fe842b32ac6d5e46106eb3ce6"
+    },
+    {
+      "name": "CAMGARDEN02S.BIN",
+      "numeric_group": null,
+      "record_count": 13,
+      "sha256": "699666a3b756df43a93f520b4685567c8d6942e48b899f4b9afa1f7daeeb9f34"
+    },
+    {
+      "name": "CAMMCART00S.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "51731146bb5262be28821f3797d732245f3c9950539d4ca16c71af33ed1f7e46"
+    },
+    {
+      "name": "CAMMCART01S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "2c3bf82bd50e79cfa8c9ebc03ff90ca3247231c61ea682ac6e745b33d31f4eb2"
+    },
+    {
+      "name": "CAMMCART02S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "2c3bf82bd50e79cfa8c9ebc03ff90ca3247231c61ea682ac6e745b33d31f4eb2"
+    },
+    {
+      "name": "CAMMCART03S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "2c3bf82bd50e79cfa8c9ebc03ff90ca3247231c61ea682ac6e745b33d31f4eb2"
+    },
+    {
+      "name": "CAMMCART04S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "2c3bf82bd50e79cfa8c9ebc03ff90ca3247231c61ea682ac6e745b33d31f4eb2"
+    },
+    {
+      "name": "CAMMCART05S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "2c3bf82bd50e79cfa8c9ebc03ff90ca3247231c61ea682ac6e745b33d31f4eb2"
+    },
+    {
+      "name": "CAMMI0100E.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "e88eca1f27a78db753cf10c10be5e2530b7da15effa52a7671d4fb24ca74097d"
+    },
+    {
+      "name": "CAMMI0101S.BIN",
+      "numeric_group": null,
+      "record_count": 6,
+      "sha256": "588e1de6711a36db7385720cc56ea0151377ae1fc422b6ea0113632eb7639000"
+    },
+    {
+      "name": "CAMMI0102B.BIN",
+      "numeric_group": null,
+      "record_count": 0,
+      "sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b"
+    },
+    {
+      "name": "CAMMI0200E.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "cc5361fb86d37f9b582417181e1a78a2f4123ca0a7a7f2652d9f14f9c4ff66c7"
+    },
+    {
+      "name": "CAMMI0200S.BIN",
+      "numeric_group": null,
+      "record_count": 8,
+      "sha256": "22c06d5962da72ed70cb3f53873c6246b5f0d081275bdb619cea2ce3761cae62"
+    },
+    {
+      "name": "CAMMI0202M.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "54038af98d19d604aeb51480c4e4581089d0bce50ca6c834dceb16c3bf127edf"
+    },
+    {
+      "name": "CAMMI0301A.BIN",
+      "numeric_group": null,
+      "record_count": 3,
+      "sha256": "55cb5b60b1c45e67f640532555ed84b40118aa432c328c658c90b95e49793986"
+    },
+    {
+      "name": "CAMMI0302A.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "d633a0d1b9a4cd8f1be0a67a47c971bf070b25580dbe6b858937d5fff141e7f5"
+    },
+    {
+      "name": "CAMMI0402S.BIN",
+      "numeric_group": null,
+      "record_count": 0,
+      "sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b"
+    },
+    {
+      "name": "CAMMI0500S.BIN",
+      "numeric_group": null,
+      "record_count": 5,
+      "sha256": "155b99f01399a2e5f62c8d5dc2bd05c7187b46f08178996523183d90f5c5b7d8"
+    },
+    {
+      "name": "CAMMI0501S.BIN",
+      "numeric_group": null,
+      "record_count": 7,
+      "sha256": "2a86018a55023ffad1d32b6ea81aac5e0ee7a511729fbb81b8fb89841ba5691d"
+    },
+    {
+      "name": "CAMMI0502K.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "b2b73f93aa4f96821f8cd40c35e378f3442ed4f831b4e29a7e5070c2f4347838"
+    },
+    {
+      "name": "CAMMI0601S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "f41538a3bed1a2a0068dbb61eb758d294c5eff90e6c321f6c61413f91d25333b"
+    },
+    {
+      "name": "CAMMI0602K.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "49661be88cd72c4453b7c9f6043b148413d284da5cef734449c6d77887a829c5"
+    },
+    {
+      "name": "CAMMI0700S.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "d489a81b0967d97312c6c154b9906b1accb1433de9507646cbbb1e48818a8318"
+    },
+    {
+      "name": "CAMMI0701K.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "3c90e2ea85deb61e9e0ed7f70deb2c6ebbd1c210d65cf7fab64192cdc9af8dcb"
+    },
+    {
+      "name": "CAMMI0701S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "92740505c805f4e830a7ca7100c9f89a53dd99e8688be58801466f181281a829"
+    },
+    {
+      "name": "CAMMI0803B.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "6986818a878657591d93e74cfc6c6d165b6fe269462921389b4da02c2088429d"
+    },
+    {
+      "name": "CAMMI0901M.BIN",
+      "numeric_group": null,
+      "record_count": 3,
+      "sha256": "4390a2786ff0ac726b7d27fbc23a77090174ccc2c3cc24166211512ae76cf7cf"
+    },
+    {
+      "name": "CAMMI1002E.BIN",
+      "numeric_group": null,
+      "record_count": 3,
+      "sha256": "2c5476f5ff1c62bcb38df7d9bee6384985564850640f2c707b705bbc17b58622"
+    },
+    {
+      "name": "CAMMI1002S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "43f8f2951096de409fd6c4d77aedc6bbd5343a5450be46ac89ef2b74d198ae93"
+    },
+    {
+      "name": "CAMMI1201A.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "06b4c600fb6ea5c51dcc81380092708d37e6b7eb101d328a42e62f5925e4c734"
+    },
+    {
+      "name": "CAMMI2601K.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "8e36cdee6e05099f82261432aded57be719dcf87e1ed1c2ced8a96a3bdaefed2"
+    },
+    {
+      "name": "CAMMI2604S.BIN",
+      "numeric_group": null,
+      "record_count": 1,
+      "sha256": "8454b7ec9f06b9477b9c9decb812ec3c120f9cfa55d92dc1c79ea30c2668863b"
+    },
+    {
+      "name": "CAMMI2900S.BIN",
+      "numeric_group": null,
+      "record_count": 4,
+      "sha256": "8feeaf307e13560e4323c20b68f3a6801a69e2df8f3617360dcbebbf8016442f"
+    },
+    {
+      "name": "CAMMI3300S.BIN",
+      "numeric_group": null,
+      "record_count": 2,
+      "sha256": "2eef37d17c1145dc3afda18f6406c184b4b7c848e6372266270a6ae4ef3c0971"
+    },
+    {
+      "name": "CAMMR00S.BIN",
+      "numeric_group": null,
+      "record_count": 77,
+      "sha256": "1503a2bb82b326753f7e1f14cc97b07ae8c13f8b03b8f5cfcc6fbb24811dc6df"
+    },
+    {
+      "name": "CAMMR01S.BIN",
+      "numeric_group": null,
+      "record_count": 20,
+      "sha256": "9bae2ca10e5a076c3ffb47e5838fc8e6831ccb414ed07ae6ae8cbb7f41c3c7f8"
+    },
+    {
+      "name": "CAMMR02S.BIN",
+      "numeric_group": null,
+      "record_count": 83,
+      "sha256": "4f74fc611224db6ae6aadd83b693c008e51bc6da397c5f8413db4c0ec773a46e"
+    },
+    {
+      "name": "CAMMR03S.BIN",
+      "numeric_group": null,
+      "record_count": 6,
+      "sha256": "181fb6033ffb6e565cb580ad5a07daddfa5bfcf1008fb9d6b3d0707add0554ba"
+    },
+    {
+      "name": "CAMPAST00S.BIN",
+      "numeric_group": null,
+      "record_count": 8,
+      "sha256": "a6bf8027bb301423e82b98b28d27d77f21630e96f0a393bd3432721552ebb7b5"
+    },
+    {
+      "name": "CAMPAST01S.BIN",
+      "numeric_group": null,
+      "record_count": 18,
+      "sha256": "5139763069d5f1d4953bc450a6d505e5e311d24eee900033d97ad66377531a68"
+    },
+    {
+      "name": "CAMPAST02S.BIN",
+      "numeric_group": null,
+      "record_count": 13,
+      "sha256": "eb92c3cc43611aba6042b9dc63cc32e33a68ce7c61ee1e4a9f3daf012439a174"
+    },
+    {
+      "name": "CAMSBOARD00S.BIN",
+      "numeric_group": null,
+      "record_count": 4,
+      "sha256": "df73ce45a74fbe42a43337485023dcda07cee4a3a905e93a193038982255f636"
+    },
+    {
+      "name": "CAMSBOARD01S.BIN",
+      "numeric_group": null,
+      "record_count": 4,
+      "sha256": "df73ce45a74fbe42a43337485023dcda07cee4a3a905e93a193038982255f636"
+    },
+    {
+      "name": "CAMSHT1S.BIN",
+      "numeric_group": null,
+      "record_count": 20,
+      "sha256": "4361ce8618109cd6c2e37bfa2724961eeddfba248dca86d90824e5b3ea40d686"
+    },
+    {
+      "name": "CAMSHT2S.BIN",
+      "numeric_group": null,
+      "record_count": 20,
+      "sha256": "4361ce8618109cd6c2e37bfa2724961eeddfba248dca86d90824e5b3ea40d686"
+    },
+    {
+      "name": "CAMSS00S.BIN",
+      "numeric_group": null,
+      "record_count": 40,
+      "sha256": "270c1ee36aaf0f36f80e5227a58422470a1b63931aaab82917b69cf5b5dfc0d4"
+    },
+    {
+      "name": "CAMSS01S.BIN",
+      "numeric_group": null,
+      "record_count": 24,
+      "sha256": "635190212c09c7448d227a8c59c7855e9ab43ea46f72ecf024accaf7f01b22be"
+    },
+    {
+      "name": "CAMSS02S.BIN",
+      "numeric_group": null,
+      "record_count": 44,
+      "sha256": "e4f22872ef12fd0aae8f1f87b7d813d4ed15f7bfc2e168599e80919bf6fc87f8"
+    },
+    {
+      "name": "CAMSS03S.BIN",
+      "numeric_group": null,
+      "record_count": 52,
+      "sha256": "9a6a077d124ecdb6d43975a59b23636544dbbe9185536cbb0a7bc54bbb7b0faa"
+    },
+    {
+      "name": "CAMSS04S.BIN",
+      "numeric_group": null,
+      "record_count": 53,
+      "sha256": "615c7777c5bf1f8177e37ac48a9954c713da672835d971e11ae2b18193896349"
+    },
+    {
+      "name": "CAMSS05S.BIN",
+      "numeric_group": null,
+      "record_count": 7,
+      "sha256": "b8a44f6a2d278a2a18531978047868728b10eba22e606b0011cacb6064357d31"
+    }
+  ],
+  "total_records": 4955,
+  "total_sources": 127,
+  "version": "0.0.9.1D"
+}

@@ -1,0 +1,10 @@
+SA3DS 0.0.9.1E-WIP4 owner-data-free regression results, Oct 13 2026 02:00 EDT
+Verified WIP3 parent SHA-256: bae68d1971b1676c294680b1d4c0964ec1f7e8a9e1c2910241ea85bfb9dd6058
+Parent ZIP integrity: unzip -t PASS
+Command: bash tests/run_sonic_action_preflight.sh
+Result: PASS (synthetic valid/slot/empty/interpolation/nonfinite/invalid-frame; native source contract)
+Command: bash tests/run_sa3ds_current_host.sh
+Result: PASS (inherited 0G White Zone, 1D CAM synthetic, WIP1 visual source, WIP2 GPU arena, WIP3 animation tick, WIP4 action preflight)
+Command: cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Isrc/sa3c -Isrc/game src/sa3c/sa3c_pose.c src/game/sonic_action_preflight.c tests/test_sonic_action_preflight.c -lm -o [temporary test binary]; ASAN_OPTIONS=detect_leaks=1 [temporary test binary]
+Result: PASS (no sanitizer reports)
+Not run: owner-generated Sonic SA3C pose validation; native devkitARM/libctru compilation; Old 3DS/Old 3DS XL hardware boot/render; retail transition trace.

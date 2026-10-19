@@ -1,0 +1,94 @@
+{
+  "schema": "sa3ds-pc2004-sonic-decode-report-v1",
+  "source": {
+    "size": 7647232,
+    "sha256": "76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5",
+    "image_base": 268435456
+  },
+  "exports": {
+    "___SONIC_MODELS": 268467620,
+    "___SONIC_OBJECTS": 268467304,
+    "___SONIC_ACTIONS": 268467664,
+    "___SONIC_MOTIONS": 268468260
+  },
+  "tables": {
+    "models_entries": 11,
+    "models_nonnull": 10,
+    "objects_entries": 79,
+    "objects_nonnull": 77,
+    "actions_entries": 149,
+    "actions_nonnull": 146,
+    "null_action_indices": [
+      24,
+      25,
+      26
+    ]
+  },
+  "hierarchies": {
+    "distinct_action_roots": 6,
+    "root_node_counts": {
+      "0x1056AF50": 73,
+      "0x105729CC": 74,
+      "0x1057BC44": 1,
+      "0x1062DE88": 73,
+      "0x1062FE6C": 1,
+      "0x107276E4": 1
+    },
+    "normal_action0_root": "0x1056AF50",
+    "normal_action0_nodes": 73
+  },
+  "models": {
+    "distinct_action_hierarchy_models": 87,
+    "normal_hierarchy_distinct_models": 28,
+    "normal_hierarchy_points": 1161,
+    "normal_hierarchy_triangles": 1993,
+    "all_action_hierarchy_points": 3389,
+    "all_action_hierarchy_triangles": 5863,
+    "exported_models_nonnull": 10
+  },
+  "motions": {
+    "count": 146,
+    "type_distribution": {
+      "3": 136,
+      "7": 10
+    },
+    "interpolation_distribution": {
+      "2": 136,
+      "3": 10
+    },
+    "node_count_distribution": {
+      "73": 126,
+      "74": 1,
+      "1": 19
+    },
+    "frame_min": 7,
+    "frame_max": 100,
+    "position_channels": 468,
+    "rotation_channels": 3392,
+    "scale_channels": 23,
+    "position_keys": 5570,
+    "rotation_keys": 80286,
+    "scale_keys": 348
+  },
+  "evidence_boundary": {
+    "confirmed": [
+      "exact supported original 2004 CHRMODELS DLL fingerprint",
+      "Sonic 11/79/149 table entry counts",
+      "0x34 object transform/child/sibling layout",
+      "8-byte action object/motion layout",
+      "12-byte motion header and packed type/interpolation halves",
+      "type-3 16-byte and type-7 24-byte per-node motion layouts",
+      "16-byte frame+vec3-float and frame+angle3 key layouts",
+      "0x2C SADX model record and finite point/normal arrays",
+      "0x1C Sonic meshset record, strip and quad primitive encodings",
+      "20-byte materials and signed-16 UV pair storage"
+    ],
+    "not_yet_promoted": [
+      "historical names/semantics of unused meshset pointer slots",
+      "exact BAMS-to-render-axis/order semantics",
+      "exact runtime animation ACTION index semantic names",
+      "exact interpolation equation for interpolation values 2 and 3",
+      "texture archive sampling/material flag runtime semantics"
+    ]
+  }
+}

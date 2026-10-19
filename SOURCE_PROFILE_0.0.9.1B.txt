@@ -1,0 +1,16 @@
+SA3DS SOURCE PROFILE — 0.0.9.1B
+
+Engineering baseline:
+  SADX PC 2004 sonic.exe
+  size: 55,549,952 bytes
+  SHA-256: 6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74
+
+Emerald Coast visual texture archives validated:
+  BEACH01.PVM  fb6fa479787fb29e57688ea56cf21da6952142d9ebb98665895d9c1372105a07
+  BEACH02.PVM  d871b7a7e78d8ea96c93a77e77290a7a2da3630942e40fcd7c744875d8a8e866
+  BEACH03.PVM  01fc98834be904a173a7aba7a3f18ef88418f9460bb78c4cfd9aba99864e6fb3
+  OBJ_BEACH.PVM 8b64b5b454dc7fac3474932dde42d749a46e406c4e756865b21e7d134227d50c
+  BEACH_SEA.PVM 0b9ee8d893cdb5b3d3f8a8e9d035292559159295d2b0bdd8683e7a190b67668d
+  BG_BEACH.PVM 6ee04c83f990066cec8cad4763e3ee8176bf05ebb277ad9d337e996488d718a4
+
+Generated owner-side packages are not distributable checkpoint payloads.

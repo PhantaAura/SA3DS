@@ -1,0 +1,2188 @@
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/0.0.9.0G_README.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/0.0.9.0G_README.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/0.0.9.0G_README.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/0.0.9.0G_README.md	2026-08-25 13:17:14.782706431 +0000
+@@ -0,0 +1,23 @@
++# SA3DS 0.0.9.0G — White Zone Validation Gate
++
++This is a code-only Sonic Adventure 3DS development checkpoint. It contains no Sega game assets, owner-generated Sonic payloads, third-party mod payloads, `.3dsx`, or CIA.
++
++## Highlights
++
++- 10 contiguous deterministic White Zone sections including dedicated TURN.
++- 24-unit course width and 10-unit measurement markers retained.
++- Selected-zone fall/out-of-bounds fallback goes through the real physics reset path.
++- Bottom-screen parity HUD snapshot data for position, XYZ velocity, speed, heading, contact/slope, action, animation, trace and resource metrics.
++- FOLLOW and fixed REFERENCE measurement camera modes.
++- Extended per-frame White Zone CSV with test identity, movement/contact and animation fields.
++- Strict `REFERENCE.csv` vs `SA3DS.csv` comparator aligned by `(test_id, frame)`.
++- 12 deterministic protocols covering acceleration, coast, braking, low/high-speed turning, jump tap/hold, Spin Dash, Roll exit, slopes and air control.
++- 1,024-state proof that animation observation/selection remains presentation-only.
++
++## Evidence rule
++
++`VERIFIED 1:1` is only emitted for an exact trace match when the comparator is explicitly told that the reference is a live retail SADX capture. Otherwise exact/tolerance agreement is `MATCHES MEASURED FIELDS`. Global `PHYSICS_1TO1` remains false.
++
++## Build
++
++Use `build_0_0_9_0G.sh` after placing owner-generated `sonic.sa3c` and `sonic.sa3t` in `runtime_0_0_9_0G/romfs/sa3ds/`. devkitARM is required.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/CHECKPOINT_0.0.9.0G.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/CHECKPOINT_0.0.9.0G.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/CHECKPOINT_0.0.9.0G.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/CHECKPOINT_0.0.9.0G.md	2026-08-25 13:18:15.283736207 +0000
+@@ -0,0 +1,28 @@
++# SA3DS 0.0.9.0G — White Zone Validation Gate
++
++## Input
++
++Reconstructed from the real code-only `SA3DS_0.0.9.0F_WhiteZoneParityFoundation.zip` recovered from the persistent SA3DS library. The transient overnight H1-H4 archives were unavailable, so this checkpoint does not claim byte-for-byte inheritance from those sandboxes.
++
++## What 0G adds
++
++- 10 deterministic White Zone sections with dedicated TURN and final AIR CONTROL / LANDING.
++- 24-unit course width and 10-unit measurement markers retained.
++- Selected-zone fallback wired into the actual physics world reset position.
++- Portable parity HUD snapshot layer.
++- FOLLOW and REFERENCE camera states.
++- Extended White Zone trace format with test, movement/contact and animation fields.
++- Strict retail comparator aligned by `(test_id, frame)`.
++- 12 deterministic movement protocols.
++- 1,024-state animation observer/selector non-mutation stress.
++- Explicit Emerald Coast acceptance gate and behavior-by-behavior parity matrix.
++
++## Evidence state
++
++`PHYSICS_1TO1 = false`.
++
++No `.3dsx`, physical Old 3DS observation, or new live SADX trace is claimed in this checkpoint. devkitARM and canonical owner payloads were not mounted in the execution environment used to rebuild the ZIP.
++
++## Validation
++
++See `TEST_RESULTS_0.0.9.0G.txt` for the exact observed pass set and environment limitations.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/CURRENT_CHECKPOINT.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/CURRENT_CHECKPOINT.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/CURRENT_CHECKPOINT.md	2026-08-24 22:51:21.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/CURRENT_CHECKPOINT.md	2026-08-25 13:17:14.754705954 +0000
+@@ -1,5 +1,13 @@
+-# Current checkpoint
++# CURRENT CHECKPOINT — SA3DS 0.0.9.0G
+ 
+-**0.0.9.0F — Physics-Synced Real Sonic / White Zone Parity Foundation**
++**White Zone Validation Gate**
+ 
+-Host/source validation passes. New 3DS runtime source is ready for the user's devkitARM build. Old 3DS hardware verification and retail-reference trace capture remain pending.
++Canonical source input: recovered `SA3DS_0.0.9.0F_WhiteZoneParityFoundation.zip` from the user's persistent SA3DS library.
++
++The earlier overnight H1-H4 ZIPs were not mounted, so 0G was rebuilt directly from the real 0F source rather than claiming a merge that could not be verified.
++
++0G contains the 10-section White Zone course with TURN, selected-zone physics fallback, developer HUD snapshot layer, FOLLOW/REFERENCE cameras, extended parity CSV capture, strict retail comparator, 12 deterministic movement protocols, and stronger animation observer invariants.
++
++`PHYSICS_1TO1 = false`.
++
++See `TEST_RESULTS_0.0.9.0G.txt`, `docs/WHITE_ZONE_PARITY_MATRIX_0.0.9.0G.md`, and `docs/EMERALD_COAST_GATE_0.0.9.0G.md`.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/RUN_STATE.json /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/RUN_STATE.json
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/RUN_STATE.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/RUN_STATE.json	2026-08-25 13:17:14.746705817 +0000
+@@ -0,0 +1,12 @@
++{
++  "project": "SA3DS",
++  "checkpoint": "0.0.9.0G",
++  "name": "White Zone Validation Gate",
++  "baseline_recovered_from_library": "SA3DS_0.0.9.0F_WhiteZoneParityFoundation.zip",
++  "persistence": "reconstructed from canonical 0F because prior overnight H1-H4 sandboxes were not mounted",
++  "physics_1to1": false,
++  "retail_live_capture": false,
++  "old_3ds_hardware_test": false,
++  "three_dsx_built": false,
++  "next": "Exercise the White Zone measurement pipeline on Old 3DS and against one live SADX protocol, then begin Emerald Coast Source Decode."
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/TEST_RESULTS_0.0.9.0G.txt /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/TEST_RESULTS_0.0.9.0G.txt
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/TEST_RESULTS_0.0.9.0G.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/TEST_RESULTS_0.0.9.0G.txt	2026-08-25 13:17:14.738705681 +0000
+@@ -0,0 +1,37 @@
++SA3DS 0.0.9.0G — White Zone Validation Gate
++
++Observed in this execution environment:
++
++PASS 10-section White Zone geometry/reset contract
++PASS actual physics out-of-bounds fallback returns to selected TURN zone
++PASS HUD snapshot plumbing
++PASS FOLLOW / REFERENCE camera state behavior
++PASS 1,024-state animation observer/selector non-mutation stress
++PASS known runtime animation mappings (32->21, 15->14, 14->14, 19->11)
++PASS 12 deterministic White Zone protocol byte-repeat checks
++PASS protocol behavior checks
++  jump_tap candidate apex row index 18, landing row index 38
++  jump_hold candidate apex row index 57, landing row index 92
++PASS strict trace comparator exact-match / retail-live classification / divergence reporting tests
++PASS 0.0.9.0G runtime source contract
++PASS inherited physics-synced Sonic runtime animation resolver
++PASS inherited 0.0.9.0F 3DS runtime source contract
++PASS 19 Movement Lab scenario regressions (observed before wrapper timeout)
++PASS general surface/contact tests
++PASS PC2004 PGetBreak/PGetInertia arithmetic tests
++PASS PC2004 collision-work layout/init tests
++PASS surface runtime support-order tests
++PASS Steam ground candidate tests
++PASS Steam air candidate tests
++PASS Steam Roll/Spin Dash evidence tests
++PASS trace determinism comparison
++PASS runtime .sa3dspak package reader (rerun separately)
++PASS 8 malformed .sa3dspak cases (rerun separately)
++
++Environment limitations / non-claims:
++- The monolithic inherited host wrapper hit the execution harness timeout after its physics/scenario section; its package-reader tail was rerun separately and passed.
++- Canonical owner CHRMODELS/PVM payloads were not mounted for this run, so owner-data extraction gates were not rerun.
++- devkitARM is unavailable here; no 0G .3dsx build is claimed.
++- No physical Old 3DS result is claimed.
++- No new live SADX retail trace is claimed.
++- PHYSICS_1TO1 remains false.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/build_0_0_9_0G.sh /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/build_0_0_9_0G.sh
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/build_0_0_9_0G.sh	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/build_0_0_9_0G.sh	2026-08-25 13:17:58.791455381 +0000
+@@ -0,0 +1,10 @@
++#!/bin/sh
++set -eu
++cd "$(dirname "$0")"
++if [ "$#" -eq 2 ]; then
++  python3 tools/prepare_3ds_owner_assets.py "$1" "$2" --runtime runtime_0_0_9_0G
++elif [ "$#" -ne 0 ]; then
++  echo "usage: $0 [CHRMODELS.DLL SONIC.PVM]" >&2
++  exit 2
++fi
++exec make -C runtime_0_0_9_0G
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/EMERALD_COAST_GATE_0.0.9.0G.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/EMERALD_COAST_GATE_0.0.9.0G.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/EMERALD_COAST_GATE_0.0.9.0G.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/EMERALD_COAST_GATE_0.0.9.0G.md	2026-08-25 13:17:14.730705545 +0000
+@@ -0,0 +1,14 @@
++# Emerald Coast Source Decode Acceptance Gate
++
++White Zone source-side validation is complete enough to move to the first real-stage decode once the measurement pipeline has been exercised on user hardware.
++
++Required before declaring the gate exercised:
++
++1. Generate owner-only `sonic.sa3c` / `sonic.sa3t` from the user's supported source data.
++2. Build `runtime_0_0_9_0G` with devkitARM on the Mac.
++3. Boot the resulting build on an Old 3DS / Old 3DS XL.
++4. Verify selected-zone reset, TURN lane, FOLLOW/REFERENCE camera switching, developer HUD, and CSV recording.
++5. Capture at least one corresponding live SADX protocol and run `tools/compare_white_zone_traces.py` against the SA3DS trace.
++6. Confirm the comparator aligns by `(test_id, frame)` and either reports exact agreement or pinpoints a reproducible first divergence. A mismatch does not justify a 1:1 claim, but it does validate the measurement pipeline.
++
++Once those checks work, Emerald Coast Source Decode may begin. Full global physics certification is **not** required before stage decoding; real-stage collision, slope, camera and object evidence is needed for the next parity layer.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/WHITE_ZONE_1TO1_PROTOCOL.json /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/WHITE_ZONE_1TO1_PROTOCOL.json
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/WHITE_ZONE_1TO1_PROTOCOL.json	2026-08-24 22:51:21.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/WHITE_ZONE_1TO1_PROTOCOL.json	2026-08-25 13:17:14.714705272 +0000
+@@ -1,17 +1,24 @@
+ {
+-  "schema": "sa3ds-white-zone-parity-protocol-v1",
++  "schema": "sa3ds-white-zone-parity-protocol-v2",
+   "purpose": "Controlled pre-Emerald-Coast behavior comparison; no global 1:1 claim",
+-  "trace_format": 6,
++  "trace_format": "sa3ds-parity-trace-v1",
+   "marker_spacing_world_units": 10.0,
++  "course_width_world_units": 24.0,
++  "camera_modes": ["FOLLOW", "REFERENCE"],
+   "tests": [
+-    {"id":"flat_accel","zone":"ACCELERATION","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"coast","zone":"BRAKE / COAST","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"brake","zone":"BRAKE / COAST","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"jump_tap","zone":"JUMP","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"jump_hold","zone":"JUMP","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"spindash","zone":"ROLL / SPINDASH","status":"SOURCE_BACKED_KERNEL_REFERENCE_TRACE_PENDING"},
+-    {"id":"uphill","zone":"SLOPE UP","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"},
+-    {"id":"downhill","zone":"SLOPE DOWN","status":"SA3DS_DETERMINISTIC_REFERENCE_PENDING"}
++    {"id":"flat_accel","zone":"ACCELERATION","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"coast","zone":"BRAKE / COAST","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"brake","zone":"BRAKE / COAST","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"turn_low","zone":"TURN","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"turn_high","zone":"TURN","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"jump_tap","zone":"JUMP","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"jump_hold","zone":"JUMP","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"spindash","zone":"ROLL / SPINDASH","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"roll_exit","zone":"ROLL / SPINDASH","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"uphill","zone":"SLOPE UP","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"downhill","zone":"SLOPE DOWN","status":"SOURCE_BACKED_PARTIAL"},
++    {"id":"air_control","zone":"AIR CONTROL / LANDING","status":"SOURCE_BACKED_PARTIAL"}
+   ],
+-  "acceptance_rule": "Only an individual test may be labeled VERIFIED_1TO1 after a reproducible retail-reference trace or equivalent direct evidence matches the SA3DS trace under documented tolerances."
++  "evidence_labels": ["VERIFIED 1:1", "MATCHES MEASURED FIELDS", "NOT VERIFIED", "LIVE CAPTURE PENDING"],
++  "acceptance_rule": "VERIFIED 1:1 requires an exact match against a reference explicitly identified as a live retail SADX capture. Tolerance-only or synthetic agreement is MATCHES MEASURED FIELDS. Global PHYSICS_1TO1 remains false."
+ }
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/WHITE_ZONE_PARITY_MATRIX_0.0.9.0G.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/WHITE_ZONE_PARITY_MATRIX_0.0.9.0G.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/docs/WHITE_ZONE_PARITY_MATRIX_0.0.9.0G.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/docs/WHITE_ZONE_PARITY_MATRIX_0.0.9.0G.md	2026-08-25 13:17:14.722705408 +0000
+@@ -0,0 +1,26 @@
++# SA3DS 0.0.9.0G — White Zone Parity Matrix
++
++Global `PHYSICS_1TO1 = false`.
++
++| Behavior / evidence | 0G classification | Basis / remaining gap |
++|---|---|---|
++| White Zone geometry, 24-unit width, 10-unit markers, 10 contiguous zones | TEST FIXTURE VERIFIED | Original deterministic lab geometry; not retail stage geometry. |
++| Selected-zone reset including real physics out-of-bounds path | TEST FIXTURE VERIFIED | Host test drives the actual physics reset branch and returns to TURN. |
++| Flat acceleration | SOURCE-BACKED / PARTIAL | Deterministic candidate plus recovered SADX/Steam arithmetic; retail live trace still needed. |
++| Coast / release | SOURCE-BACKED / PARTIAL | Deterministic candidate; retail live trace pending. |
++| Braking / reverse | SOURCE-BACKED / PARTIAL | PC-2004 break/inertia evidence plus deterministic protocol; retail trace pending. |
++| Low-speed turning | SOURCE-BACKED / PARTIAL | Dedicated TURN fixture and deterministic protocol; exact retail timing/rates pending live trace. |
++| High-speed turning | SOURCE-BACKED / PARTIAL | Dedicated TURN fixture and deterministic protocol; exact retail timing/rates pending live trace. |
++| Jump tap | SOURCE-BACKED / PARTIAL | Deterministic airborne/landing sequence; exact retail frame parity pending. |
++| Jump hold | SOURCE-BACKED / PARTIAL | Deterministic held-jump sequence; exact retail frame parity pending. |
++| Apex frame / landing frame | LIVE CAPTURE PENDING | 0G records exact candidate rows, but they are not retail-certified. |
++| Spin Dash charge/release | SOURCE-BACKED / PARTIAL | Exact recovered behavior/constants where established plus deterministic state protocol. |
++| Roll entry/exit | SOURCE-BACKED / PARTIAL | Deterministic state protocol; exact retail transition timing still pending. |
++| Uphill / downhill surface response | SOURCE-BACKED / PARTIAL | General-surface and support-order evidence plus deterministic fixtures. |
++| Air control | SOURCE-BACKED / PARTIAL | Recovered airborne candidate behavior; exact retail trace pending. |
++| Dense Sonic runtime animation ID → ACTION slot mappings | SOURCE-BACKED / PARTIAL | Known recovered mappings are tested. |
++| Animation observer cannot mutate physics | VERIFIED ARCHITECTURE INVARIANT | 1,024-state `memcmp` stress test plus runtime guard. |
++| Walk/jog/run animation switch policy | NOT VERIFIED | Selector deliberately reports `PROVISIONAL`; `jog_speed` and `run_speed` are not claimed as retail animation thresholds. |
++| Live SADX frame-by-frame equality | LIVE CAPTURE PENDING | Comparator is ready; no new live retail capture was available in this run. |
++| Old 3DS performance / memory / controls | HARDWARE PENDING | Runtime HUD reports draw calls, triangles and free linear memory, but no physical 3DS observation is claimed. |
++| 0G `.3dsx` | BUILD PENDING | devkitARM is not available in this execution environment. |
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/Makefile /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/Makefile
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/Makefile	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/Makefile	2026-08-25 13:10:18.913537666 +0000
+@@ -0,0 +1,79 @@
++# SA3DS 0.0.9.0G — White Zone Validation Gate
++.SUFFIXES:
++
++ifeq ($(strip $(DEVKITARM)),)
++$(error "Please set DEVKITARM. Example: export DEVKITPRO=/opt/devkitpro; export DEVKITARM=$$DEVKITPRO/devkitARM")
++endif
++
++TOPDIR ?= $(CURDIR)
++include $(DEVKITARM)/3ds_rules
++
++TARGET      := sa3ds_0_0_9_0G_white_zone_validation
++BUILD       := build
++SOURCES     := source ../src/sa3c ../src/sa1/physics ../src/game ../src/platform/3ds
++INCLUDES    := include ../src/sa3c ../src/sa1/physics ../src/game ../src/platform/3ds
++ROMFS       := romfs
++APP_TITLE   := SA3DS 0.0.9.0G
++APP_DESCRIPTION := White Zone Validation Gate
++APP_AUTHOR  := SA3DS project
++
++ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
++CFLAGS := -g -Wall -Wextra -Werror=implicit-function-declaration -O2 -mword-relocations \
++          -ffunction-sections $(ARCH)
++CFLAGS += $(INCLUDE) -D__3DS__
++ASFLAGS := -g $(ARCH)
++LDFLAGS = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
++LIBS := -lcitro3d -lctru -lm
++LIBDIRS := $(CTRULIB)
++
++ifneq ($(BUILD),$(notdir $(CURDIR)))
++export OUTPUT := $(CURDIR)/$(TARGET)
++export TOPDIR := $(CURDIR)
++export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
++export DEPSDIR := $(CURDIR)/$(BUILD)
++
++CFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
++SFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
++PICAFILES := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.v.pica)))
++
++export LD := $(CC)
++export OFILES_SOURCES := $(CFILES:.c=.o) $(SFILES:.s=.o)
++export OFILES_BIN := $(PICAFILES:.v.pica=.shbin.o)
++export OFILES := $(OFILES_BIN) $(OFILES_SOURCES)
++export HFILES := $(PICAFILES:.v.pica=_shbin.h)
++export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
++                  $(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
++export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
++export _3DSXDEPS := $(if $(NO_SMDH),,$(OUTPUT).smdh)
++export _3DSXFLAGS += --romfs=$(CURDIR)/$(ROMFS)
++ifeq ($(strip $(NO_SMDH)),)
++export _3DSXFLAGS += --smdh=$(CURDIR)/$(TARGET).smdh
++endif
++
++.PHONY: all clean check-assets
++all: check-assets $(BUILD)
++	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
++
++check-assets:
++	@test -f $(ROMFS)/sa3ds/sonic.sa3c || (echo "Missing owner-generated romfs/sa3ds/sonic.sa3c"; exit 1)
++	@test -f $(ROMFS)/sa3ds/sonic.sa3t || (echo "Missing owner-generated romfs/sa3ds/sonic.sa3t"; exit 1)
++
++$(BUILD):
++	@mkdir -p $@
++
++clean:
++	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).map
++
++else
++
++$(OUTPUT).3dsx: $(OUTPUT).elf $(_3DSXDEPS)
++$(OFILES_SOURCES): $(HFILES)
++$(OUTPUT).elf: $(OFILES)
++
++.PRECIOUS: %.shbin
++%.shbin.o %_shbin.h: %.shbin
++	$(SILENTMSG) $(notdir $<)
++	$(bin2o)
++
++-include $(DEPSDIR)/*.d
++endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/README.md /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/README.md
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/README.md	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/README.md	2026-08-25 13:17:58.811455722 +0000
+@@ -0,0 +1,35 @@
++# SA3DS 0.0.9.0G — White Zone Validation Runtime
++
++This directory is the Old-3DS White Zone measurement runtime. It contains no Sega assets.
++
++Generate the owner-only RomFS payloads from the supported PC2004 files and build:
++
++```sh
++./build_0_0_9_0G.sh "/path/to/CHRMODELS.DLL" "/path/to/SONIC.PVM"
++```
++
++If the owner-only payloads are already present under `runtime_0_0_9_0G/romfs/sa3ds/`, run:
++
++```sh
++make -C runtime_0_0_9_0G
++```
++
++Expected target name: `runtime_0_0_9_0G/sa3ds_0_0_9_0G_white_zone_validation.3dsx`.
++
++## White Zone controls
++
++- Circle Pad: move / steer
++- A: jump
++- B or X: normal contextual action
++- L / R: manual camera yaw
++- Y: recenter camera
++- SELECT: toggle developer overlay
++- SELECT + L / R: previous / next selected test zone
++- SELECT + Y: reset to selected zone
++- SELECT + X: start / stop CSV trace
++- SELECT + D-Pad Left: switch FOLLOW / REFERENCE camera
++- START: exit
++
++REFERENCE deliberately does not auto-follow Sonic, which makes camera-relative parity recordings reproducible. Animation observation/selection is presentation-only and guarded against physics-state mutation at runtime.
++
++The HUD deliberately displays `PHYSICS_1TO1:NO`; 0G is a measurement gate, not a global parity claim.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/lab_gpu.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/lab_gpu.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/lab_gpu.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/lab_gpu.h	2026-08-24 22:48:58.000000000 +0000
+@@ -0,0 +1,27 @@
++#ifndef SA3DS_0F_LAB_GPU_H
++#define SA3DS_0F_LAB_GPU_H
++
++#include <3ds.h>
++#include <citro3d.h>
++#include <stdint.h>
++
++#include "../../src/sa1/physics/player_state.h"
++
++typedef struct {
++    float position[3];
++    float texcoord[2];
++} SA3DSLabVertex;
++
++typedef struct {
++    SA3DSLabVertex *scratch;
++    uint32_t scratch_capacity;
++    uint32_t frame_draws;
++    uint32_t frame_triangles;
++} SA3DSLabGpu;
++
++int sa3ds_lab_gpu_init(SA3DSLabGpu *lab);
++void sa3ds_lab_gpu_destroy(SA3DSLabGpu *lab);
++int sa3ds_lab_gpu_draw(SA3DSLabGpu *lab, const SA1PlayerState *player,
++                       float camera_yaw);
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/owner_assets.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/owner_assets.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/owner_assets.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/owner_assets.h	2026-08-22 23:46:34.000000000 +0000
+@@ -0,0 +1,9 @@
++#ifndef SA3DS_0E_OWNER_ASSETS_H
++#define SA3DS_0E_OWNER_ASSETS_H
++#include <stddef.h>
++#include <stdint.h>
++
++int sa3ds_read_file(const char *path, uint8_t **out_data, size_t *out_size);
++void sa3ds_free_file(void *data);
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/physics.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/physics.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/physics.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/physics.h	2026-08-22 23:44:00.000000000 +0000
+@@ -0,0 +1,29 @@
++#ifndef SA3DS_PHYSICS_COMPAT_H
++#define SA3DS_PHYSICS_COMPAT_H
++
++/* Compatibility surface for the 0.0.7 Movement Lab renderer. */
++#include "../../src/sa1/physics/movement.h"
++#include "../../src/sa1/physics/steam_flat.h"
++#include "../../src/game/stage.h"
++
++typedef SA1Vec3 SaVec3;
++typedef SA1PlayerState SaPlayer;
++typedef SA1Surface SaSurface;
++typedef SA1Input SaInput;
++
++static inline void sa_physics_reset(SaPlayer *player) {
++    sa1_player_reset(player, sa3ds_movement_lab_world());
++}
++static inline SaSurface sa_course_surface(float x, float z) {
++    return sa3ds_movement_lab_surface(0, x, z);
++}
++static inline void sa_physics_step(SaPlayer *player, const SaInput *input, float camera_yaw) {
++    sa1_physics_step_steam_sonic_flat(player, input, camera_yaw,
++                     sa3ds_movement_lab_world(),
++                     &SA1_PHYSICS_PLACEHOLDER_CONSTANTS, NULL);
++}
++static inline float sa_horizontal_speed(const SaPlayer *player) {
++    return sa1_horizontal_speed(player);
++}
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/sonic_gpu.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/sonic_gpu.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/include/sonic_gpu.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/include/sonic_gpu.h	2026-08-22 23:46:34.000000000 +0000
+@@ -0,0 +1,35 @@
++#ifndef SA3DS_0E_SONIC_GPU_H
++#define SA3DS_0E_SONIC_GPU_H
++
++#include <3ds.h>
++#include <citro3d.h>
++#include <stddef.h>
++#include <stdint.h>
++#include "sa3c_character.h"
++#include "sa3c_pose.h"
++#include "sa3c_render.h"
++#include "sa3t_texture.h"
++
++typedef struct {
++    float position[3];
++    float texcoord[2];
++} SA3DSGpuVertex;
++
++typedef struct {
++    const SA3CCharacter *character;
++    const SA3TArchive *textures;
++    C3D_Tex *gpu_textures;
++    uint32_t texture_count;
++    SA3DSGpuVertex *scratch;
++    uint32_t scratch_capacity;
++    uint32_t frame_draws;
++    uint32_t frame_triangles;
++    uint32_t frame_vertices;
++    int v_flip_debug;
++} SA3DSSonicGpu;
++
++int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r, const SA3CCharacter *c, const SA3TArchive *t);
++void sa3ds_sonic_gpu_destroy(SA3DSSonicGpu *r);
++int sa3ds_sonic_gpu_draw(SA3DSSonicGpu *r, uint16_t root_node, const SA3CMatrix *world, size_t world_count, SA3CRenderStats *out_stats);
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/romfs/sa3ds/README.txt /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/romfs/sa3ds/README.txt
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/romfs/sa3ds/README.txt	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/romfs/sa3ds/README.txt	2026-08-22 23:44:00.000000000 +0000
+@@ -0,0 +1,2 @@
++Generated owner-source packages go here at build time.
++They are intentionally not shipped in the SA3DS code checkpoint.
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/lab_gpu.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/lab_gpu.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/lab_gpu.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/lab_gpu.c	2026-08-24 22:48:58.000000000 +0000
+@@ -0,0 +1,136 @@
++#include "lab_gpu.h"
++
++#include <math.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "../../src/game/parity_lab.h"
++
++#define PI 3.14159265358979323846f
++
++static void camera_relative(const SA1PlayerState *p, float camera_yaw,
++                            float x, float y, float z, float out[3]) {
++    float dx = x - p->pos.x;
++    float dy = y - p->pos.y;
++    float dz = z - p->pos.z;
++    float c = cosf(-camera_yaw), s = sinf(-camera_yaw);
++    out[0] = dx*c - dz*s;
++    out[1] = dy;
++    out[2] = dx*s + dz*c;
++}
++
++static void write_vertex(SA3DSLabVertex *v, const SA1PlayerState *p,
++                         float camera_yaw, float x, float y, float z) {
++    camera_relative(p, camera_yaw, x, y, z, v->position);
++    v->texcoord[0] = 0.0f;
++    v->texcoord[1] = 0.0f;
++}
++
++static void write_quad(SA3DSLabVertex *v, const SA1PlayerState *p,
++                       float camera_yaw,
++                       float x0, float x1, float z0, float z1,
++                       float y00, float y10, float y01, float y11) {
++    write_vertex(&v[0],p,camera_yaw,x0,y00,z0);
++    write_vertex(&v[1],p,camera_yaw,x1,y10,z0);
++    write_vertex(&v[2],p,camera_yaw,x0,y01,z1);
++    write_vertex(&v[3],p,camera_yaw,x0,y01,z1);
++    write_vertex(&v[4],p,camera_yaw,x1,y10,z0);
++    write_vertex(&v[5],p,camera_yaw,x1,y11,z1);
++}
++
++static void bind_vertices(SA3DSLabVertex *v) {
++    C3D_BufInfo *buf = C3D_GetBufInfo();
++    BufInfo_Init(buf);
++    BufInfo_Add(buf, v, sizeof(*v), 2, 0x10);
++}
++
++static void set_constant_color(uint32_t rgba) {
++    C3D_TexEnv *env = C3D_GetTexEnv(0);
++    C3D_TexEnvInit(env);
++    C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, 0, 0);
++    C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
++    C3D_TexEnvColor(env, rgba);
++}
++
++static uint32_t zone_color(unsigned id) {
++    /* Subtle developer-only White Zone bands. Exact hue is presentation-only. */
++    static const uint32_t c[] = {
++        0xF7F7F7FFu, 0xE9F2FAFFu, 0xF1F4F7FFu,
++        0xEDF7F2FFu, 0xF7F1EDFFu, 0xEEF0F7FFu,
++        0xF5F5F5FFu, 0xF2EEF7FFu, 0xEAF5F7FFu
++    };
++    return c[id % (sizeof(c)/sizeof(c[0]))];
++}
++
++int sa3ds_lab_gpu_init(SA3DSLabGpu *lab) {
++    if (!lab) return 0;
++    memset(lab, 0, sizeof(*lab));
++    /* Markers are batched; 6 vertices per marker, comfortably under this cap. */
++    lab->scratch_capacity = 512;
++    lab->scratch = (SA3DSLabVertex*)linearAlloc(
++        (size_t)lab->scratch_capacity * sizeof(*lab->scratch));
++    return lab->scratch != 0;
++}
++
++void sa3ds_lab_gpu_destroy(SA3DSLabGpu *lab) {
++    if (!lab) return;
++    if (lab->scratch) linearFree(lab->scratch);
++    memset(lab, 0, sizeof(*lab));
++}
++
++int sa3ds_lab_gpu_draw(SA3DSLabGpu *lab, const SA1PlayerState *player,
++                       float camera_yaw) {
++    if (!lab || !lab->scratch || !player) return 0;
++    lab->frame_draws = 0;
++    lab->frame_triangles = 0;
++    C3D_CullFace(GPU_CULL_NONE);
++
++    size_t zone_count = 0;
++    const SA3DSParityZone *zones = sa3ds_parity_lab_zones(&zone_count);
++    const float half = sa3ds_parity_lab_half_width();
++
++    for (size_t i = 0; i < zone_count; ++i) {
++        SA1Surface a = sa3ds_parity_lab_surface(0, -half, zones[i].z_start + 0.001f);
++        SA1Surface b = sa3ds_parity_lab_surface(0,  half, zones[i].z_start + 0.001f);
++        SA1Surface c = sa3ds_parity_lab_surface(0, -half, zones[i].z_end - 0.001f);
++        SA1Surface d = sa3ds_parity_lab_surface(0,  half, zones[i].z_end - 0.001f);
++        if (!a.valid || !b.valid || !c.valid || !d.valid) return 0;
++        write_quad(lab->scratch, player, camera_yaw, -half, half,
++                   zones[i].z_start, zones[i].z_end,
++                   a.ground_y, b.ground_y, c.ground_y, d.ground_y);
++        GSPGPU_FlushDataCache(lab->scratch, 6u*sizeof(*lab->scratch));
++        bind_vertices(lab->scratch);
++        set_constant_color(zone_color((unsigned)i));
++        C3D_DrawArrays(GPU_TRIANGLES, 0, 6);
++        lab->frame_draws++;
++        lab->frame_triangles += 2;
++    }
++
++    /* Distance markers every 10 world units. Their exact placement is the
++       measurement fixture; it is intentionally independent of stage art. */
++    uint32_t n = 0;
++    const float spacing = sa3ds_parity_lab_marker_spacing();
++    float z0 = zones[0].z_start;
++    float z1 = zones[zone_count-1].z_end;
++    float first = ceilf(z0 / spacing) * spacing;
++    for (float z = first; z <= z1 && n + 6u <= lab->scratch_capacity; z += spacing) {
++        SA1Surface s0 = sa3ds_parity_lab_surface(0, -half, fminf(z + 0.001f, z1 - 0.001f));
++        SA1Surface s1 = sa3ds_parity_lab_surface(0,  half, fminf(z + 0.001f, z1 - 0.001f));
++        if (!s0.valid || !s1.valid) continue;
++        float dz = 0.055f;
++        write_quad(&lab->scratch[n], player, camera_yaw, -half, half,
++                   z - dz, z + dz,
++                   s0.ground_y + 0.012f, s1.ground_y + 0.012f,
++                   s0.ground_y + 0.012f, s1.ground_y + 0.012f);
++        n += 6u;
++    }
++    if (n) {
++        GSPGPU_FlushDataCache(lab->scratch, (size_t)n*sizeof(*lab->scratch));
++        bind_vertices(lab->scratch);
++        set_constant_color(0x8090A0FFu);
++        C3D_DrawArrays(GPU_TRIANGLES, 0, n);
++        lab->frame_draws++;
++        lab->frame_triangles += n/3u;
++    }
++    return 1;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/main.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/main.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/main.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/main.c	2026-08-25 13:08:27.219987653 +0000
+@@ -0,0 +1,314 @@
++#include <3ds.h>
++#include <citro3d.h>
++#include <math.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <sys/stat.h>
++
++#include "sonic_shbin.h"
++#include "owner_assets.h"
++#include "sonic_gpu.h"
++#include "lab_gpu.h"
++#include "sa3c_character.h"
++#include "sa3c_pose.h"
++#include "sa3t_texture.h"
++#include "../../src/game/parity_lab.h"
++#include "../../src/game/parity_hud.h"
++#include "../../src/game/parity_trace.h"
++#include "../../src/game/sonic_animation_sync.h"
++#include "../../src/game/sonic_animation_runtime.h"
++#include "../../src/platform/3ds/input_adapter.h"
++#include "../../src/sa1/physics/physics_constants.h"
++#include "../../src/sa1/physics/steam_flat.h"
++
++#define CLEAR_COLOR 0xF8FAFCFFu
++#define DISPLAY_TRANSFER_FLAGS \
++    (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | \
++     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
++     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
++#define INVALID_U16 0xFFFFu
++#define PI 3.14159265358979323846f
++
++static DVLB_s *g_dvlb;
++static shaderProgram_s g_program;
++static int g_u_projection=-1, g_u_modelview=-1;
++static C3D_Mtx g_projection;
++static C3D_RenderTarget *g_target;
++
++static uint8_t *g_sa3c_bytes, *g_sa3t_bytes;
++static size_t g_sa3c_size, g_sa3t_size;
++static SA3CCharacter g_character;
++static SA3TArchive g_texture_archive;
++static SA3CTransform *g_local;
++static SA3CMatrix *g_world;
++static size_t g_node_count;
++static SA3DSSonicGpu g_sonic_gpu;
++static SA3DSLabGpu g_lab_gpu;
++static SA3CRenderStats g_stats;
++
++static SA1PlayerState g_player;
++static SA3DSSonicAnimationSync g_anim_sync;
++static SA3DSSonicAnimationRuntime g_anim_runtime;
++static SA3DSSonicAnimationObservation g_observation;
++static SA3DSSonicAnimationSelection g_selection;
++static SA3DSParityZoneId g_selected_zone=SA3DS_PARITY_ZONE_CALIBRATION;
++static SA3DSParityCameraState g_camera={SA3DS_PARITY_CAMERA_FOLLOW,0.0f};
++static int g_dev_overlay=1;
++static int g_paused=0;
++static int g_cull_mode=0;
++static uint64_t g_last_submit_ms=0;
++static FILE *g_trace_file=0;
++static unsigned g_trace_frames=0;
++
++static uint16_t rd16(const uint8_t *p) {
++    return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
++}
++
++static uint16_t action_frame_count(const SA3CCharacter *c, uint16_t action_slot) {
++    const SA3CSection *s=&c->sections[7];
++    if ((uint32_t)action_slot>=s->count) return 0;
++    const uint8_t *r=c->data+s->offset+(size_t)action_slot*s->stride;
++    if (rd16(r+2)==INVALID_U16) return 0;
++    return rd16(r+4);
++}
++
++static float wrap_angle(float a) {
++    while (a > PI) a -= 2.0f*PI;
++    while (a < -PI) a += 2.0f*PI;
++    return a;
++}
++
++static void trace_stop(void) {
++    if (g_trace_file) fclose(g_trace_file);
++    g_trace_file=0;
++}
++
++static void trace_toggle(void) {
++    if (g_trace_file) { trace_stop(); return; }
++    mkdir("sdmc:/3ds/SA3DS",0777);
++    mkdir("sdmc:/3ds/SA3DS/traces",0777);
++    g_trace_file=fopen("sdmc:/3ds/SA3DS/traces/white_zone_trace.csv","wb");
++    g_trace_frames=0;
++    if (g_trace_file && sa3ds_parity_trace_write_header(g_trace_file)!=0) trace_stop();
++}
++
++static void reset_selected_zone(void) {
++    (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
++    memset(&g_anim_sync,0,sizeof(g_anim_sync));
++    memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
++    sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
++}
++
++static void cycle_zone(int delta) {
++    int n=(int)g_selected_zone+delta;
++    while(n<0) n+=(int)SA3DS_PARITY_ZONE_COUNT;
++    while(n>=(int)SA3DS_PARITY_ZONE_COUNT) n-=(int)SA3DS_PARITY_ZONE_COUNT;
++    g_selected_zone=(SA3DSParityZoneId)n;
++    reset_selected_zone();
++}
++
++static void print_help(void) {
++    printf("\x1b[2J\x1b[1;1H");
++    printf("SA3DS 0.0.9.0G - WHITE ZONE VALIDATION\n\n");
++    printf("Circle Pad  move/steer\n");
++    printf("A           jump\n");
++    printf("B / X       action\n");
++    printf("L / R       camera\n");
++    printf("Y           recenter camera\n");
++    printf("SELECT      overlay\n");
++    printf("SELECT+L/R  prev/next test zone\n");
++    printf("SELECT+DLeft FOLLOW / REFERENCE camera\n");
++    printf("SELECT+Y    reset selected zone\n");
++    printf("SELECT+X    trace on/off\n");
++    printf("START       exit\n\n");
++    printf("Developer-only original test geometry.\n");
++    printf("No whole-engine 1:1 claim.\n");
++}
++
++static void print_status(void) {
++    if (!g_dev_overlay) return;
++    const SA3DSParityZone *zone=sa3ds_parity_lab_zone_for_z(g_player.pos.z);
++    const SA3DSParityZone *selected=sa3ds_parity_lab_zone_by_id(g_selected_zone);
++    uint16_t frames=action_frame_count(&g_character,g_selection.binding.action_slot);
++    SA3DSParityHudSnapshot hud;
++    sa3ds_parity_hud_snapshot(&hud,&g_player,zone,selected,&g_selection,frames,
++        g_trace_file!=0,g_trace_frames,
++        (unsigned)(g_stats.draw_calls+g_lab_gpu.frame_draws),
++        (unsigned)(g_stats.triangles+g_lab_gpu.frame_triangles),
++        linearSpaceFree(),g_camera.mode);
++    printf("\x1b[14;1HTest:%-12.12s Sel:%-10.10s ",hud.active_zone,hud.selected_zone);
++    printf("\x1b[15;1HF:%6llu P:%5.1f %4.1f %5.1f ",(unsigned long long)hud.sim_frame,hud.pos_x,hud.pos_y,hud.pos_z);
++    printf("\x1b[16;1HV:%5.2f %5.2f %5.2f H:%4.2f ",hud.vel_x,hud.vel_y,hud.vel_z,hud.horizontal_speed);
++    printf("\x1b[17;1HYaw:%6.3f %s A:%d S:%ld ",hud.heading,hud.grounded?"GND":"AIR",hud.action_state,(long)hud.surface_id);
++    printf("\x1b[18;1HN:%4.2f %4.2f %4.2f Sl:%5.3f ",hud.normal_x,hud.normal_y,hud.normal_z,hud.slope_radians);
++    printf("\x1b[19;1HAnim:%3u ACTION:%3u Fr:%5.1f/%u ",hud.runtime_animation_id,hud.action_slot,hud.animation_frame,hud.animation_frame_count);
++    printf("\x1b[20;1HTrace:%s %5u D:%u T:%u ",hud.trace_recording?"REC":"OFF",hud.trace_frames,hud.draw_calls,hud.triangles);
++    printf("\x1b[21;1HLin:%5luKB Cam:%-9s ",(unsigned long)(hud.free_linear_bytes/1024u),sa3ds_parity_camera_mode_name(hud.camera_mode));
++    printf("\x1b[22;1HSelector:%s CPU:%3llums ",hud.selector_is_provisional?"PROVISIONAL":"SOURCE",(unsigned long long)g_last_submit_ms);
++    printf("\x1b[23;1HPHYSICS_1TO1:NO                     ");
++}
++
++static void fail_screen(const char *msg) {
++    printf("\nERROR: %s\nPress START to exit.\n",msg?msg:"unknown");
++    while (aptMainLoop()) {
++        hidScanInput(); if (hidKeysDown()&KEY_START) break; gspWaitForVBlank();
++    }
++}
++
++static int load_owner_packages(void) {
++    if (!sa3ds_read_file("romfs:/sa3ds/sonic.sa3c",&g_sa3c_bytes,&g_sa3c_size)) return 0;
++    if (!sa3ds_read_file("romfs:/sa3ds/sonic.sa3t",&g_sa3t_bytes,&g_sa3t_size)) return 0;
++    if (sa3c_character_open(&g_character,g_sa3c_bytes,g_sa3c_size)!=SA3C_OK) return 0;
++    if (sa3c_character_validate_references(&g_character)!=SA3C_OK) return 0;
++    if (sa3t_open(&g_texture_archive,g_sa3t_bytes,g_sa3t_size)!=SA3T_OK) return 0;
++    if (g_texture_archive.texture_count!=g_character.sections[6].count) return 0;
++    g_node_count=g_character.sections[0].count;
++    g_local=(SA3CTransform*)calloc(g_node_count,sizeof(*g_local));
++    g_world=(SA3CMatrix*)calloc(g_node_count,sizeof(*g_world));
++    return g_local && g_world;
++}
++
++static int init_scene(void) {
++    g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
++    if (!g_dvlb) return 0;
++    shaderProgramInit(&g_program);
++    shaderProgramSetVsh(&g_program,&g_dvlb->DVLE[0]);
++    C3D_BindProgram(&g_program);
++    g_u_projection=shaderInstanceGetUniformLocation(g_program.vertexShader,"projection");
++    g_u_modelview=shaderInstanceGetUniformLocation(g_program.vertexShader,"modelView");
++    if (g_u_projection<0 || g_u_modelview<0) return 0;
++
++    C3D_AttrInfo *attr=C3D_GetAttrInfo();
++    AttrInfo_Init(attr);
++    AttrInfo_AddLoader(attr,0,GPU_FLOAT,3);
++    AttrInfo_AddLoader(attr,1,GPU_FLOAT,2);
++    Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,0.1f,1000.0f,false);
++    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);
++    C3D_AlphaTest(true,GPU_GREATER,15);
++    C3D_CullFace(GPU_CULL_NONE);
++    if (!sa3ds_sonic_gpu_init(&g_sonic_gpu,&g_character,&g_texture_archive)) return 0;
++    if (!sa3ds_lab_gpu_init(&g_lab_gpu)) return 0;
++    return 1;
++}
++
++static int sample_pose(void) {
++    uint16_t root=INVALID_U16;
++    SA3CPoseResult pr=sa3c_pose_sample_action(&g_character,
++        g_selection.binding.action_slot,g_selection.sample_frame,1,g_local,g_node_count,&root);
++    if (pr!=SA3C_POSE_OK || root==INVALID_U16) return 0;
++    pr=sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count);
++    if (pr!=SA3C_POSE_OK) return 0;
++
++    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
++
++    /* White Zone geometry is transformed CPU-side into player-relative camera
++       space. The 3DS matrix only supplies a simple chase-camera offset. */
++    C3D_Mtx lab_mv;
++    Mtx_Identity(&lab_mv);
++    Mtx_Translate(&lab_mv,0.0f,-2.2f,-18.0f,true);
++    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&lab_mv);
++    if (!sa3ds_lab_gpu_draw(&g_lab_gpu,&g_player,g_camera.yaw)) return 0;
++
++    C3D_Mtx sonic_mv;
++    Mtx_Identity(&sonic_mv);
++    Mtx_Translate(&sonic_mv,-1.2f,-0.3f,-18.0f,true);
++    Mtx_RotateY(&sonic_mv,wrap_angle(g_player.yaw-g_camera.yaw),true);
++    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&sonic_mv);
++    switch(g_cull_mode) {
++        default: case 0: C3D_CullFace(GPU_CULL_NONE); break;
++        case 1: C3D_CullFace(GPU_CULL_BACK_CCW); break;
++        case 2: C3D_CullFace(GPU_CULL_FRONT_CCW); break;
++    }
++    return sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats);
++}
++
++static void cleanup(void) {
++    trace_stop();
++    sa3ds_lab_gpu_destroy(&g_lab_gpu);
++    sa3ds_sonic_gpu_destroy(&g_sonic_gpu);
++    free(g_world); free(g_local); g_world=NULL; g_local=NULL;
++    sa3ds_free_file(g_sa3t_bytes); sa3ds_free_file(g_sa3c_bytes);
++    g_sa3t_bytes=g_sa3c_bytes=NULL;
++    if (g_dvlb) { shaderProgramFree(&g_program); DVLB_Free(g_dvlb); g_dvlb=NULL; }
++}
++
++int main(void) {
++    gfxInitDefault();
++    consoleInit(GFX_BOTTOM,NULL);
++    print_help();
++    if (R_FAILED(romfsInit())) { fail_screen("romfsInit failed"); gfxExit(); return 1; }
++    if (!C3D_Init(C3D_DEFAULT_CMDBUF_SIZE)) { fail_screen("C3D_Init failed"); romfsExit(); gfxExit(); return 1; }
++    g_target=C3D_RenderTargetCreate(240,400,GPU_RB_RGBA8,GPU_RB_DEPTH24_STENCIL8);
++    if (!g_target) { fail_screen("render target allocation failed"); C3D_Fini(); romfsExit(); gfxExit(); return 1; }
++    C3D_RenderTargetSetOutput(g_target,GFX_TOP,GFX_LEFT,DISPLAY_TRANSFER_FLAGS);
++    if (!load_owner_packages()) {
++        fail_screen("owner SA3C/SA3T missing or invalid"); cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
++    }
++    if (!init_scene()) {
++        fail_screen("Citro3D White Zone init failed"); cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
++    }
++    reset_selected_zone();
++    g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
++    g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
++
++    while (aptMainLoop()) {
++        hidScanInput();
++        u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
++        if (down&KEY_START) break;
++        int modifier=(held&KEY_SELECT)!=0;
++        if ((down&KEY_SELECT) && !(held&(KEY_L|KEY_R|KEY_X|KEY_Y|KEY_DLEFT))) g_dev_overlay=!g_dev_overlay;
++        if (modifier && (down&KEY_L)) cycle_zone(-1);
++        if (modifier && (down&KEY_R)) cycle_zone(1);
++        if (modifier && (down&KEY_Y)) reset_selected_zone();
++        if (modifier && (down&KEY_X)) trace_toggle();
++        if (modifier && (down&KEY_DLEFT)) sa3ds_parity_camera_toggle(&g_camera);
++        if (!modifier && (down&KEY_Y)) sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
++        if (!modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
++        if (!modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
++
++        SA1Input in=sa3ds_read_logical_input(down,held,up);
++        if (modifier) {
++            in.action_pressed=in.action_held=in.action_released=false;
++            in.spindash_shortcut_pressed=in.spindash_shortcut_held=in.spindash_shortcut_released=false;
++            in.lightspeed_shortcut_pressed=in.lightspeed_shortcut_held=in.lightspeed_shortcut_released=false;
++        }
++        if (!g_paused) {
++            sa1_physics_step_steam_sonic_flat(&g_player,&in,g_camera.yaw,
++                sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
++            SA1PlayerState physics_done=g_player;
++            g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
++            g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
++            /* Hard architecture gate: animation observation/selection is an
++               observer. Any write back into physics state is a runtime error. */
++            if (memcmp(&physics_done,&g_player,sizeof(g_player))!=0) {
++                fail_screen("animation mutated physics state");
++                break;
++            }
++            if (g_trace_file) {
++                const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
++                if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
++                        trace_zone?trace_zone->name:"UNKNOWN",&g_player,&in,&g_selection)!=0) trace_stop();
++                else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
++            }
++        }
++
++        sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
++            (!modifier && (held&(KEY_L|KEY_R))) ? 1 : 0);
++
++        uint64_t t0=osGetTime();
++        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
++        C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,CLEAR_COLOR,0);
++        C3D_FrameDrawOn(g_target);
++        if (!sample_pose()) {
++            C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
++        }
++        C3D_FrameEnd(0);
++        g_last_submit_ms=osGetTime()-t0;
++        print_status();
++    }
++
++    cleanup();
++    C3D_Fini(); romfsExit(); gfxExit();
++    return 0;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/owner_assets.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/owner_assets.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/owner_assets.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/owner_assets.c	2026-08-22 23:46:34.000000000 +0000
+@@ -0,0 +1,22 @@
++#include "owner_assets.h"
++#include <stdio.h>
++#include <stdlib.h>
++
++int sa3ds_read_file(const char *path, uint8_t **out_data, size_t *out_size) {
++    if (!path || !out_data || !out_size) return 0;
++    *out_data = NULL; *out_size = 0;
++    FILE *f = fopen(path, "rb");
++    if (!f) return 0;
++    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return 0; }
++    long n = ftell(f);
++    if (n <= 0) { fclose(f); return 0; }
++    rewind(f);
++    uint8_t *p = (uint8_t*)malloc((size_t)n);
++    if (!p) { fclose(f); return 0; }
++    if (fread(p, 1, (size_t)n, f) != (size_t)n) { free(p); fclose(f); return 0; }
++    fclose(f);
++    *out_data = p; *out_size = (size_t)n;
++    return 1;
++}
++
++void sa3ds_free_file(void *data) { free(data); }
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/sonic.v.pica /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/sonic.v.pica
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/sonic.v.pica	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/sonic.v.pica	2026-08-22 23:46:34.000000000 +0000
+@@ -0,0 +1,28 @@
++; SA3DS 0.0.9.0E minimal textured vertex shader.
++; Uses the same matrix/attribute pattern as devkitPro Citro3D examples.
++
++.fvec projection[4], modelView[4]
++.constf myconst(0.0, 1.0, 0.0, 0.0)
++.alias zeros myconst.xxxx
++
++.out outpos position
++.out outtc0 texcoord0.st
++
++.alias inpos v0
++.alias intc0 v1
++
++.entry vmain
++.proc vmain
++    dp4 r15.x, modelView[0], inpos
++    dp4 r15.y, modelView[1], inpos
++    dp4 r15.z, modelView[2], inpos
++    dp4 r15.w, modelView[3], inpos
++    dp4 outpos.x, projection[0], r15
++    dp4 outpos.y, projection[1], r15
++    dp4 outpos.z, projection[2], r15
++    dp4 outpos.w, projection[3], r15
++
++    mov outtc0.st, intc0
++    mov outtc0.pq, zeros
++    end
++.end
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/sonic_gpu.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/sonic_gpu.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/runtime_0_0_9_0G/source/sonic_gpu.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/runtime_0_0_9_0G/source/sonic_gpu.c	2026-08-22 23:46:34.000000000 +0000
+@@ -0,0 +1,165 @@
++#include "sonic_gpu.h"
++
++#include <math.h>
++#include <stdlib.h>
++#include <string.h>
++
++#define TEX_UPLOAD_FLAGS \
++    (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) | \
++     GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGBA8) | \
++     GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO))
++
++static uint16_t rd16(const uint8_t *p) {
++    return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
++}
++static uint32_t rd32(const uint8_t *p) {
++    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
++}
++static float rdf(const uint8_t *p) {
++    uint32_t u = rd32(p); float f; memcpy(&f, &u, sizeof(f)); return f;
++}
++
++/*
++ * SA3T stores conventional row-major RGBA8. PICA textures are tiled. This
++ * follows the well-established 3DS path used by sf2d: bswap each RGBA32 pixel,
++ * then hardware-display-transfer into an OUT_TILED RGBA8 texture with vertical
++ * flip. No Sega data is embedded; input comes from owner-generated SA3T.
++ */
++static int upload_rgba8(C3D_Tex *tex, uint16_t width, uint16_t height, const uint8_t *rgba) {
++    if (!tex || !rgba) return 0;
++    if (!C3D_TexInit(tex, width, height, GPU_RGBA8)) return 0;
++
++    const size_t bytes = (size_t)width * (size_t)height * 4u;
++    uint32_t *tmp = (uint32_t*)linearAlloc(bytes);
++    if (!tmp) { C3D_TexDelete(tex); memset(tex,0,sizeof(*tex)); return 0; }
++
++    for (size_t i=0;i<(size_t)width*(size_t)height;i++) {
++        uint32_t px;
++        memcpy(&px, rgba + i*4u, 4u);
++        tmp[i] = __builtin_bswap32(px);
++    }
++
++    GSPGPU_FlushDataCache(tmp, bytes);
++    GSPGPU_FlushDataCache(tex->data, tex->size);
++    C3D_SyncDisplayTransfer(
++        tmp, GX_BUFFER_DIM(width,height),
++        (uint32_t*)tex->data, GX_BUFFER_DIM(width,height),
++        TEX_UPLOAD_FLAGS);
++    gspWaitForPPF();
++    linearFree(tmp);
++
++    C3D_TexSetFilter(tex, GPU_NEAREST, GPU_NEAREST);
++    C3D_TexSetWrap(tex, GPU_REPEAT, GPU_REPEAT);
++    return 1;
++}
++
++static void xform(const SA3CMatrix *m, float x,float y,float z, float *out) {
++    out[0]=x*m->m[0]+y*m->m[4]+z*m->m[8]+m->m[12];
++    out[1]=x*m->m[1]+y*m->m[5]+z*m->m[9]+m->m[13];
++    out[2]=x*m->m[2]+y*m->m[6]+z*m->m[10]+m->m[14];
++}
++
++static uint32_t material_rgba(const SA3CCharacter *c, uint16_t material_index) {
++    const SA3CSection *s=&c->sections[5];
++    if ((uint32_t)material_index >= s->count) return 0xFFFFFFFFu;
++    const uint8_t *m=c->data+s->offset+(size_t)material_index*s->stride;
++    uint32_t d=rd32(m);
++    uint8_t r=(uint8_t)((d>>16)&255u), g=(uint8_t)((d>>8)&255u), b=(uint8_t)(d&255u);
++    if (r==0 && g==0 && b==0) r=g=b=255;
++    return ((uint32_t)r<<24)|((uint32_t)g<<16)|((uint32_t)b<<8)|0xFFu;
++}
++
++typedef struct { SA3DSSonicGpu *r; } EmitCtx;
++
++static int draw_command(const SA3CDrawCommand *cmd, void *user) {
++    EmitCtx *ctx=(EmitCtx*)user;
++    SA3DSSonicGpu *r=ctx->r;
++    const SA3CCharacter *c=r->character;
++    if (!cmd || cmd->index_count==0 || cmd->index_count>r->scratch_capacity) return 1;
++    if ((uint32_t)cmd->texture_slot>=r->texture_count) return 1;
++
++    const SA3CSection *vs=&c->sections[3], *is=&c->sections[4];
++    const uint8_t *vertices=c->data+vs->offset;
++    const uint8_t *indices=c->data+is->offset;
++
++    for (uint32_t i=0;i<cmd->index_count;i++) {
++        uint16_t vi=rd16(indices+(size_t)(cmd->first_index+i)*2u);
++        if ((uint32_t)vi>=vs->count) return 1;
++        const uint8_t *v=vertices+(size_t)vi*vs->stride;
++        float p[3];
++        xform(&cmd->world,rdf(v),rdf(v+4),rdf(v+8),p);
++        r->scratch[i].position[0]=p[0];
++        r->scratch[i].position[1]=p[1];
++        r->scratch[i].position[2]=p[2];
++        float u=sa3c_basic_uv_normalize(rdf(v+24));
++        float vv=sa3c_basic_uv_normalize(rdf(v+28));
++        r->scratch[i].texcoord[0]=u;
++        r->scratch[i].texcoord[1]=r->v_flip_debug ? -vv : vv;
++    }
++
++    GSPGPU_FlushDataCache(r->scratch,(size_t)cmd->index_count*sizeof(*r->scratch));
++    C3D_BufInfo *buf=C3D_GetBufInfo();
++    BufInfo_Init(buf);
++    BufInfo_Add(buf,r->scratch,sizeof(*r->scratch),2,0x10);
++
++    C3D_TexBind(0,&r->gpu_textures[cmd->texture_slot]);
++    C3D_TexEnv *env=C3D_GetTexEnv(0);
++    C3D_TexEnvInit(env);
++    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);
++    C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
++    C3D_TexEnvColor(env,material_rgba(c,cmd->material_index));
++
++    C3D_DrawArrays(GPU_TRIANGLES,0,cmd->index_count);
++    r->frame_draws++;
++    r->frame_vertices+=cmd->index_count;
++    r->frame_triangles+=cmd->index_count/3u;
++    return 0;
++}
++
++int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r, const SA3CCharacter *c, const SA3TArchive *t) {
++    if (!r || !c || !t || t->texture_count==0 || t->texture_count!=c->sections[6].count) return 0;
++    memset(r,0,sizeof(*r)); r->character=c; r->textures=t; r->texture_count=t->texture_count;
++
++    r->gpu_textures=(C3D_Tex*)calloc(r->texture_count,sizeof(C3D_Tex));
++    if (!r->gpu_textures) return 0;
++    for (uint32_t i=0;i<r->texture_count;i++) {
++        SA3TTexture desc; const uint8_t *rgba=NULL;
++        if (sa3t_texture(t,i,&desc,&rgba)!=SA3T_OK || !upload_rgba8(&r->gpu_textures[i],desc.width,desc.height,rgba)) {
++            sa3ds_sonic_gpu_destroy(r); return 0;
++        }
++    }
++
++    /* 1,993 triangles => <=5,979 submitted vertices for normal Sonic, but use
++       package-wide INDX count as a safe upper bound for any one mesh. */
++    uint32_t max_mesh_indices=0;
++    const SA3CSection *ms=&c->sections[2]; const uint8_t *mesh=c->data+ms->offset;
++    for (uint32_t i=0;i<ms->count;i++) {
++        uint32_t n=rd32(mesh+(size_t)i*ms->stride+8);
++        if (n>max_mesh_indices) max_mesh_indices=n;
++    }
++    if (max_mesh_indices<3) { sa3ds_sonic_gpu_destroy(r); return 0; }
++    r->scratch_capacity=max_mesh_indices;
++    r->scratch=(SA3DSGpuVertex*)linearAlloc((size_t)r->scratch_capacity*sizeof(*r->scratch));
++    if (!r->scratch) { sa3ds_sonic_gpu_destroy(r); return 0; }
++    return 1;
++}
++
++void sa3ds_sonic_gpu_destroy(SA3DSSonicGpu *r) {
++    if (!r) return;
++    if (r->gpu_textures) {
++        for (uint32_t i=0;i<r->texture_count;i++) if (r->gpu_textures[i].data) C3D_TexDelete(&r->gpu_textures[i]);
++        free(r->gpu_textures);
++    }
++    if (r->scratch) linearFree(r->scratch);
++    memset(r,0,sizeof(*r));
++}
++
++int sa3ds_sonic_gpu_draw(SA3DSSonicGpu *r, uint16_t root_node, const SA3CMatrix *world, size_t world_count, SA3CRenderStats *out_stats) {
++    if (!r || !world) return 0;
++    r->frame_draws=r->frame_triangles=r->frame_vertices=0;
++    EmitCtx ctx={r}; SA3CRenderStats st;
++    SA3CPoseResult pr=sa3c_render_emit(r->character,root_node,world,world_count,draw_command,&ctx,&st);
++    if (pr!=SA3C_POSE_OK) return 0;
++    if (out_stats) *out_stats=st;
++    return 1;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_hud.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_hud.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_hud.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_hud.c	2026-08-25 13:06:45.655981219 +0000
+@@ -0,0 +1,92 @@
++#include "parity_hud.h"
++
++#include <math.h>
++#include <string.h>
++
++#include "../sa1/physics/movement.h"
++
++#define SA3DS_PI 3.14159265358979323846f
++
++static float wrap_angle(float a) {
++    while (a > SA3DS_PI) a -= 2.0f * SA3DS_PI;
++    while (a < -SA3DS_PI) a += 2.0f * SA3DS_PI;
++    return a;
++}
++
++void sa3ds_parity_camera_init(SA3DSParityCameraState *camera, float yaw) {
++    if (!camera) return;
++    camera->mode = SA3DS_PARITY_CAMERA_FOLLOW;
++    camera->yaw = wrap_angle(yaw);
++}
++
++void sa3ds_parity_camera_toggle(SA3DSParityCameraState *camera) {
++    if (!camera) return;
++    camera->mode = camera->mode == SA3DS_PARITY_CAMERA_FOLLOW
++        ? SA3DS_PARITY_CAMERA_REFERENCE : SA3DS_PARITY_CAMERA_FOLLOW;
++}
++
++void sa3ds_parity_camera_recenter(SA3DSParityCameraState *camera, float player_yaw) {
++    if (!camera) return;
++    camera->yaw = wrap_angle(player_yaw);
++}
++
++void sa3ds_parity_camera_manual_yaw(SA3DSParityCameraState *camera, float delta) {
++    if (!camera) return;
++    camera->yaw = wrap_angle(camera->yaw + delta);
++}
++
++void sa3ds_parity_camera_tick(SA3DSParityCameraState *camera, float player_yaw,
++                              int manual_yaw_active) {
++    if (!camera || manual_yaw_active || camera->mode != SA3DS_PARITY_CAMERA_FOLLOW) return;
++    float difference = wrap_angle(player_yaw - camera->yaw);
++    camera->yaw = wrap_angle(camera->yaw + difference * 0.025f);
++}
++
++const char *sa3ds_parity_camera_mode_name(SA3DSParityCameraMode mode) {
++    return mode == SA3DS_PARITY_CAMERA_REFERENCE ? "REFERENCE" : "FOLLOW";
++}
++
++void sa3ds_parity_hud_snapshot(SA3DSParityHudSnapshot *out,
++    const SA1PlayerState *player,
++    const SA3DSParityZone *active,
++    const SA3DSParityZone *selected,
++    const SA3DSSonicAnimationSelection *animation,
++    uint16_t animation_frame_count,
++    int trace_recording,
++    unsigned trace_frames,
++    unsigned draw_calls,
++    unsigned triangles,
++    size_t free_linear_bytes,
++    SA3DSParityCameraMode camera_mode) {
++    if (!out) return;
++    memset(out, 0, sizeof(*out));
++    out->active_zone = active ? active->name : "OUTSIDE";
++    out->selected_zone = selected ? selected->name : "?";
++    out->animation_frame_count = animation_frame_count;
++    out->trace_recording = trace_recording ? 1 : 0;
++    out->trace_frames = trace_frames;
++    out->draw_calls = draw_calls;
++    out->triangles = triangles;
++    out->free_linear_bytes = free_linear_bytes;
++    out->camera_mode = camera_mode;
++    if (!player) return;
++    out->sim_frame = player->sim_frame;
++    out->pos_x = player->pos.x; out->pos_y = player->pos.y; out->pos_z = player->pos.z;
++    out->vel_x = player->vel.x; out->vel_y = player->vel.y; out->vel_z = player->vel.z;
++    out->horizontal_speed = sa1_horizontal_speed(player);
++    out->heading = player->yaw;
++    out->grounded = player->grounded ? 1 : 0;
++    out->action_state = (int)player->action_state;
++    out->surface_id = player->surface_id;
++    out->normal_x = player->ground_normal.x;
++    out->normal_y = player->ground_normal.y;
++    out->normal_z = player->ground_normal.z;
++    out->slope_radians = player->ground_slope_radians;
++    out->support_distance = player->support_distance;
++    if (animation) {
++        out->runtime_animation_id = animation->binding.runtime_id;
++        out->action_slot = animation->binding.action_slot;
++        out->animation_frame = animation->sample_frame;
++        out->selector_is_provisional = animation->selector_is_provisional;
++    }
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_hud.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_hud.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_hud.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_hud.h	2026-08-25 13:06:45.643981040 +0000
+@@ -0,0 +1,69 @@
++#ifndef SA3DS_GAME_PARITY_HUD_H
++#define SA3DS_GAME_PARITY_HUD_H
++
++#include <stddef.h>
++#include <stdint.h>
++
++#include "parity_lab.h"
++#include "sonic_animation_runtime.h"
++#include "../sa1/physics/player_state.h"
++
++typedef enum {
++    SA3DS_PARITY_CAMERA_FOLLOW = 0,
++    SA3DS_PARITY_CAMERA_REFERENCE = 1
++} SA3DSParityCameraMode;
++
++typedef struct {
++    SA3DSParityCameraMode mode;
++    float yaw;
++} SA3DSParityCameraState;
++
++typedef struct {
++    const char *active_zone;
++    const char *selected_zone;
++    uint64_t sim_frame;
++    float pos_x, pos_y, pos_z;
++    float vel_x, vel_y, vel_z;
++    float horizontal_speed;
++    float heading;
++    int grounded;
++    int action_state;
++    int32_t surface_id;
++    float normal_x, normal_y, normal_z;
++    float slope_radians;
++    float support_distance;
++    uint16_t runtime_animation_id;
++    uint16_t action_slot;
++    float animation_frame;
++    uint16_t animation_frame_count;
++    int selector_is_provisional;
++    int trace_recording;
++    unsigned trace_frames;
++    unsigned draw_calls;
++    unsigned triangles;
++    size_t free_linear_bytes;
++    SA3DSParityCameraMode camera_mode;
++} SA3DSParityHudSnapshot;
++
++void sa3ds_parity_camera_init(SA3DSParityCameraState *camera, float yaw);
++void sa3ds_parity_camera_toggle(SA3DSParityCameraState *camera);
++void sa3ds_parity_camera_recenter(SA3DSParityCameraState *camera, float player_yaw);
++void sa3ds_parity_camera_manual_yaw(SA3DSParityCameraState *camera, float delta);
++void sa3ds_parity_camera_tick(SA3DSParityCameraState *camera, float player_yaw,
++                              int manual_yaw_active);
++const char *sa3ds_parity_camera_mode_name(SA3DSParityCameraMode mode);
++
++void sa3ds_parity_hud_snapshot(SA3DSParityHudSnapshot *out,
++    const SA1PlayerState *player,
++    const SA3DSParityZone *active,
++    const SA3DSParityZone *selected,
++    const SA3DSSonicAnimationSelection *animation,
++    uint16_t animation_frame_count,
++    int trace_recording,
++    unsigned trace_frames,
++    unsigned draw_calls,
++    unsigned triangles,
++    size_t free_linear_bytes,
++    SA3DSParityCameraMode camera_mode);
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_lab.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_lab.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_lab.c	2026-08-24 22:46:39.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_lab.c	2026-08-25 13:06:18.131550687 +0000
+@@ -7,17 +7,30 @@
+ #define LAB_HALF_WIDTH 12.0f
+ #define LAB_MARKER_SPACING 10.0f
+ 
+-/* Keep ranges adjacent so the floor has no seams between test sections. */
++/* Adjacent ranges deliberately avoid seams. The course stays 24 units wide. */
+ static const SA3DSParityZone kZones[SA3DS_PARITY_ZONE_COUNT] = {
+-    {SA3DS_PARITY_ZONE_CALIBRATION,    "CALIBRATION",      -40.0f,  20.0f, -30.0f, 200},
+-    {SA3DS_PARITY_ZONE_ACCELERATION,   "ACCELERATION",      20.0f, 100.0f,  24.0f, 201},
+-    {SA3DS_PARITY_ZONE_BRAKE_COAST,    "BRAKE / COAST",    100.0f, 150.0f, 104.0f, 202},
+-    {SA3DS_PARITY_ZONE_JUMP,           "JUMP",             150.0f, 205.0f, 154.0f, 203},
+-    {SA3DS_PARITY_ZONE_ROLL_SPINDASH,  "ROLL / SPINDASH",  205.0f, 260.0f, 209.0f, 204},
+-    {SA3DS_PARITY_ZONE_SLOPE_UP,       "SLOPE UP",         260.0f, 300.0f, 264.0f, 205},
+-    {SA3DS_PARITY_ZONE_PLATEAU,        "PLATEAU",          300.0f, 330.0f, 304.0f, 206},
+-    {SA3DS_PARITY_ZONE_SLOPE_DOWN,     "SLOPE DOWN",       330.0f, 370.0f, 334.0f, 207},
+-    {SA3DS_PARITY_ZONE_AIR_LANDING,    "AIR / LANDING",    370.0f, 430.0f, 374.0f, 208},
++    {SA3DS_PARITY_ZONE_CALIBRATION,    "CALIBRATION",           -40.0f,  20.0f, -30.0f, 200},
++    {SA3DS_PARITY_ZONE_ACCELERATION,   "ACCELERATION",           20.0f, 100.0f,  24.0f, 201},
++    {SA3DS_PARITY_ZONE_BRAKE_COAST,    "BRAKE / COAST",        100.0f, 150.0f, 104.0f, 202},
++    {SA3DS_PARITY_ZONE_TURN,           "TURN",                 150.0f, 205.0f, 154.0f, 203},
++    {SA3DS_PARITY_ZONE_JUMP,           "JUMP",                 205.0f, 260.0f, 209.0f, 204},
++    {SA3DS_PARITY_ZONE_ROLL_SPINDASH,  "ROLL / SPINDASH",      260.0f, 315.0f, 264.0f, 205},
++    {SA3DS_PARITY_ZONE_SLOPE_UP,       "SLOPE UP",             315.0f, 355.0f, 319.0f, 206},
++    {SA3DS_PARITY_ZONE_PLATEAU,        "PLATEAU",              355.0f, 385.0f, 359.0f, 207},
++    {SA3DS_PARITY_ZONE_SLOPE_DOWN,     "SLOPE DOWN",           385.0f, 425.0f, 389.0f, 208},
++    {SA3DS_PARITY_ZONE_AIR_LANDING,    "AIR CONTROL / LANDING",425.0f, 500.0f, 429.0f, 209},
++};
++
++static SA1PhysicsWorld gWorld = {
++    .query_surface = sa3ds_parity_lab_surface,
++    .query_contact = 0,
++    .context = 0,
++    .reset_position = {0.0f, 1.0f, -30.0f},
++    .reset_min_x = -28.0f,
++    .reset_max_x = 28.0f,
++    .reset_min_y = -40.0f,
++    .reset_min_z = -60.0f,
++    .reset_max_z = 520.0f
+ };
+ 
+ static int in_course(float x, float z) {
+@@ -37,7 +50,6 @@
+ 
+ const SA3DSParityZone *sa3ds_parity_lab_zone_for_z(float z) {
+     for (size_t i = 0; i < SA3DS_PARITY_ZONE_COUNT; ++i) {
+-        /* Last zone owns its inclusive end point. */
+         if (z >= kZones[i].z_start &&
+             (z < kZones[i].z_end || i + 1u == SA3DS_PARITY_ZONE_COUNT))
+             return &kZones[i];
+@@ -77,18 +89,7 @@
+ }
+ 
+ const SA1PhysicsWorld *sa3ds_parity_lab_world(void) {
+-    static SA1PhysicsWorld world = {
+-        .query_surface = sa3ds_parity_lab_surface,
+-        .query_contact = 0, /* heightfield adapter is deliberate for this course */
+-        .context = 0,
+-        .reset_position = {0.0f, 1.0f, -30.0f},
+-        .reset_min_x = -28.0f,
+-        .reset_max_x = 28.0f,
+-        .reset_min_y = -40.0f,
+-        .reset_min_z = -60.0f,
+-        .reset_max_z = 450.0f
+-    };
+-    return &world;
++    return &gWorld;
+ }
+ 
+ int sa3ds_parity_lab_reset_player(SA1PlayerState *player, SA3DSParityZoneId id) {
+@@ -96,17 +97,20 @@
+     const SA3DSParityZone *zone = sa3ds_parity_lab_zone_by_id(id);
+     if (!zone) return 0;
+ 
+-    sa1_player_reset(player, sa3ds_parity_lab_world());
+     SA1Surface s = sa3ds_parity_lab_surface(0, 0.0f, zone->reset_z);
+     if (!s.valid) return 0;
+-    player->pos.x = 0.0f;
+-    player->pos.z = zone->reset_z;
+-    player->pos.y = s.ground_y + 1.0f;
++
++    /* Crucial 0G behavior: the same selected-zone position is used by the
++       physics layer if a later step falls or runs out of bounds. */
++    gWorld.reset_position.x = 0.0f;
++    gWorld.reset_position.y = s.ground_y + 1.0f;
++    gWorld.reset_position.z = zone->reset_z;
++
++    sa1_player_reset(player, &gWorld);
+     player->ground_normal = s.normal;
+     player->ground_slope_radians = s.slope_radians;
+     player->surface_id = s.surface_id;
+     player->surface_forward = (SA1Vec3){0.0f, s.grad_z, 1.0f};
+-    /* Normalize enough for the diagnostic tangent frame. */
+     float len = sqrtf(player->surface_forward.y * player->surface_forward.y + 1.0f);
+     player->surface_forward.y /= len;
+     player->surface_forward.z /= len;
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_lab.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_lab.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_lab.h	2026-08-24 22:46:39.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_lab.h	2026-08-25 13:06:18.123550551 +0000
+@@ -11,6 +11,7 @@
+     SA3DS_PARITY_ZONE_CALIBRATION = 0,
+     SA3DS_PARITY_ZONE_ACCELERATION,
+     SA3DS_PARITY_ZONE_BRAKE_COAST,
++    SA3DS_PARITY_ZONE_TURN,
+     SA3DS_PARITY_ZONE_JUMP,
+     SA3DS_PARITY_ZONE_ROLL_SPINDASH,
+     SA3DS_PARITY_ZONE_SLOPE_UP,
+@@ -29,25 +30,16 @@
+     int32_t surface_id;
+ } SA3DSParityZone;
+ 
+-/*
+- * Developer-only White Zone parity course.
+- *
+- * This is original test geometry, not reconstructed Sega stage geometry. Its
+- * purpose is to isolate one movement behavior at a time before Emerald Coast
+- * enters the runtime. A result obtained here may only be called 1:1 for the
+- * exact measured behavior/test, never for the whole retail physics stack.
+- */
++/* Developer-only original White Zone geometry. */
+ SA1Surface sa3ds_parity_lab_surface(void *context, float x, float z);
+ const SA1PhysicsWorld *sa3ds_parity_lab_world(void);
+-
+ const SA3DSParityZone *sa3ds_parity_lab_zones(size_t *count_out);
+ const SA3DSParityZone *sa3ds_parity_lab_zone_for_z(float z);
+ const SA3DSParityZone *sa3ds_parity_lab_zone_by_id(SA3DSParityZoneId id);
+ 
+-/* Deterministic reset to the selected test zone. */
++/* Reset also arms the physics world's out-of-bounds fallback for this zone. */
+ int sa3ds_parity_lab_reset_player(SA1PlayerState *player, SA3DSParityZoneId id);
+ 
+-/* Course presentation helpers. */
+ float sa3ds_parity_lab_half_width(void);
+ float sa3ds_parity_lab_marker_spacing(void);
+ 
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_trace.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_trace.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_trace.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_trace.c	2026-08-25 13:07:12.200442583 +0000
+@@ -0,0 +1,47 @@
++#include "parity_trace.h"
++
++#include <inttypes.h>
++
++#include "../sa1/physics/movement.h"
++#include "../sa1/physics/surface_frame.h"
++
++int sa3ds_parity_trace_write_header(FILE *output) {
++    if (!output) return -1;
++    return fprintf(output,
++        "trace_version,test_id,test_name,frame,move_x,move_z,"
++        "jump_pressed,jump_held,jump_released,action_pressed,action_held,action_released,"
++        "pos_x,pos_y,pos_z,vel_x,vel_y,vel_z,horizontal_speed,local_forward_speed,local_side_speed,heading,"
++        "grounded,action_state,surface_id,surface_flags,normal_x,normal_y,normal_z,slope_radians,support_distance,"
++        "runtime_animation_id,action_slot,animation_frame,selector_provisional\n") < 0 ? -1 : 0;
++}
++
++int sa3ds_parity_trace_write_frame(FILE *output,
++    SA3DSParityZoneId test_id,
++    const char *test_name,
++    const SA1PlayerState *player,
++    const SA1Input *input,
++    const SA3DSSonicAnimationSelection *animation) {
++    if (!output || !player || !input || !animation) return -1;
++    float local_forward = sa1_vec3_dot(player->vel, player->surface_forward);
++    float local_side = sa1_vec3_dot(player->vel, player->surface_right);
++    int result = fprintf(output,
++        "%d,%d,%s,%" PRIu64 ",%.9g,%.9g,"
++        "%d,%d,%d,%d,%d,%d,"
++        "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,"
++        "%d,%d,%" PRId32 ",%" PRIu32 ",%.9g,%.9g,%.9g,%.9g,%.9g,"
++        "%u,%u,%.9g,%d\n",
++        SA3DS_PARITY_TRACE_VERSION, (int)test_id, test_name ? test_name : "UNKNOWN", player->sim_frame,
++        input->move_x, input->move_z,
++        input->jump_pressed ? 1 : 0, input->jump_held ? 1 : 0, input->jump_released ? 1 : 0,
++        input->action_pressed ? 1 : 0, input->action_held ? 1 : 0, input->action_released ? 1 : 0,
++        player->pos.x, player->pos.y, player->pos.z,
++        player->vel.x, player->vel.y, player->vel.z,
++        sa1_horizontal_speed(player), local_forward, local_side, player->yaw,
++        player->grounded ? 1 : 0, (int)player->action_state,
++        player->surface_id, player->surface_flags,
++        player->ground_normal.x, player->ground_normal.y, player->ground_normal.z,
++        player->ground_slope_radians, player->support_distance,
++        (unsigned)animation->binding.runtime_id, (unsigned)animation->binding.action_slot,
++        animation->sample_frame, animation->selector_is_provisional ? 1 : 0);
++    return result < 0 ? -1 : 0;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_trace.h /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_trace.h
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/src/game/parity_trace.h	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/src/game/parity_trace.h	2026-08-25 13:06:58.024194002 +0000
+@@ -0,0 +1,21 @@
++#ifndef SA3DS_GAME_PARITY_TRACE_H
++#define SA3DS_GAME_PARITY_TRACE_H
++
++#include <stdio.h>
++
++#include "parity_lab.h"
++#include "sonic_animation_runtime.h"
++#include "../sa1/physics/input.h"
++#include "../sa1/physics/player_state.h"
++
++#define SA3DS_PARITY_TRACE_VERSION 1
++
++int sa3ds_parity_trace_write_header(FILE *output);
++int sa3ds_parity_trace_write_frame(FILE *output,
++    SA3DSParityZoneId test_id,
++    const char *test_name,
++    const SA1PlayerState *player,
++    const SA1Input *input,
++    const SA3DSSonicAnimationSelection *animation);
++
++#endif
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/run_0_0_9_0G_tests.sh /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/run_0_0_9_0G_tests.sh
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/run_0_0_9_0G_tests.sh	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/run_0_0_9_0G_tests.sh	2026-08-25 13:11:47.021984898 +0000
+@@ -0,0 +1,48 @@
++#!/bin/sh
++set -eu
++export PYTHONDONTWRITEBYTECODE=1
++cd "$(dirname "$0")/.."
++B="${TMPDIR:-/tmp}/sa3ds_0g_tests"
++rm -rf "$B"; mkdir -p "$B"
++trap 'rm -rf "$B"' EXIT INT TERM
++common="src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/physics_constants.c src/sa1/physics/movement.c src/sa1/physics/steam_input.c src/sa1/physics/steam_player_parameters.c src/sa1/physics/steam_air.c src/sa1/physics/steam_spindash_evidence.c src/sa1/physics/steam_ball.c src/sa1/physics/pc2004_motion.c src/sa1/physics/pc2004_collision_work.c src/sa1/physics/steam_surface_evidence.c src/sa1/physics/steam_surface.c src/sa1/physics/steam_flat.c"
++
++echo '== White Zone 10-section geometry + selected reset =='
++cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \
++  $common src/game/parity_lab.c tests/test_white_zone_parity_lab.c -lm -o "$B/lab"
++"$B/lab"
++
++echo '== HUD snapshot + FOLLOW/REFERENCE camera =='
++cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \
++  src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/movement.c src/game/parity_lab.c src/game/parity_hud.c \
++  tests/test_parity_hud.c -lm -o "$B/hud"
++"$B/hud"
++
++echo '== animation observer non-mutation stress =='
++cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \
++  src/sa1/physics/surface_frame.c src/sa1/physics/steam_player_parameters.c \
++  src/game/sonic_animation_sync.c src/game/sonic_animation_runtime.c \
++  tests/test_animation_observer_h4.c -lm -o "$B/anim_stress"
++"$B/anim_stress"
++
++echo '== extended White Zone deterministic protocols =='
++cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \
++  $common src/game/parity_lab.c src/game/parity_trace.c \
++  src/game/sonic_animation_sync.c src/game/sonic_animation_runtime.c \
++  tools/run_white_zone_protocol.c -lm -o "$B/protocol"
++for s in flat_accel coast brake turn_low turn_high jump_tap jump_hold spindash roll_exit uphill downhill air_control; do
++  "$B/protocol" "$s" 120 "$B/$s.csv" >/dev/null
++  "$B/protocol" "$s" 120 "$B/${s}_repeat.csv" >/dev/null
++  cmp "$B/$s.csv" "$B/${s}_repeat.csv"
++done
++python3 tests/test_white_zone_protocol_outputs.py "$B"
++
++echo '== strict retail comparator =='
++python3 tests/test_white_zone_trace_comparator.py
++python3 tools/compare_white_zone_traces.py "$B/flat_accel.csv" "$B/flat_accel_repeat.csv" | grep 'STATUS: MATCHES MEASURED FIELDS' >/dev/null
++python3 tools/compare_white_zone_traces.py "$B/flat_accel.csv" "$B/flat_accel_repeat.csv" --retail-live | grep 'STATUS: VERIFIED 1:1' >/dev/null
++
++echo '== 0G runtime source contract =='
++python3 tests/test_0_0_9_0G_runtime_source.py
++
++echo '0.0.9.0G White Zone validation suite: PASS'
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_0_0_9_0G_runtime_source.py /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_0_0_9_0G_runtime_source.py
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_0_0_9_0G_runtime_source.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_0_0_9_0G_runtime_source.py	2026-08-25 13:12:19.278359060 +0000
+@@ -0,0 +1,26 @@
++#!/usr/bin/env python3
++from pathlib import Path
++
++root=Path(__file__).resolve().parents[1]
++main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
++mk=(root/'runtime_0_0_9_0G/Makefile').read_text()
++lab=(root/'src/game/parity_lab.c').read_text()
++trace=(root/'src/game/parity_trace.c').read_text()
++hud=(root/'src/game/parity_hud.c').read_text()
++
++required_main=[
++    'SA3DS 0.0.9.0G - WHITE ZONE VALIDATION',
++    'sa3ds_parity_camera_toggle(&g_camera)',
++    'sa3ds_parity_trace_write_frame',
++    'PHYSICS_1TO1:NO',
++    'memcmp(&physics_done,&g_player,sizeof(g_player))',
++]
++for token in required_main: assert token in main, token
++assert 'sa3ds_0_0_9_0G_white_zone_validation' in mk
++assert 'SA3DS_PARITY_ZONE_TURN' in lab and 'AIR CONTROL / LANDING' in lab
++assert 'gWorld.reset_position.z = zone->reset_z' in lab
++for field in ['test_id','runtime_animation_id','action_slot','animation_frame','normal_x','slope_radians']:
++    assert field in trace, field
++assert 'SA3DS_PARITY_CAMERA_REFERENCE' in (root/'src/game/parity_hud.h').read_text()
++assert 'camera->mode != SA3DS_PARITY_CAMERA_FOLLOW' in hud
++print('0.0.9.0G 3DS runtime/source contract: PASS')
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_animation_observer_h4.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_animation_observer_h4.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_animation_observer_h4.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_animation_observer_h4.c	2026-08-25 13:09:11.614512057 +0000
+@@ -0,0 +1,45 @@
++#include <assert.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++
++#include "../src/game/sonic_animation_runtime.h"
++#include "../src/game/sonic_animation_sync.h"
++#include "../src/sa1/physics/steam_player_parameters.h"
++
++static uint32_t lcg(uint32_t *s) { *s=*s*1664525u+1013904223u; return *s; }
++static float sf(uint32_t *s, float scale) { return ((float)(lcg(s)&0xffffu)/32767.5f-1.0f)*scale; }
++
++int main(void) {
++    SA3DSSonicAnimationBinding b;
++    assert(sa3ds_sonic_animation_binding(32,&b) && b.action_slot==21);
++    assert(sa3ds_sonic_animation_binding(15,&b) && b.action_slot==14);
++    assert(sa3ds_sonic_animation_binding(14,&b) && b.action_slot==14);
++    assert(sa3ds_sonic_animation_binding(19,&b) && b.action_slot==11);
++
++    uint32_t seed=0x13579bdu;
++    for (unsigned i=0;i<1024;i++) {
++        SA1PlayerState p;
++        memset(&p,0,sizeof(p));
++        p.pos=(SA1Vec3){sf(&seed,20),sf(&seed,10),sf(&seed,200)};
++        p.vel=(SA1Vec3){sf(&seed,3),sf(&seed,3),sf(&seed,3)};
++        p.yaw=sf(&seed,3.14159f);
++        p.grounded=(lcg(&seed)&1u)!=0;
++        p.surface_id=(int32_t)(lcg(&seed)%220u);
++        p.support_distance=(float)(lcg(&seed)%100u)/50.0f;
++        p.sim_frame=i;
++        p.action_state=(SA1ActionState)(lcg(&seed)%4u);
++        p.ball_form=(p.action_state==SA1_ACTION_ROLL || p.action_state==SA1_ACTION_SPINDASH_CHARGE || !p.grounded);
++        p.spindash_charge=(p.action_state==SA1_ACTION_SPINDASH_CHARGE)?(float)(lcg(&seed)%100u)/20.0f:0.0f;
++        SA1PlayerState before=p;
++        SA3DSSonicAnimationSync sync={0};
++        SA3DSSonicAnimationRuntime runtime={0};
++        SA3DSSonicAnimationObservation o=sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
++        assert(memcmp(&before,&p,sizeof(p))==0);
++        SA3DSSonicAnimationSelection sel=sa3ds_sonic_animation_select(&runtime,&p,&o);
++        assert(memcmp(&before,&p,sizeof(p))==0);
++        assert(sel.selector_is_provisional==1);
++    }
++    puts("animation observer 1024-state non-mutation stress: PASS");
++    return 0;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_parity_hud.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_parity_hud.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_parity_hud.c	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_parity_hud.c	2026-08-25 13:08:57.806275529 +0000
+@@ -0,0 +1,54 @@
++#include <assert.h>
++#include <math.h>
++#include <stdio.h>
++#include <string.h>
++
++#include "../src/game/parity_hud.h"
++#include "../src/sa1/physics/movement.h"
++
++int main(void) {
++    SA3DSParityCameraState camera;
++    sa3ds_parity_camera_init(&camera,0.25f);
++    assert(camera.mode == SA3DS_PARITY_CAMERA_FOLLOW);
++    sa3ds_parity_camera_tick(&camera,1.25f,0);
++    assert(camera.yaw > 0.25f && camera.yaw < 1.25f);
++    float followed=camera.yaw;
++    sa3ds_parity_camera_toggle(&camera);
++    assert(camera.mode == SA3DS_PARITY_CAMERA_REFERENCE);
++    sa3ds_parity_camera_tick(&camera,-2.0f,0);
++    assert(fabsf(camera.yaw-followed)<1e-6f);
++    sa3ds_parity_camera_manual_yaw(&camera,0.1f);
++    assert(fabsf(camera.yaw-(followed+0.1f))<1e-6f);
++    sa3ds_parity_camera_recenter(&camera,-0.5f);
++    assert(fabsf(camera.yaw+0.5f)<1e-6f);
++    assert(!strcmp(sa3ds_parity_camera_mode_name(camera.mode),"REFERENCE"));
++
++    SA1PlayerState p;
++    memset(&p,0,sizeof(p));
++    p.sim_frame=42;
++    p.pos=(SA1Vec3){1,2,3};
++    p.vel=(SA1Vec3){3,4,4};
++    p.yaw=0.75f;
++    p.grounded=true;
++    p.action_state=SA1_ACTION_GROUNDED;
++    p.surface_id=203;
++    p.ground_normal=(SA1Vec3){0,1,0};
++    p.support_distance=1.0f;
++    SA3DSSonicAnimationSelection sel;
++    memset(&sel,0,sizeof(sel));
++    sel.binding.runtime_id=32;
++    sel.binding.action_slot=21;
++    sel.sample_frame=7.5f;
++    sel.selector_is_provisional=1;
++    const SA3DSParityZone *turn=sa3ds_parity_lab_zone_by_id(SA3DS_PARITY_ZONE_TURN);
++    SA3DSParityHudSnapshot hud;
++    sa3ds_parity_hud_snapshot(&hud,&p,turn,turn,&sel,30,1,99,12,345,1024*1024,camera.mode);
++    assert(!strcmp(hud.active_zone,"TURN"));
++    assert(hud.sim_frame==42 && hud.runtime_animation_id==32 && hud.action_slot==21);
++    assert(hud.trace_recording && hud.trace_frames==99);
++    assert(hud.draw_calls==12 && hud.triangles==345 && hud.free_linear_bytes==1024*1024);
++    assert(hud.camera_mode==SA3DS_PARITY_CAMERA_REFERENCE);
++    assert(hud.selector_is_provisional);
++    puts("White Zone parity HUD/camera tests: PASS");
++    return 0;
++}
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_parity_lab.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_parity_lab.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_parity_lab.c	2026-08-24 22:47:32.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_parity_lab.c	2026-08-25 13:08:44.982051282 +0000
+@@ -16,9 +16,11 @@
+ int main(void) {
+     size_t count = 0;
+     const SA3DSParityZone *zones = sa3ds_parity_lab_zones(&count);
+-    assert(zones && count == SA3DS_PARITY_ZONE_COUNT);
++    assert(zones && count == 10u && count == SA3DS_PARITY_ZONE_COUNT);
+     assert(fabsf(sa3ds_parity_lab_half_width() - 12.0f) < 1e-6f);
+     assert(fabsf(sa3ds_parity_lab_marker_spacing() - 10.0f) < 1e-6f);
++    assert(!strcmp(zones[SA3DS_PARITY_ZONE_TURN].name, "TURN"));
++    assert(!strcmp(zones[SA3DS_PARITY_ZONE_AIR_LANDING].name, "AIR CONTROL / LANDING"));
+ 
+     for (size_t i = 0; i < count; ++i) {
+         assert(zones[i].name && zones[i].name[0]);
+@@ -29,9 +31,9 @@
+         assert(s.valid && s.surface_id == zones[i].surface_id);
+     }
+ 
+-    SA1Surface up = sa3ds_parity_lab_surface(0, 0, 280.0f);
+-    SA1Surface plateau = sa3ds_parity_lab_surface(0, 0, 315.0f);
+-    SA1Surface down = sa3ds_parity_lab_surface(0, 0, 350.0f);
++    SA1Surface up = sa3ds_parity_lab_surface(0, 0, 335.0f);
++    SA1Surface plateau = sa3ds_parity_lab_surface(0, 0, 370.0f);
++    SA1Surface down = sa3ds_parity_lab_surface(0, 0, 405.0f);
+     assert(up.valid && up.grad_z > 0.0f && up.ground_y > 0.0f);
+     assert(plateau.valid && fabsf(plateau.ground_y - 8.0f) < 1e-6f);
+     assert(down.valid && down.grad_z < 0.0f && down.ground_y > 0.0f);
+@@ -41,8 +43,6 @@
+     assert(p.grounded && p.surface_id == 201 && fabsf(p.pos.z - 24.0f) < 1e-6f);
+     assert(fabsf(p.pos.y - 1.0f) < 1e-6f);
+ 
+-    /* Controlled flat lane is sufficient to reproduce the existing Steam
+-       acceleration candidate deterministically without stage-side noise. */
+     float previous = 0.0f;
+     for (unsigned f = 0; f < 30; ++f) {
+         SA1Input in = {0}; in.move_z = 1.0f;
+@@ -68,6 +68,15 @@
+     memset(&action, 0, sizeof(action)); action.action_released = true; step(&p, &action);
+     assert(p.action_state == SA1_ACTION_ROLL && p.ball_form);
+ 
++    /* 0G: test the real physics out-of-bounds reset path, not just the helper. */
++    assert(sa3ds_parity_lab_reset_player(&p, SA3DS_PARITY_ZONE_TURN));
++    p.pos.y = sa3ds_parity_lab_world()->reset_min_y - 1.0f;
++    SA1Input zero = {0};
++    step(&p, &zero);
++    assert(fabsf(p.pos.z - zones[SA3DS_PARITY_ZONE_TURN].reset_z) < 1e-6f);
++    assert(fabsf(p.pos.x) < 1e-6f);
++    assert(p.grounded);
++
+     puts("White Zone parity-lab fixture tests: PASS");
+     return 0;
+ }
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_protocol_outputs.py /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_protocol_outputs.py
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_protocol_outputs.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_protocol_outputs.py	2026-08-25 13:11:07.316457007 +0000
+@@ -0,0 +1,35 @@
++#!/usr/bin/env python3
++import csv, pathlib, sys
++
++root=pathlib.Path(sys.argv[1])
++
++def rows(name):
++    with open(root/f"{name}.csv",newline="",encoding="utf-8") as f: return list(csv.DictReader(f))
++def fl(r,k): return float(r[k])
++def ints(rs,k): return {int(r[k]) for r in rs}
++
++acc=rows("flat_accel"); assert fl(acc[-1],"horizontal_speed")>fl(acc[0],"horizontal_speed")
++coast=rows("coast"); assert fl(coast[-1],"horizontal_speed")<fl(coast[0],"horizontal_speed")
++brake=rows("brake"); assert max(abs(fl(r,"heading")) for r in brake)>1.0
++for n in ("turn_low","turn_high"):
++    rs=rows(n); assert max(abs(fl(r,"heading")) for r in rs)>0.5
++
++def jump_stats(name):
++    rs=rows(name); assert 0 in ints(rs,"grounded") and 1 in ints(rs,"grounded")
++    apex=max(range(len(rs)),key=lambda i: fl(rs[i],"pos_y"))
++    airborne_seen=False; landing=None
++    for i,r in enumerate(rs):
++        if int(r["grounded"])==0: airborne_seen=True
++        elif airborne_seen: landing=i; break
++    assert landing is not None and landing>apex
++    return max(fl(r,"pos_y") for r in rs),apex,landing
++
++tap=jump_stats("jump_tap"); hold=jump_stats("jump_hold"); assert hold[0]>tap[0]
++spin=rows("spindash"); assert 2 in ints(spin,"action_state") and 3 in ints(spin,"action_state")
++roll=rows("roll_exit"); assert fl(roll[-1],"horizontal_speed")<=fl(roll[0],"horizontal_speed")
++for n in ("uphill","downhill"):
++    rs=rows(n); assert rs and all(r["selector_provisional"]=="1" for r in rs)
++air=rows("air_control"); assert 0 in ints(air,"grounded") and max(abs(fl(r,"heading")) for r in air)>0.5
++print("12 deterministic White Zone protocol behavior checks: PASS")
++print(f"jump_tap apex_index={tap[1]} landing_index={tap[2]}")
++print(f"jump_hold apex_index={hold[1]} landing_index={hold[2]}")
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_trace_comparator.py /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_trace_comparator.py
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tests/test_white_zone_trace_comparator.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tests/test_white_zone_trace_comparator.py	2026-08-25 13:10:09.939477607 +0000
+@@ -0,0 +1,34 @@
++import csv
++import pathlib
++import subprocess
++import sys
++import tempfile
++
++ROOT=pathlib.Path(__file__).resolve().parents[1]
++HEADER=["trace_version","test_id","test_name","frame","pos_x","pos_y","pos_z","vel_x","vel_y","vel_z"]
++
++def write(path,dx=0.0):
++    with open(path,"w",newline="",encoding="utf-8") as f:
++        w=csv.DictWriter(f,fieldnames=HEADER); w.writeheader()
++        for frame in range(3):
++            w.writerow(dict(trace_version=1,test_id=3,test_name="TURN",frame=frame,
++                pos_x=frame+dx,pos_y=1,pos_z=154+frame,vel_x=1,vel_y=0,vel_z=0))
++
++def run(*args):
++    return subprocess.run([sys.executable,str(ROOT/"tools/compare_white_zone_traces.py"),*map(str,args)],text=True,capture_output=True)
++
++def main():
++    with tempfile.TemporaryDirectory() as td:
++        td=pathlib.Path(td); a=td/"reference.csv"; b=td/"sa3ds.csv"; c=td/"bad.csv"
++        write(a); write(b); write(c,0.25)
++        p=run(a,b)
++        assert p.returncode==0 and "STATUS: MATCHES MEASURED FIELDS" in p.stdout
++        p=run(a,b,"--retail-live")
++        assert p.returncode==0 and "STATUS: VERIFIED 1:1" in p.stdout
++        p=run(a,c)
++        assert p.returncode==1 and "STATUS: NOT VERIFIED" in p.stdout
++        assert "FIRST_DIVERGENCE: test_id=3 frame=0 field=pos_x" in p.stdout
++        assert "POSITION_ERROR_3D: max=0.25" in p.stdout
++    print("White Zone trace comparator tests: PASS")
++
++if __name__=="__main__": main()
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tools/compare_white_zone_traces.py /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tools/compare_white_zone_traces.py
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tools/compare_white_zone_traces.py	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tools/compare_white_zone_traces.py	2026-08-25 13:10:09.911477152 +0000
+@@ -0,0 +1,111 @@
++#!/usr/bin/env python3
++"""Strict White Zone retail-vs-SA3DS frame comparator.
++
++VERIFIED 1:1 is reserved for an exact match against a reference explicitly
++marked --retail-live. Tolerance agreement never promotes the global project.
++"""
++import argparse
++import csv
++import math
++from collections import Counter
++
++KEY_FIELDS=("test_id","frame")
++POS_FIELDS=("pos_x","pos_y","pos_z")
++VEL_FIELDS=("vel_x","vel_y","vel_z")
++INTEGER_FIELDS={
++    "trace_version","test_id","frame","jump_pressed","jump_held","jump_released",
++    "action_pressed","action_held","action_released","grounded","action_state",
++    "surface_id","surface_flags","runtime_animation_id","action_slot","selector_provisional",
++}
++IGNORE_EXACT={"test_name"}
++
++def load(path):
++    with open(path,newline="",encoding="utf-8") as f:
++        r=csv.DictReader(f)
++        if not r.fieldnames: raise SystemExit(f"empty trace: {path}")
++        rows={}
++        for row in r:
++            key=(row.get("test_id"),row.get("frame"))
++            if key in rows: raise SystemExit(f"duplicate test/frame {key} in {path}")
++            rows[key]=row
++        return r.fieldnames,rows
++
++def f3(row, fields):
++    try: return tuple(float(row[x]) for x in fields)
++    except (TypeError,ValueError,KeyError): return None
++
++def d3(a,b):
++    if a is None or b is None: return None
++    return math.sqrt(sum((x-y)*(x-y) for x,y in zip(a,b)))
++
++def close_field(field,a,b,abs_tol,rel_tol):
++    if field in INTEGER_FIELDS or field in IGNORE_EXACT: return a==b
++    try:
++        x=float(a); y=float(b)
++    except (TypeError,ValueError):
++        return a==b
++    return math.isclose(x,y,abs_tol=abs_tol,rel_tol=rel_tol)
++
++def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,retail_live=False):
++    ref_fields,ref=load(ref_path); sa_fields,sa=load(sa3ds_path)
++    common=[f for f in ref_fields if f in sa_fields]
++    missing=[f for f in ref_fields if f not in sa_fields]
++    extra=[f for f in sa_fields if f not in ref_fields]
++    keys=sorted(set(ref)|set(sa),key=lambda k:(int(k[0] or -1),int(k[1] or -1)))
++    mismatches=Counter(); first=None; exact=True; tolerance_match=True
++    pos_err=[]; vel_err=[]
++    for key in keys:
++        rr=ref.get(key); ss=sa.get(key)
++        if rr is None or ss is None:
++            exact=False; tolerance_match=False; mismatches["missing_frame"]+=1
++            if first is None: first=(key,"missing_frame",rr is not None,ss is not None)
++            continue
++        pe=d3(f3(rr,POS_FIELDS),f3(ss,POS_FIELDS)); ve=d3(f3(rr,VEL_FIELDS),f3(ss,VEL_FIELDS))
++        if pe is not None: pos_err.append(pe)
++        if ve is not None: vel_err.append(ve)
++        for field in common:
++            a=rr[field]; b=ss[field]
++            if a!=b:
++                exact=False; mismatches[field]+=1
++                if first is None: first=(key,field,a,b)
++                if not close_field(field,a,b,abs_tol,rel_tol): tolerance_match=False
++    if missing or extra:
++        exact=False; tolerance_match=False
++    if exact and retail_live: status="VERIFIED 1:1"
++    elif exact or tolerance_match: status="MATCHES MEASURED FIELDS"
++    else: status="NOT VERIFIED"
++    return {
++        "status":status,"exact":exact,"tolerance_match":tolerance_match,
++        "first":first,"mismatches":mismatches,"missing":missing,"extra":extra,
++        "pos_max":max(pos_err,default=0.0),"pos_mean":sum(pos_err)/len(pos_err) if pos_err else 0.0,
++        "vel_max":max(vel_err,default=0.0),"vel_mean":sum(vel_err)/len(vel_err) if vel_err else 0.0,
++        "frames":len(keys),
++    }
++
++def main():
++    ap=argparse.ArgumentParser()
++    ap.add_argument("reference"); ap.add_argument("sa3ds")
++    ap.add_argument("--retail-live",action="store_true",help="reference came from a live retail SADX capture")
++    ap.add_argument("--abs",dest="abs_tol",type=float,default=1e-6)
++    ap.add_argument("--rel",dest="rel_tol",type=float,default=1e-6)
++    args=ap.parse_args()
++    r=compare(args.reference,args.sa3ds,args.abs_tol,args.rel_tol,args.retail_live)
++    print(f"STATUS: {r['status']}")
++    print(f"ALIGNED_KEYS: {r['frames']}")
++    print(f"EXACT_MATCH: {'YES' if r['exact'] else 'NO'}")
++    print(f"TOLERANCE_MATCH: {'YES' if r['tolerance_match'] else 'NO'}")
++    if r['first']:
++        key,field,a,b=r['first']
++        print(f"FIRST_DIVERGENCE: test_id={key[0]} frame={key[1]} field={field} reference={a} sa3ds={b}")
++    else:
++        print("FIRST_DIVERGENCE: NONE")
++    print(f"POSITION_ERROR_3D: max={r['pos_max']:.9g} mean={r['pos_mean']:.9g}")
++    print(f"VELOCITY_ERROR_3D: max={r['vel_max']:.9g} mean={r['vel_mean']:.9g}")
++    if r['mismatches']:
++        print("FIELD_MISMATCH_COUNTS:")
++        for field,count in sorted(r['mismatches'].items()): print(f"  {field}: {count}")
++    if r['missing']: print("MISSING_SA3DS_FIELDS: "+",".join(r['missing']))
++    if r['extra']: print("EXTRA_SA3DS_FIELDS: "+",".join(r['extra']))
++    return 0 if r['status']!="NOT VERIFIED" else 1
++
++if __name__=="__main__": raise SystemExit(main())
+diff -ruN '--exclude=0G_CHANGED_FILES.txt' '--exclude=0G_against_0.0.9.0F.patch' '--exclude=SHA256SUMS_0.0.9.0G.txt' /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tools/run_white_zone_protocol.c /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tools/run_white_zone_protocol.c
+--- /mnt/data/sa3ds0f/SA3DS_0.0.9.0F_WhiteZoneParityFoundation/tools/run_white_zone_protocol.c	2026-08-24 22:47:54.000000000 +0000
++++ /mnt/data/SA3DS_0.0.9.0G_WhiteZoneValidation/tools/run_white_zone_protocol.c	2026-08-25 13:09:40.783003975 +0000
+@@ -3,100 +3,153 @@
+ #include <string.h>
+ 
+ #include "../src/game/parity_lab.h"
++#include "../src/game/parity_trace.h"
++#include "../src/game/sonic_animation_sync.h"
++#include "../src/game/sonic_animation_runtime.h"
+ #include "../src/sa1/physics/physics_constants.h"
+-#include "../src/sa1/physics/physics_trace.h"
+ #include "../src/sa1/physics/steam_flat.h"
++#include "../src/sa1/physics/steam_player_parameters.h"
+ 
+ typedef enum {
+     TEST_ACCEL,
+     TEST_COAST,
+     TEST_BRAKE,
++    TEST_TURN_LOW,
++    TEST_TURN_HIGH,
+     TEST_JUMP_TAP,
+     TEST_JUMP_HOLD,
+     TEST_SPINDASH,
++    TEST_ROLL_EXIT,
+     TEST_UPHILL,
+-    TEST_DOWNHILL
++    TEST_DOWNHILL,
++    TEST_AIR_CONTROL
+ } TestKind;
+ 
++typedef struct {
++    const char *name;
++    TestKind kind;
++    SA3DSParityZoneId zone;
++} ProtocolRow;
++
++static const ProtocolRow kProtocols[] = {
++    {"flat_accel", TEST_ACCEL, SA3DS_PARITY_ZONE_ACCELERATION},
++    {"coast", TEST_COAST, SA3DS_PARITY_ZONE_BRAKE_COAST},
++    {"brake", TEST_BRAKE, SA3DS_PARITY_ZONE_BRAKE_COAST},
++    {"turn_low", TEST_TURN_LOW, SA3DS_PARITY_ZONE_TURN},
++    {"turn_high", TEST_TURN_HIGH, SA3DS_PARITY_ZONE_TURN},
++    {"jump_tap", TEST_JUMP_TAP, SA3DS_PARITY_ZONE_JUMP},
++    {"jump_hold", TEST_JUMP_HOLD, SA3DS_PARITY_ZONE_JUMP},
++    {"spindash", TEST_SPINDASH, SA3DS_PARITY_ZONE_ROLL_SPINDASH},
++    {"roll_exit", TEST_ROLL_EXIT, SA3DS_PARITY_ZONE_ROLL_SPINDASH},
++    {"uphill", TEST_UPHILL, SA3DS_PARITY_ZONE_SLOPE_UP},
++    {"downhill", TEST_DOWNHILL, SA3DS_PARITY_ZONE_SLOPE_DOWN},
++    {"air_control", TEST_AIR_CONTROL, SA3DS_PARITY_ZONE_AIR_LANDING},
++};
++
+ static int parse(const char *name, TestKind *kind, SA3DSParityZoneId *zone) {
+-    struct Row { const char *name; TestKind kind; SA3DSParityZoneId zone; };
+-    static const struct Row rows[] = {
+-        {"flat_accel", TEST_ACCEL, SA3DS_PARITY_ZONE_ACCELERATION},
+-        {"coast", TEST_COAST, SA3DS_PARITY_ZONE_BRAKE_COAST},
+-        {"brake", TEST_BRAKE, SA3DS_PARITY_ZONE_BRAKE_COAST},
+-        {"jump_tap", TEST_JUMP_TAP, SA3DS_PARITY_ZONE_JUMP},
+-        {"jump_hold", TEST_JUMP_HOLD, SA3DS_PARITY_ZONE_JUMP},
+-        {"spindash", TEST_SPINDASH, SA3DS_PARITY_ZONE_ROLL_SPINDASH},
+-        {"uphill", TEST_UPHILL, SA3DS_PARITY_ZONE_SLOPE_UP},
+-        {"downhill", TEST_DOWNHILL, SA3DS_PARITY_ZONE_SLOPE_DOWN},
+-    };
+-    for (unsigned i = 0; i < sizeof(rows)/sizeof(rows[0]); ++i) {
+-        if (!strcmp(name, rows[i].name)) { *kind = rows[i].kind; *zone = rows[i].zone; return 1; }
++    for (unsigned i=0;i<sizeof(kProtocols)/sizeof(kProtocols[0]);++i) {
++        if (!strcmp(name,kProtocols[i].name)) {
++            *kind=kProtocols[i].kind; *zone=kProtocols[i].zone; return 1;
++        }
+     }
+     return 0;
+ }
+ 
+ static SA1Input input_for(TestKind kind, unsigned frame) {
+-    SA1Input in = {0};
++    SA1Input in={0};
+     switch (kind) {
+     case TEST_ACCEL:
+     case TEST_UPHILL:
+     case TEST_DOWNHILL:
+-        in.move_z = 1.0f;
+-        break;
++        in.move_z=1.0f; break;
+     case TEST_COAST:
++    case TEST_ROLL_EXIT:
+         break;
+     case TEST_BRAKE:
+-        in.move_z = -1.0f;
+-        break;
++        in.move_z=-1.0f; break;
++    case TEST_TURN_LOW:
++    case TEST_TURN_HIGH:
++        in.move_x=1.0f; break;
+     case TEST_JUMP_TAP:
+-        if (frame == 0) in.jump_pressed = true;
+-        if (frame < 2) in.jump_held = true;
+-        if (frame == 2) in.jump_released = true;
++        if (frame==0) in.jump_pressed=true;
++        if (frame<2) in.jump_held=true;
++        if (frame==2) in.jump_released=true;
+         break;
+     case TEST_JUMP_HOLD:
+-        if (frame == 0) in.jump_pressed = true;
+-        if (frame < 60) in.jump_held = true;
+-        if (frame == 60) in.jump_released = true;
++        if (frame==0) in.jump_pressed=true;
++        if (frame<60) in.jump_held=true;
++        if (frame==60) in.jump_released=true;
+         break;
+     case TEST_SPINDASH:
+-        if (frame == 0) in.action_pressed = true;
+-        if (frame < 20) in.action_held = true;
+-        if (frame == 20) in.action_released = true;
++        if (frame==0) in.action_pressed=true;
++        if (frame<20) in.action_held=true;
++        if (frame==20) in.action_released=true;
+         break;
++    case TEST_AIR_CONTROL:
++        in.move_x=1.0f; in.move_z=0.25f; break;
+     }
+     return in;
+ }
+ 
++static void apply_precondition(TestKind kind, SA1PlayerState *p) {
++    switch (kind) {
++    case TEST_COAST: case TEST_BRAKE: p->vel.z=1.5f; break;
++    case TEST_TURN_LOW: p->vel.z=0.35f; break;
++    case TEST_TURN_HIGH: p->vel.z=3.0f; break;
++    case TEST_ROLL_EXIT:
++        p->vel.z=0.18f; p->action_state=SA1_ACTION_ROLL; p->ball_form=true; break;
++    case TEST_UPHILL: case TEST_DOWNHILL: p->vel.z=1.0f; break;
++    case TEST_AIR_CONTROL:
++        p->grounded=false; p->action_state=SA1_ACTION_AIRBORNE;
++        p->pos.y+=6.0f; p->vel.y=0.0f; p->ball_form=false; break;
++    default: break;
++    }
++}
++
+ int main(int argc, char **argv) {
+-    if (argc != 4) {
+-        fprintf(stderr, "usage: %s TEST FRAMES OUT.csv\n", argv[0]);
++    if (argc!=4) {
++        fprintf(stderr,"usage: %s TEST FRAMES OUT.csv\n",argv[0]);
+         return 2;
+     }
+     TestKind kind; SA3DSParityZoneId zone;
+-    if (!parse(argv[1], &kind, &zone)) {
+-        fprintf(stderr, "unknown test: %s\n", argv[1]);
++    if (!parse(argv[1],&kind,&zone)) {
++        fprintf(stderr,"unknown test: %s\n",argv[1]);
+         return 2;
+     }
+-    unsigned frames = (unsigned)strtoul(argv[2], 0, 10);
+-    FILE *out = fopen(argv[3], "wb");
++    unsigned frames=(unsigned)strtoul(argv[2],0,10);
++    FILE *out=fopen(argv[3],"wb");
+     if (!out) { perror(argv[3]); return 2; }
+ 
+     SA1PlayerState p;
+-    if (!sa3ds_parity_lab_reset_player(&p, zone)) { fclose(out); return 2; }
+-    /* Coast/brake protocols begin from a controlled forward speed. This is a
+-       test fixture precondition, not a claim about how retail reaches it. */
+-    if (kind == TEST_COAST || kind == TEST_BRAKE) p.vel.z = 1.5f;
+-    if (kind == TEST_UPHILL || kind == TEST_DOWNHILL) p.vel.z = 1.0f;
+-
+-    if (sa1_trace_write_header(out)) { fclose(out); return 2; }
+-    for (unsigned f = 0; f < frames; ++f) {
+-        SA1Input in = input_for(kind, f);
+-        sa1_physics_step_steam_sonic_flat(&p, &in, 0.0f,
+-            sa3ds_parity_lab_world(), &SA1_PHYSICS_PLACEHOLDER_CONSTANTS, 0);
+-        if (sa1_trace_write_frame(out, &p, &in)) { fclose(out); return 2; }
++    if (!sa3ds_parity_lab_reset_player(&p,zone)) { fclose(out); return 2; }
++    apply_precondition(kind,&p);
++    SA3DSSonicAnimationSync sync={0};
++    SA3DSSonicAnimationRuntime runtime={0};
++    const SA3DSParityZone *z=sa3ds_parity_lab_zone_by_id(zone);
++
++    if (sa3ds_parity_trace_write_header(out)) { fclose(out); return 2; }
++    for (unsigned f=0;f<frames;++f) {
++        SA1Input in=input_for(kind,f);
++        sa1_physics_step_steam_sonic_flat(&p,&in,0.0f,
++            sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,0);
++        SA1PlayerState physics_done=p;
++        SA3DSSonicAnimationObservation observation=
++            sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
++        if (memcmp(&physics_done,&p,sizeof(p))!=0) {
++            fprintf(stderr,"animation observation mutated physics at frame %u\n",f);
++            fclose(out); return 3;
++        }
++        SA3DSSonicAnimationSelection selection=
++            sa3ds_sonic_animation_select(&runtime,&p,&observation);
++        if (memcmp(&physics_done,&p,sizeof(p))!=0) {
++            fprintf(stderr,"animation selection mutated physics at frame %u\n",f);
++            fclose(out); return 3;
++        }
++        if (sa3ds_parity_trace_write_frame(out,zone,z?z->name:argv[1],&p,&in,&selection)) {
++            fclose(out); return 2;
++        }
+     }
+     fclose(out);
+-    printf("White Zone protocol %s: %u frames -> %s\n", argv[1], frames, argv[3]);
++    printf("White Zone protocol %s: %u frames -> %s\n",argv[1],frames,argv[3]);
+     return 0;
+ }

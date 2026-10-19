@@ -1,0 +1,34 @@
+0.0.9.0D ONLY GATE: PASS
+
+PC2004 Sonic render semantics:
+  motions=146
+  linear=146
+  strips=941
+  quads=22
+  Basic UV source range=[0,255]
+
+Native SA3C pose/draw submission:
+  action0 root=72
+  visited_nodes=73
+  visible_nodes=28
+  draws=42
+  triangles=1993
+
+Native SA3T texture package:
+  textures=16
+  RGBA8 pixel bytes=232192
+
+Host textured white-space raster smoke:
+  action=0 frame=0.000 -> PASS, draws=42, source_tris=1993, raster_tris=1993, shaded_pixels=5938, alpha_rejects=66
+  action=9 frame=0.000 -> PASS, draws=42, source_tris=1993, raster_tris=1993, shaded_pixels=5952, alpha_rejects=37
+  action=9 frame=5.000 -> PASS, draws=42, source_tris=1993, raster_tris=1993, shaded_pixels=5904, alpha_rejects=44
+  frame 0 vs frame 5 pixel output differs -> real motion changes rendered pose
+
+Inherited regression observed before 0D-only rerun:
+  19 Movement Lab scenario regressions: PASS
+  0.0.9.0A real-source recon: PASS
+  0.0.9.0B physics-synced presentation: PASS
+  0.0.9.0C exact real Sonic source decode: PASS
+
+Distribution audit:
+  no .dll/.exe/.pvm/.prs/.sa3c/.sa3t/.png/.ppm/.bmp/.jpg/.jpeg payloads included

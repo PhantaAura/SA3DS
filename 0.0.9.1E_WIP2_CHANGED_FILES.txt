@@ -1,0 +1,16 @@
+Parent: SA3DS_0.0.9.1E-WIP1_WhiteZoneVisualGuard_CodeOnly.zip SHA256 94f9c681b8b04512c0c26e472f7f7beb071dbc041a4e314267f25a47fb295eb2
+NEW src/sa3c/sa3c_gpu_batch.h
+NEW src/sa3c/sa3c_gpu_batch.c
+MOD runtime_0_0_9_0F/include/sonic_gpu.h
+MOD runtime_0_0_9_0F/source/sonic_gpu.c
+MOD runtime_0_0_9_0F/source/lab_gpu.c
+MOD runtime_0_0_9_0F/source/main.c
+NEW tests/test_sa3c_gpu_batch.c
+NEW tests/test_white_zone_gpu_batch_source.py
+NEW tests/run_white_zone_gpu_batch.sh
+MOD RUN_STATE.json
+MOD PARITY_STATUS.json
+MOD ERROR_HISTORY.md
+MOD CURRENT_CHECKPOINT.md
+NEW CHECKPOINT_0.0.9.1E_WIP2.md
+NEW 0.0.9.1E_WIP2_CHANGED_FILES.txt

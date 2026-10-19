@@ -1,0 +1,110 @@
+{
+  "expected_count": 17,
+  "files": [
+    {
+      "name": "BEACH01.PVM",
+      "role": "act0 stage textures",
+      "sha256": "fb6fa479787fb29e57688ea56cf21da6952142d9ebb98665895d9c1372105a07",
+      "size": 1725760
+    },
+    {
+      "name": "BEACH02.PVM",
+      "role": "act1 stage textures",
+      "sha256": "d871b7a7e78d8ea96c93a77e77290a7a2da3630942e40fcd7c744875d8a8e866",
+      "size": 2218336
+    },
+    {
+      "name": "BEACH03.PVM",
+      "role": "act2 stage textures",
+      "sha256": "01fc98834be904a173a7aba7a3f18ef88418f9460bb78c4cfd9aba99864e6fb3",
+      "size": 2850848
+    },
+    {
+      "name": "OBJ_BEACH.PVM",
+      "role": "Emerald Coast object textures",
+      "sha256": "8b64b5b454dc7fac3474932dde42d749a46e406c4e756865b21e7d134227d50c",
+      "size": 623008
+    },
+    {
+      "name": "BEACH_SEA.PVM",
+      "role": "sea textures",
+      "sha256": "0b9ee8d893cdb5b3d3f8a8e9d035292559159295d2b0bdd8683e7a190b67668d",
+      "size": 743776
+    },
+    {
+      "name": "BG_BEACH.PVM",
+      "role": "background textures",
+      "sha256": "6ee04c83f990066cec8cad4763e3ee8176bf05ebb277ad9d337e996488d718a4",
+      "size": 175264
+    },
+    {
+      "name": "SET0100S.BIN",
+      "role": "act0 Sonic SET",
+      "sha256": "cdbe4be005819cf04e2d1856416352ebaab745a277238b5f9136787cb6349170",
+      "size": 25280
+    },
+    {
+      "name": "SET0100E.BIN",
+      "role": "act0 enemy SET",
+      "sha256": "8c45f7be501a4a014028037d671322f866a6d2c6982d3d33350da5e5b168da22",
+      "size": 18176
+    },
+    {
+      "name": "SET0101S.BIN",
+      "role": "act1 Sonic SET",
+      "sha256": "720e5db0d64429ab95e5eba3a30943bc30dd68fb216e53b5ad43ec76cab91000",
+      "size": 31904
+    },
+    {
+      "name": "SET0101M.BIN",
+      "role": "act1 alternate-character SET",
+      "sha256": "997919a708c0f78b96cb02bb1ec98dfd53e23c9ade735a10f69b469750576b71",
+      "size": 31040
+    },
+    {
+      "name": "SET0102S.BIN",
+      "role": "act2 Sonic SET",
+      "sha256": "c40207bc544dd80f209c7f37e2fdbbde3cce5c6f3cf4336c2d2fd780ebd18121",
+      "size": 64
+    },
+    {
+      "name": "SET0102B.BIN",
+      "role": "act2 alternate-character SET",
+      "sha256": "65034328b267f0a123d86e263b50582260c9a0591234447cb63ea451f505c06e",
+      "size": 10976
+    },
+    {
+      "name": "CAM0100S.BIN",
+      "role": "act0 Sonic camera",
+      "sha256": "9920294d5ef5b0b7ce8ebee14661c489234668c16a7da3c405589101899ec5d3",
+      "size": 6208
+    },
+    {
+      "name": "CAM0100E.BIN",
+      "role": "act0 alternate camera",
+      "sha256": "815742f8cce42354808a954c9b28c97adbe80562bd78224f993177dc95f1f203",
+      "size": 6016
+    },
+    {
+      "name": "CAM0101S.BIN",
+      "role": "act1 Sonic camera",
+      "sha256": "080e4188d5c38474a4da482f87f4d56875a190161f726fa16f57f615b1310f49",
+      "size": 8576
+    },
+    {
+      "name": "CAM0102S.BIN",
+      "role": "act2 Sonic camera",
+      "sha256": "9a86bcf6a4f5776e73dc1a96ed87e3c1f99f6111cea595eec9fc414826ba8fdd",
+      "size": 128
+    },
+    {
+      "name": "CAM0102B.BIN",
+      "role": "act2 alternate camera",
+      "sha256": "7b2913d924601a7e6b87341e776c3f1e0314a983d8b11828c1326af1685d0885",
+      "size": 256
+    }
+  ],
+  "missing": [],
+  "recognized_count": 17,
+  "source": "canonical owner system source"
+}

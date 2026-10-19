@@ -1,0 +1,17 @@
+SA3DS 0.0.9.1D TEST RESULTS (owner supplied canonical inputs)
+
+PASS tests/test_pc2004_cam.py synthetic source with raw NaN-pattern row
+PASS CAM header/count/length validation
+PASS CAM neutral chunk SHA256/CRC32/provenance validation and corruption tests
+PASS CAM duplicate source / invalid filenames rejection
+PASS zero-record CAM files
+PASS all 127 CAM files / 4,955 records in owner's system 2.zip
+PASS 127/127 CAM basename and SHA256 comparison with system.zip
+PASS batch CAM import; numeric groups and named sources kept distinct
+PASS owner-generated Emerald Coast CAM standalone grouped packages
+PASS EC Act 0/1/2 combined GEOMETRY+MATERIALS+TEXTURES+SET+CAMERA packages
+PASS tests/test_pc2004_set.py inherited 1C owner-data tests
+PASS ./tests/run_0_0_9_1C_tests.sh /mnt/data/sonic.exe '/mnt/data/system 2.zip' (full inherited 1C suite, exit 0)
+
+PENDING runtime-native camera semantics, hardware exercise, all-physics parity.
+No devkitARM/.3dsx build attempted or claimed here.

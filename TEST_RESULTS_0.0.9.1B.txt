@@ -1,0 +1,100 @@
+== inherited 0.0.9.1A regression ==
+== inherited 0.0.9.0G regression ==
+== White Zone 10-section geometry + selected reset ==
+White Zone parity-lab fixture tests: PASS
+== HUD snapshot + FOLLOW/REFERENCE camera ==
+White Zone parity HUD/camera tests: PASS
+== animation observer non-mutation stress ==
+animation observer 1024-state non-mutation stress: PASS
+== extended White Zone deterministic protocols ==
+12 deterministic White Zone protocol behavior checks: PASS
+jump_tap apex_index=18 landing_index=38
+jump_hold apex_index=57 landing_index=92
+== strict retail comparator ==
+White Zone trace comparator tests: PASS
+== 0G runtime source contract ==
+0.0.9.0G 3DS runtime/source contract: PASS
+0.0.9.0G White Zone validation suite: PASS
+== exact PC2004 Emerald Coast root/code witnesses ==
+== exact PC2004 Emerald Coast structural decode ==
+PC2004 Emerald Coast exact-source decode tests: PASS
+== source-neutral collision chunk ==
+Emerald Coast pointer-free collision chunk tests: PASS
+valid .sa3dspak v1.0: 2 chunks, 735904 bytes
+== Emerald Coast system companion inventory ==
+0.0.9.1 Emerald Coast source-decode suite: PASS
+== EC visual/material/PVM exact-source decode ==
+PC2004 Emerald Coast visual/material/PVM decode tests: PASS
+== EC visual evidence report ==
+== owner-side EC visual package builder ==
+{"act": 0, "bytes": 4349696, "indices": 58794, "instances": 480, "materials_deduplicated": 237, "meshes": 578, "meshes_without_uv": 61, "models": 183, "output": "/tmp/sa3ds_0_0_9_1B_tests/out/emerald_coast_act0.sa3dspak", "sha256": "5fbb164a27337381cea897f4dc2be01906e669aa70804b86ce0945e77efc7bce", "textures": 103, "triangles": 19598, "vertices": 22237}
+{"act": 1, "bytes": 5100304, "indices": 49350, "instances": 169, "materials_deduplicated": 120, "meshes": 557, "meshes_without_uv": 25, "models": 142, "output": "/tmp/sa3ds_0_0_9_1B_tests/out/emerald_coast_act1.sa3dspak", "sha256": "71cf8407688814fe576a6573a33bee5f05a577afdbc9729721e8873ad9a95359", "textures": 91, "triangles": 16450, "vertices": 16460}
+{"act": 2, "bytes": 4712080, "indices": 32565, "instances": 199, "materials_deduplicated": 122, "meshes": 314, "meshes_without_uv": 14, "models": 101, "output": "/tmp/sa3ds_0_0_9_1B_tests/out/emerald_coast_act2.sa3dspak", "sha256": "bd71fb939fbcc2abceae81054e6b44360640f1d9fa9c2b65088f84fd82181d30", "textures": 89, "triangles": 10855, "vertices": 10418}
+valid .sa3dspak v1.0: 4 chunks, 4349696 bytes
+valid .sa3dspak v1.0: 4 chunks, 5100304 bytes
+valid .sa3dspak v1.0: 4 chunks, 4712080 bytes
+0.0.9.1B Emerald Coast visual/material/PVM suite: PASS
+
+== focused Sonic texture regression after base-first correction ==
+== inherited 0.0.9.0C suite ==
+== inherited 0.0.9.0B suite ==
+== inherited 0.0.9.0A + frozen 0.0.8.8.9 suite ==
+== frozen 0.0.8.8.9 suite ==
+general surface frame/contact tests: PASS
+surface evidence branch tests: PASS
+PC 2004 PGetBreak/PGetInertia arithmetic tests: PASS
+PC 2004 collision-work layout/init tests: PASS
+surface runtime support-order tests: PASS
+steam ground-parity candidate tests: PASS
+steam air-parity candidate tests: PASS
+steam roll/spindash PC-2004 evidence tests: PASS
+portable physics tests: PASS (placeholder expectations)
+trace: accel_flat (8 frames) -> /tmp/sa3ds_host_tests/determinism_a.csv
+trace: accel_flat (8 frames) -> /tmp/sa3ds_host_tests/determinism_b.csv
+PASS: traces match within configured tolerances
+trace determinism test: PASS
+19 scenario regressions: PASS (flat/air/ball + 2004 support-order cases)
+packed 3 chunks -> /tmp/sa3ds_host_tests/synthetic.sa3dspak
+valid .sa3dspak v1.0: 3 chunks, 416 bytes
+extracted 3 chunks -> /tmp/sa3ds_host_tests/extracted
+runtime package reader tests: PASS
+8 malformed package cases: PASS
+== 0.0.9.0A real-source recon ==
+PC2004 character-loader recon tests: PASS
+PC2004 proven-offset character gate tests: PASS
+== 0.0.9.0B physics-synced presentation tests ==
+sonic animation physics-observer unit tests: PASS
+sonic animation/real physics integration tests: PASS
+19-trace animation-intent bridge spot checks: PASS
+PC2004 Sonic ACTION direct-slot access atlas: PASS
+0.0.9.0B suite: PASS
+== 0.0.9.0C exact real Sonic source decode ==
+{
+  "status": "PASS",
+  "source_sha256": "76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5",
+  "normal_nodes": 73,
+  "normal_points": 1161,
+  "normal_triangles": 1993,
+  "actions_nonnull": 146,
+  "motions": 146
+}
+PC2004 exact SONIC.PVM parse/decode tests: PASS
+PC2004 Sonic material -> SONIC.PVM binding: PASS (13/16 slots referenced)
+PC2004 Sonic -> pointer-free SA3C deterministic build: PASS
+SA3C counts: {'NODE': 223, 'MODL': 87, 'MESH': 124, 'VRTX': 4525, 'INDX': 17589, 'MATL': 19, 'TEXS': 16, 'ANIM': 149, 'CHAN': 3715, 'KEYS': 86204}
+SA3C bytes: 1669728
+native SA3C character reader/reference validation: PASS
+0.0.9.0C suite: PASS
+== 0.0.9.0D source rendering semantics ==
+PC2004 Sonic render semantics: PASS motions=146 linear=146 strips=941 quads=22 uv=[0,255]
+== generated owner-source packages ==
+== native SA3C pose/draw submission ==
+real Sonic white-space pose/render submission: PASS
+action0 root=72 visited=73 visible_nodes=28 draws=42 triangles=1993 bounds=[-2.503257 -5.392684 -3.214163]-[5.230134 4.462759 3.283108]
+== native SA3T texture package ==
+SA3T real Sonic RGBA8 texture package: PASS (16 textures, 232192 pixel bytes)
+== host textured white-space raster smoke ==
+host textured white-space render: PASS action=0 frame=0.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5978 alpha_rejects=4
+host textured white-space render: PASS action=9 frame=0.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5976 alpha_rejects=5
+host textured white-space render: PASS action=9 frame=5.000 draws=42 source_tris=1993 raster_tris=1993 shaded_pixels=5936 alpha_rejects=4
+0.0.9.0D suite: PASS

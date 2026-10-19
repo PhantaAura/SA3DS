@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""One-command developer entry point for host and optional 3DS workflows."""
+import argparse
+import hashlib
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent
+BUILD = ROOT / "build" / "host"
+DIST = ROOT / "dist"
+SCENARIOS = ["accel_flat", "coast_from_speed", "brake_from_speed", "reverse_from_speed",
+             "jump_tap", "jump_hold", "air_control", "gentle_uphill", "gentle_downhill",
+             "steep_uphill", "bank_transition", "high_speed_turn", "low_speed_turn", "fall_reset",
+             "spindash_action", "spindash_shortcut"]
+
+def run(command, **kwargs):
+    print("+ " + " ".join(map(str, command)))
+    return subprocess.run(list(map(str, command)), cwd=str(ROOT), check=True, **kwargs)
+
+def compile_runner():
+    BUILD.mkdir(parents=True, exist_ok=True)
+    sources = ["src/sa1/physics/ground.c", "src/sa1/physics/physics_constants.c",
+               "src/sa1/physics/movement.c",
+               "src/sa1/physics/steam_input.c",
+               "src/sa1/physics/steam_player_parameters.c",
+               "src/sa1/physics/steam_air.c",
+               "src/sa1/physics/steam_spindash_evidence.c",
+               "src/sa1/physics/steam_ball.c",
+               "src/sa1/physics/steam_flat.c",
+               "src/game/stage.c",
+               "src/sa1/physics/physics_trace.c", "tests/physics_runner.c"]
+    compiler = os.environ.get("CC", "cc")
+    run([compiler, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
+         "-Isrc/sa1/physics", "-Isrc/game", *sources, "-lm", "-o", BUILD / "physics_runner"])
+    return BUILD / "physics_runner"
+
+def toolchain_available():
+    devkitarm = os.environ.get("DEVKITARM")
+    compiler = pathlib.Path(devkitarm) / "bin" / "arm-none-eabi-gcc" if devkitarm else None
+    devkitpro = pathlib.Path(os.environ.get("DEVKITPRO", "/nonexistent"))
+    return bool(compiler and compiler.is_file() and (pathlib.Path(devkitarm) / "3ds_rules").is_file()
+                and (devkitpro / "libctru" / "include" / "3ds.h").is_file())
+
+def command_doctor(_args):
+    checks = []
+    checks.append(("Python >= 3.9", sys.version_info >= (3, 9), sys.version.split()[0]))
+    cc = shutil.which(os.environ.get("CC", "cc")); checks.append(("host C compiler", bool(cc), cc or "not found"))
+    for name in ("DEVKITPRO", "DEVKITARM"):
+        value = os.environ.get(name); checks.append((name, bool(value and pathlib.Path(value).is_dir()), value or "not set"))
+    devkitpro = pathlib.Path(os.environ.get("DEVKITPRO", "/nonexistent"))
+    checks.append(("devkitARM + libctru", toolchain_available(), "available" if toolchain_available() else "not available"))
+    for label, header in (("Citro2D (optional here)", "citro2d.h"), ("Citro3D (optional here)", "citro3d.h")):
+        path = devkitpro / "portlibs" / "3ds" / "include" / header
+        checks.append((label, path.is_file(), str(path) if path.is_file() else "not found"))
+    for name, ok, detail in checks: print("%-29s %s  %s" % (name, "OK" if ok else "--", detail))
+    print("Host-only commands remain available without the 3DS toolchain.")
+    return 0 if cc else 1
+
+def command_test(_args):
+    run(["sh", "tests/run_host_tests.sh"]); return 0
+
+def command_physics_test(args):
+    command_test(args)
+    args.all = True; args.scenario = "accel_flat"; args.frames = 240; args.output = None
+    return command_trace(args)
+
+def command_trace(args):
+    runner = compile_runner(); DIST.mkdir(exist_ok=True)
+    names = SCENARIOS if args.all else [args.scenario]
+    for name in names:
+        output = pathlib.Path(args.output) if args.output and len(names) == 1 else DIST / (name + ".csv")
+        run([runner, name, args.frames, output])
+    return 0
+
+def command_compare(args):
+    command = [sys.executable, "tools/compare_traces.py", args.reference, args.generated,
+               "--abs", args.absolute, "--rel", args.relative]
+    for value in args.tolerance: command += ["--tolerance", value]
+    run(command); return 0
+
+def command_package(args):
+    mapping = {"pack": "pack", "validate-pack": "validate", "inspect-pack": "inspect", "extract-pack": "extract"}
+    command = [sys.executable, "tools/sa3dspak.py", mapping[args.command]] + args.arguments
+    run(command); return 0
+
+def command_source_check(args):
+    command = [sys.executable, "tools/source_check.py", args.manifest]
+    if args.root: command += ["--root", args.root]
+    run(command); return 0
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""): digest.update(block)
+    return digest.hexdigest()
+
+def command_build(_args):
+    command_test(_args)
+    DIST.mkdir(exist_ok=True)
+    package = DIST / "movement_lab_synthetic.sa3dspak"
+    run([sys.executable, "tools/sa3dspak.py", "pack", package,
+         "--source-profile", "synthetic-original-v1",
+         "--chunk", "GEOMETRY=tests/data/synthetic_geometry.txt",
+         "--chunk", "COLLISION=tests/data/synthetic_collision.txt"])
+    run([sys.executable, "tools/sa3dspak.py", "validate", package])
+    if not toolchain_available():
+        print("3DS build: SKIPPED — DEVKITARM compiler/3ds_rules not available; no .3dsx claimed.")
+        return 0
+    run(["make", "-C", "runtime", "clean"]); run(["make", "-C", "runtime"])
+    built = ROOT / "runtime" / "sa3ds_movementlab_0_0_8_6.3dsx"
+    if not built.is_file(): raise RuntimeError("make succeeded without expected .3dsx")
+    destination = DIST / built.name; shutil.copy2(built, destination)
+    print("3DSX SHA-256: %s  %s" % (sha256(destination), destination)); return 0
+
+def command_clean(_args):
+    for path in (ROOT / "build", ROOT / "dist", ROOT / "runtime" / "build"):
+        if path.is_dir(): shutil.rmtree(path)
+    for pattern in ("*.3dsx", "*.elf", "*.map", "*.smdh"):
+        for path in (ROOT / "runtime").glob(pattern): path.unlink()
+    print("removed generated build/dist artifacts"); return 0
+
+def parser():
+    top = argparse.ArgumentParser(prog="./sa3ds"); sub = top.add_subparsers(dest="command", required=True)
+    for name, function in (("doctor", command_doctor), ("test", command_test), ("physics-test", command_physics_test),
+                           ("build", command_build), ("clean", command_clean)):
+        item = sub.add_parser(name); item.set_defaults(function=function)
+    item = sub.add_parser("trace"); item.add_argument("scenario", choices=SCENARIOS, nargs="?", default="accel_flat"); item.add_argument("--frames", type=int, default=240); item.add_argument("--output"); item.add_argument("--all", action="store_true"); item.set_defaults(function=command_trace)
+    item = sub.add_parser("compare-traces"); item.add_argument("reference"); item.add_argument("generated"); item.add_argument("--abs", dest="absolute", default="1e-6"); item.add_argument("--rel", dest="relative", default="1e-6"); item.add_argument("--tolerance", action="append", default=[]); item.set_defaults(function=command_compare)
+    item = sub.add_parser("source-check"); item.add_argument("manifest"); item.add_argument("--root"); item.set_defaults(function=command_source_check)
+    for name in ("pack", "validate-pack", "inspect-pack", "extract-pack"):
+        item = sub.add_parser(name); item.add_argument("arguments", nargs=argparse.REMAINDER); item.set_defaults(function=command_package)
+    return top
+
+def main():
+    args = parser().parse_args()
+    try: return args.function(args)
+    except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+        print("error: %s" % error, file=sys.stderr); return 1
+
+if __name__ == "__main__": raise SystemExit(main())

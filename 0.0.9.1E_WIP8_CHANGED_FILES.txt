@@ -1,0 +1,25 @@
+Parent: 0.0.9.1E-WIP7 SHA256 a6975cca7b791be96848422438580316f6aa5eab083f97c730514904e1810332
+Run: overall 11 / 2026-10-13 06:00 EDT
+
+MODIFIED
+runtime_0_0_9_0G/include/owner_assets.h
+runtime_0_0_9_0G/source/owner_assets.c
+runtime_0_0_9_0G/source/main.c
+runtime_0_0_9_0G/Makefile
+runtime_0_0_9_0G/README.md
+build_0_0_9_0G.sh
+tests/run_sa3ds_current_host.sh
+RUN_STATE.json
+CURRENT_CHECKPOINT.md
+ERROR_HISTORY.md
+PARITY_STATUS.json
+
+ADDED
+tests/test_owner_pair_loader.c
+tests/run_owner_pair_loader.sh
+tests/test_0g_external_asset_integration.py
+tests/test_owner_asset_build_mode.sh
+CHECKPOINT_0.0.9.1E_WIP8.md
+0.0.9.1E_WIP8_CHANGED_FILES.txt
+
+All existing source and host tests inherited. Code-only; no game binaries/assets.

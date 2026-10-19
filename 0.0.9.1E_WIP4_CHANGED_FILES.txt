@@ -1,0 +1,18 @@
+Parent: SA3DS_0.0.9.1E-WIP3_AnimationTickStability_CodeOnly.zip SHA256 bae68d1971b1676c294680b1d4c0964ec1f7e8a9e1c2910241ea85bfb9dd6058
+NEW src/game/sonic_action_preflight.h
+NEW src/game/sonic_action_preflight.c
+MOD src/game/sonic_animation_runtime.h
+MOD src/game/sonic_animation_runtime.c
+MOD src/sa3c/sa3c_pose.c
+MOD runtime_0_0_9_0F/source/main.c
+NEW tests/test_sonic_action_preflight.c
+NEW tests/run_sonic_action_preflight.sh
+MOD tests/test_sonic_animation_runtime.c
+MOD tests/run_sa3ds_current_host.sh
+MOD RUN_STATE.json
+MOD PARITY_STATUS.json
+MOD ERROR_HISTORY.md
+MOD CURRENT_CHECKPOINT.md
+NEW CHECKPOINT_0.0.9.1E_WIP4.md
+NEW 0.0.9.1E_WIP4_CHANGED_FILES.txt
+NEW TEST_RESULTS_0.0.9.1E_WIP4.txt

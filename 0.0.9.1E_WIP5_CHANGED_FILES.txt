@@ -1,0 +1,17 @@
+Parent: 0.0.9.1E-WIP4 SHA256 ad00a50be61d22ecbb0b60a82fd938ce7d2715520f5515f133799cd1724dcba2
+src/game/sonic_action_preflight.c
+src/game/sonic_action_preflight.h
+runtime_0_0_9_0F/source/main.c
+tools/check_sonic_actions.c (NEW)
+tests/make_synthetic_sonic_sa3c.py (NEW)
+tests/test_sonic_action_preflight.c
+tests/run_sonic_action_preflight.sh
+tests/run_sa3ds_current_host.sh
+RUN_STATE.json
+CURRENT_CHECKPOINT.md
+PARITY_STATUS.json
+ERROR_HISTORY.md
+CHECKPOINT_0.0.9.1E_WIP5.md (NEW)
+docs/0.0.9.1E_WIP5_ACTION_KEY_INTEGRITY.md (NEW)
+0.0.9.1E_WIP5_CHANGED_FILES.txt (NEW)
+TEST_RESULTS_0.0.9.1E_WIP5.txt (NEW)

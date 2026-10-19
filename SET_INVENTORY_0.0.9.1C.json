@@ -1,0 +1,650 @@
+{
+  "emerald_coast_placements": 3664,
+  "exact_source_record_shape": "32-byte header plus 32-byte records",
+  "provenance": "source metadata only; no owner source records/geometry/textures included",
+  "source_file_count": 71,
+  "source_groups": 45,
+  "source_record_total": 30085,
+  "sources": [
+    {
+      "name": "SET0000A.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 0,
+      "record_count": 4,
+      "sha256": "51874859e629c9d9a1d66b2af9b663f3834a2a64f308e4f6f525faabee3e4f81",
+      "unique_type_words": 3,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET0100E.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 567,
+      "sha256": "8c45f7be501a4a014028037d671322f866a6d2c6982d3d33350da5e5b168da22",
+      "unique_type_words": 38,
+      "variant_suffix": "E"
+    },
+    {
+      "name": "SET0100S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 789,
+      "sha256": "cdbe4be005819cf04e2d1856416352ebaab745a277238b5f9136787cb6349170",
+      "unique_type_words": 81,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0101M.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 969,
+      "sha256": "997919a708c0f78b96cb02bb1ec98dfd53e23c9ade735a10f69b469750576b71",
+      "unique_type_words": 56,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0101S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 996,
+      "sha256": "720e5db0d64429ab95e5eba3a30943bc30dd68fb216e53b5ad43ec76cab91000",
+      "unique_type_words": 65,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0102B.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 342,
+      "sha256": "65034328b267f0a123d86e263b50582260c9a0591234447cb63ea451f505c06e",
+      "unique_type_words": 28,
+      "variant_suffix": "B"
+    },
+    {
+      "name": "SET0102S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 1,
+      "record_count": 1,
+      "sha256": "c40207bc544dd80f209c7f37e2fdbbde3cce5c6f3cf4336c2d2fd780ebd18121",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0200E.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 2,
+      "record_count": 755,
+      "sha256": "4a3d75a3199299436b34d4a20df6e2d6415df462528e1017c66a7cde66a4b31d",
+      "unique_type_words": 41,
+      "variant_suffix": "E"
+    },
+    {
+      "name": "SET0200S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 2,
+      "record_count": 506,
+      "sha256": "7e241986a46814c0ecc48b3aff057e3adc173c67f854b8781f7a1895df6925c0",
+      "unique_type_words": 43,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0201S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 2,
+      "record_count": 273,
+      "sha256": "f79d665e054d3317767c32f74b563811711e51ec3402c946aab423613ab3730c",
+      "unique_type_words": 37,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0202M.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 2,
+      "record_count": 975,
+      "sha256": "be93f0bd09126f970e6ba81e74dca2db044a8c64b834f92678a081dc54dc97b4",
+      "unique_type_words": 65,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0202S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 2,
+      "record_count": 873,
+      "sha256": "5da6cc77e2049165ac77ed11c45d31cdaa39be4d7eb5a585a186fdda427c7154",
+      "unique_type_words": 60,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0300S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 504,
+      "sha256": "e79655c967b7a7f63d53a9f2351768cb1e89e884778b6006d5dc9c6a9dd1a834",
+      "unique_type_words": 39,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0301A.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 246,
+      "sha256": "8847cdfa744303afeb5944924afc16661ea610203dad9f5e54a1d5b3935011c8",
+      "unique_type_words": 31,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET0301B.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 82,
+      "sha256": "0c84c4d6b02fd65f9aabce937de50530f03eda825f3e2accdfd71a63b0fbd26b",
+      "unique_type_words": 20,
+      "variant_suffix": "B"
+    },
+    {
+      "name": "SET0301S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 632,
+      "sha256": "29b45daee3d4da3862f51f16eefe84f9a0dd0b9f52e9ba8eb4c3a51434a5f9ab",
+      "unique_type_words": 48,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0302A.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 213,
+      "sha256": "baad39045033171e92112afce331d6f180b1e18f1250dfb255c2610ad51b83d6",
+      "unique_type_words": 19,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET0302S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 3,
+      "record_count": 16,
+      "sha256": "8d649b95ce8f7fd91e2be56940c37e88602f77c9e78eeb93a4af08536cdb1947",
+      "unique_type_words": 5,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0400M.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 4,
+      "record_count": 970,
+      "sha256": "9b69d17b2034e1967796ee5a0ced38ca0a9e1b7524493c50200e260d551671e7",
+      "unique_type_words": 75,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0400S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 4,
+      "record_count": 707,
+      "sha256": "dd99fe48c3a110454b36a6c2aa6c502b67c4212a9ac9d280e3381c41497ddd3d",
+      "unique_type_words": 57,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0401S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 4,
+      "record_count": 729,
+      "sha256": "d417fcaa9ce662e8099e49efbd64676753454f9318c7101eec96af83d61c907b",
+      "unique_type_words": 22,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0402K.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 4,
+      "record_count": 522,
+      "sha256": "bb63cc318dfa7759acceb3d077b6c6b9d2da8a68f2a0d07cde7f8e4ef3d4eaa2",
+      "unique_type_words": 78,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET0402S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 4,
+      "record_count": 419,
+      "sha256": "543c19898cab6486ef1dae26227e694923409ecbfa7ce500a6a0cf8fb15ec55a",
+      "unique_type_words": 69,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0500S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 5,
+      "record_count": 984,
+      "sha256": "5cfb09f27d1f7fe40761a5e0f1e0a245c2aad9be3a01120f2d5141c083d7678a",
+      "unique_type_words": 59,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0501E.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 5,
+      "record_count": 878,
+      "sha256": "c8045293367d3cca02c7a9b7868c12ef107f2e74ee3de81be4967d30ab69c697",
+      "unique_type_words": 53,
+      "variant_suffix": "E"
+    },
+    {
+      "name": "SET0501S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 5,
+      "record_count": 732,
+      "sha256": "1aeaec7071cbe56c2f501241f2713cb85524369a2b3febf840fa424016328085",
+      "unique_type_words": 59,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0502K.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 5,
+      "record_count": 743,
+      "sha256": "8d2fcfebbc109202d28834ee06b0db47acff3c4ddd7e46b225245ba180596b2c",
+      "unique_type_words": 49,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET0600M.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 690,
+      "sha256": "cdca69287d0f8bc4d224daf9e5acfb352d571d3c10055406bd80ea43feeb9a29",
+      "unique_type_words": 58,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0600S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 737,
+      "sha256": "8004a48d3309465c1344872cfc5f341afa6802ca09e0ddaf642d967010cf0bf5",
+      "unique_type_words": 58,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0601M.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 58,
+      "sha256": "39d6ba42edc958d92a28ba7ff108031cb88b00cb9c46a7014eed244da92c74a6",
+      "unique_type_words": 13,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0601S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 776,
+      "sha256": "b0c3cd0cc3227f8ed473b0a3ca7f1e9209300de2828a843c6efb60fe26db98c1",
+      "unique_type_words": 54,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0602K.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 414,
+      "sha256": "2a15071061851d7f4b96d52b41fccb3cb57a55cdc4d98a9252678302c669518e",
+      "unique_type_words": 41,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET0602M.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 7,
+      "sha256": "f82fb746f7bfaccebb2651f8699073939d9eefd89016a2261516087b5007fd70",
+      "unique_type_words": 4,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0602S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 6,
+      "record_count": 382,
+      "sha256": "e2789a7fbdb615f626f4f0b009e6b19e855a7c162ed49dc3245ef4750140975d",
+      "unique_type_words": 47,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0700S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 7,
+      "record_count": 492,
+      "sha256": "0a2074afab171dca436c4eeadbec68e9be29d53553f38f4c203ede4808d030b4",
+      "unique_type_words": 42,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0701K.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 7,
+      "record_count": 1011,
+      "sha256": "c046993bf88102ae44bd85d5bbf8703f306c56d896cac8a5cb43414a4467747a",
+      "unique_type_words": 57,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET0701S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 7,
+      "record_count": 916,
+      "sha256": "18f9e10c1f25e938aafccf2056c324d06cd47fc9460d7129d6b8a559c372d60d",
+      "unique_type_words": 60,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0702S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 7,
+      "record_count": 31,
+      "sha256": "a4d7d0192d9897fbb600eb28e8034e086dd9aeb6c4310d3dd9be00cb59be4f4e",
+      "unique_type_words": 6,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0800S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 8,
+      "record_count": 134,
+      "sha256": "ce3391d002bd26931580b441498ad1a5f1a5314ea1fe6a351e8a06c753cb8a67",
+      "unique_type_words": 29,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0801S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 8,
+      "record_count": 170,
+      "sha256": "0710b1d68090c92b9ebddc22c8256d87c9c20acb2c7010ef920a18fdc923d758",
+      "unique_type_words": 37,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0802M.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 8,
+      "record_count": 970,
+      "sha256": "799a0dcd8bac0d968b4c5b02809b5aec7ff549451530e750d00cb61e73b8d919",
+      "unique_type_words": 64,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0802S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 8,
+      "record_count": 969,
+      "sha256": "74f5c7fb432a7401c7931abb1477b31e6a14e2579686a633e9ed3d8eac7a58c4",
+      "unique_type_words": 67,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0803B.BIN",
+      "numeric_act_from_filename": 3,
+      "numeric_level_id_from_filename": 8,
+      "record_count": 275,
+      "sha256": "ca1bbdb4881dbcb2c48ba5134bd682578a6ba68a86c120abbe901f62c42f5142",
+      "unique_type_words": 34,
+      "variant_suffix": "B"
+    },
+    {
+      "name": "SET0900K.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 457,
+      "sha256": "eb2a3c92461f627d05f9f5529f23b311d56504d40281696f4ed76c42096bbe85",
+      "unique_type_words": 113,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET0900S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 246,
+      "sha256": "9b5bbe777d362f332b7b867ca720a66ef8ddbc285cbca5cd0682b01806673ff8",
+      "unique_type_words": 65,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0901M.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 244,
+      "sha256": "858215d13124e0ceffa90141fe6fcf25a8618029fd9fa086e2caefe7b65c7ba8",
+      "unique_type_words": 21,
+      "variant_suffix": "M"
+    },
+    {
+      "name": "SET0901S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 244,
+      "sha256": "59844151434806392c8b70a54e25c21d010f7c155d813b6f75f948b9fdd31e49",
+      "unique_type_words": 24,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0902S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 134,
+      "sha256": "1bd4ea4481a5894254d04c5ebffac104bafd2763e6d8342a51ce1681cb0aded6",
+      "unique_type_words": 35,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET0903S.BIN",
+      "numeric_act_from_filename": 3,
+      "numeric_level_id_from_filename": 9,
+      "record_count": 194,
+      "sha256": "35f06d6f187f444c9631987921d0470385ba3aabe165de324b5b203316fdac13",
+      "unique_type_words": 36,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1000A.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 242,
+      "sha256": "7c56f8d63b2d132f854a974b4d7129f85bc285068ea6a9a3f3f1b3df0c7014f3",
+      "unique_type_words": 43,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET1000S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 386,
+      "sha256": "48bdbf814968c21ea4133879899472f67bf19858ff984041c869b8310594f10f",
+      "unique_type_words": 47,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1001S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 460,
+      "sha256": "7753c46c99bac93ada2561e8ca648a2a54cc0a716425809e0a6d5158b2855171",
+      "unique_type_words": 35,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1002E.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 189,
+      "sha256": "ad2826111b8c2dc74e1c201bfb66b0e2ab202cfc4248b871de590106cf1dc93d",
+      "unique_type_words": 28,
+      "variant_suffix": "E"
+    },
+    {
+      "name": "SET1002S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 847,
+      "sha256": "330b7ade84f198e7f924fcd71487e1e171d5b3026a5a3e5a89420c0984c9701f",
+      "unique_type_words": 51,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1003S.BIN",
+      "numeric_act_from_filename": 3,
+      "numeric_level_id_from_filename": 10,
+      "record_count": 34,
+      "sha256": "5deddd9f50b314149bacf0778d1953e81edb32f2e3e26e12f3d70056b59a4be1",
+      "unique_type_words": 6,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1200A.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 350,
+      "sha256": "aa9211f1b3cf64360e167cd4f504db435f3aa2f9120ebbb06b37326039099b24",
+      "unique_type_words": 42,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET1200B.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 404,
+      "sha256": "86fabb359988b7398ffcd04ae94f64870b8932a250bcce56a4a6a08a4a93e1e4",
+      "unique_type_words": 37,
+      "variant_suffix": "B"
+    },
+    {
+      "name": "SET1200S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 1,
+      "sha256": "16abab341fb7f370e27e4dadcf81766dd0dfd0ae64469477bb2cf6614938b2af",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1201A.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 456,
+      "sha256": "26587f2df618bdc4fb277d314866a3319c1d870df8d8b3b1a17854e5097b1d5c",
+      "unique_type_words": 74,
+      "variant_suffix": "A"
+    },
+    {
+      "name": "SET1201S.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 17,
+      "sha256": "22366fd935202fffc019b9a5928091628158d73acefe75928202d2e9f40b3d7d",
+      "unique_type_words": 5,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1202E.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 1008,
+      "sha256": "10bf529f2fab7adc5b090c2193b494d072e0b9f28f99acd7ad30c40b096364ba",
+      "unique_type_words": 77,
+      "variant_suffix": "E"
+    },
+    {
+      "name": "SET1202S.BIN",
+      "numeric_act_from_filename": 2,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 1,
+      "sha256": "16abab341fb7f370e27e4dadcf81766dd0dfd0ae64469477bb2cf6614938b2af",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1203S.BIN",
+      "numeric_act_from_filename": 3,
+      "numeric_level_id_from_filename": 12,
+      "record_count": 1,
+      "sha256": "16abab341fb7f370e27e4dadcf81766dd0dfd0ae64469477bb2cf6614938b2af",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1500S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 15,
+      "record_count": 83,
+      "sha256": "99f7e38dd6a4831fa73dcb06832cc05374b972031c1844510ae12a6b374f1a6d",
+      "unique_type_words": 9,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1600S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 16,
+      "record_count": 25,
+      "sha256": "54e3ae3575a45f7209b577da552ba9c838f0eca7fc1e5e5e4290d511a635d010",
+      "unique_type_words": 3,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1700S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 17,
+      "record_count": 27,
+      "sha256": "f7af8799d6f76391e7c26d389031d0de7ec81f06b3e9deba54cd159fd2a93e00",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1800B.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 18,
+      "record_count": 12,
+      "sha256": "03fb01ce6bbd107b08ea4962eafbe49875f91099d8b9730cfb7558a940bf76a9",
+      "unique_type_words": 1,
+      "variant_suffix": "B"
+    },
+    {
+      "name": "SET1800S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 18,
+      "record_count": 12,
+      "sha256": "03fb01ce6bbd107b08ea4962eafbe49875f91099d8b9730cfb7558a940bf76a9",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET1801K.BIN",
+      "numeric_act_from_filename": 1,
+      "numeric_level_id_from_filename": 18,
+      "record_count": 35,
+      "sha256": "2b91d5bbb8ca85bfcc806a72a52d6718aee8d722e7a88e249db44c6ddaccb301",
+      "unique_type_words": 3,
+      "variant_suffix": "K"
+    },
+    {
+      "name": "SET1900S.BIN",
+      "numeric_act_from_filename": 0,
+      "numeric_level_id_from_filename": 19,
+      "record_count": 516,
+      "sha256": "258590a0be15b9591b696528128297f918ec38df4da35cf05b6d913763bab3db",
+      "unique_type_words": 23,
+      "variant_suffix": "S"
+    },
+    {
+      "name": "SET9999S.BIN",
+      "numeric_act_from_filename": 99,
+      "numeric_level_id_from_filename": 99,
+      "record_count": 1,
+      "sha256": "d67d32575dcf645128d0842b4696a118d19a16d42c9814c0a056d1359ece098e",
+      "unique_type_words": 1,
+      "variant_suffix": "S"
+    }
+  ],
+  "version": "0.0.9.1C"
+}

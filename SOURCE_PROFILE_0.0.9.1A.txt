@@ -1,0 +1,18 @@
+SA3DS 0.0.9.1A source profile
+
+Canonical engineering executable:
+sonic.exe
+size=55549952
+sha256=6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74
+PE32/i386 image_base=0x00400000
+
+Emerald Coast stage profile:
+level_id=1
+act_stride=8
+landtable_pointer_table_va=0x0097DA08
+act0_landtable=0x00E99CB8
+act1_landtable=0x01039E9C
+act2_landtable=0x010386B4
+
+The source archive includes no Sega executable, PVM, SET, CAM, decoded texture,
+or generated collision package.

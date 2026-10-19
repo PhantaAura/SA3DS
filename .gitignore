@@ -1,0 +1,11 @@
+dist/*.elf
+dist/*.map
+runtime*/build/
+runtime*/*.3dsx
+runtime*/*.elf
+runtime*/*.smdh
+runtime*/*.map
+**/Pass11A_results/
+*.sa3c
+*.sa3t
+__pycache__/

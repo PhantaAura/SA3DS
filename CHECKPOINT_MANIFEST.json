@@ -1,0 +1,29 @@
+{
+  "changed_files": {
+    "CURRENT_CHECKPOINT.md": "a085d5f6f9ebb2080187600c3f0c4d5638ef1a2ec5c7a36e11af85a466706192",
+    "ERROR_HISTORY.md": "032a71eba15fbc8f0b9d1666add338264bdb1e05252b54afb03fd070edcd2287",
+    "PARITY_STATUS.json": "9ccccc6860e9157555c23e143bab199e7179666adba6777992440999e85f01bf",
+    "RUN12_OLD3DS_TEST.md": "409558140fc26c95f03d90aae97966ccc90ead38f408b94473c043823adab831",
+    "RUN_STATE.json": "c8381a99fc970c715533742234f38b63a395e1908b3a1b4e44061fbd507fdf81",
+    "runtime_0_0_9_0G/Makefile": "8a5b8f9fba8988d6474d62c64a747e9136d96c48fa389a784faf50d3b19efd0b",
+    "runtime_0_0_9_0G/README.md": "bb498381ba2286dc1d5f45d80ec4cd646d116649bd8dbd16ab875ae8824cc49e",
+    "runtime_0_0_9_0G/romfs_sd/sa3ds/README.txt": "94bb5e564b7f485c29fb30c8e9c5751077365283a3885f52282688342b8808f3",
+    "runtime_0_0_9_0G/source/main.c": "cb86df721542be0b8e77f8952ce5c1a5bd76d30e125d95fa07a24dfc8485ff62",
+    "src/game/white_zone_tick.c": "ef5eebb44f5522a405851cbb7736bce1447d18f139a513153f949badfee76266",
+    "src/game/white_zone_tick.h": "74151c516911e226c42b58baa50ad85f61cd7ab41305f0ce046e31649d89d5ea",
+    "tests/run_sa3ds_current_host.sh": "cb7891cdfddee0a0dfb47b1b62087ebc621cd3118132c72633fdb873c3e5bc75",
+    "tests/run_white_zone_tick.sh": "2dfd24716356d3b7ac4153e65fa462e8f3ee8ee70142ad156bd9c3adbff7cfeb",
+    "tests/test_owner_asset_build_mode.sh": "aed21c10061b6fb91e08b51bcef3e9fe5faecf20dd278cd7989e427487248a11",
+    "tests/test_white_zone_tick.c": "df5c7e64c8f8338bb22c412228d80b5ad121fff9bf5289b7089e74d5f4036503",
+    "tests/test_white_zone_tick_integration.py": "f72345339e4b087368d6def53e55179a6390fa701023f303f84bff4a075c9f3a"
+  },
+  "checkpoint": "0.0.9.1E-WIP9",
+  "code_only": true,
+  "host_test_command": "bash tests/run_sa3ds_current_host.sh",
+  "native_3ds_compiled": false,
+  "old_3ds_tested": false,
+  "parent_version": "0.0.9.1E-WIP8",
+  "parent_zip_sha256": "c9428d39e432378acaabf8f6fea22df15b4c2251a832ae35cc1833ad4edaa502",
+  "release_gate": "NOT PASSED",
+  "scheduled_overall_run": 12
+}

@@ -1,0 +1,8 @@
+SA3DS 0.0.9.1C — SET source profile
+Canonical PC2004 executable: sonic.exe SHA256 6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74
+Owner SET source ZIP: system 2.zip (only used at import/test time; not bundled)
+Validated SET sources: 71 / 30085 placements / 45 numeric level-act groupings
+EC SET placements: 3664 across 6 source variants
+Source file SHA fingerprints: SET_INVENTORY_0.0.9.1C.json
+Neutral data format: SA3DSET v1.0, no Windows pointers
+Unproven: object type high-bit semantics, parameter meanings, runtime spawn classes

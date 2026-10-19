@@ -1,0 +1,35 @@
+SA3DS 0.0.9.0B — Physics-Synced Animation Gate
+
+PASS: frozen 0.0.8.8.9 file-integrity audit — 108/108 files byte-identical, 0 mismatches
+PASS: general surface frame/contact
+PASS: surface evidence branches
+PASS: PC2004 PGetBreak/PGetInertia arithmetic
+PASS: PC2004 collision-work layout/init
+PASS: surface runtime support ordering
+PASS: Steam ground-parity candidate
+PASS: Steam air-parity candidate
+PASS: Steam Roll/Spin Dash PC2004 evidence
+PASS: portable physics placeholder-regression expectations
+PASS: deterministic trace comparison
+PASS: all 19 Movement Lab scenarios
+PASS: .sa3dspak pack/validate/extract round trip
+PASS: native runtime .sa3dspak reader
+PASS: all 8 malformed-package cases
+PASS: PC2004 character-loader recon
+PASS: PC2004 proven-offset character gate
+PASS: PC2004 Sonic ACTION direct-slot access atlas
+PASS: Sonic animation physics-observer unit tests
+PASS: Sonic animation / real frozen-physics integration tests
+PASS: 19-trace animation-intent bridge spot checks
+
+Aggregate runner note:
+The one-shot nested shell run exceeded the execution tool timeout after the native
+package-reader PASS. No failure was reported. The remaining malformed-package,
+real-source recon, ACTION-atlas, animation unit/integration, and trace-bridge tests
+were then executed individually and all passed as listed above.
+
+SOURCE BLOCKER:
+Exact CHRMODELS_orig.dll not mounted/discoverable.
+Required size: 7,647,232 bytes
+Required SHA-256: 76bbaa1b6aa23872648e6f1f39642e4262403e372b4c4b32f20f0ec89780c2a5
+No real Sonic motion keys, timing, or action-name mapping were fabricated.

@@ -1,0 +1,33 @@
+{
+  "acts": [
+    {
+      "act": 0,
+      "collision_count": 480,
+      "collision_list_va": "0x00e95938",
+      "landtable_va": "0x00e99cb8",
+      "texture_archive": "BEACH01",
+      "texture_list_va": "0x00f812ac"
+    },
+    {
+      "act": 1,
+      "collision_count": 169,
+      "collision_list_va": "0x010386d8",
+      "landtable_va": "0x01039e9c",
+      "texture_archive": "BEACH02",
+      "texture_list_va": "0x00ef553c"
+    },
+    {
+      "act": 2,
+      "collision_count": 199,
+      "collision_list_va": "0x01036ab8",
+      "landtable_va": "0x010386b4",
+      "texture_archive": "BEACH03",
+      "texture_list_va": "0x00e9a4cc"
+    }
+  ],
+  "landtable_table_va": "0x0097da08",
+  "source_sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
+  "stage_rel_loader_0x51f680": "RET/static-link stub",
+  "stage_rel_marker": "_Stg01.rel",
+  "status": "PASS"
+}

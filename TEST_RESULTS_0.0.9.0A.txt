@@ -1,0 +1,31 @@
+SA3DS 0.0.9.0A — Real Sonic Loader Gate
+
+NEW REAL-SOURCE TESTS
+PASS  PC2004 character-loader recon tests
+PASS  PC2004 proven-offset character gate tests
+PASS  new Python modules compile
+
+FROZEN 0.0.8.8.9 REGRESSIONS
+PASS  general surface frame/contact
+PASS  surface evidence branches
+PASS  PC2004 PGetBreak/PGetInertia arithmetic
+PASS  PC2004 collision-work layout/init
+PASS  surface runtime support order
+PASS  Steam ground candidate
+PASS  Steam air candidate
+PASS  Steam roll/Spin Dash evidence
+PASS  portable physics
+PASS  deterministic trace comparison
+PASS  19 scenario regressions
+PASS  package pack/validate/inspect/extract/round-trip
+PASS  native runtime package reader
+PASS  8 malformed package cases
+
+INTEGRITY
+PASS  108/108 frozen 0.0.8.8.9 files byte-identical
+PASS  code-only forbidden-extension scan
+
+NOTE
+The original host script reached the package-extraction stage before the execution
+harness timeout. The unchanged remaining native-reader and malformed-package
+commands were run directly against that same generated package and both passed.
