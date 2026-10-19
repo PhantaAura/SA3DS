@@ -54,7 +54,14 @@ These values are used only as **physics-backed classification boundaries**. 0.0.
 
 This gives the eventual source-motion sampler a deterministic 60 Hz gameplay clock and prevents render-framerate drift.
 
-**No animation playback-rate formula is invented in this checkpoint.** Once the real source motions/dispatcher are decoded, any SADX behavior that speeds/slows locomotion animation must be reproduced from evidence.
+The exact PC2004 `SonicAnimData` rows and the retail `PlayAnimation` dispatcher
+at `0x0044A800` are now recovered. Properties 3/4/5/8 advance by the row's
+`AnimationSpeed`; properties 6/7 subtract it. The native selector therefore
+uses the exact fixed step for those properties. Properties 9/10 multiply the
+row speed by runtime-owned float inputs, and property 11 uses an external input
+directly. Those inputs and the transition-blend pose are still unresolved, so
+the native runtime retains its clearly flagged `0.5` fallback only for dynamic
+properties rather than inventing a multiplier.
 
 ## Air phase
 

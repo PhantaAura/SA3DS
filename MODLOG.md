@@ -1,5 +1,29 @@
 # SA3DS mod log
 
+## 2026-10-19 — PC2004 Sonic AnimData fixed-rate pass
+
+- Verified exact PC2004 executable identity and used REA with Ghidra 12.1.4;
+  Hopper was not used.
+- Expanded the executable reconstruction tool from ACTION remap-only output to
+  all 146 complete 16-byte `SonicAnimData` row definitions.
+- Confirmed `PlayAnimation` (`0x0044A800`) uses row `AnimationSpeed` directly
+  for fixed properties and uses external runtime multipliers for properties
+  9/10/11.
+- Integrated exact instance/property/next/transition/speed metadata for the 17
+  currently bound Sonic animations and exact fixed-property frame advance.
+- Kept dynamic animation rate and retail transition blending explicitly
+  provisional; no multiplier or blend behavior was invented.
+- Added deterministic metadata/timeline regression tests and exact-executable
+  comparison to the Pass11B owner-data oracle.
+- Full owner-data-free host suite and Pass11B owner oracle passed; the latter
+  compared 14,049 scalars with maximum error `4.91638197e-09`.
+- Built the SD-mode Old 3DS application with devkitARM/Citro3D. The resulting
+  239,556-byte `.3dsx` has SHA-256
+  `5a504f5ecee14b0a0cdafe5364d741cc6268c9fca707e69e90ea21dd7b9dd669`.
+- Azahar 2126.0 (Old 3DS mode) loaded local owner-only assets, completed all 16
+  CPU-swizzled texture uploads, logged the first submitted frame, and displayed
+  Sonic in White Zone at 60 FPS. No physical-hardware run was performed.
+
 ## 2026-10-17 — Pass11B source-motion audit
 
 - Imported the supplied Pass10A code-only source as the working base and preserved Pass11A under `audits/pass11a/`.

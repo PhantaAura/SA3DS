@@ -14,6 +14,8 @@ printf '\n== WIP2 GPU frame lifetime gate ==\n'
 sh tests/run_white_zone_gpu_batch.sh
 printf '\n== WIP3 animation presentation timeline gate ==\n'
 sh tests/run_animation_tick_stability.sh
+printf '\n== PC2004 SonicAnimData checked-in evidence gate ==\n'
+python3 tests/test_pc2004_sonic_animdata_report.py
 printf '\n== WIP4/WIP5 Sonic ACTION pose and all-key preflight ==\n'
 sh tests/run_sonic_action_preflight.sh
 printf '\n== WIP6 Sonic geometry GPU submission preflight ==\n'

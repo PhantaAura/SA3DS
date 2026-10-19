@@ -1,5 +1,5 @@
 {
-  "schema": "sa3ds-pc2004-sonic-animdata-remap-v1",
+  "schema": "sa3ds-pc2004-sonic-animdata-v2",
   "source_sha256": "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
   "initializer_va": "0x007CEC90",
   "runtime_animdata_va": "0x03C56210",
@@ -157,73 +157,1474 @@
     144,
     142
   ],
+  "animdata_rows": [
+    {
+      "dense_id": 0,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 0,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.5,
+      "source_action_slot": 1
+    },
+    {
+      "dense_id": 1,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 2,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 122
+    },
+    {
+      "dense_id": 2,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 2,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 123
+    },
+    {
+      "dense_id": 3,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 2
+    },
+    {
+      "dense_id": 4,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 5,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 120
+    },
+    {
+      "dense_id": 5,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 6,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 121
+    },
+    {
+      "dense_id": 6,
+      "instance": 73,
+      "property": 6,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 120
+    },
+    {
+      "dense_id": 7,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 7,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 96
+    },
+    {
+      "dense_id": 8,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 8,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 97
+    },
+    {
+      "dense_id": 9,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 9,
+      "transition_speed": 0.25,
+      "animation_speed": 3.4000000953674316,
+      "source_action_slot": 3
+    },
+    {
+      "dense_id": 10,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 10,
+      "transition_speed": 0.25,
+      "animation_speed": 1.399999976158142,
+      "source_action_slot": 4
+    },
+    {
+      "dense_id": 11,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 11,
+      "transition_speed": 0.25,
+      "animation_speed": 0.800000011920929,
+      "source_action_slot": 5
+    },
+    {
+      "dense_id": 12,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 12,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 6
+    },
+    {
+      "dense_id": 13,
+      "instance": 73,
+      "property": 9,
+      "next_animation": 13,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 18
+    },
+    {
+      "dense_id": 14,
+      "instance": 74,
+      "property": 10,
+      "next_animation": 14,
+      "transition_speed": 0.25,
+      "animation_speed": 0.20000000298023224,
+      "source_action_slot": 14
+    },
+    {
+      "dense_id": 15,
+      "instance": 74,
+      "property": 9,
+      "next_animation": 15,
+      "transition_speed": 0.25,
+      "animation_speed": 0.699999988079071,
+      "source_action_slot": 14
+    },
+    {
+      "dense_id": 16,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 16,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 8
+    },
+    {
+      "dense_id": 17,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 9
+    },
+    {
+      "dense_id": 18,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 18,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 10
+    },
+    {
+      "dense_id": 19,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 11
+    },
+    {
+      "dense_id": 20,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 7
+    },
+    {
+      "dense_id": 21,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 22,
+      "transition_speed": 0.125,
+      "animation_speed": 3.0,
+      "source_action_slot": 12
+    },
+    {
+      "dense_id": 22,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 22,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 13
+    },
+    {
+      "dense_id": 23,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 23,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 116
+    },
+    {
+      "dense_id": 24,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 117
+    },
+    {
+      "dense_id": 25,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 25,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 7
+    },
+    {
+      "dense_id": 26,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 26,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 15
+    },
+    {
+      "dense_id": 27,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 28,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 16
+    },
+    {
+      "dense_id": 28,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 17
+    },
+    {
+      "dense_id": 29,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 1,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 22
+    },
+    {
+      "dense_id": 30,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 0.8999999761581421,
+      "source_action_slot": 20
+    },
+    {
+      "dense_id": 31,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 31,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 19
+    },
+    {
+      "dense_id": 32,
+      "instance": 1,
+      "property": 3,
+      "next_animation": 32,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 21
+    },
+    {
+      "dense_id": 33,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 23
+    },
+    {
+      "dense_id": 34,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 34,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 31
+    },
+    {
+      "dense_id": 35,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 32
+    },
+    {
+      "dense_id": 36,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 33
+    },
+    {
+      "dense_id": 37,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 0.0,
+      "source_action_slot": 34
+    },
+    {
+      "dense_id": 38,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 38,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 35
+    },
+    {
+      "dense_id": 39,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 16,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 8
+    },
+    {
+      "dense_id": 40,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 45
+    },
+    {
+      "dense_id": 41,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 16,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 8
+    },
+    {
+      "dense_id": 42,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 46
+    },
+    {
+      "dense_id": 43,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 16,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 8
+    },
+    {
+      "dense_id": 44,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 16,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 44
+    },
+    {
+      "dense_id": 45,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 16,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 47
+    },
+    {
+      "dense_id": 46,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 9,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 49
+    },
+    {
+      "dense_id": 47,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 47,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 50
+    },
+    {
+      "dense_id": 48,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 48,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 37
+    },
+    {
+      "dense_id": 49,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 49,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 36
+    },
+    {
+      "dense_id": 50,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 51,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 124
+    },
+    {
+      "dense_id": 51,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 51,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 125
+    },
+    {
+      "dense_id": 52,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 126
+    },
+    {
+      "dense_id": 53,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 54,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 42
+    },
+    {
+      "dense_id": 54,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 54,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
+      "source_action_slot": 43
+    },
+    {
+      "dense_id": 55,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 55,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 27
+    },
+    {
+      "dense_id": 56,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 57,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 28
+    },
+    {
+      "dense_id": 57,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 57,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 29
+    },
+    {
+      "dense_id": 58,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 37,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 30
+    },
+    {
+      "dense_id": 59,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 38
+    },
+    {
+      "dense_id": 60,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 39
+    },
+    {
+      "dense_id": 61,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 40
+    },
+    {
+      "dense_id": 62,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 41
+    },
+    {
+      "dense_id": 63,
+      "instance": 73,
+      "property": 6,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 23
+    },
+    {
+      "dense_id": 64,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 31,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 119
+    },
+    {
+      "dense_id": 65,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 65,
+      "transition_speed": 1.0,
+      "animation_speed": 0.30000001192092896,
+      "source_action_slot": 48
+    },
+    {
+      "dense_id": 66,
+      "instance": 73,
+      "property": 12,
+      "next_animation": 66,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 51
+    },
+    {
+      "dense_id": 67,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 67,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 53
+    },
+    {
+      "dense_id": 68,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 68,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 52
+    },
+    {
+      "dense_id": 69,
+      "instance": 73,
+      "property": 12,
+      "next_animation": 69,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 93
+    },
+    {
+      "dense_id": 70,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 70,
+      "transition_speed": 1.0,
+      "animation_speed": 0.5,
+      "source_action_slot": 94
+    },
+    {
+      "dense_id": 71,
+      "instance": 73,
+      "property": 9,
+      "next_animation": 71,
+      "transition_speed": 0.5,
+      "animation_speed": 2.0,
+      "source_action_slot": 95
+    },
+    {
+      "dense_id": 72,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 74,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 113
+    },
+    {
+      "dense_id": 73,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 73,
+      "transition_speed": 1.0,
+      "animation_speed": 2.0,
+      "source_action_slot": 114
+    },
+    {
+      "dense_id": 74,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 74,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 123
+    },
+    {
+      "dense_id": 75,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 75,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": null
+    },
+    {
+      "dense_id": 76,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": null
+    },
+    {
+      "dense_id": 77,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 78,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 42
+    },
+    {
+      "dense_id": 78,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 78,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 43
+    },
+    {
+      "dense_id": 79,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 79,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 99
+    },
+    {
+      "dense_id": 80,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 80,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 98
+    },
+    {
+      "dense_id": 81,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 81,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 103
+    },
+    {
+      "dense_id": 82,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 82,
+      "transition_speed": 1.0,
+      "animation_speed": 15.0,
+      "source_action_slot": 116
+    },
+    {
+      "dense_id": 83,
+      "instance": 74,
+      "property": 10,
+      "next_animation": 83,
+      "transition_speed": 1.0,
+      "animation_speed": 0.20000000298023224,
+      "source_action_slot": 14
+    },
+    {
+      "dense_id": 84,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 1.0,
+      "animation_speed": 0.25,
+      "source_action_slot": 115
+    },
+    {
+      "dense_id": 85,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 85,
+      "transition_speed": 1.0,
+      "animation_speed": 0.5,
+      "source_action_slot": 127
+    },
+    {
+      "dense_id": 86,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 86,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 116
+    },
+    {
+      "dense_id": 87,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 87,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 118
+    },
+    {
+      "dense_id": 88,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 88,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 102
+    },
+    {
+      "dense_id": 89,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 89,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 106
+    },
+    {
+      "dense_id": 90,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 90,
+      "transition_speed": 0.25,
+      "animation_speed": 2.0,
+      "source_action_slot": 105
+    },
+    {
+      "dense_id": 91,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 91,
+      "transition_speed": 0.25,
+      "animation_speed": 2.0,
+      "source_action_slot": 104
+    },
+    {
+      "dense_id": 92,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 92,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 128
+    },
+    {
+      "dense_id": 93,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 89,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 129
+    },
+    {
+      "dense_id": 94,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 94,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 91
+    },
+    {
+      "dense_id": 95,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 94,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 92
+    },
+    {
+      "dense_id": 96,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 97,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 87
+    },
+    {
+      "dense_id": 97,
+      "instance": 73,
+      "property": 12,
+      "next_animation": 97,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 88
+    },
+    {
+      "dense_id": 98,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 94,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 88
+    },
+    {
+      "dense_id": 99,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 99,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 89
+    },
+    {
+      "dense_id": 100,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 100,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 90
+    },
+    {
+      "dense_id": 101,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 101,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 90
+    },
+    {
+      "dense_id": 102,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 102,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 62
+    },
+    {
+      "dense_id": 103,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 103,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 58
+    },
+    {
+      "dense_id": 104,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 104,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 59
+    },
+    {
+      "dense_id": 105,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 111,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 61
+    },
+    {
+      "dense_id": 106,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 105,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 60
+    },
+    {
+      "dense_id": 107,
+      "instance": 73,
+      "property": 12,
+      "next_animation": 107,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 54
+    },
+    {
+      "dense_id": 108,
+      "instance": 73,
+      "property": 12,
+      "next_animation": 108,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 55
+    },
+    {
+      "dense_id": 109,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 114,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 56
+    },
+    {
+      "dense_id": 110,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 114,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 57
+    },
+    {
+      "dense_id": 111,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 64
+    },
+    {
+      "dense_id": 112,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 112,
+      "transition_speed": 0.5,
+      "animation_speed": 0.30000001192092896,
+      "source_action_slot": 65
+    },
+    {
+      "dense_id": 113,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 102,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 66
+    },
+    {
+      "dense_id": 114,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 114,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 67
+    },
+    {
+      "dense_id": 115,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 102,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
+      "source_action_slot": 68
+    },
+    {
+      "dense_id": 116,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.8500000238418579,
+      "source_action_slot": 69
+    },
+    {
+      "dense_id": 117,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.8500000238418579,
+      "source_action_slot": 70
+    },
+    {
+      "dense_id": 118,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.8500000238418579,
+      "source_action_slot": 109
+    },
+    {
+      "dense_id": 119,
+      "instance": 73,
+      "property": 6,
+      "next_animation": 112,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.8500000238418579,
+      "source_action_slot": 109
+    },
+    {
+      "dense_id": 120,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 121,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 71
+    },
+    {
+      "dense_id": 121,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 122,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 107
+    },
+    {
+      "dense_id": 122,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 108
+    },
+    {
+      "dense_id": 123,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 112,
+      "transition_speed": 0.25,
+      "animation_speed": 1.5,
+      "source_action_slot": 72
+    },
+    {
+      "dense_id": 124,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 124,
+      "transition_speed": 0.25,
+      "animation_speed": 1.5,
+      "source_action_slot": 63
+    },
+    {
+      "dense_id": 125,
+      "instance": 74,
+      "property": 10,
+      "next_animation": 125,
+      "transition_speed": 0.25,
+      "animation_speed": 0.20000000298023224,
+      "source_action_slot": 14
+    },
+    {
+      "dense_id": 126,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 127,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 135
+    },
+    {
+      "dense_id": 127,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 127,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 136
+    },
+    {
+      "dense_id": 128,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 0.25,
+      "source_action_slot": 137
+    },
+    {
+      "dense_id": 129,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 134
+    },
+    {
+      "dense_id": 130,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 131,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 145
+    },
+    {
+      "dense_id": 131,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 131,
+      "transition_speed": 1.0,
+      "animation_speed": 0.5,
+      "source_action_slot": 146
+    },
+    {
+      "dense_id": 132,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 147
+    },
+    {
+      "dense_id": 133,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 148
+    },
+    {
+      "dense_id": 134,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 134,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.25,
+      "source_action_slot": 130
+    },
+    {
+      "dense_id": 135,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 135,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 131
+    },
+    {
+      "dense_id": 136,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 136,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 132
+    },
+    {
+      "dense_id": 137,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 137,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 133
+    },
+    {
+      "dense_id": 138,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 138,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
+      "source_action_slot": 133
+    },
+    {
+      "dense_id": 139,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 139,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 138
+    },
+    {
+      "dense_id": 140,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 141,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
+      "source_action_slot": 139
+    },
+    {
+      "dense_id": 141,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 141,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
+      "source_action_slot": 140
+    },
+    {
+      "dense_id": 142,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 134,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
+      "source_action_slot": 141
+    },
+    {
+      "dense_id": 143,
+      "instance": 73,
+      "property": 5,
+      "next_animation": 143,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 143
+    },
+    {
+      "dense_id": 144,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 134,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
+      "source_action_slot": 144
+    },
+    {
+      "dense_id": 145,
+      "instance": 1,
+      "property": 10,
+      "next_animation": 145,
+      "transition_speed": 0.25,
+      "animation_speed": 0.20000000298023224,
+      "source_action_slot": 142
+    }
+  ],
   "core_movement": {
     "Stand": {
       "dense_id": 0,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 0,
+      "transition_speed": 0.0625,
+      "animation_speed": 0.5,
       "source_action_slot": 1
     },
     "Walk1": {
       "dense_id": 9,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 9,
+      "transition_speed": 0.25,
+      "animation_speed": 3.4000000953674316,
       "source_action_slot": 3
     },
     "Walk2": {
       "dense_id": 10,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 10,
+      "transition_speed": 0.25,
+      "animation_speed": 1.399999976158142,
       "source_action_slot": 4
     },
     "Walk3": {
       "dense_id": 11,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 11,
+      "transition_speed": 0.25,
+      "animation_speed": 0.800000011920929,
       "source_action_slot": 5
     },
     "Run1": {
       "dense_id": 12,
+      "instance": 73,
+      "property": 10,
+      "next_animation": 12,
+      "transition_speed": 0.25,
+      "animation_speed": 0.5,
       "source_action_slot": 6
     },
     "Run2": {
       "dense_id": 13,
+      "instance": 73,
+      "property": 9,
+      "next_animation": 13,
+      "transition_speed": 0.5,
+      "animation_speed": 0.5,
       "source_action_slot": 18
     },
     "JumpOrSpin": {
       "dense_id": 14,
+      "instance": 74,
+      "property": 10,
+      "next_animation": 14,
+      "transition_speed": 0.25,
+      "animation_speed": 0.20000000298023224,
       "source_action_slot": 14
     },
     "Roll": {
       "dense_id": 15,
+      "instance": 74,
+      "property": 9,
+      "next_animation": 15,
+      "transition_speed": 0.25,
+      "animation_speed": 0.699999988079071,
       "source_action_slot": 14
     },
     "Spring": {
       "dense_id": 16,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 16,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
       "source_action_slot": 8
     },
     "SpringToFall": {
       "dense_id": 17,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 18,
+      "transition_speed": 0.125,
+      "animation_speed": 1.0,
       "source_action_slot": 9
     },
     "Fall": {
       "dense_id": 18,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 18,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
       "source_action_slot": 10
     },
     "Land": {
       "dense_id": 19,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 1.0,
       "source_action_slot": 11
     },
     "Brake": {
       "dense_id": 20,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 0.25,
+      "animation_speed": 1.0,
       "source_action_slot": 7
     },
     "Uncurl": {
       "dense_id": 29,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 1,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
       "source_action_slot": 22
     },
     "TurnAround": {
       "dense_id": 30,
+      "instance": 73,
+      "property": 4,
+      "next_animation": 0,
+      "transition_speed": 1.0,
+      "animation_speed": 0.8999999761581421,
       "source_action_slot": 20
     },
     "Skidding": {
       "dense_id": 31,
+      "instance": 73,
+      "property": 3,
+      "next_animation": 31,
+      "transition_speed": 0.0625,
+      "animation_speed": 1.0,
       "source_action_slot": 19
     },
     "SpinBall": {
       "dense_id": 32,
+      "instance": 1,
+      "property": 3,
+      "next_animation": 32,
+      "transition_speed": 0.5,
+      "animation_speed": 1.0,
       "source_action_slot": 21
     }
   }

@@ -26,6 +26,8 @@ static SA3DSSonicAnimationSelection tick(SA3DSSonicAnimationSync *sync,
     SA3DSSonicAnimationSelection sel = sa3ds_sonic_animation_select(runtime, p, &o);
     assert(sel.binding.runtime_id == expected);
     assert(sel.ticks_in_selection == expected_elapsed);
+    if (sel.binding.property == 3 || sel.binding.property == 4)
+        assert(sel.playback_rate_is_source_backed);
     /* HUD/render may request the same completed frame multiple times. */
     for (int i=0; i<10; ++i) {
         SA3DSSonicAnimationObservation again = sa3ds_sonic_animation_observe(

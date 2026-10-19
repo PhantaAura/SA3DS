@@ -6,8 +6,10 @@ contents are not present as file bytes.  The exact retail initializer at
 0x007CEC90 fills every 16-byte AnimData_t row.  Its first field is either a
 pointer loaded from the ___SONIC_ACTIONS pointer table or NULL.
 
-This tool recognizes those exact initializer stores without executing x86.
-It emits only structural indices/metadata; it does not extract Sega assets.
+This tool recognizes those exact initializer stores without executing x86.  In
+addition to the ACTION pointer remap it recovers the five scalar fields that
+control the retail animation state machine.  It emits only structural
+indices/metadata; it does not extract Sega assets.
 """
 from __future__ import annotations
 
@@ -114,6 +116,188 @@ def _nearest_action_load(code: bytes, before: int, reg: int):
     return candidates[-1][1] if candidates else None
 
 
+def _modrm_length(code: bytes, pos: int, operand_size: int, immediate_size: int = 0) -> int:
+    """Length of the small ModR/M subset used by the retail initializer."""
+    if pos + 2 > len(code):
+        raise ReconError("truncated ModR/M instruction")
+    modrm = code[pos + 1]
+    mod = modrm >> 6
+    rm = modrm & 7
+    length = 2
+    if mod != 3 and rm == 4:  # SIB
+        if pos + length >= len(code):
+            raise ReconError("truncated SIB")
+        sib = code[pos + length]
+        length += 1
+        if mod == 0 and (sib & 7) == 5:
+            length += 4
+    if mod == 0 and rm == 5:
+        length += 4
+    elif mod == 1:
+        length += 1
+    elif mod == 2:
+        length += 4
+    return length + immediate_size
+
+
+def _recover_scalar_stores(code: bytes):
+    """Interpret the straight-line MOV/XOR subset in InitSonicAnimData.
+
+    The exact PC2004 function contains only MOV, XOR ESI,ESI, PUSH/POP and RET.
+    Tracking register constants is sufficient to recover stores compiled via
+    either immediates or register reuse, while rejecting any changed opcode
+    stream instead of guessing.
+    """
+    # Each register carries known-bit mask/value.  Partial byte assignments are
+    # common because the compiler reuses CL/DL/BL for row fields.
+    masks = [0] * 8
+    values = [0] * 8
+    stores = {}
+
+    def assign(reg: int, value: int, mask: int = 0xFFFFFFFF):
+        masks[reg] = mask
+        values[reg] = value & mask
+
+    def assign_low8(encoded: int, value: int):
+        reg = encoded & 3
+        shift = 8 if encoded >= 4 else 0
+        mask = 0xFF << shift
+        masks[reg] |= mask
+        values[reg] = (values[reg] & ~mask) | ((value & 0xFF) << shift)
+
+    def store(address: int, width: int, value: int, mask: int):
+        if not (ANIMDATA_VA <= address < ANIMDATA_VA + ANIMDATA_COUNT * ANIMDATA_STRIDE):
+            return
+        # ACTION pointers are recovered independently from their source-table
+        # loads; their runtime addresses are intentionally not interpreted.
+        if (address - ANIMDATA_VA) % ANIMDATA_STRIDE == 0:
+            return
+        needed = (1 << (width * 8)) - 1
+        if mask & needed != needed:
+            raise ReconError(f"initializer store {address:#x}: register value is not constant")
+        if address in stores:
+            raise ReconError(f"initializer store {address:#x}: duplicate write")
+        stores[address] = (width, value & needed)
+
+    pos = 0
+    while pos < len(code):
+        op = code[pos]
+        if op == 0xC3:  # RET
+            pos += 1
+            break
+        if 0x50 <= op <= 0x57:  # PUSH reg
+            pos += 1
+            continue
+        if 0x58 <= op <= 0x5F:  # POP reg
+            assign(op - 0x58, 0, 0)
+            pos += 1
+            continue
+        if op == 0xA1:  # MOV EAX,[moffs32]
+            assign(0, 0, 0)
+            pos += 5
+            continue
+        if op == 0xA3:  # MOV [moffs32],EAX
+            address = struct.unpack_from("<I", code, pos + 1)[0]
+            store(address, 4, values[0], masks[0])
+            pos += 5
+            continue
+        if 0xB0 <= op <= 0xB7:  # MOV r8,imm8
+            assign_low8(op - 0xB0, code[pos + 1])
+            pos += 2
+            continue
+        if 0xB8 <= op <= 0xBF:  # MOV r32,imm32
+            assign(op - 0xB8, struct.unpack_from("<I", code, pos + 1)[0])
+            pos += 5
+            continue
+        if op == 0x33:  # XOR r32,r/m32 (only self-XOR is admitted)
+            modrm = code[pos + 1]
+            dst = (modrm >> 3) & 7
+            src = modrm & 7
+            if modrm >> 6 != 3 or dst != src:
+                raise ReconError(f"unexpected XOR at initializer +{pos:#x}")
+            assign(dst, 0)
+            pos += 2
+            continue
+        if op == 0x8B:  # MOV r32,r/m32
+            modrm = code[pos + 1]
+            dst = (modrm >> 3) & 7
+            length = _modrm_length(code, pos, 4)
+            if modrm >> 6 == 3:
+                src = modrm & 7
+                masks[dst], values[dst] = masks[src], values[src]
+            else:
+                assign(dst, 0, 0)  # ACTION pointer load; not scalar metadata.
+            pos += length
+            continue
+        if op in (0x88, 0x89):  # MOV r8/r32 to r/m
+            width = 1 if op == 0x88 else 4
+            modrm = code[pos + 1]
+            src = (modrm >> 3) & 7
+            length = _modrm_length(code, pos, width)
+            if modrm >> 6 == 0 and (modrm & 7) == 5:
+                address = struct.unpack_from("<I", code, pos + 2)[0]
+                store(address, width, values[src], masks[src])
+            pos += length
+            continue
+        if op in (0xC6, 0xC7):  # MOV imm8/imm32 to r/m
+            width = 1 if op == 0xC6 else 4
+            modrm = code[pos + 1]
+            if (modrm >> 3) & 7:
+                raise ReconError(f"unexpected C6/C7 group at initializer +{pos:#x}")
+            length = _modrm_length(code, pos, width, width)
+            if modrm >> 6 == 0 and (modrm & 7) == 5:
+                address = struct.unpack_from("<I", code, pos + 2)[0]
+                value = int.from_bytes(code[pos + length - width:pos + length], "little")
+                store(address, width, value, (1 << (width * 8)) - 1)
+            pos += length
+            continue
+        if op == 0x66:
+            if pos + 2 >= len(code):
+                raise ReconError("truncated operand-size-prefixed instruction")
+            sub = code[pos + 1]
+            if sub == 0x89:  # MOV r16 to r/m16
+                modrm_pos = pos + 1
+                modrm = code[pos + 2]
+                src = (modrm >> 3) & 7
+                length = 1 + _modrm_length(code, modrm_pos, 2)
+                if modrm >> 6 == 0 and (modrm & 7) == 5:
+                    address = struct.unpack_from("<I", code, pos + 3)[0]
+                    store(address, 2, values[src], masks[src])
+                pos += length
+                continue
+            if sub == 0xC7:  # MOV imm16 to r/m16
+                modrm_pos = pos + 1
+                modrm = code[pos + 2]
+                if (modrm >> 3) & 7:
+                    raise ReconError(f"unexpected 66 C7 group at initializer +{pos:#x}")
+                length = 1 + _modrm_length(code, modrm_pos, 2, 2)
+                if modrm >> 6 == 0 and (modrm & 7) == 5:
+                    address = struct.unpack_from("<I", code, pos + 3)[0]
+                    value = struct.unpack_from("<H", code, pos + length - 2)[0]
+                    store(address, 2, value, 0xFFFF)
+                pos += length
+                continue
+        raise ReconError(f"unexpected opcode {op:#04x} at initializer +{pos:#x}")
+
+    if pos != len(code):
+        raise ReconError(f"initializer decode ended at +{pos:#x}, expected +{len(code):#x}")
+
+    rows = []
+    for dense_id in range(ANIMDATA_COUNT):
+        base = ANIMDATA_VA + dense_id * ANIMDATA_STRIDE
+        fields = ((4, 1, "instance"), (5, 1, "property"), (6, 2, "next_animation"),
+                  (8, 4, "transition_speed"), (12, 4, "animation_speed"))
+        row = {"dense_id": dense_id}
+        for offset, width, name in fields:
+            actual = stores.get(base + offset)
+            if actual is None or actual[0] != width:
+                raise ReconError(f"dense animation {dense_id}: missing {name} store")
+            raw = actual[1]
+            row[name] = struct.unpack("<f", struct.pack("<I", raw))[0] if width == 4 else raw
+        rows.append(row)
+    return rows
+
+
 def recover_mapping(path: Path):
     data = Path(path).read_bytes()
     sha = hashlib.sha256(data).hexdigest()
@@ -160,8 +344,12 @@ def recover_mapping(path: Path):
     if any(slot in (24, 25, 26) for slot in mapping if slot is not None):
         raise ReconError("mapping references a null ___SONIC_ACTIONS slot")
 
+    rows = _recover_scalar_stores(code)
+    for row, slot in zip(rows, mapping):
+        row["source_action_slot"] = slot
+
     return {
-        "schema": "sa3ds-pc2004-sonic-animdata-remap-v1",
+        "schema": "sa3ds-pc2004-sonic-animdata-v2",
         "source_sha256": sha,
         "initializer_va": f"0x{INIT_START_VA:08X}",
         "runtime_animdata_va": f"0x{ANIMDATA_VA:08X}",
@@ -169,7 +357,8 @@ def recover_mapping(path: Path):
         "source_action_slot_count": ACTION_SLOT_COUNT,
         "null_dense_animation_ids": nulls,
         "dense_to_source_action_slot": mapping,
-        "core_movement": {name: {"dense_id": dense, "source_action_slot": mapping[dense]}
+        "animdata_rows": rows,
+        "core_movement": {name: rows[dense]
                           for name, dense in CORE_DENSE_IDS.items()},
     }
 

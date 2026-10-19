@@ -39,7 +39,9 @@ static void init(Fixture *f) {
 
 static SA3DSActionPreflightResult run(Fixture *f, uint16_t slot,
                                       SA3DSActionPreflightReport *r) {
-    const SA3DSSonicAnimationBinding b={9,slot,"synthetic"};
+    const SA3DSSonicAnimationBinding b={
+        .runtime_id=9, .action_slot=slot, .name="synthetic"
+    };
     return sa3ds_action_preflight(&f->c,&b,1,r);
 }
 

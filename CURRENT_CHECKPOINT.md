@@ -1,4 +1,58 @@
-# SA3DS 0.0.9.1E-WIP9 — 12-run White Zone Flight Final Candidate
+# SA3DS current checkpoint — PC2004 fixed-rate animation reconstruction
+
+**Verified source parent:** Pass11B source-motion audit.
+
+## 2026-10-19 integrated pass
+
+- Verified the owner PC2004 `sonic.exe` as SHA-256
+  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`
+  and analyzed it with REA using Ghidra 12.1.4 (x86 image base `0x00400000`).
+- Confirmed animated hierarchy traversal at `0x004050C0`: parent local
+  transform is applied before model draw and child recursion; sibling traversal
+  occurs after matrix pop. The existing ACTION 1 source-pose oracle still
+  agrees for 223 nodes, 7 frames, and 14,049 scalars (maximum absolute error
+  `4.91638197e-09`).
+- Recovered all 146 retail `SonicAnimData` rows from the exact initializer at
+  `0x007CEC90`, including action slot, instance, property, next animation,
+  transition speed, and animation speed.
+- Verified in retail `PlayAnimation` at `0x0044A800` that fixed properties
+  advance by their row `AnimationSpeed`. Replaced SA3DS's global provisional
+  `0.5` step for those properties with the recovered per-animation rate. Fall
+  and Spin Ball now advance at `1.0` frame/tick; Stand remains its proven
+  `0.5` frame/tick.
+- Kept the provisional `0.5` fallback for properties 9/10/11 because their
+  runtime-owned multiplier inputs are not yet reconstructed. Retail transition
+  blending is also still unresolved and was not guessed.
+- The CPU-swizzled texture upload path, owner-pair loader, renderer, hierarchy
+  code, animation selection, White Zone, and hardware diagnostics are unchanged.
+
+## Verification status
+
+- Exact-executable AnimData reconstruction: PASS (146 rows).
+- Deterministic animation timing tests: PASS, including fixed versus dynamic
+  rate classification and same-tick stability.
+- Pass11B independent raw-DLL pose oracle: PASS (223 nodes, 7 frames, 14,049
+  scalar comparisons, maximum absolute error `4.91638197e-09`).
+- Full owner-data-free host regression suite: PASS.
+- Native Old 3DS SD-mode build with devkitARM/Citro3D: PASS. Output
+  `dist/SA3DS_Pass11B_Audited.3dsx` is 239,556 bytes with SHA-256
+  `5a504f5ecee14b0a0cdafe5364d741cc6268c9fca707e69e90ea21dd7b9dd669`.
+  The only compiler warning is the deliberately inactive legacy GPU-transfer
+  helper; the runtime still uses the CPU-swizzled upload path.
+- Azahar 2126.0, Old 3DS mode, Vulkan: PASS with locally generated owner-only
+  SA3C/SA3T on the emulator SD. All 16 CPU uploads completed, the boot trace
+  recorded `First frame rendered/submitted`, and White Zone displayed Sonic at
+  60 FPS. This is emulator evidence, not physical-hardware evidence.
+- Physical Old 3DS / Old 3DS XL: NOT RUN for this checkpoint. The inherited
+  CPU-upload first-frame hardware log remains the latest physical evidence.
+
+## Remaining objective
+
+Recover the property 9/10 external speed inputs and the retail transition blend
+state, then implement velocity-driven Walk/Run/Jump/Roll frame progression and
+cross-action pose blending without altering physics.
+
+## Inherited 0.0.9.1E-WIP9 checkpoint
 
 **Scheduled run:** Overall Run 12/12, 2026-10-13 07:00 America/New_York (EDT).
 **Verified parent:** 0.0.9.1E-WIP8 External Owner Pair, SHA-256

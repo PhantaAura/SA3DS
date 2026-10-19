@@ -3,23 +3,25 @@
 #include <string.h>
 
 static const SA3DSSonicAnimationBinding kBindings[] = {
-    { 0,  1, "Stand"},
-    { 9,  3, "Walk1"},
-    {10,  4, "Walk2"},
-    {11,  5, "Walk3"},
-    {12,  6, "Run1"},
-    {13, 18, "Run2"},
-    {14, 14, "Jump/Spin"},
-    {15, 14, "Roll"},
-    {16,  8, "Spring"},
-    {17,  9, "Spring->Fall"},
-    {18, 10, "Fall"},
-    {19, 11, "Land"},
-    {20,  7, "Brake"},
-    {29, 22, "Uncurl"},
-    {30, 20, "Turn Around"},
-    {31, 19, "Skidding"},
-    {32, 21, "Spin Ball"},
+    /* Exact scalar fields recovered from PC2004 InitSonicAnimData (0x7CEC90).
+     * Property meanings are verified against PlayAnimation (0x44A800). */
+    { 0,  1, 73,  3,  0, 0.0625f, 0.5f, "Stand"},
+    { 9,  3, 73, 10,  9, 0.25f,   3.4f, "Walk1"},
+    {10,  4, 73, 10, 10, 0.25f,   1.4f, "Walk2"},
+    {11,  5, 73, 10, 11, 0.25f,   0.8f, "Walk3"},
+    {12,  6, 73, 10, 12, 0.25f,   0.5f, "Run1"},
+    {13, 18, 73,  9, 13, 0.5f,    0.5f, "Run2"},
+    {14, 14, 74, 10, 14, 0.25f,   0.2f, "Jump/Spin"},
+    {15, 14, 74,  9, 15, 0.25f,   0.7f, "Roll"},
+    {16,  8, 73,  3, 16, 0.25f,   1.0f, "Spring"},
+    {17,  9, 73,  4, 18, 0.125f,  1.0f, "Spring->Fall"},
+    {18, 10, 73,  3, 18, 0.25f,   1.0f, "Fall"},
+    {19, 11, 73,  4,  0, 1.0f,    1.0f, "Land"},
+    {20,  7, 73,  4,  0, 0.25f,   1.0f, "Brake"},
+    {29, 22, 73,  4,  1, 0.0625f, 1.0f, "Uncurl"},
+    {30, 20, 73,  4,  0, 1.0f,    0.9f, "Turn Around"},
+    {31, 19, 73,  3, 31, 0.0625f, 1.0f, "Skidding"},
+    {32, 21,  1,  3, 32, 0.5f,    1.0f, "Spin Ball"},
 };
 
 size_t sa3ds_sonic_animation_binding_count(void) {
@@ -74,6 +76,28 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
     }
 }
 
+static int fixed_retail_frame_step(const SA3DSSonicAnimationBinding *binding,
+                                   float *out_step) {
+    if (!binding || !out_step) return 0;
+    switch (binding->property) {
+    case 3: /* loop forward */
+    case 4: /* advance then transition to NextAnim */
+    case 5: /* advance and clamp */
+    case 8: /* advance then transition with blend bookkeeping */
+        *out_step = binding->animation_speed;
+        return 1;
+    case 6: /* loop backward */
+    case 7: /* reverse and clamp */
+        *out_step = -binding->animation_speed;
+        return 1;
+    default:
+        /* Properties 9/10 multiply AnimationSpeed by runtime-owned float
+         * inputs; property 11 uses an input directly. Those inputs have not
+         * yet been reconstructed in the native player state. */
+        return 0;
+    }
+}
+
 SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     SA3DSSonicAnimationRuntime *runtime,
     const SA1PlayerState *player,
@@ -108,9 +132,14 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     out.ticks_in_selection = player->sim_frame >= runtime->selection_entry_frame
         ? player->sim_frame - runtime->selection_entry_frame : 0;
 
-    /* 0E's 0.5 source-frame/tick playback is retained deliberately as a
-     * hardware-test baseline. It is NOT yet evidence for retail playback rate. */
-    out.sample_frame = (float)out.ticks_in_selection * 0.5f;
+    float frame_step = 0.5f;
+    out.playback_rate_is_source_backed =
+        fixed_retail_frame_step(&out.binding, &frame_step);
+    /* The retail transition blend is not fabricated here. Once selected,
+     * fixed-rate properties now advance at their exact AnimData rate. The old
+     * 0.5 baseline remains only for dynamic properties 9/10/11 until their
+     * external speed inputs are reconstructed. */
+    out.sample_frame = (float)out.ticks_in_selection * frame_step;
     runtime->last_sim_frame = player->sim_frame;
     runtime->cached_selection = out;
     return out;

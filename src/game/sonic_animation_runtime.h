@@ -9,6 +9,11 @@
 typedef struct {
     uint16_t runtime_id;
     uint16_t action_slot;
+    uint8_t instance;
+    int8_t property;
+    uint16_t next_runtime_id;
+    float transition_speed;
+    float animation_speed;
     const char *name;
 } SA3DSSonicAnimationBinding;
 
@@ -16,6 +21,7 @@ typedef struct {
     SA3DSSonicAnimationBinding binding;
     float sample_frame;
     uint64_t ticks_in_selection;
+    int playback_rate_is_source_backed;
     int selector_is_provisional;
 } SA3DSSonicAnimationSelection;
 
