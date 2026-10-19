@@ -2,6 +2,57 @@
 
 **Verified source parent:** Pass11B source-motion audit.
 
+## 2026-10-19 PC2004 transition/blending checkpoint
+
+- Reverified exact PC2004 `sonic.exe` SHA-256
+  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+  The REA/Ghidra bridge was unavailable (Ghidra's default Java 25 process
+  failed); targeted recovery used the exact Ghidra 12.1.4 C export and raw
+  executable instructions. Hopper was not used.
+- Recovered `PlayAnimation` (`0x0044A800`) transition dispatch and its local
+  transition-motion builder (`0x0043F2A0`). Same-root destination rows below
+  transition speed 1 blend a frozen source pose toward destination frame zero.
+  Position/scale are linear; rotation uses the shortest signed 16-bit BAMS
+  path (`0x004383D0`). Root changes and speed-1 rows switch immediately, and
+  an active blend is not interrupted by a newly requested index.
+- Recovered the ground selector at `0x00495CD0`: IDs 9/10/11/12/13 are chosen
+  from signed local speed plus five times the acceleration residual at the
+  exact jog/run/rush/dash thresholds. The prior runtime skipped IDs 11 and 13.
+- Replaced the one-tick landing placeholder with property-4 playback. Land
+  (ID 19, ACTION 11, 16 frames) advances until `frames - 1`, then installs
+  `NextAnim` 0 without blending. Soft-versus-hard landing selection remains
+  provisional because the presentation bridge does not expose the exact
+  pre-contact vertical state used by Sonic's action switch.
+- Added one caller-owned transition pose buffer to the existing renderer; no
+  per-frame allocation or duplicate animation system was introduced. The CPU
+  texture uploader, physics, `PHYSICS_1TO1=false`, Pose Lab, owner loader,
+  hierarchy evaluator, and White Zone remain unchanged.
+
+### Verification
+
+- Focused transition/timing and shortest-BAMS tests: PASS.
+- Real owner-generated SA3C preflight: PASS, 17 bindings / 51 pose samples;
+  exact ACTION roots and frame counts agree.
+- Pass11B raw-DLL source-pose oracle: PASS, 223 nodes, 7 frames, 14,049
+  scalars, maximum absolute error `4.91638197e-09`.
+- Full owner-data-free host regression: PASS.
+- Old 3DS SD-mode devkitARM build: PASS. Updated `.3dsx` is 241,152 bytes,
+  SHA-256 `cfcd6225d43d8868816ab2ab5321bcae9754ea36652a0552c65f015049d91830`.
+- Azahar 2126.0, Old 3DS mode, Vulkan: PASS on the updated build with owner SD
+  assets. It ran at 59-60 FPS; boot logging confirmed all 16 CPU texture
+  uploads and first-frame submission. Live HUD/visual checks exercised Stand,
+  Walk/Run (ID 12/ACTION 6 reached), Jump/Spin (14/14), Land (19/11), and
+  return to Stand without a freeze or invalid pose.
+- Physical Old 3DS / Old 3DS XL: NOT RUN for this checkpoint.
+
+### Remaining objective
+
+Recover the exact soft-land (ID 2) versus hard-land (ID 19) state input and
+the non-flat acceleration residual. Add a source-oracle transition-pose dump
+for numerical retail comparison beyond the verified formulas and synthetic
+shortest-path test; current emulator validation establishes runtime behavior,
+not complete animation parity.
+
 ## 2026-10-19 integrated pass
 
 - Reverified the owner PC2004 `sonic.exe` as SHA-256

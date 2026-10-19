@@ -8,9 +8,14 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c -Isrc/game \
   tests/test_sonic_action_preflight.c -lm -o "$TMP/preflight"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c -Isrc/game \
   src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c \
+  src/sa1/physics/steam_player_parameters.c \
   src/game/sonic_animation_runtime.c src/game/sonic_action_preflight.c \
   tools/check_sonic_actions.c -lm -o "$TMP/check_sonic_actions"
 python3 tests/make_synthetic_sonic_sa3c.py "$TMP/synthetic.sa3c"
+cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
+  src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c \
+  tests/test_sonic_transition_pose.c -lm -o "$TMP/test_transition_pose"
+"$TMP/test_transition_pose" "$TMP/synthetic.sa3c"
 "$TMP/check_sonic_actions" "$TMP/synthetic.sa3c"
 python3 tests/make_synthetic_sonic_sa3c.py --bad-key "$TMP/corrupt.sa3c"
 if "$TMP/check_sonic_actions" "$TMP/corrupt.sa3c" > "$TMP/bad.out" 2>&1; then
@@ -20,6 +25,7 @@ grep -q 'NONFINITE.*key=1' "$TMP/bad.out"
 "$TMP/preflight"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c -Isrc/game \
   src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c \
+  src/sa1/physics/steam_player_parameters.c \
   src/game/sonic_animation_runtime.c src/game/sonic_action_preflight.c \
   tools/check_sonic_actions.c -lm -o "$TMP/check_sonic_actions"
 python3 tests/make_synthetic_sonic_sa3c.py "$TMP/synthetic.sa3c"

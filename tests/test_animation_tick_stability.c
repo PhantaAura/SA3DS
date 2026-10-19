@@ -1,5 +1,5 @@
-/* Presentation timeline regression: same-tick sampling, landing, rewind, reset.
- * No retail animation-state timing or motion speed is asserted here. */
+/* Presentation timeline regression: same-tick sampling, property-4 landing,
+ * rewind, and reset. */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -55,10 +55,15 @@ static void run_landing_sequence(void) {
     p.action_state = SA1_ACTION_GROUNDED; p.ball_form = false;
     SA3DSSonicAnimationSelection landing = tick(&sync, &runtime, &p, 19, 0);
     assert(landing.binding.action_slot == 11);
-    p.sim_frame = 4;
-    tick(&sync, &runtime, &p, 0, 0);
-    p.sim_frame = 5;
-    tick(&sync, &runtime, &p, 0, 1);
+    /* Action 11 has 16 frames. PlayAnimation advances property 4 until
+     * frame >= frames-1 and then installs NextAnim 0 without blending. */
+    for (uint64_t frame=4;frame<=17;frame++) {
+        p.sim_frame=frame;
+        SA3DSSonicAnimationSelection held=tick(&sync,&runtime,&p,19,frame-3);
+        assert(held.sample_frame==(float)(frame-3));
+    }
+    p.sim_frame=18;
+    tick(&sync,&runtime,&p,0,0);
     /* Rewind to an earlier physics frame: old transition and elapsed ticks
      * must not survive into the new trace timeline. */
     p.sim_frame = 1; p.grounded = false;

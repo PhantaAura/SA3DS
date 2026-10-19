@@ -180,6 +180,48 @@ SA3CPoseResult sa3c_pose_sample_action(const SA3CCharacter *c,uint16_t action_in
     return SA3C_POSE_OK;
 }
 
+static float transition_lerp(float a,float b,float t) {
+    return a+(b-a)*t;
+}
+
+static float transition_bams_lerp(float arad,float brad,float t) {
+    int32_t a=(int32_t)roundf(arad*SA3C_RAD_TO_BAMS);
+    int32_t b=(int32_t)roundf(brad*SA3C_RAD_TO_BAMS);
+    int16_t delta=(int16_t)(b-a);
+    return roundf((float)a+(float)delta*t)*SA3C_BAMS_TO_RAD;
+}
+
+SA3CPoseResult sa3c_pose_sample_transition(const SA3CCharacter *c,
+    uint16_t source_action_index,float source_frame,
+    uint16_t destination_action_index,float weight,
+    SA3CTransform *local,SA3CTransform *scratch,size_t local_count,
+    uint16_t *out_root_node) {
+    if(!c||!local||!scratch||!isfinite(weight)||weight<0.0f||weight>1.0f)
+        return SA3C_POSE_ERR_ARGUMENT;
+    uint16_t source_root=SA3C_INVALID_U16,destination_root=SA3C_INVALID_U16;
+    SA3CPoseResult pr=sa3c_pose_sample_action(c,source_action_index,
+        source_frame,1,scratch,local_count,&source_root);
+    if(pr!=SA3C_POSE_OK)return pr;
+    pr=sa3c_pose_sample_action(c,destination_action_index,0.0f,1,
+        local,local_count,&destination_root);
+    if(pr!=SA3C_POSE_OK)return pr;
+    if(source_root!=destination_root)return SA3C_POSE_ERR_HIERARCHY;
+    if(local_count<c->sections[0].count)return SA3C_POSE_ERR_RANGE;
+    for(uint32_t i=0;i<c->sections[0].count;i++) {
+        local[i].position.x=transition_lerp(scratch[i].position.x,local[i].position.x,weight);
+        local[i].position.y=transition_lerp(scratch[i].position.y,local[i].position.y,weight);
+        local[i].position.z=transition_lerp(scratch[i].position.z,local[i].position.z,weight);
+        local[i].rotation.x=transition_bams_lerp(scratch[i].rotation.x,local[i].rotation.x,weight);
+        local[i].rotation.y=transition_bams_lerp(scratch[i].rotation.y,local[i].rotation.y,weight);
+        local[i].rotation.z=transition_bams_lerp(scratch[i].rotation.z,local[i].rotation.z,weight);
+        local[i].scale.x=transition_lerp(scratch[i].scale.x,local[i].scale.x,weight);
+        local[i].scale.y=transition_lerp(scratch[i].scale.y,local[i].scale.y,weight);
+        local[i].scale.z=transition_lerp(scratch[i].scale.z,local[i].scale.z,weight);
+    }
+    if(out_root_node)*out_root_node=destination_root;
+    return SA3C_POSE_OK;
+}
+
 static SA3CPoseResult walk_world(const SA3CCharacter *c,uint16_t node_index,const SA3CTransform *local,SA3CMatrix *world,const SA3CMatrix *parent,uint32_t depth) {
     if(node_index==SA3C_INVALID_U16)return SA3C_POSE_OK;
     if((uint32_t)node_index>=c->sections[0].count || depth>c->sections[0].count)return SA3C_POSE_ERR_HIERARCHY;

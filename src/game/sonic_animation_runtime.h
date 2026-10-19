@@ -14,6 +14,8 @@ typedef struct {
     uint16_t next_runtime_id;
     float transition_speed;
     float animation_speed;
+    uint16_t source_root_node;
+    uint16_t source_frame_count;
     const char *name;
 } SA3DSSonicAnimationBinding;
 
@@ -30,17 +32,25 @@ typedef struct {
     uint64_t ticks_in_selection;
     int playback_rate_is_source_backed;
     int selector_is_provisional;
+    int transition_active;
+    uint16_t transition_from_action_slot;
+    float transition_from_frame;
+    float transition_weight;
 } SA3DSSonicAnimationSelection;
 
 typedef struct {
     int initialized;
     int previous_grounded;
-    uint16_t previous_runtime_id;
+    SA3DSSonicAnimationBinding active_binding;
     uint64_t selection_entry_frame;
     uint64_t last_sim_frame;
     float accumulated_sample_frame;
     float speed_scalar;
     uint8_t speed_scalar_valid;
+    uint8_t transition_active;
+    uint16_t transition_from_action_slot;
+    float transition_from_frame;
+    float transition_progress;
     SA3DSSonicAnimationSelection cached_selection;
 } SA3DSSonicAnimationRuntime;
 
@@ -65,9 +75,10 @@ int sa3ds_sonic_animation_frame_step(
     float *out_step);
 
 /*
- * Presentation-only selector. Dense-ID -> ACTION mappings are source-backed;
- * choosing which dense ID to play for a given broad physics intent remains a
- * provisional policy until the retail animation-state switch code is traced.
+ * Presentation-only selector. Dense-ID -> ACTION mappings, the five ground
+ * speed bands, and PlayAnimation transition mechanics are source-backed.
+ * The broader intent bridge remains provisional where Sonic action-state
+ * inputs (including soft-versus-hard landing) are not yet represented.
  * Selection is stable across repeated queries of one completed sim_frame;
  * rewind clears the prior transition history. Explicit reset is required
  * when switching zones/players at the same sim_frame.

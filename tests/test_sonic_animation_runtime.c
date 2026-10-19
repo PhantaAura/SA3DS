@@ -42,24 +42,25 @@ int main(void) {
         uint8_t instance;
         int8_t property;
         float transition, speed;
+        uint16_t root, frames;
     } expected[] = {
-        { 0,  1,  0, 73,  3, 0.0625f, 0.5f},
-        { 9,  3,  9, 73, 10, 0.25f,   3.4f},
-        {10,  4, 10, 73, 10, 0.25f,   1.4f},
-        {11,  5, 11, 73, 10, 0.25f,   0.8f},
-        {12,  6, 12, 73, 10, 0.25f,   0.5f},
-        {13, 18, 13, 73,  9, 0.5f,    0.5f},
-        {14, 14, 14, 74, 10, 0.25f,   0.2f},
-        {15, 14, 15, 74,  9, 0.25f,   0.7f},
-        {16,  8, 16, 73,  3, 0.25f,   1.0f},
-        {17,  9, 18, 73,  4, 0.125f,  1.0f},
-        {18, 10, 18, 73,  3, 0.25f,   1.0f},
-        {19, 11,  0, 73,  4, 1.0f,    1.0f},
-        {20,  7,  0, 73,  4, 0.25f,   1.0f},
-        {29, 22,  1, 73,  4, 0.0625f, 1.0f},
-        {30, 20,  0, 73,  4, 1.0f,    0.9f},
-        {31, 19, 31, 73,  3, 0.0625f, 1.0f},
-        {32, 21, 32,  1,  3, 0.5f,    1.0f},
+        { 0,  1,  0, 73,  3, 0.0625f, 0.5f, 72,32},
+        { 9,  3,  9, 73, 10, 0.25f,   3.4f, 72,32},
+        {10,  4, 10, 73, 10, 0.25f,   1.4f, 72,32},
+        {11,  5, 11, 73, 10, 0.25f,   0.8f, 72,32},
+        {12,  6, 12, 73, 10, 0.25f,   0.5f, 72,32},
+        {13, 18, 13, 73,  9, 0.5f,    0.5f, 72,33},
+        {14, 14, 14, 74, 10, 0.25f,   0.2f,146, 7},
+        {15, 14, 15, 74,  9, 0.25f,   0.7f,146, 7},
+        {16,  8, 16, 73,  3, 0.25f,   1.0f, 72,32},
+        {17,  9, 18, 73,  4, 0.125f,  1.0f, 72,33},
+        {18, 10, 18, 73,  3, 0.25f,   1.0f, 72,32},
+        {19, 11,  0, 73,  4, 1.0f,    1.0f, 72,16},
+        {20,  7,  0, 73,  4, 0.25f,   1.0f, 72,33},
+        {29, 22,  1, 73,  4, 0.0625f, 1.0f, 72,16},
+        {30, 20,  0, 73,  4, 1.0f,    0.9f, 72,16},
+        {31, 19, 31, 73,  3, 0.0625f, 1.0f, 72,16},
+        {32, 21, 32,  1,  3, 0.5f,    1.0f,147, 7},
     };
     SA3DSSonicAnimationBinding b;
     assert(sa3ds_sonic_animation_binding_count() == sizeof(expected) / sizeof(expected[0]));
@@ -80,6 +81,8 @@ int main(void) {
         assert(entry.property == expected[i].property);
         assert(entry.transition_speed == expected[i].transition);
         assert(entry.animation_speed == expected[i].speed);
+        assert(entry.source_root_node == expected[i].root);
+        assert(entry.source_frame_count == expected[i].frames);
         for (size_t j = 0; j < i; ++j) {
             SA3DSSonicAnimationBinding previous;
             assert(sa3ds_sonic_animation_binding_at(j, &previous));
@@ -114,6 +117,68 @@ int main(void) {
     assert(sa3ds_sonic_animation_binding(32, &b));
     assert(b.instance == 1 && b.property == 3 && b.animation_speed == 1.0f);
 
+    /* 0x00495CD0 compares Speed.x + 5*residual against Sonic's exact
+     * jog/run/rush/dash thresholds and selects all five ground clips. */
+    static const struct { float speed; uint16_t id; } ground_cases[] = {
+        {0.20f,9},
+        {0.46000000834465027f,9},
+        {0.47f,10},
+        {1.3899999856948853f,10},
+        {1.40f,11},
+        {2.299999952316284f,11},
+        {2.31f,12},
+        {5.090000152587891f,12},
+        {5.10f,13},
+    };
+    for (size_t i=0;i<sizeof(ground_cases)/sizeof(ground_cases[0]);i++) {
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_rt={0};
+        SA1PlayerState case_player=base_player();
+        case_player.vel.z=ground_cases[i].speed;
+        SA3DSSonicAnimationObservation case_o=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection case_s=
+            select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==ground_cases[i].id);
+    }
+
+    /* Same-root Run2 -> Walk3 uses the destination's 0.25 transition row. */
+    {
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_rt={0};
+        SA1PlayerState case_player=base_player();
+        case_player.vel.z=5.10f;
+        SA3DSSonicAnimationObservation case_o=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection case_s=
+            select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==13&&!case_s.transition_active);
+        case_player.sim_frame=1;case_player.vel.z=1.40f;
+        case_o=observe(&case_sync,&case_player);
+        case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==11&&case_s.transition_active);
+        assert(case_s.transition_from_action_slot==18);
+        assert(case_s.transition_weight==0.25f);
+    }
+
+    /* Ground -> ball jump and ball jump -> upright fall change ACTION roots,
+     * so PlayAnimation explicitly bypasses transition construction. */
+    {
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_rt={0};
+        SA1PlayerState case_player=base_player();
+        SA3DSSonicAnimationObservation case_o=observe(&case_sync,&case_player);
+        (void)select_no_mutation(&case_rt,&case_player,&case_o);
+        case_player.sim_frame=1;case_player.grounded=false;
+        case_player.action_state=SA1_ACTION_AIRBORNE;case_player.ball_form=true;
+        case_o=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection case_s=
+            select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==14&&!case_s.transition_active);
+        case_player.sim_frame=2;case_player.ball_form=false;
+        case_o=observe(&case_sync,&case_player);
+        case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==18&&!case_s.transition_active);
+    }
+
     SA1PlayerState p = base_player();
     SA3DSSonicAnimationSync sync = {0};
     SA3DSSonicAnimationRuntime rt = {0};
@@ -126,38 +191,42 @@ int main(void) {
     p.sim_frame = 1; p.vel.z = 0.2f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 9 && s.binding.action_slot == 3);
+    assert(s.transition_active && s.transition_from_action_slot == 1);
+    assert(s.transition_from_frame == 0.0f && s.transition_weight == 0.25f);
     assert(s.playback_rate_is_source_backed);
 
-    p.sim_frame = 2; p.vel.z = SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jog_speed;
-    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 10 && s.binding.action_slot == 4);
-    assert(s.playback_rate_is_source_backed);
-
-    p.sim_frame = 3; p.vel.z = SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed;
-    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 12 && s.binding.action_slot == 6);
-
-    p.sim_frame = 4; p.grounded = false; p.action_state = SA1_ACTION_AIRBORNE;
+    /* A root change bypasses blending even though Jump's row says 0.25. */
+    p.sim_frame = 2; p.grounded = false; p.action_state = SA1_ACTION_AIRBORNE;
     p.ball_form = true; p.vel.y = 1.0f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 14 && s.binding.action_slot == 14);
+    /* PlayAnimation does not interrupt an in-flight state-2 blend. */
+    assert(s.binding.runtime_id == 9 && s.transition_weight == 0.5f);
+    p.sim_frame = 3;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 9 && s.transition_weight == 0.75f);
+    p.sim_frame = 4;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 9 && !s.transition_active);
+    p.sim_frame = 5;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 14 && !s.transition_active);
     assert(s.playback_rate_is_source_backed);
 
-    p.sim_frame = 5; p.grounded = true; p.action_state = SA1_ACTION_GROUNDED;
+    p.sim_frame = 6; p.grounded = true; p.action_state = SA1_ACTION_GROUNDED;
     p.ball_form = false; p.vel.y = 0.0f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
     assert(s.ticks_in_selection == 0);
     assert(s.playback_rate_is_source_backed);
 
-    p.sim_frame = 6; p.action_state = SA1_ACTION_SPINDASH_CHARGE; p.ball_form = true;
+    p.sim_frame = 7; p.action_state = SA1_ACTION_SPINDASH_CHARGE; p.ball_form = true;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 32 && s.binding.action_slot == 21);
+    assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
     assert(s.playback_rate_is_source_backed);
 
-    p.sim_frame = 7; p.action_state = SA1_ACTION_ROLL;
+    p.sim_frame = 8; p.action_state = SA1_ACTION_ROLL;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 15 && s.binding.action_slot == 14);
+    assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
     assert(s.playback_rate_is_source_backed);
 
     /* Exact PlayAnimation property arithmetic. Property 11 deliberately

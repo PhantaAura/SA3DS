@@ -66,8 +66,12 @@ instead assigns `5.0`. Property 9 multiplies its input by row speed; property 10
 multiplies the scalar by row speed; property 11 uses the scalar directly. SA3DS
 accumulates these steps once per completed physics tick. The verified
 flat/upright path supplies the cleared zero residual; unrecovered non-flat
-residual paths retain a flagged `0.5` fallback. Retail transition blending
-remains unresolved and is not guessed.
+residual paths retain a flagged `0.5` fallback. The verified `PlayAnimation`
+path blends a frozen source local pose toward destination frame zero only when
+the destination transition speed is below 1 and both ACTIONs share a root.
+Position/scale are linear and rotation uses the shortest signed-BAMS path.
+Root changes and speed-1 rows switch immediately. Property-4 Land advances to
+`frames - 1`, then installs `NextAnim` without a blend.
 
 ## Air phase
 

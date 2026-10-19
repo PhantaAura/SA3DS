@@ -46,6 +46,7 @@ static SA3DSOwnerSource g_owner_source=SA3DS_OWNER_SOURCE_NONE;
 static SA3CCharacter g_character;
 static SA3TArchive g_texture_archive;
 static SA3CTransform *g_local;
+static SA3CTransform *g_transition_local;
 static SA3CMatrix *g_world;
 static size_t g_node_count;
 static SA3DSSonicGpu g_sonic_gpu;
@@ -403,8 +404,9 @@ static int load_owner_packages(void) {
     boot_checkpoint("Allocating Sonic pose arrays");
     g_node_count=g_character.sections[0].count;
     g_local=(SA3CTransform*)calloc(g_node_count,sizeof(*g_local));
+    g_transition_local=(SA3CTransform*)calloc(g_node_count,sizeof(*g_transition_local));
     g_world=(SA3CMatrix*)calloc(g_node_count,sizeof(*g_world));
-    if (!g_local || !g_world) return 0;
+    if (!g_local || !g_transition_local || !g_world) return 0;
     size_t binding_count=sa3ds_sonic_animation_binding_count();
     SA3DSSonicAnimationBinding *bindings=(SA3DSSonicAnimationBinding*)
         calloc(binding_count,sizeof(*bindings));
@@ -490,8 +492,19 @@ static int sample_pose(void) {
         if(pr==SA3C_POSE_OK && g_pose_bind)
             pr=sa3c_pose_bind(&g_character,g_local,g_node_count);
     } else {
-        pr=sa3c_pose_sample_action(&g_character,
-            g_selection.binding.action_slot,g_selection.sample_frame,1,g_local,g_node_count,&root);
+        if (g_selection.transition_active) {
+            pr=sa3c_pose_sample_transition(&g_character,
+                g_selection.transition_from_action_slot,
+                g_selection.transition_from_frame,
+                g_selection.binding.action_slot,
+                g_selection.transition_weight,
+                g_local,g_transition_local,g_node_count,&root);
+        } else {
+            int loop=g_selection.binding.property!=4;
+            pr=sa3c_pose_sample_action(&g_character,
+                g_selection.binding.action_slot,g_selection.sample_frame,loop,
+                g_local,g_node_count,&root);
+        }
     }
     if (pr!=SA3C_POSE_OK || root==INVALID_U16) return 0;
     pr=sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count);
@@ -538,7 +551,8 @@ static void cleanup(void) {
     trace_stop();
     sa3ds_lab_gpu_destroy(&g_lab_gpu);
     sa3ds_sonic_gpu_destroy(&g_sonic_gpu);
-    free(g_world); free(g_local); g_world=NULL; g_local=NULL;
+    free(g_world); free(g_transition_local); free(g_local);
+    g_world=NULL; g_transition_local=NULL; g_local=NULL;
     sa3ds_free_file(g_sa3t_bytes); sa3ds_free_file(g_sa3c_bytes);
     g_sa3t_bytes=g_sa3c_bytes=NULL;
     if (g_dvlb) { shaderProgramFree(&g_program); DVLB_Free(g_dvlb); g_dvlb=NULL; }

@@ -109,9 +109,14 @@ SA3DSActionPreflightResult sa3ds_action_preflight(
         }
         const uint8_t *a = c->data + c->sections[7].offset +
             (size_t)slot * c->sections[7].stride;
+        uint16_t root = read_u16(a + 2);
         uint16_t frames = read_u16(a + 4);
-        if (read_u16(a + 2) == 0xFFFFu || frames == 0) {
+        if (root == 0xFFFFu || frames == 0) {
             result = SA3DS_ACTION_PREFLIGHT_EMPTY; break;
+        }
+        if (root != bindings[i].source_root_node ||
+            frames != bindings[i].source_frame_count) {
+            result = SA3DS_ACTION_PREFLIGHT_METADATA; break;
         }
         result = validate_tracks(c, a, &r);
         if (result != SA3DS_ACTION_PREFLIGHT_OK) break;
@@ -163,6 +168,7 @@ const char *sa3ds_action_preflight_result_name(SA3DSActionPreflightResult r) {
     case SA3DS_ACTION_PREFLIGHT_ARGUMENT: return "ARGUMENT";
     case SA3DS_ACTION_PREFLIGHT_SLOT: return "SLOT";
     case SA3DS_ACTION_PREFLIGHT_EMPTY: return "EMPTY";
+    case SA3DS_ACTION_PREFLIGHT_METADATA: return "METADATA";
     case SA3DS_ACTION_PREFLIGHT_POSE: return "POSE";
     case SA3DS_ACTION_PREFLIGHT_NONFINITE: return "NONFINITE";
     case SA3DS_ACTION_PREFLIGHT_TRACK_RANGE: return "TRACK_RANGE";

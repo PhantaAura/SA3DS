@@ -67,6 +67,20 @@ SA3CPoseResult sa3c_pose_sample_action(
     size_t local_count,
     uint16_t *out_root_node);
 
+/* PC2004 PlayAnimation transition action (0x0043F2A0): sample the retained
+ * source pose, sample the destination at frame zero, then interpolate local
+ * position/scale linearly and rotation along the shortest signed-BAMS path. */
+SA3CPoseResult sa3c_pose_sample_transition(
+    const SA3CCharacter *c,
+    uint16_t source_action_index,
+    float source_frame,
+    uint16_t destination_action_index,
+    float weight,
+    SA3CTransform *local,
+    SA3CTransform *scratch,
+    size_t local_count,
+    uint16_t *out_root_node);
+
 /* Build world matrices using Ninja object transform/eval semantics. */
 SA3CPoseResult sa3c_pose_build_world(
     const SA3CCharacter *c,
