@@ -1,12 +1,14 @@
-# SA3DS current checkpoint — PC2004 fixed-rate animation reconstruction
+# SA3DS current checkpoint — PC2004 movement-driven animation rates
 
 **Verified source parent:** Pass11B source-motion audit.
 
 ## 2026-10-19 integrated pass
 
-- Verified the owner PC2004 `sonic.exe` as SHA-256
-  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`
-  and analyzed it with REA using Ghidra 12.1.4 (x86 image base `0x00400000`).
+- Reverified the owner PC2004 `sonic.exe` as SHA-256
+  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+  The live REA/Ghidra bridge was unavailable for this pass, so the targeted
+  recovery used the exact Ghidra 12.1.4 C export plus raw instructions from
+  that executable. Hopper was not used.
 - Confirmed animated hierarchy traversal at `0x004050C0`: parent local
   transform is applied before model draw and child recursion; sibling traversal
   occurs after matrix pop. The existing ACTION 1 source-pose oracle still
@@ -20,37 +22,50 @@
   `0.5` step for those properties with the recovered per-animation rate. Fall
   and Spin Ball now advance at `1.0` frame/tick; Stand remains its proven
   `0.5` frame/tick.
-- Kept the provisional `0.5` fallback for properties 9/10/11 because their
-  runtime-owned multiplier inputs are not yet reconstructed. Retail transition
-  blending is also still unresolved and was not guessed.
+- Recovered the dynamic inputs from `InitCharacterVars` (`0x00442750`) and
+  Sonic's ground-animation selector (`0x00495CD0`). Property 9 advances by
+  `CharObj2.Speed.x * AnimationSpeed`. Properties 10/11 read the stateful
+  `CharObj2.SpindashSpeed`: ground locomotion refreshes it as
+  `CharObj2.Speed.x + 20 * EntityData2[0x38]`, while the jump transition at
+  `0x00495E60` assigns `5.0`. Property 10 multiplies it by `AnimationSpeed`;
+  property 11 uses it directly.
+- Integrated those rules into the existing selector and accumulated each
+  completed tick's step so later speed changes do not rewrite earlier frames.
+  Jump/Spin consequently advances at `5.0 * 0.2 = 1.0` frame/tick regardless
+  of later airborne speed. The verified flat/upright physics path supplies the
+  cleared zero residual; unrecovered non-flat residual paths retain the flagged
+  `0.5` fallback.
+  Animation timing remains presentation-only and cannot modify movement.
 - The CPU-swizzled texture upload path, owner-pair loader, renderer, hierarchy
   code, animation selection, White Zone, and hardware diagnostics are unchanged.
 
 ## Verification status
 
 - Exact-executable AnimData reconstruction: PASS (146 rows).
-- Deterministic animation timing tests: PASS, including fixed versus dynamic
-  rate classification and same-tick stability.
+- Deterministic animation timing tests: PASS, including signed property 9,
+  properties 10/11, changing movement inputs, per-tick accumulation, unknown
+  residual fallback, persistent Jump/Spin scalar, selection changes, and
+  same-tick stability.
 - Pass11B independent raw-DLL pose oracle: PASS (223 nodes, 7 frames, 14,049
   scalar comparisons, maximum absolute error `4.91638197e-09`).
 - Full owner-data-free host regression suite: PASS.
 - Native Old 3DS SD-mode build with devkitARM/Citro3D: PASS. Output
-  `dist/SA3DS_Pass11B_Audited.3dsx` is 239,556 bytes with SHA-256
-  `5a504f5ecee14b0a0cdafe5364d741cc6268c9fca707e69e90ea21dd7b9dd669`.
+  `dist/SA3DS_Pass11B_Audited.3dsx` is 239,884 bytes with SHA-256
+  `83a29554b538a6a44fc0417ed1fee2929462b1eea11b560f0f2fb249227ee71a`.
   The only compiler warning is the deliberately inactive legacy GPU-transfer
   helper; the runtime still uses the CPU-swizzled upload path.
-- Azahar 2126.0, Old 3DS mode, Vulkan: PASS with locally generated owner-only
-  SA3C/SA3T on the emulator SD. All 16 CPU uploads completed, the boot trace
-  recorded `First frame rendered/submitted`, and White Zone displayed Sonic at
-  60 FPS. This is emulator evidence, not physical-hardware evidence.
+- Azahar was not rerun for this checkpoint. The inherited 2126.0 Old 3DS/Vulkan
+  result remains the latest emulator evidence: all 16 CPU uploads completed,
+  the boot trace recorded `First frame rendered/submitted`, and White Zone
+  displayed Sonic at 60 FPS with owner-generated SD assets.
 - Physical Old 3DS / Old 3DS XL: NOT RUN for this checkpoint. The inherited
   CPU-upload first-frame hardware log remains the latest physical evidence.
 
 ## Remaining objective
 
-Recover the property 9/10 external speed inputs and the retail transition blend
-state, then implement velocity-driven Walk/Run/Jump/Roll frame progression and
-cross-action pose blending without altering physics.
+Recover the exact non-flat `EntityData2+0x38` residual behavior and retail
+transition-blend state, then implement cross-action pose blending without
+altering physics.
 
 ## Inherited 0.0.9.1E-WIP9 checkpoint
 

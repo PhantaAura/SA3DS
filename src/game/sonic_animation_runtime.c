@@ -1,5 +1,6 @@
 #include "sonic_animation_runtime.h"
 
+#include <math.h>
 #include <string.h>
 
 static const SA3DSSonicAnimationBinding kBindings[] = {
@@ -76,8 +77,10 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
     }
 }
 
-static int fixed_retail_frame_step(const SA3DSSonicAnimationBinding *binding,
-                                   float *out_step) {
+int sa3ds_sonic_animation_frame_step(
+    const SA3DSSonicAnimationBinding *binding,
+    const SA3DSSonicAnimationSpeedInputs *inputs,
+    float *out_step) {
     if (!binding || !out_step) return 0;
     switch (binding->property) {
     case 3: /* loop forward */
@@ -90,12 +93,27 @@ static int fixed_retail_frame_step(const SA3DSSonicAnimationBinding *binding,
     case 7: /* reverse and clamp */
         *out_step = -binding->animation_speed;
         return 1;
+    case 9: /* loop using pfloat18: CharObj2.Speed.x */
+        if (!inputs) return 0;
+        *out_step = inputs->forward_speed * binding->animation_speed;
+        return 1;
+    case 10: /* loop using pfloat1C prepared by Sonic's selector */
+        if (!inputs) return 0;
+        *out_step = inputs->speed_scalar * binding->animation_speed;
+        return 1;
+    case 11: /* advance/transition using pfloat1C directly */
+        if (!inputs) return 0;
+        *out_step = inputs->speed_scalar;
+        return 1;
     default:
-        /* Properties 9/10 multiply AnimationSpeed by runtime-owned float
-         * inputs; property 11 uses an input directly. Those inputs have not
-         * yet been reconstructed in the native player state. */
         return 0;
     }
+}
+
+static float local_forward_speed(const SA1PlayerState *player) {
+    /* Matches CharObj2.Speed.x for the verified flat/upright runtime path. */
+    return player->vel.x * sinf(player->yaw) +
+           player->vel.z * cosf(player->yaw);
 }
 
 SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
@@ -122,9 +140,25 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     if (!sa3ds_sonic_animation_binding(id, &out.binding))
         (void)sa3ds_sonic_animation_binding(0, &out.binding);
 
-    if (!runtime->initialized || runtime->previous_runtime_id != out.binding.runtime_id) {
+    int changed_selection = !runtime->initialized ||
+        runtime->previous_runtime_id != out.binding.runtime_id;
+    if (changed_selection) {
         runtime->selection_entry_frame = player->sim_frame;
         runtime->previous_runtime_id = out.binding.runtime_id;
+        runtime->accumulated_sample_frame = 0.0f;
+    }
+
+    /* The second retail pointer targets stateful CharObj2.SpindashSpeed.
+     * Ground locomotion refreshes it every selector call. The jump transition
+     * that selects action 14 instead assigns 5.0 and leaves it persistent. */
+    if (out.binding.runtime_id >= 9 && out.binding.runtime_id <= 12) {
+        runtime->speed_scalar = local_forward_speed(player) +
+            player->animation_accel_residual * 20.0f;
+        runtime->speed_scalar_valid =
+            player->animation_accel_residual_valid ? 1 : 0;
+    } else if (changed_selection && out.binding.runtime_id == 14) {
+        runtime->speed_scalar = 5.0f;
+        runtime->speed_scalar_valid = 1;
     }
     runtime->initialized = 1;
     runtime->previous_grounded = player->grounded ? 1 : 0;
@@ -133,13 +167,24 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
         ? player->sim_frame - runtime->selection_entry_frame : 0;
 
     float frame_step = 0.5f;
+    SA3DSSonicAnimationSpeedInputs speed_inputs = {
+        local_forward_speed(player),
+        runtime->speed_scalar
+    };
+    const SA3DSSonicAnimationSpeedInputs *inputs = &speed_inputs;
+    if ((out.binding.property == 10 || out.binding.property == 11) &&
+        !runtime->speed_scalar_valid)
+        inputs = NULL;
     out.playback_rate_is_source_backed =
-        fixed_retail_frame_step(&out.binding, &frame_step);
-    /* The retail transition blend is not fabricated here. Once selected,
-     * fixed-rate properties now advance at their exact AnimData rate. The old
-     * 0.5 baseline remains only for dynamic properties 9/10/11 until their
-     * external speed inputs are reconstructed. */
-    out.sample_frame = (float)out.ticks_in_selection * frame_step;
+        sa3ds_sonic_animation_frame_step(&out.binding, inputs, &frame_step);
+    /* Dynamic retail rates must be integrated per completed physics tick;
+     * multiplying the current rate by total selection age rewrites history
+     * whenever movement speed changes. */
+    if (!changed_selection) {
+        uint64_t elapsed = player->sim_frame - runtime->last_sim_frame;
+        runtime->accumulated_sample_frame += (float)elapsed * frame_step;
+    }
+    out.sample_frame = runtime->accumulated_sample_frame;
     runtime->last_sim_frame = player->sim_frame;
     runtime->cached_selection = out;
     return out;

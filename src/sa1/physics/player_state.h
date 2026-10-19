@@ -36,6 +36,13 @@ typedef struct {
     SA1Vec3 surface_right;
     float support_distance;
     uint32_t surface_flags;
+
+    /* PC2004 EntityData2+0x38 scratch input used only to pace animation.
+     * It is cleared before each movement tick and receives the forward force
+     * left over by specific ground-friction clamps. It must never feed back
+     * into SA3DS movement. */
+    float animation_accel_residual;
+    bool animation_accel_residual_valid;
 } SA1PlayerState;
 
 #endif

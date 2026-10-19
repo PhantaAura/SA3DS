@@ -57,11 +57,17 @@ This gives the eventual source-motion sampler a deterministic 60 Hz gameplay clo
 The exact PC2004 `SonicAnimData` rows and the retail `PlayAnimation` dispatcher
 at `0x0044A800` are now recovered. Properties 3/4/5/8 advance by the row's
 `AnimationSpeed`; properties 6/7 subtract it. The native selector therefore
-uses the exact fixed step for those properties. Properties 9/10 multiply the
-row speed by runtime-owned float inputs, and property 11 uses an external input
-directly. Those inputs and the transition-blend pose are still unresolved, so
-the native runtime retains its clearly flagged `0.5` fallback only for dynamic
-properties rather than inventing a multiplier.
+uses the exact fixed step for those properties. `InitCharacterVars` at
+`0x00442750` binds property 9 to signed local `CharObj2.Speed.x` and properties
+10/11 to stateful `CharObj2.SpindashSpeed`. Sonic's ground selector at
+`0x00495CD0` refreshes that scalar as
+`CharObj2.Speed.x + 20 * EntityData2[0x38]`; the jump transition at `0x00495E60`
+instead assigns `5.0`. Property 9 multiplies its input by row speed; property 10
+multiplies the scalar by row speed; property 11 uses the scalar directly. SA3DS
+accumulates these steps once per completed physics tick. The verified
+flat/upright path supplies the cleared zero residual; unrecovered non-flat
+residual paths retain a flagged `0.5` fallback. Retail transition blending
+remains unresolved and is not guessed.
 
 ## Air phase
 

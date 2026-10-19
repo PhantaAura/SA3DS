@@ -14,6 +14,7 @@ static SA1PlayerState base_player(void) {
     p.ground_normal = (SA1Vec3){0,1,0};
     p.surface_forward = (SA1Vec3){0,0,1};
     p.surface_right = (SA1Vec3){1,0,0};
+    p.animation_accel_residual_valid = true;
     return p;
 }
 
@@ -125,11 +126,12 @@ int main(void) {
     p.sim_frame = 1; p.vel.z = 0.2f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 9 && s.binding.action_slot == 3);
-    assert(!s.playback_rate_is_source_backed);
+    assert(s.playback_rate_is_source_backed);
 
     p.sim_frame = 2; p.vel.z = SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jog_speed;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 10 && s.binding.action_slot == 4);
+    assert(s.playback_rate_is_source_backed);
 
     p.sim_frame = 3; p.vel.z = SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
@@ -139,7 +141,7 @@ int main(void) {
     p.ball_form = true; p.vel.y = 1.0f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 14 && s.binding.action_slot == 14);
-    assert(!s.playback_rate_is_source_backed);
+    assert(s.playback_rate_is_source_backed);
 
     p.sim_frame = 5; p.grounded = true; p.action_state = SA1_ACTION_GROUNDED;
     p.ball_form = false; p.vel.y = 0.0f;
@@ -156,7 +158,71 @@ int main(void) {
     p.sim_frame = 7; p.action_state = SA1_ACTION_ROLL;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 15 && s.binding.action_slot == 14);
+    assert(s.playback_rate_is_source_backed);
+
+    /* Exact PlayAnimation property arithmetic. Property 11 deliberately
+     * ignores the row AnimationSpeed. These fixtures exercise the recovered
+     * equations; they are not presented as captured retail movement values. */
+    SA3DSSonicAnimationSpeedInputs speed_inputs = {2.0f, 3.0f};
+    float step_rate = 0.0f;
+    b = (SA3DSSonicAnimationBinding){.property=9, .animation_speed=0.5f};
+    assert(sa3ds_sonic_animation_frame_step(&b, &speed_inputs, &step_rate));
+    assert(fabsf(step_rate - 1.0f) < 1e-6f);
+    speed_inputs.forward_speed = -2.0f;
+    assert(sa3ds_sonic_animation_frame_step(&b, &speed_inputs, &step_rate));
+    assert(fabsf(step_rate + 1.0f) < 1e-6f);
+    speed_inputs.forward_speed = 2.0f;
+    b.property = 10;
+    assert(sa3ds_sonic_animation_frame_step(&b, &speed_inputs, &step_rate));
+    assert(fabsf(step_rate - 1.5f) < 1e-6f);
+    b.property = 11;
+    b.animation_speed = 99.0f;
+    assert(sa3ds_sonic_animation_frame_step(&b, &speed_inputs, &step_rate));
+    assert(fabsf(step_rate - 3.0f) < 1e-6f);
+
+    /* A changing property-10 speed is accumulated one tick at a time. */
+    memset(&sync, 0, sizeof(sync));
+    memset(&rt, 0, sizeof(rt));
+    p = base_player();
+    p.vel.z = 0.2f;
+    p.sim_frame = 200;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 9 && s.sample_frame == 0.0f);
+    p.vel.z = 0.3f;
+    p.sim_frame = 201;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(fabsf(s.sample_frame - 1.02f) < 1e-6f);
+    p.animation_accel_residual = 0.01f;
+    p.sim_frame = 202;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(fabsf(s.sample_frame - 2.72f) < 1e-5f);
+
+    /* Property 10/11 require the recovered residual's provenance. Unknown
+     * surface paths retain the established 0.5 fallback and say so. */
+    p.animation_accel_residual_valid = false;
+    p.sim_frame = 203;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(!s.playback_rate_is_source_backed);
+    assert(fabsf(s.sample_frame - 3.22f) < 1e-5f);
+
+    /* The retail jump initializer sets persistent CharObj2.SpindashSpeed=5;
+     * Jump/Spin's property 10 and 0.2 row speed therefore advance by 1.0 even
+     * when airborne forward velocity changes on the next tick. */
+    memset(&sync, 0, sizeof(sync));
+    memset(&rt, 0, sizeof(rt));
+    p = base_player();
+    p.grounded = false;
+    p.action_state = SA1_ACTION_AIRBORNE;
+    p.ball_form = true;
+    p.vel.z = 0.25f;
+    p.sim_frame = 300;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 14 && s.sample_frame == 0.0f);
+    p.vel.z = 1.25f;
+    p.sim_frame = 301;
+    o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
+    assert(s.binding.runtime_id == 14 && s.playback_rate_is_source_backed);
+    assert(fabsf(s.sample_frame - 1.0f) < 1e-6f);
 
     /* Fixed property 3 is now advanced by the exact retail AnimData speed.
      * Fall is 1.0 frame/tick; the prior provisional global rate was 0.5. */
@@ -173,6 +239,6 @@ int main(void) {
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 18 && s.sample_frame == 1.0f);
 
-    puts("physics-synced Sonic runtime animation resolver + PC2004 fixed rates: PASS");
+    puts("physics-synced Sonic runtime animation resolver + PC2004 rates: PASS");
     return 0;
 }

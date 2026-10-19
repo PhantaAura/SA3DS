@@ -35,6 +35,8 @@ int main(void) {
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     SA1Input fwd = {0}; fwd.move_z = 1.0f;
     step(&p, fwd, &d);
+    assert(p.animation_accel_residual_valid);
+    assert(p.animation_accel_residual == 0.0f);
     assert(d.had_analog == 1);
     assert(fabsf(d.filtered_input_magnitude - full.magnitude) < 0.000001f);
     assert(fabsf(d.requested_force - full.magnitude * 0.05f) < 0.000001f);

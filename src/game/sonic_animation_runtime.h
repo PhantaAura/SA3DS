@@ -18,6 +18,13 @@ typedef struct {
 } SA3DSSonicAnimationBinding;
 
 typedef struct {
+    /* CharObj2.Speed.x in PC2004: signed player-local forward speed. */
+    float forward_speed;
+    /* CharObj2.SpindashSpeed: state routines prepare this shared scalar. */
+    float speed_scalar;
+} SA3DSSonicAnimationSpeedInputs;
+
+typedef struct {
     SA3DSSonicAnimationBinding binding;
     float sample_frame;
     uint64_t ticks_in_selection;
@@ -31,6 +38,9 @@ typedef struct {
     uint16_t previous_runtime_id;
     uint64_t selection_entry_frame;
     uint64_t last_sim_frame;
+    float accumulated_sample_frame;
+    float speed_scalar;
+    uint8_t speed_scalar_valid;
     SA3DSSonicAnimationSelection cached_selection;
 } SA3DSSonicAnimationRuntime;
 
@@ -41,6 +51,18 @@ int sa3ds_sonic_animation_binding_at(size_t index, SA3DSSonicAnimationBinding *o
 
 int sa3ds_sonic_animation_binding(uint16_t runtime_id,
                                   SA3DSSonicAnimationBinding *out);
+
+/* Exact PC2004 PlayAnimation (0x0044A800) property 9/10/11 arithmetic.
+ * Property 9 uses forward_speed * AnimationSpeed. Properties 10 and 11 use
+ * the stateful CharObj2.SpindashSpeed scalar. Sonic's ground-animation
+ * selector (0x00495CD0) prepares forward_speed + 20 * acceleration residual;
+ * other state transitions can assign constants, including jump's 5.0 at
+ * 0x00495E60. Property 10 multiplies the scalar by AnimationSpeed; property 11
+ * consumes it directly. */
+int sa3ds_sonic_animation_frame_step(
+    const SA3DSSonicAnimationBinding *binding,
+    const SA3DSSonicAnimationSpeedInputs *inputs,
+    float *out_step);
 
 /*
  * Presentation-only selector. Dense-ID -> ACTION mappings are source-backed;

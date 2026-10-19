@@ -312,6 +312,13 @@ static void steam_flat_horizontal(SA1PlayerState *player, const SA1Input *input,
     local.vertical = clampf(local.vertical, -p->lim_v_spd, p->lim_v_spd);
     player->vel = local_to_world(player->yaw, local);
 
+    /* PC2004 PGetAcceleration clears EntityData2+0x38 before this path and
+     * only writes it when a nonzero ground-friction limit clips forward
+     * force. The supported flat/upright specialization has zero net local-Y
+     * contact acceleration, so that residual remains exactly zero. */
+    player->animation_accel_residual = 0.0f;
+    player->animation_accel_residual_valid = true;
+
     if (dbg) {
         memset(dbg, 0, sizeof(*dbg));
         dbg->forward_speed_before = original_local.forward;
@@ -347,6 +354,11 @@ void sa1_physics_step_steam_sonic_flat(
         world->query_surface(world->context, player->pos.x, player->pos.z) :
         (SA1Surface){0};
     int just_jumped = 0;
+
+    /* Mirrors the per-tick clear at PC2004 0x00446F10. A path marks the value
+     * valid only where its residual behavior has been recovered. */
+    player->animation_accel_residual = 0.0f;
+    player->animation_accel_residual_valid = false;
 
     /* 0.0.8.7 preserves the verified flat/upright specialization exactly and
      * routes non-flat/arbitrary support through the new general contact frame. */
@@ -397,6 +409,8 @@ void sa1_physics_step_steam_sonic_flat(
         if (!just_jumped)
             (void)sa1_steam_sonic_apply_jump_hold(player, input->jump_held);
         sa1_steam_sonic_air_step(player, input, camera_yaw, NULL);
+        /* PGetAccelerationAir does not populate the ground-friction scratch. */
+        player->animation_accel_residual_valid = true;
     }
 
     player->pos.x += player->vel.x;

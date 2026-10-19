@@ -1,5 +1,29 @@
 # SA3DS mod log
 
+## 2026-10-19 — PC2004 movement-driven animation-rate pass
+
+- Recovered the property 9/10/11 inputs from the exact owner PC2004 executable
+  using its Ghidra 12.1.4 export and raw x86 instructions. The live REA/Ghidra
+  bridge was unavailable; Hopper was not used.
+- Confirmed property 9 uses signed local forward speed times row speed;
+  properties 10/11 use stateful `CharObj2.SpindashSpeed`. Ground locomotion
+  sets that scalar to `forward + 20 * ground residual`; the jump transition
+  sets it to `5.0`. Property 10 multiplies it by row speed and property 11 uses
+  it directly.
+- Integrated the recovered formulas and per-tick rate accumulation into the
+  existing runtime. The animation reads movement state but does not feed back
+  into movement; unrecovered non-flat residual paths remain explicitly
+  provisional.
+- Added deterministic equation, signed-speed, changing-input, persistent jump
+  scalar, fallback, and flat-path residual tests. The cumulative host suite,
+  exact-executable AnimData reconstruction, and 14,049-scalar Pass11B pose
+  oracle pass.
+- The staged devkitARM/Citro3D build passes. The code-only 239,884-byte `.3dsx`
+  has SHA-256
+  `83a29554b538a6a44fc0417ed1fee2929462b1eea11b560f0f2fb249227ee71a`.
+- Azahar and physical Old 3DS testing were not rerun for this checkpoint. The
+  CPU-swizzled texture upload path is unchanged.
+
 ## 2026-10-19 — PC2004 Sonic AnimData fixed-rate pass
 
 - Verified exact PC2004 executable identity and used REA with Ghidra 12.1.4;
