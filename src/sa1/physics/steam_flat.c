@@ -96,7 +96,7 @@ static unsigned steam_slow_turn_step(float speed,
     return (unsigned)step;
 }
 
-/* The Steam turn helpers rotate the player frame and then transform/blend the
+/* The PC2004 turn helpers rotate the player frame and then transform/blend the
  * local speed vector. Keeping world velocity as SA3DS's authoritative state
  * lets us reproduce that transformation explicitly. */
 static SA1LocalSpeed apply_turn_helper(SA1PlayerState *player,
@@ -108,20 +108,20 @@ static SA1LocalSpeed apply_turn_helper(SA1PlayerState *player,
     player->yaw = approach_angle_bams(player->yaw, target, step_bams);
     SA1LocalSpeed transformed = world_to_local(player->yaw, old_world);
 
-    if (kind == SA1_STEAM_TURN_QUICK) {
-        /* 0x4E2770 restores the saved local speed after changing yaw. */
-        return old_local;
-    }
+    if (kind == SA1_STEAM_TURN_QUICK)
+        return transformed;
 
     if (kind == SA1_STEAM_TURN_GENERAL || kind == SA1_STEAM_TURN_SLOW) {
-        /* Flat/upright analog branch of 0x4E2480/0x4E2800: 99% transformed
-         * velocity + 1% old local velocity. */
-        transformed.forward = transformed.forward * SADX_UPRIGHT_TURN_BLEND +
-                              old_local.forward * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-        transformed.vertical = transformed.vertical * SADX_UPRIGHT_TURN_BLEND +
-                               old_local.vertical * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-        transformed.side = transformed.side * SADX_UPRIGHT_TURN_BLEND +
-                           old_local.side * (1.0f - SADX_UPRIGHT_TURN_BLEND);
+        /* PC2004 0x443C50/0x443E60 on upright ground: retain 99% of
+         * the pre-turn local velocity and mix in 1% of the vector transformed
+         * into the new player frame. The previous implementation had these
+         * operands reversed. */
+        transformed.forward = old_local.forward * SADX_UPRIGHT_TURN_BLEND +
+                              transformed.forward * (1.0f - SADX_UPRIGHT_TURN_BLEND);
+        transformed.vertical = old_local.vertical * SADX_UPRIGHT_TURN_BLEND +
+                               transformed.vertical * (1.0f - SADX_UPRIGHT_TURN_BLEND);
+        transformed.side = old_local.side * SADX_UPRIGHT_TURN_BLEND +
+                           transformed.side * (1.0f - SADX_UPRIGHT_TURN_BLEND);
     }
     return transformed;
 }

@@ -1,6 +1,52 @@
-# SA3DS current checkpoint — PC2004 movement-driven animation rates
+# SA3DS current checkpoint — PC2004 flat-ground turn inertia
 
 **Verified source parent:** Pass11B source-motion audit.
+
+## 2026-10-20 PC2004 flat-ground turn-inertia checkpoint
+
+- Started from clean commit `56535c281b67c91bcf76bcace6dcfee431ab1f1a`.
+- Reverified the owner PC2004 `sonic.exe` as SHA-256
+  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+  REA's Ghidra 12.1.4 provider produced a live `PGetAcceleration`
+  (`0x0044C270`) decompilation and 40 incoming references. The direct GUI
+  bridge was unavailable and the first headless analysis exceeded its startup
+  deadline; subsequent live Ghidra decompilation and reference queries passed.
+  Hopper was not used.
+- Confirmed that the existing PC2004 input builder already preserves analog
+  magnitude: per-axis 3072 deadzones precede a clamped cubic radial curve.
+- Recovered flat/upright turn inertia from `0x00443C50`, `0x00443DF0`, and
+  `0x00443E60`. General and slow turns retain
+  `0.9900000095 * old_local + 0.00999999046 * transformed`; the prior native
+  implementation had those operands reversed. Quick turn writes the saved
+  velocity transformed into the new player frame; the prior implementation
+  restored the stale local vector.
+- Corrected the existing flat-ground helper without changing movement
+  constants, input routing, collision, animation, rendering, or the CPU
+  texture-upload path. `PHYSICS_1TO1` remains false.
+
+### Verification
+
+- Exact-executable signature verifier: PASS, including all three recovered
+  turn helpers and their retail constants.
+- Focused flat-ground tests: PASS, including near/partial/full analog input,
+  braking, reverse input, quick turn, and source-derived general-turn output.
+- Full owner-data-free host regression: PASS (19 scenario regressions plus all
+  inherited input, physics, animation, renderer-contract, scheduler, package,
+  and importer tests).
+- Old 3DS SD-mode devkitARM build: PASS. Updated `.3dsx` is 241,120 bytes,
+  SHA-256 `7506efdc0cce30275414a0e93b8a813581398249d6d02ff1eb1a1fd052a58a4c`.
+- Azahar 2126.0, Old 3DS mode, Vulkan: BLOCKED in this session. The updated
+  build and a clean copy of the parent `56535c2` artifact both emitted only
+  boot marker `000` and stopped before `romfsInit`; therefore this is not
+  evidence of a physics regression, but no current emulator gameplay or
+  visual validation is claimed.
+- Physical Old 3DS / Old 3DS XL: NOT RUN.
+
+### Remaining objective
+
+Capture an equivalent PC2004 runtime flat-ground trace for numerical per-tick
+comparison, then recover camera-relative input/update ordering and the
+remaining non-flat acceleration residual without changing verified physics.
 
 ## 2026-10-19 PC2004 transition/blending checkpoint
 

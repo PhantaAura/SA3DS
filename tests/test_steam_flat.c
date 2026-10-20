@@ -44,15 +44,28 @@ int main(void) {
     assert(fabsf(d.forward_speed_after - d.accel_forward) < 0.000001f);
     assert(d.angle_delta_bams == 0);
 
-    /* At rest, a 90-degree request uses the 45-degree quick-turn helper and
-       contributes no forward force that frame. */
+    /* Partial Circle Pad deflection remains partial after PC2004's cubic
+       input curve; it must not become a full-strength acceleration request. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
+    SA1Input half_fwd = {0}; half_fwd.move_z = half_post_deadzone;
+    step(&p, half_fwd, &d);
+    assert(fabsf(d.filtered_input_magnitude - 0.125f) < 0.00002f);
+    assert(fabsf(d.requested_force - 0.125f * 0.05f) < 0.000002f);
+    assert(d.requested_force < full.magnitude * 0.05f);
+
+    /* At rest, a 90-degree request uses the 45-degree quick-turn helper and
+       contributes no forward force that frame. PC2004 0x443DF0 preserves the
+       world-space inertia by transforming it into the new local frame. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.vel.x = 1.0f; /* zero forward speed, nonzero side inertia */
     SA1Input right = {0}; right.move_x = 1.0f;
     step(&p, right, &d);
     assert(d.turn_kind == SA1_STEAM_TURN_QUICK);
     assert(d.turn_step_bams == 0x2000u);
     assert(fabsf(d.requested_force) < 0.000001f);
     assert(d.angle_delta_bams == 0x4000u);
+    assert(fabsf(d.forward_speed_after - 0.70710677f) < 0.000002f);
+    assert(fabsf(d.side_speed_after - 0.42426407f) < 0.000002f);
 
     /* Opposite input at speed enters slowdown/braking rather than immediate
        reverse acceleration. */
@@ -71,15 +84,21 @@ int main(void) {
     assert(d.crossed_zero == 1);
     assert(fabsf(d.forward_speed_after) < 0.000001f);
 
-    /* General turning changes the player frame while retaining almost all
-       world-space inertia through the verified 0.99/0.01 blend. */
+    /* PC2004 0x443C50 retains 99% of pre-turn local velocity and mixes 1% of
+       the transformed velocity. This is intentionally not the inverse blend. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     p.vel.z = 1.0f;
     step(&p, right, &d);
     assert(d.turn_kind == SA1_STEAM_TURN_GENERAL);
     assert(d.turn_step_bams == 0x0800u);
     assert(fabsf(p.yaw) > 0.19f && fabsf(p.yaw) < 0.20f); /* 11.25 degrees */
-    assert(fabsf(d.side_speed_after) > 0.05f); /* velocity did not snap to facing */
+    const float turned_forward = cosf(p.yaw);
+    const float turned_side = -sinf(p.yaw);
+    const float blended_forward = 0.99f + 0.01f * turned_forward;
+    const float blended_side = 0.01f * turned_side;
+    assert(fabsf(d.forward_speed_after - (blended_forward - 0.06f)) < 0.000002f);
+    assert(fabsf(d.side_speed_after -
+                 (blended_side + blended_side * -0.4f)) < 0.000002f);
 
     /* High-speed shallow steering selects Steam's shrinking slow-turn step. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());

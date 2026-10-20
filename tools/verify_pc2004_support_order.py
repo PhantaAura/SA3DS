@@ -5,7 +5,8 @@ This verifier fingerprints the exact supported 2004 US executable and checks
 small control-flow/data-reference signatures around PGetAcceleration,
 PSetPosition, and PResetPosition. It is deliberately conservative: it proves
 where the 1.16 steep-movement threshold is used and where it is *not* directly
-referenced, plus the post-collision speed/orientation reset structure.
+referenced, plus the flat-ground turn blend and post-collision speed/orientation
+reset structure.
 """
 from __future__ import annotations
 
@@ -24,6 +25,9 @@ VA = {
     "PResetPosition": (0x0043EE70, 0x0043F001),
     "PGetInertia": (0x00443650, 0x00443800),
     "PGetBreak": (0x00448E50, 0x004491E0),
+    "PTurnGeneral": (0x00443C50, 0x00443DEA),
+    "PTurnQuick": (0x00443DF0, 0x00443E4F),
+    "PTurnSlow": (0x00443E60, 0x00443F47),
     "PConvertVector_G2P": 0x0043EC00,
     "unstick_speed_1_16": 0x007E0178,
     "unstick_up_0_1": 0x007DD568,
@@ -34,6 +38,8 @@ VA = {
     "mul_5": 0x007DCCFC,
     "mul_0_8": 0x007DCE5C,
     "mul_0_4": 0x007DD550,
+    "turn_keep_local": 0x007E0118,
+    "turn_mix_transformed": 0x007E011C,
 }
 
 EXPECTED_FLOATS = {
@@ -46,6 +52,8 @@ EXPECTED_FLOATS = {
     "mul_5": 5.0,
     "mul_0_8": 0.800000011920929,
     "mul_0_4": 0.4000000059604645,
+    "turn_keep_local": 0.9900000095367432,
+    "turn_mix_transformed": 0.009999990463256836,
 }
 
 SIGNATURES = {
@@ -54,6 +62,29 @@ SIGNATURES = {
     "presetposition_entry": (0x0043EE70, "83ec0c558b6c241c56"),
     "pgetinertia_entry": (0x00443650, "83ec188b44242083c010"),
     "pgetbreak_entry": (0x00448E50, "83ec18538b5c24248d4310"),
+    "pturn_general_entry": (0x00443C50, "83ec0c538d5f388bc38b088b50048b40"),
+    # After rotating the player frame, the upright analog branch computes
+    # 0.99 * the retained local speed + (1 - 0.99) * transformed speed.
+    "pturn_general_upright_blend": (
+        0x00443DB0,
+        "d90510cb7d005dd8e1d9442404d8c9d9c2d80bdec1d91b5bd9c1d84f3c"
+        "d9c1d84c2404dec1d95f3cd84c2408d9c9d84f40dec1d95f4083c40cc3",
+    ),
+    # Quick turn transforms the saved vector around the 0x2000 yaw step and
+    # writes the transformed components back without restoring old locals.
+    "pturn_quick_transform_writeback": (
+        0x00443DF0,
+        "83ec0c568bf083c6388bc68b088b50048b4008894c24048d4c24045157"
+        "8954241089442414e876aeffff8b5424208b471868002000005250e82345ffff"
+        "8d4c24185157894718e8c5adffff8b5424208b4424248b4c24288916894604"
+        "83c41c",
+    ),
+    "pturn_slow_upright_blend": (
+        0x00443EF8,
+        "d90518017e00d9051c017e00eb0cd90598cc7d00d90598cc7d00d9442404"
+        "d8c9d9c2d80fdec1d91f5fd9c1d84e3cd9442404d8cadec1d95e3cd9c9"
+        "d84e40d9442408d8cadec1d95e40ddd883c40cc3",
+    ),
     # Exact PGetAcceleration primary steep branch: Up < .1, abs(cross-y) > .6,
     # forward speed > 1.16, then zero tangent add terms and use -weight.
     "pgetaccel_up_0_1_ref": (0x0044C38A, "d9451cd81d68d57d00"),
@@ -183,6 +214,7 @@ def main():
             "primary_unstick_branch":"Up<0.1 && abs(internal_cross_y)>0.6 && Speed.x>1.16; tangent add terms zeroed; local normal add=-weight",
             "inverted_biases":"for Speed.x>1.16: Up<-0.4 => -5*weight; Up<-0.3 => -0.8*weight; Up<-0.1 => -0.4*weight",
             "post_collision_reset":"PResetPosition converts post-collision vector to player space on normal path, writes local speed, and recomputes Up from support normal or 1.0 upright path",
+            "flat_turn_inertia":"upright analog general/slow turns keep 0.99 of pre-turn local speed and mix 0.00999999 of transformed speed; quick turn writes transformed speed after its 0x2000 yaw step",
             "portable_order_rule":"do not inject a second speculative support refresh before ordinary grounded movement",
         },
         "not_proven":{
@@ -199,6 +231,7 @@ def main():
         print("  PGetAcceleration/PSetPosition/PResetPosition/PGetBreak/PGetInertia entries: PASS")
         print("  1.16 direct refs: PGetAcceleration=4, PSetPosition=0, PResetPosition=0")
         print("  exact steep unstick constants/branch signatures: PASS")
+        print("  flat general/quick/slow turn-inertia signatures: PASS")
         print("  PResetPosition post-collision local-speed/Up reset signatures: PASS")
         print("  0.3/1.16 forced-fall heuristic: NOT promoted to 2004-PC authority")
     return 0
