@@ -673,10 +673,11 @@ int main(void) {
         unsigned steps=(g_pose_lab || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
+            SA1SteamFlatDebug physics_trace={0};
             if (!modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
             if (!modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
             sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
-                sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+                sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
             SA1PlayerState physics_done=g_player;
             g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
             g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
@@ -689,7 +690,8 @@ int main(void) {
             if (g_trace_file) {
                 const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
                 if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
-                        trace_zone?trace_zone->name:"UNKNOWN",&g_player,&tick_input,&g_selection)!=0) trace_stop();
+                        trace_zone?trace_zone->name:"UNKNOWN",&g_player,&tick_input,
+                        g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
                 else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,

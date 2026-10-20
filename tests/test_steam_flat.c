@@ -100,6 +100,21 @@ int main(void) {
     assert(fabsf(d.side_speed_after -
                  (blended_side + blended_side * -0.4f)) < 0.000002f);
 
+    /* PC2004 PGetSpeed 0x44403A..0x4440E1 stops damped local-Z inertia
+       when it crosses below 0.87*jog_speed. The old port kept decaying it. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.vel.x = 1.0f;
+    step(&p, none, &d);
+    assert(fabsf(d.side_speed_before - 1.0f) < 0.000001f);
+    assert(fabsf(d.accel_side - (-0.4f)) < 0.000001f);
+    assert(fabsf(d.side_speed_after - 0.6f) < 0.000001f);
+    assert(d.side_stopped_at_jog_threshold == 0);
+    step(&p, none, &d);
+    assert(fabsf(d.side_speed_before - 0.6f) < 0.000001f);
+    assert(fabsf(d.accel_side - (-0.24f)) < 0.000001f);
+    assert(fabsf(d.side_speed_after) < 0.000001f);
+    assert(d.side_stopped_at_jog_threshold == 1);
+
     /* High-speed shallow steering selects Steam's shrinking slow-turn step. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     p.vel.z = 6.0f;

@@ -17,3 +17,14 @@ this is equivalent to the previous yaw-local representation.
 The trace comparator does not assume either input file is authoritative. A
 reference trace becomes evidence only when its source/version and capture
 method are documented.
+
+## White Zone parity trace v2
+
+The interactive/native White Zone trace appends camera yaw, post-deadzone
+analog values, local velocity before and after the ground step, acceleration,
+requested force, resistance, turn selection, braking/zero-cross flags, and the
+PC2004 local-Z jog-threshold stop flag. These are emitted after each fixed 60 Hz
+simulation tick and do not alter player state.
+
+Comparison results must be labelled `RETAIL TRACE VERIFIED`,
+`SOURCE-EQUATION VERIFIED`, `PORT-INTERNAL REGRESSION`, or `NOT VERIFIED`.

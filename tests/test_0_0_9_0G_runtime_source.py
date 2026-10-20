@@ -21,7 +21,11 @@ for token in required_main: assert token in main, token
 assert 'sa3ds_0_0_9_0G_white_zone_validation' in mk
 assert 'SA3DS_PARITY_ZONE_TURN' in lab and 'AIR CONTROL / LANDING' in lab
 assert 'gWorld.reset_position.z = zone->reset_z' in lab
-for field in ['test_id','runtime_animation_id','action_slot','animation_frame','normal_x','slope_radians']:
+for field in [
+    'test_id','runtime_animation_id','action_slot','animation_frame','normal_x','slope_radians',
+    'post_deadzone_x','filtered_input_magnitude','camera_yaw','local_forward_before',
+    'accel_forward','turn_step','side_stopped_at_jog_threshold',
+]:
     assert field in trace, field
 assert 'SA3DS_PARITY_CAMERA_REFERENCE' in (root/'src/game/parity_hud.h').read_text()
 assert 'camera->mode != SA3DS_PARITY_CAMERA_FOLLOW' in hud

@@ -22,7 +22,12 @@ typedef enum {
     TEST_ROLL_EXIT,
     TEST_UPHILL,
     TEST_DOWNHILL,
-    TEST_AIR_CONTROL
+    TEST_AIR_CONTROL,
+    TEST_NEUTRAL,
+    TEST_PARTIAL,
+    TEST_QUICK_TURN,
+    TEST_CAMERA_TURN,
+    TEST_SIDE_THRESHOLD
 } TestKind;
 
 typedef struct {
@@ -44,6 +49,11 @@ static const ProtocolRow kProtocols[] = {
     {"uphill", TEST_UPHILL, SA3DS_PARITY_ZONE_SLOPE_UP},
     {"downhill", TEST_DOWNHILL, SA3DS_PARITY_ZONE_SLOPE_DOWN},
     {"air_control", TEST_AIR_CONTROL, SA3DS_PARITY_ZONE_AIR_LANDING},
+    {"neutral", TEST_NEUTRAL, SA3DS_PARITY_ZONE_CALIBRATION},
+    {"partial", TEST_PARTIAL, SA3DS_PARITY_ZONE_ACCELERATION},
+    {"quick_turn", TEST_QUICK_TURN, SA3DS_PARITY_ZONE_TURN},
+    {"camera_turn", TEST_CAMERA_TURN, SA3DS_PARITY_ZONE_TURN},
+    {"side_threshold", TEST_SIDE_THRESHOLD, SA3DS_PARITY_ZONE_TURN},
 };
 
 static int parse(const char *name, TestKind *kind, SA3DSParityZoneId *zone) {
@@ -87,6 +97,15 @@ static SA1Input input_for(TestKind kind, unsigned frame) {
         break;
     case TEST_AIR_CONTROL:
         in.move_x=1.0f; in.move_z=0.25f; break;
+    case TEST_PARTIAL:
+        in.move_z=(3072.0f + 29441.0f * 0.5f) / 32512.0f; break;
+    case TEST_QUICK_TURN:
+        in.move_x=1.0f; break;
+    case TEST_CAMERA_TURN:
+        in.move_z=1.0f; break;
+    case TEST_NEUTRAL:
+    case TEST_SIDE_THRESHOLD:
+        break;
     }
     return in;
 }
@@ -102,8 +121,13 @@ static void apply_precondition(TestKind kind, SA1PlayerState *p) {
     case TEST_AIR_CONTROL:
         p->grounded=false; p->action_state=SA1_ACTION_AIRBORNE;
         p->pos.y+=6.0f; p->vel.y=0.0f; p->ball_form=false; break;
+    case TEST_SIDE_THRESHOLD: p->vel.x=1.0f; break;
     default: break;
     }
+}
+
+static float camera_yaw_for(TestKind kind) {
+    return kind == TEST_CAMERA_TURN ? 1.5707963267948966f : 0.0f;
 }
 
 int main(int argc, char **argv) {
@@ -130,8 +154,10 @@ int main(int argc, char **argv) {
     if (sa3ds_parity_trace_write_header(out)) { fclose(out); return 2; }
     for (unsigned f=0;f<frames;++f) {
         SA1Input in=input_for(kind,f);
-        sa1_physics_step_steam_sonic_flat(&p,&in,0.0f,
-            sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,0);
+        float camera_yaw=camera_yaw_for(kind);
+        SA1SteamFlatDebug physics={0};
+        sa1_physics_step_steam_sonic_flat(&p,&in,camera_yaw,
+            sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics);
         SA1PlayerState physics_done=p;
         SA3DSSonicAnimationObservation observation=
             sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
@@ -145,7 +171,8 @@ int main(int argc, char **argv) {
             fprintf(stderr,"animation selection mutated physics at frame %u\n",f);
             fclose(out); return 3;
         }
-        if (sa3ds_parity_trace_write_frame(out,zone,z?z->name:argv[1],&p,&in,&selection)) {
+        if (sa3ds_parity_trace_write_frame(out,zone,z?z->name:argv[1],&p,&in,
+                                           camera_yaw,&physics,&selection)) {
             fclose(out); return 2;
         }
     }

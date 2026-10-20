@@ -78,6 +78,17 @@ SIGNATURES = {
     "pgetspeed_add_forward": (0x00443F5E, "d9472c8b4738d84738"),
     "pgetspeed_idle_factor_ref": (0x00443F70, "d987c0000000d80d24017e00"),
     "pgetspeed_forward_zero_cross_store": (0x00443F9E, "897738"),
+    # Local-Z integration uses the same 0.87*jog threshold. Positive and
+    # negative branches snap speed.z to zero when damping crosses the band.
+    "pgetspeed_side_jog_deadband": (
+        0x0044403A,
+        "d94740d94734d84740d95c240c8b4c240cd8152ccb7d00894f40dfe0f6c441"
+        "7535d8542428dfe0f6c4057a0bd854240cdfe0f6c4447b6bd85c2428dfe0f6"
+        "c4017565d944240cd85c2428dfe0f6c4057a56897740eb51d8152ccb7d00dfe0"
+        "f6c4057a42d9442428d9e0d95c2428d8542428dfe0f6c441750bd854240cdfe0"
+        "f6c4447b1fd85c2428dfe0f6c4417a19d944240cd85c2428dfe0f6c441750a89"
+        "7740eb05897740ddd8",
+    ),
 
     "psetposition_entry": (0x0044CDF0, "83ec2053558b6c2430"),
     "psetposition_roll_surface_flags": (0x0044CE00, "8b4e5c578b7c243489464c894648894644894e6089465c"),
@@ -92,6 +103,17 @@ SIGNATURES = {
     "presetposition_entry": (0x0043EE70, "83ec0c558b6c241c56"),
     "presetposition_write_local_speed": (0x0043EF9D, "8b44240c8d553889028b4424108942048b442414894208"),
 }
+
+# Calls in the ordinary grounded Sonic action path.  Checking the decoded
+# rel32 targets makes the per-frame ordering evidence explicit instead of
+# relying on nearby bytes or names imported from a secondary decompilation.
+FLAT_TICK_CALLS = (
+    (0x0049AD34, 0x0044BB60, "pre_acceleration_movement"),
+    (0x0049AD3C, 0x0044C270, "PGetAcceleration"),
+    (0x0049AD44, 0x00443F50, "PGetSpeed"),
+    (0x0049AD4C, 0x0044CDF0, "PSetPosition"),
+    (0x0049AD54, 0x0043EE70, "PResetPosition"),
+)
 
 
 def sha256(path: Path) -> str:
@@ -138,6 +160,16 @@ def require_bytes(data: bytes, base: int, sections, va: int, hx: str, label: str
         raise ValueError(f"{label} mismatch at {va:#x}: {actual.hex()} != {expected.hex()}")
 
 
+def require_rel32_call(data: bytes, base: int, sections, va: int, target: int, label: str):
+    off, _ = va_to_off(va, base, sections)
+    if data[off] != 0xE8:
+        raise ValueError(f"{label} is not a rel32 call at {va:#x}")
+    displacement = struct.unpack_from("<i", data, off + 1)[0]
+    actual = va + 5 + displacement
+    if actual != target:
+        raise ValueError(f"{label} target mismatch at {va:#x}: {actual:#x} != {target:#x}")
+
+
 def read_number(data: bytes, base: int, sections, va: int, kind: str):
     off, section = va_to_off(va, base, sections)
     if kind == "f":
@@ -162,6 +194,8 @@ def main() -> int:
     base, sections = parse_pe(data)
     for label, (va, hx) in SIGNATURES.items():
         require_bytes(data, base, sections, va, hx, label)
+    for va, target, label in FLAT_TICK_CALLS:
+        require_rel32_call(data, base, sections, va, target, label)
 
     constants = {}
     for name, (kind, expected) in EXPECTED.items():
@@ -184,17 +218,21 @@ def main() -> int:
             "default_acceleration_multiplier": "normal PInitialize path writes 1.0f to motionwk2+0x3C",
             "PGetBreak": "uses air_resist/air_resist_y/air_resist_z, run_break, lim_frict, grd_frict, grd_frict_z and zero-cross guards before writing playerwk AddVelocity",
             "PGetInertia": "uses run_speed/Up, -8.0 inverted branch, grounded pending-impulse path, status 0x100 Up<=0.98 0.0002 drag branch, and normal air_resist terms",
-            "PGetSpeed": "integrates AddVelocity into Speed and contains explicit forward zero-cross protection; 0.87*jog_speed is a low-speed threshold",
-            "support_order": "action-state movement produces AddVelocity/Speed before PSetPosition then PResetPosition",
+            "PGetSpeed": "integrates AddVelocity into Speed, contains forward zero-cross protection, and applies the 0.87*jog_speed deadband to forward and local-Z speed",
+            "support_order": "exact calls at 0x0049AD34..0x0049AD54 execute movement, PGetAcceleration, PGetSpeed, PSetPosition, then PResetPosition",
             "surface_flag_rollover": "PSetPosition copies playerwk SurfaceFlags to SurfaceFlags_Old and clears current flags/scratch collision vectors before rebuilding contact state",
             "collision_work_setup": "both checked PSetPosition collision-helper paths consume the separate playerwk+0x64 work block and derive a scalar from player height * 0.5f before broad collision processing",
         },
         "not_proven": {
             "portable_body_probe_shape": "the exact helper-level PSetPosition/PResetPosition body probes are still not reconstructed into neutral 3DS geometry queries",
             "pending_collision_impulse_semantics": "PGetInertia consumes/clears an opaque vector through the playerwk+0x64 work block; static Movement Lab specialization assumes no pending dynamic-object impulse",
-            "all_PGetSpeed_status_paths": "0.0.8.8.8 only promotes the axis zero-cross invariant; remaining action/status low-speed branches stay evidence-only",
+            "all_PGetSpeed_status_paths": "forward and local-Z deadbands are promoted; remaining action/status-dependent branches stay evidence-only",
         },
         "verified_signatures": sorted(SIGNATURES),
+        "flat_tick_calls": [
+            {"call_va": va, "target_va": target, "label": label}
+            for va, target, label in FLAT_TICK_CALLS
+        ],
     }
 
     if args.json:
@@ -206,7 +244,8 @@ def main() -> int:
         print("  default motionwk2 acceleration multiplier 1.0f: PASS")
         print("  PGetBreak field/branch signatures: PASS")
         print("  PGetInertia field/branch signatures: PASS")
-        print("  PGetSpeed AddVelocity integration/zero-cross evidence: PASS")
+        print("  PGetSpeed AddVelocity integration/forward + local-Z deadband evidence: PASS")
+        print("  grounded Sonic movement -> acceleration -> speed -> position -> reset order: PASS")
         print("  PSetPosition surface-flag rollover + helper work/height setup: PASS")
         print("  PResetPosition local-speed write: PASS")
         print("  exact portable body-probe shape: STILL UNRESOLVED")

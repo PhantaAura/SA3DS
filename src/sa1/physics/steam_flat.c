@@ -225,8 +225,30 @@ static float integrate_forward(float old_speed, float accel, int has_analog,
 }
 
 static float integrate_side(float old_speed, float accel,
-                            const SA1SteamPlayerParameters *p) {
+                            const SA1SteamPlayerParameters *p,
+                            int *stopped_at_threshold) {
     float next = old_speed + accel;
+    float threshold = p->jog_speed * SADX_PGETSPEED_IDLE_FACTOR;
+    int stopped = 0;
+
+    /* PC2004 PGetSpeed 0x0044403A..0x004440E1 applies its
+     * 0.87*jog_speed deadband to local-Z as well as forward speed. It snaps
+     * lateral inertia when damping crosses into that band, or when an already
+     * small lateral value receives no acceleration. */
+    if (old_speed > 0.0f) {
+        if ((old_speed >= threshold && next < threshold) ||
+            (old_speed < threshold && old_speed == next)) {
+            next = 0.0f;
+            stopped = 1;
+        }
+    } else if (old_speed < 0.0f) {
+        if ((old_speed <= -threshold && next > -threshold) ||
+            (old_speed > -threshold && old_speed == next)) {
+            next = 0.0f;
+            stopped = 1;
+        }
+    }
+    if (stopped_at_threshold) *stopped_at_threshold = stopped;
     if ((old_speed > 0.0f && next < 0.0f) ||
         (old_speed < 0.0f && next > 0.0f))
         next = 0.0f;
@@ -248,6 +270,7 @@ static void steam_flat_horizontal(SA1PlayerState *player, const SA1Input *input,
     SA1SteamTurnKind turn_kind = SA1_STEAM_TURN_NONE;
     int brake_branch = 0;
     int crossed_zero = 0;
+    int side_stopped = 0;
 
     /* Verified flat/upright resistance branches in Steam PGetAcceleration. */
     if (analog.active) {
@@ -308,7 +331,7 @@ static void steam_flat_horizontal(SA1PlayerState *player, const SA1Input *input,
 
     local.forward = integrate_forward(local.forward, accel_forward,
                                       analog.active, p, &crossed_zero);
-    local.side = integrate_side(local.side, accel_side, p);
+    local.side = integrate_side(local.side, accel_side, p, &side_stopped);
     local.vertical = clampf(local.vertical, -p->lim_v_spd, p->lim_v_spd);
     player->vel = local_to_world(player->yaw, local);
 
@@ -339,6 +362,7 @@ static void steam_flat_horizontal(SA1PlayerState *player, const SA1Input *input,
         dbg->had_analog = analog.active;
         dbg->used_brake_branch = brake_branch;
         dbg->crossed_zero = crossed_zero;
+        dbg->side_stopped_at_jog_threshold = side_stopped;
     }
 }
 

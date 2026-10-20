@@ -22,9 +22,11 @@ def main():
         td=pathlib.Path(td); a=td/"reference.csv"; b=td/"sa3ds.csv"; c=td/"bad.csv"
         write(a); write(b); write(c,0.25)
         p=run(a,b)
-        assert p.returncode==0 and "STATUS: MATCHES MEASURED FIELDS" in p.stdout
+        assert p.returncode==0 and "STATUS: PORT-INTERNAL REGRESSION" in p.stdout
+        p=run(a,b,"--reference-kind","source-equation")
+        assert p.returncode==0 and "STATUS: SOURCE-EQUATION VERIFIED" in p.stdout
         p=run(a,b,"--retail-live")
-        assert p.returncode==0 and "STATUS: VERIFIED 1:1" in p.stdout
+        assert p.returncode==0 and "STATUS: RETAIL TRACE VERIFIED" in p.stdout
         p=run(a,c)
         assert p.returncode==1 and "STATUS: NOT VERIFIED" in p.stdout
         assert "FIRST_DIVERGENCE: test_id=3 frame=0 field=pos_x" in p.stdout

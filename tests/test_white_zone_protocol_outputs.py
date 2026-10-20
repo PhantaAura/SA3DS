@@ -30,6 +30,8 @@ roll=rows("roll_exit"); assert fl(roll[-1],"horizontal_speed")<=fl(roll[0],"hori
 for n in ("uphill","downhill"):
     rs=rows(n); assert rs and all(r["selector_provisional"]=="1" for r in rs)
 air=rows("air_control"); assert 0 in ints(air,"grounded") and max(abs(fl(r,"heading")) for r in air)>0.5
-print("12 deterministic White Zone protocol behavior checks: PASS")
+for n in ("neutral", "partial", "quick_turn", "camera_turn", "side_threshold"):
+    assert rows(n), n
+print("17 deterministic White Zone protocol behavior checks: PASS")
 print(f"jump_tap apex_index={tap[1]} landing_index={tap[2]}")
 print(f"jump_hold apex_index={hold[1]} landing_index={hold[2]}")

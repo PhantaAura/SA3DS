@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Strict White Zone retail-vs-SA3DS frame comparator.
+"""Strict White Zone reference-vs-SA3DS frame comparator.
 
-VERIFIED 1:1 is reserved for an exact match against a reference explicitly
-marked --retail-live. Tolerance agreement never promotes the global project.
+The caller must identify reference authority. Agreement never promotes the
+global project beyond the fields and frames present in the two traces.
 """
 import argparse
 import csv
@@ -46,7 +46,8 @@ def close_field(field,a,b,abs_tol,rel_tol):
         return a==b
     return math.isclose(x,y,abs_tol=abs_tol,rel_tol=rel_tol)
 
-def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,retail_live=False):
+def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,
+            reference_kind="port-regression"):
     ref_fields,ref=load(ref_path); sa_fields,sa=load(sa3ds_path)
     common=[f for f in ref_fields if f in sa_fields]
     missing=[f for f in ref_fields if f not in sa_fields]
@@ -71,8 +72,12 @@ def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,retail_live=False):
                 if not close_field(field,a,b,abs_tol,rel_tol): tolerance_match=False
     if missing or extra:
         exact=False; tolerance_match=False
-    if exact and retail_live: status="VERIFIED 1:1"
-    elif exact or tolerance_match: status="MATCHES MEASURED FIELDS"
+    if exact or tolerance_match:
+        status={
+            "retail-trace":"RETAIL TRACE VERIFIED",
+            "source-equation":"SOURCE-EQUATION VERIFIED",
+            "port-regression":"PORT-INTERNAL REGRESSION",
+        }[reference_kind]
     else: status="NOT VERIFIED"
     return {
         "status":status,"exact":exact,"tolerance_match":tolerance_match,
@@ -85,11 +90,15 @@ def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,retail_live=False):
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("reference"); ap.add_argument("sa3ds")
-    ap.add_argument("--retail-live",action="store_true",help="reference came from a live retail SADX capture")
+    ap.add_argument("--reference-kind",choices=("retail-trace","source-equation","port-regression"),
+                    default="port-regression")
+    ap.add_argument("--retail-live",action="store_true",
+                    help="compatibility alias for --reference-kind retail-trace")
     ap.add_argument("--abs",dest="abs_tol",type=float,default=1e-6)
     ap.add_argument("--rel",dest="rel_tol",type=float,default=1e-6)
     args=ap.parse_args()
-    r=compare(args.reference,args.sa3ds,args.abs_tol,args.rel_tol,args.retail_live)
+    kind="retail-trace" if args.retail_live else args.reference_kind
+    r=compare(args.reference,args.sa3ds,args.abs_tol,args.rel_tol,kind)
     print(f"STATUS: {r['status']}")
     print(f"ALIGNED_KEYS: {r['frames']}")
     print(f"EXACT_MATCH: {'YES' if r['exact'] else 'NO'}")

@@ -1,6 +1,67 @@
-# SA3DS current checkpoint — PC2004 flat-ground turn inertia
+# SA3DS current checkpoint — Azahar recovery and PC2004 flat-ground trace v2
 
-**Verified source parent:** Pass11B source-motion audit.
+**Verified source parent:** commit `9130f0f316bda3daa2a3592741c2dfa3a61b9f09`.
+
+## 2026-10-20 Azahar recovery and local-Z inertia-stop checkpoint
+
+- Started from clean commit `9130f0f316bda3daa2a3592741c2dfa3a61b9f09`.
+- Reproduced boot marker `000` in Azahar 2126.0 and inspected the actual
+  startup order. The marker is written before the interactive three-mode boot
+  menu; `romfsInit` is intentionally deferred until a mode is chosen. The
+  apparent current/parent "failure" was therefore a waiting menu, not a crash
+  and not a physics regression. Selecting `A` starts full White Zone.
+- Reverified the private PC2004 executable as SHA-256
+  `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+  REA opened that exact file with Ghidra 12.1.4 / IBM Semeru Java 21, but a
+  new live decompilation timed out while whole-program analysis was starting.
+  This pass therefore does not claim a new live query. It reuses the previous
+  checkpoint's live `PGetAcceleration` (`0x0044C270`) and turn-helper evidence,
+  and independently checks this pass's findings against exact instructions in
+  the executable. Hopper was not used.
+- Recovered the ordinary grounded update call order at `0x0049AD34` through
+  `0x0049AD54`: movement helper, `PGetAcceleration` (`0x0044C270`),
+  `PGetSpeed` (`0x00443F50`), `PSetPosition` (`0x0044CDF0`), then
+  `PResetPosition` (`0x0043EE70`). The verifier decodes and checks every rel32
+  target against the exact executable.
+- Found a confirmed discrepancy in `PGetSpeed`. PC2004 applies the
+  `0.87 * jog_speed` stop band to local-Z (side) inertia as well as forward
+  speed. SA3DS previously retained a decaying lateral remainder until sign
+  crossing. The existing flat-ground integrator now matches the positive and
+  negative PC2004 branches. With Sonic's parameters, side speed `1.0` damps to
+  `0.6` on tick 1 and snaps to `0.0` on tick 2 instead of retaining `0.36`.
+- Extended the existing CSV trace compatibly to version 2. It now records
+  post-deadzone input, filtered magnitude/direction, camera yaw, before/after
+  local velocity, acceleration/resistance contributions, turn decision, brake
+  and zero-cross branches, and the local-Z stop-band event. Added neutral,
+  partial-input, quick-turn, camera-relative, and side-threshold scenarios.
+  Comparator output now distinguishes `RETAIL TRACE VERIFIED`,
+  `SOURCE-EQUATION VERIFIED`, `PORT-INTERNAL REGRESSION`, and `NOT VERIFIED`.
+  No retail runtime trace was captured; the new numerical fixtures are
+  source-equation verified, not proof of global 1:1 parity.
+
+### Verification
+
+- Exact-executable signature/call-target verifier: PASS.
+- Focused White Zone protocol: PASS, 17 deterministic scenarios; the five new
+  cases report `SOURCE-EQUATION VERIFIED`.
+- Full owner-data-free host regression: PASS.
+- Old 3DS SD-mode devkitARM build: PASS. Updated `.3dsx` is 242,140 bytes,
+  SHA-256 `49c358e4e5d05648c2b98f9a348c16757f96524533630e8b4e37ac3c0fc82027`.
+  The only warning remains the deliberately inactive legacy GPU uploader.
+- Azahar 2126.0, Old 3DS mode, Vulkan: PASS on that exact updated artifact
+  with owner-generated SD assets. The latest boot segment passed `romfsInit`,
+  completed all 16 CPU-swizzled texture uploads, initialized Sonic's GPU data,
+  and logged first-frame submission. White Zone rendered Sonic, accepted
+  movement/action input, and measured 59–60 FPS.
+- Physical Old 3DS / Old 3DS XL: NOT RUN. `PHYSICS_1TO1` remains false.
+
+### Remaining objective
+
+Capture an independently instrumented PC2004 retail flat-ground trace with
+matched initial state and inputs, then use the version-2 comparator to identify
+the earliest real per-tick divergence. Recover the remaining opaque
+PSetPosition/PResetPosition body-probe and collision-response semantics before
+promoting any broader physics-parity claim.
 
 ## 2026-10-20 PC2004 flat-ground turn-inertia checkpoint
 

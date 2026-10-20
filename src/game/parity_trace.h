@@ -7,8 +7,9 @@
 #include "sonic_animation_runtime.h"
 #include "../sa1/physics/input.h"
 #include "../sa1/physics/player_state.h"
+#include "../sa1/physics/steam_flat.h"
 
-#define SA3DS_PARITY_TRACE_VERSION 1
+#define SA3DS_PARITY_TRACE_VERSION 2
 
 int sa3ds_parity_trace_write_header(FILE *output);
 int sa3ds_parity_trace_write_frame(FILE *output,
@@ -16,6 +17,8 @@ int sa3ds_parity_trace_write_frame(FILE *output,
     const char *test_name,
     const SA1PlayerState *player,
     const SA1Input *input,
+    float camera_yaw,
+    const SA1SteamFlatDebug *physics,
     const SA3DSSonicAnimationSelection *animation);
 
 #endif

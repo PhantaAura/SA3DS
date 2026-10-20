@@ -36,6 +36,7 @@ typedef struct {
     int had_analog;
     int used_brake_branch;
     int crossed_zero;
+    int side_stopped_at_jog_threshold;
 } SA1SteamFlatDebug;
 
 /*
