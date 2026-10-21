@@ -10,8 +10,12 @@ assert 'if (down&KEY_R) return 6;' in main
 assert 'sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak' in main
 assert 'sa3ds_ec_visual_open(&g_ec_visual' in main
 assert 'sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f' in main
-assert 'return sa3ds_ec_gpu_draw(&g_ec_gpu);' in main
-assert 'g_pose_lab || g_emerald_coast || g_paused' in main
+assert 'if (!sa3ds_ec_gpu_draw(&g_ec_gpu)) return 0;' in main
+assert 'if (!g_ec_combined) return 1;' in main
+assert 'g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused' in main
+assert 'sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player)' in main
+assert 'g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world()' in main
+assert 'sonic_mv=g_ec_view;' in main
 assert 'sa3ds_upload_rgba8_cpu' in gpu and 'C3D_SyncDisplayTransfer' not in gpu
 assert 'g->resident_texture_count++' in gpu
 assert 'sa3dspak' in mk

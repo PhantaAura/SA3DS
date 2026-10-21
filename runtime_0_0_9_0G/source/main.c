@@ -16,6 +16,9 @@
 #include "sa3t_texture.h"
 #include "sa3c_gpu_preflight.h"
 #include "emerald_coast_visual.h"
+#include "emerald_coast_collision.h"
+#include "emerald_coast_replay.h"
+#include "../../src/sa1/physics/movement.h"
 #include "../../src/game/sonic_pose_metrics.h"
 #include "../../src/game/sonic_action_preflight.h"
 #include "../../src/game/parity_lab.h"
@@ -61,6 +64,14 @@ static size_t g_ec_size;
 static SA3DSECVisual g_ec_visual;
 static SA3DSECGpu g_ec_gpu;
 static int g_emerald_coast;
+static int g_ec_combined;
+static int g_ec_replay;
+static unsigned g_ec_replay_tick;
+static int g_ec_replay_pause;
+static unsigned g_rendered_frames;
+static SA3DSECCollision g_ec_collision;
+static C3D_Mtx g_ec_view;
+static float g_ec_model_lift;
 static SA3CRenderStats g_stats;
 
 static SA1PlayerState g_player;
@@ -157,7 +168,7 @@ static int boot_menu(void) {
     /* Owner-side emulator/hardware automation hook.  The marker contains no
        game data and avoids relying on host keyboard-to-3DS mappings. */
     FILE *autoboot=fopen("sdmc:/3ds/SA3DS/emerald_coast_autoboot.flag","rb");
-    if (autoboot) { fclose(autoboot); return 6; }
+    if (autoboot) { int selected=fgetc(autoboot);fclose(autoboot);return selected=='W'?3:6; }
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
     printf("SA3DS Pass10A Pose Lab\n\n");
@@ -167,7 +178,7 @@ static int boot_menu(void) {
     printf("Y = CPU texture upload only\n");
     printf("A = FULL White Zone WIP9\n");
     printf("L = Pass10A Pose Lab\n\n");
-    printf("R = Emerald Coast Act 1 preview\n\n");
+    printf("R = Emerald Coast Act 1\n\n");
     printf("START = exit\n\n");
     printf("Run B, then X, then A.\n");
     printf("No owner assets needed for B.\n");
@@ -213,7 +224,9 @@ static void trace_toggle(void) {
     if (g_trace_file) { trace_stop(); return; }
     mkdir("sdmc:/3ds/SA3DS",0777);
     mkdir("sdmc:/3ds/SA3DS/traces",0777);
-    g_trace_file=fopen("sdmc:/3ds/SA3DS/traces/white_zone_trace.csv","wb");
+    g_trace_file=fopen(g_emerald_coast?
+        "sdmc:/3ds/SA3DS/traces/emerald_coast_trace.csv":
+        "sdmc:/3ds/SA3DS/traces/white_zone_trace.csv","wb");
     g_trace_frames=0;
     if (g_trace_file && sa3ds_parity_trace_write_header(g_trace_file)!=0) trace_stop();
 }
@@ -221,7 +234,10 @@ static void trace_toggle(void) {
 static void reset_selected_zone(void) {
     sa3ds_wz_tick_reset(&g_tick_clock);
     g_last_frame_ms=osGetTime();
-    (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
+    if (g_emerald_coast && g_ec_combined) {
+        sa1_player_reset(&g_player,&g_ec_collision.world);
+        g_ec_collision.reference_y=g_player.pos.y;
+    } else (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
     memset(&g_anim_sync,0,sizeof(g_anim_sync));
     memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
     /* Refresh the pose immediately, even when a zone reset occurs while paused. */
@@ -303,10 +319,12 @@ static void emerald_coast_help(void) {
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
     printf("SA3DS - EMERALD COAST ACT 1\n\n");
-    printf("Authentic PC2004 act-0 preview.\n");
+    printf("Authentic PC2004 opening subset.\n");
     printf("500-unit opening residency subset.\n");
-    printf("Stage-only Checkpoint A.\n\n");
-    printf("START       exit\n\n");
+    printf("Circle Pad move / A jump\n");
+    printf("L/R camera / Y recenter\n");
+    printf("SELECT+Y reset / SELECT+X trace\n");
+    printf("START exit\n\n");
     printf("Owner package loaded from SD.\n");
     printf("No retail camera/collision claim.\n");
 }
@@ -323,9 +341,14 @@ static void emerald_coast_status(void) {
         (unsigned long)(g_ec_size/1024u),g_ec_gpu.subset_radius);
     printf("\x1b[18;1HLinear free:%5luKB Frame:%3llums ",
         (unsigned long)(linearSpaceFree()/1024u),(unsigned long long)g_last_submit_ms);
-    printf("\x1b[19;1HCPU-swizzled textures: YES       ");
-    printf("\x1b[20;1HCollision/Sonic: CHECKPOINT B    ");
-    printf("\x1b[21;1HPHYSICS_1TO1:NO                  ");
+    printf("\x1b[19;1HP:%6.1f %6.1f %6.1f %s    ",g_player.pos.x,g_player.pos.y,g_player.pos.z,g_player.grounded?"GND":"AIR");
+    printf("\x1b[20;1HV:%5.2f %5.2f %5.2f S:%ld    ",g_player.vel.x,g_player.vel.y,g_player.vel.z,(long)g_player.surface_id);
+    printf("\x1b[21;1HN:%4.2f %4.2f %4.2f Wall:%lu  ",g_player.ground_normal.x,g_player.ground_normal.y,g_player.ground_normal.z,(unsigned long)g_ec_collision.wall_hits);
+    printf("\x1b[22;1HCollision:%lu Q:%lu Tests:%lu  ",(unsigned long)g_ec_collision.triangle_count,(unsigned long)g_ec_collision.queries,(unsigned long)g_ec_collision.triangle_tests);
+    printf("\x1b[23;1HSonic D:%lu Anim:%u Fr:%.1f    ",(unsigned long)g_sonic_gpu.frame_draws,g_selection.binding.runtime_id,g_selection.sample_frame);
+    printf("\x1b[24;1HTick:%llu GPU frames:%u       ",(unsigned long long)g_player.sim_frame,g_rendered_frames);
+    printf("\x1b[25;1HPartial collision/follow camera ");
+    printf("\x1b[26;1HPHYSICS_1TO1:NO                ");
 }
 
 static void pose_lab_help(void) {
@@ -490,6 +513,16 @@ static int load_emerald_coast_package(void) {
         return 0;
     }
     boot_note("Emerald Coast act-0 package preflight passed");
+    if(g_ec_combined){
+        uint8_t *collision_bytes=NULL;size_t collision_size=0;
+        boot_checkpoint("Loading and indexing owner Emerald Coast collision");
+        if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_collision.sa3dspak",
+            &collision_bytes,&collision_size))return 0;
+        int ok=sa3ds_ec_collision_open(&g_ec_collision,collision_bytes,collision_size);
+        sa3ds_free_file(collision_bytes);
+        if(!ok||!sa3ds_ec_collision_spawn(&g_ec_collision,SA3DS_EC_SPAWN_X,SA3DS_EC_SPAWN_Z,0.0f))return 0;
+        boot_note("Provisional spawn: imported support at x=0 z=-50; not retail spawn");
+    }
     return 1;
 }
 
@@ -536,6 +569,17 @@ static int init_scene(void) {
         boot_checkpoint("CPU-swizzling Emerald Coast opening subset");
         if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
         boot_note("Emerald Coast opening subset resident");
+        if (g_ec_combined && !sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,
+                &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
+        if(g_ec_combined){
+            uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
+            if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
+               sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count)!=SA3C_POSE_OK||
+               !sa3ds_pose_metrics(&g_character,root,g_world,g_node_count,&stand))return 0;
+            /* Align the original Stand feet to the existing 1-unit support
+             * body. This fixed presentation offset never changes physics. */
+            g_ec_model_lift=-stand.min[1]-1.0f;
+        }
     } else {
         boot_checkpoint("CPU swizzle Sonic textures");
         if (!sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,&g_character,&g_texture_archive,
@@ -550,11 +594,18 @@ static int sample_pose(void) {
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
     if (g_emerald_coast) {
         C3D_Mtx stage_mv;
-        Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
+        if(g_ec_combined){
+            Mtx_LookAt(&stage_mv,FVec3_New(g_player.pos.x-sinf(g_camera.yaw)*40.0f,
+                g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f),
+                FVec3_New(g_player.pos.x,g_player.pos.y+3.0f,g_player.pos.z),
+                FVec3_New(0,1,0),false);
+        }else Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
+        g_ec_view=stage_mv;
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
-        return sa3ds_ec_gpu_draw(&g_ec_gpu);
+        if (!sa3ds_ec_gpu_draw(&g_ec_gpu)) return 0;
+        if (!g_ec_combined) return 1;
     }
     uint16_t root=INVALID_U16;
     SA3CPoseResult pr;
@@ -599,11 +650,15 @@ static int sample_pose(void) {
     Mtx_Identity(&lab_mv);
     Mtx_Translate(&lab_mv,0.0f,-2.2f,-18.0f,true);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&lab_mv);
-    if (!g_pose_lab && !sa3ds_lab_gpu_draw(&g_lab_gpu,&g_player,g_camera.yaw)) return 0;
+    if (!g_pose_lab && !g_emerald_coast && !sa3ds_lab_gpu_draw(&g_lab_gpu,&g_player,g_camera.yaw)) return 0;
 
     C3D_Mtx sonic_mv;
     Mtx_Identity(&sonic_mv);
-    if (g_pose_lab) {
+    if(g_emerald_coast){
+        sonic_mv=g_ec_view;
+        Mtx_Translate(&sonic_mv,g_player.pos.x,g_player.pos.y+g_ec_model_lift,g_player.pos.z,true);
+        Mtx_RotateY(&sonic_mv,g_player.yaw-PI*0.5f,true);
+    } else if (g_pose_lab) {
         Mtx_Translate(&sonic_mv,0.0f,-g_pose_center_y,-g_pose_distance,true);
         Mtx_RotateY(&sonic_mv,g_pose_yaw,true);
     } else {
@@ -622,6 +677,7 @@ static int sample_pose(void) {
 static void cleanup(void) {
     trace_stop();
     sa3ds_ec_gpu_destroy(&g_ec_gpu);
+    sa3ds_ec_collision_destroy(&g_ec_collision);
     sa3ds_lab_gpu_destroy(&g_lab_gpu);
     sa3ds_sonic_gpu_destroy(&g_sonic_gpu);
     free(g_world); free(g_transition_local); free(g_local);
@@ -682,10 +738,21 @@ int main(void) {
     if (!g_target) { fail_screen("render target allocation failed"); C3D_Fini(); romfsExit(); gfxExit(); return 1; }
     C3D_RenderTargetSetOutput(g_target,GFX_TOP,GFX_LEFT,DISPLAY_TRANSFER_FLAGS);
     g_emerald_coast=(mode==6);
+    FILE *stage_only=fopen("sdmc:/3ds/SA3DS/emerald_coast_stage_only.flag","rb");
+    g_ec_combined=g_emerald_coast && stage_only==NULL;
+    FILE *replay=fopen("sdmc:/3ds/SA3DS/emerald_coast_replay.flag","rb");
+    g_ec_replay=g_ec_combined && replay!=NULL;
+    g_ec_replay_pause=replay && fgetc(replay)=='P';
+    if(replay)fclose(replay);
+    if(stage_only)fclose(stage_only);
     if (g_emerald_coast) {
         boot_checkpoint("FULL: loading Emerald Coast visual package");
         if (!load_emerald_coast_package()) {
             fail_screen("Emerald Coast act-0 package missing or invalid");
+            cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
+        }
+        if (g_ec_combined && !load_owner_packages()) {
+            fail_screen("Combined probe: Sonic owner pair invalid");
             cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
         }
     } else {
@@ -711,7 +778,7 @@ int main(void) {
     g_pose_lab=(mode==5);
     boot_checkpoint(g_pose_lab?"POSE LAB: reset and freeze Stand frame 0":
         (g_emerald_coast?"EMERALD COAST: reset preview":"FULL: reset player/animation"));
-    if (g_emerald_coast) {
+    if (g_emerald_coast && !g_ec_combined) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
@@ -729,10 +796,10 @@ int main(void) {
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
         if (down&KEY_START) break;
         if (g_pose_lab) pose_lab_keys(down);
-        int modifier=!g_pose_lab && !g_emerald_coast && ((held&KEY_SELECT)!=0);
+        int modifier=!g_pose_lab && ((held&KEY_SELECT)!=0);
         if (!g_pose_lab && !g_emerald_coast && (down&KEY_SELECT) && !(held&(KEY_L|KEY_R|KEY_X|KEY_Y|KEY_DLEFT))) g_dev_overlay=!g_dev_overlay;
-        if (modifier && (down&KEY_L)) cycle_zone(-1);
-        if (modifier && (down&KEY_R)) cycle_zone(1);
+        if (!g_emerald_coast && modifier && (down&KEY_L)) cycle_zone(-1);
+        if (!g_emerald_coast && modifier && (down&KEY_R)) cycle_zone(1);
         if (modifier && (down&KEY_Y)) reset_selected_zone();
         if (modifier && (down&KEY_A)) {
             g_paused=!g_paused;
@@ -741,7 +808,7 @@ int main(void) {
         }
         if (modifier && (down&KEY_X)) trace_toggle();
         if (modifier && (down&KEY_DLEFT)) sa3ds_parity_camera_toggle(&g_camera);
-        if (!g_emerald_coast && !modifier && (down&KEY_Y)) sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
+        if (!modifier && (down&KEY_Y)) sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
 
         SA1Input in=sa3ds_read_logical_input(down,held,up);
         if (modifier) {
@@ -758,14 +825,26 @@ int main(void) {
             now_ms-g_last_frame_ms<=UINT32_MAX) ?
             (uint32_t)(now_ms-g_last_frame_ms) : SA3DS_WZ_MAX_ELAPSED_MS;
         g_last_frame_ms=now_ms;
-        unsigned steps=(g_pose_lab || g_emerald_coast || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
+        unsigned steps=(g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
+            if(g_ec_replay) {
+                if(g_ec_replay_tick==0){reset_selected_zone();trace_toggle();}
+                tick_input=sa3ds_ec_replay_input(g_ec_replay_tick);
+                /* Fixed camera for equivalent scripted directional inputs. */
+                g_camera.yaw=0;
+            }
             SA1SteamFlatDebug physics_trace={0};
             if (!modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
             if (!modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
+            SA1Vec3 previous=g_player.pos;
+            uint64_t previous_tick=g_player.sim_frame;
+            if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
-                sa3ds_parity_lab_world(),&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+                g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
+                &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+            if(g_emerald_coast && !(previous_tick && g_player.sim_frame==1))
+                sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
             SA1PlayerState physics_done=g_player;
             g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
             g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
@@ -778,17 +857,34 @@ int main(void) {
             if (g_trace_file) {
                 const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
                 if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
-                        trace_zone?trace_zone->name:"UNKNOWN",&g_player,&tick_input,
+                        g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN"),&g_player,&tick_input,
                         g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
                 else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
                 (!modifier && (held&(KEY_L|KEY_R))) ? 1 : 0);
+            if(g_ec_replay) {
+                if(g_ec_replay_tick%30==0 || tick_input.jump_pressed) {
+                    char line[180];snprintf(line,sizeof(line),
+                        "tick=%u in=%.2f,%.2f p=%.3f,%.3f,%.3f v=%.3f,%.3f,%.3f g=%d walls=%lu",
+                        g_ec_replay_tick,tick_input.move_x,tick_input.move_z,
+                        g_player.pos.x,g_player.pos.y,g_player.pos.z,g_player.vel.x,g_player.vel.y,g_player.vel.z,
+                        g_player.grounded,(unsigned long)g_ec_collision.wall_hits);boot_log("REPLAY",line);
+                }
+                if(++g_ec_replay_tick==600){trace_stop();g_ec_replay=0;boot_log("REPLAY","finished; live HID controls resumed");}
+                if(g_ec_replay_pause && g_ec_replay_tick==270){
+                    g_paused=1;boot_log("REPLAY","paused airborne for inspection; SELECT+A resumes");
+                }
+            }
         }
 
         uint64_t t0=osGetTime();
+        int probe_log=g_rendered_frames<3u || g_rendered_frames==60u || g_rendered_frames==180u;
+        char frame_line[160];
+        if(probe_log){snprintf(frame_line,sizeof(frame_line),"frame %u begin stage=%d sonic=%d",g_rendered_frames,g_emerald_coast,!g_emerald_coast||g_ec_combined);boot_log("FRAME",frame_line);}
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameBegin");
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        if(probe_log)boot_log("FRAME","begin returned");
         C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,
             g_pose_lab?0x9EBAD2FFu:CLEAR_COLOR,0);
         C3D_FrameDrawOn(g_target);
@@ -797,12 +893,19 @@ int main(void) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
+        if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices);boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
+        if(probe_log)boot_log("FRAME","end returned");
+        g_rendered_frames++;
         if (g_boottrace_first_frame) {
             boot_log("OK","First frame rendered/submitted");
             g_boottrace_first_frame=0;
         }
         g_last_submit_ms=osGetTime()-t0;
+        if(g_emerald_coast&&probe_log){snprintf(frame_line,sizeof(frame_line),
+            "frame=%u tick=%llu pos=%.3f,%.3f,%.3f grounded=%d wall=%lu linear=%lu",
+            g_rendered_frames,(unsigned long long)g_player.sim_frame,g_player.pos.x,g_player.pos.y,g_player.pos.z,
+            g_player.grounded,(unsigned long)g_ec_collision.wall_hits,(unsigned long)linearSpaceFree());boot_log("PLAY",frame_line);}
         if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
