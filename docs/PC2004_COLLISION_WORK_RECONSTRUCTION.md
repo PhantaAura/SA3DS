@@ -88,6 +88,38 @@ Real-stage collision calibration begins once Emerald Coast LandTable geometry is
 imported. That is the right place to validate the full neutral polygon solver
 against actual SA1 scale and edge cases.
 
+### Emerald Coast bridge (Checkpoint B continuation)
+
+The imported-stage adapter still feeds the inherited one-unit support-center
+controller. Its task-foot origin is therefore `controller_pos - up * 1`.
+This is an explicit port-coordinate bridge, not a recovered retail body.
+
+Exact PC2004 `0x4915F0` loads `playerwk+0x11C` (`center_height`), transforms
+`(0,center_height,0)` through `PConvertVector_P2G`, then adds task position.
+Sonic main calls it at `0x49BEFA` before display; `0x494A0F..0x494A1A` reads and
+translates that center. Original parameter-table entry 0 contains
+`center_height=5.400000095367432`, distinct from collision `height/2=5`.
+
+The stage model now uses this parameter-derived center instead of aligning a
+Stand-pose AABB minimum. Its unit-length contact-frame axes also orient the
+model on slopes. Exact retail angle smoothing/air orientation are unresolved.
+The bounded planar wall sweep uses the recovered five-unit csts radius/center,
+bridged from the controller support point. It is not a replacement for the
+retail polygon arbitration, edge/corner or body-probe algorithm.
+
+An inclined-wall regression also demonstrates an adapter-ordering defect:
+floor resolution occurs before the wall sweep, which can push a grounded actor
+below the floor already accepted that tick. The adapter now restores the
+one-unit signed support distance only when the actor is still grounded and an
+actual imported floor is available, removing inward normal velocity. Airborne
+actors and missing support are not snapped. This geometry-consistency repair
+is PORT-INTERNAL REGRESSION evidence, not a recovered retail contact formula.
+
+Focused anchor/radius regressions are in `tests/run_emerald_coast_collision.sh`;
+exact executable witnesses and parameter values are checked by
+`tools/verify_pc2004_stage_scale.py`. Neither changes mesh/stage scale, movement
+constants, or White Zone's synthetic support convention.
+
 ## Freeze decision
 
 Core movement math and retail collision architecture are frozen for the

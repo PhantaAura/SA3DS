@@ -51,6 +51,27 @@ visibility-mask/frustum conditions are not claimed reconstructed here.
 `tools/verify_pc2004_stage_scale.py` checks the original branch and source
 coordinates against local owner packages without exporting game payloads.
 
+### Bounded deferred-water rendering
+
+For Emerald Coast, `0x43A637` tests COL bit 1 and `0x43A668` submits queue
+parameter 0. Queue flag construction at `0x403F94` and execution at `0x40893D`
+lead to `0x77ED20(0)`, setting D3D `ZWRITEENABLE` (state 14) false. The separate
+COL `0x02000000` fade path is not reclassified by this integration.
+
+GPU batches retain this land class independently of material identity. Ordinary
+stage/Sonic draw first, then supported water-class batches with depth testing
+but no depth writes. The resident textured water materials use source-alpha /
+inverse-source-alpha: material setup `0x784850` indexes the original table
+`0x88AE1C` with `flags>>29` and `(flags>>26)&7`. Flag `0x00200000` selects
+textured setup; it is NOT an inferred alpha-enable flag. Unsupported water
+blend factors fail loading safely. Non-water alpha/foam entries are unchanged;
+the full original depth-sorted transparent queue remains unimplemented.
+
+`tests/run_emerald_coast_gpu_runtime.sh` executes the actual GPU batching/draw
+code against a synthetic package with a mocked SDK boundary. It verifies shared
+materials in separate land classes, texture reuse, draw masks, state restoration
+and failure cleanup; it does not prove rasterization fidelity.
+
 ### UV semantics
 
 Current PC2004 Basic stage UVs are signed 16-bit per-corner values.  SA Tools

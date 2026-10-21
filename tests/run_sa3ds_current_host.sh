@@ -38,6 +38,7 @@ printf '\n== CPUUpload2 software Morton tiling/source guards ==\n'
 python3 tests/test_cpu_texture_tiling.py
 printf '\n== Emerald Coast native visual-package reader ==\n'
 sh tests/run_emerald_coast_visual_runtime.sh
+sh tests/run_emerald_coast_gpu_runtime.sh
 sh tests/run_emerald_coast_collision.sh
 python3 tests/test_emerald_coast_native_integration.py
 printf '\nSA3DS cumulative host (owner-data-free) gate: PASS\n'

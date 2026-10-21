@@ -41,6 +41,35 @@ def audit(exe,chrmodels,sonic,stage):
     assert read(skip,3)==bytes.fromhex('83c724')
     assert bytes.fromhex('893c8518d5b203') in read(0x43aa62,skip-0x43aa62)
     print('PC2004 land draw-list signed visibility filter: PASS (0x43AA5B -> loop stride)')
+    signatures={
+        'Sonic center_height load':(0x4915f6,'8b911c010000'),
+        'Sonic rotated center call':(0x49161a,'e871d6faff'),
+        'Sonic task Y addition':(0x491642,'d94724d8460cd95e0c'),
+        'Sonic display reads updated center':(0x494a0f,'8b57388b520c83c208'),
+        'Sonic display translates center':(0x494a1a,'e851062f00'),
+        'csts transformed center Y addition':(0x44962e,'d9442464d84324d95d08'),
+        'csts radius height load':(0x449642,'d98110010000'),
+        'csts radius height half':(0x44964f,'d80d98cc7d00'),
+        'Sonic main updates center before display':(0x49befa,'e8f156ffff'),
+        'Sonic main display call':(0x49bf04,'e8b789ffff'),
+        'Land water class':(0x43a637,'f6c1027430'),
+        'Land water queue parameter':(0x43a668,'6a00'),
+        'Queue depth-write bit':(0x403f94,'80e101c0e104'),
+        'Queued depth-write test':(0x40893d,'f644243410'),
+        'Queued depth-write false':(0x40894b,'6a00'),
+        'Queued depth-write setter':(0x408956,'e8c5633700'),
+        'D3D ZWRITEENABLE':(0x77ed2b,'526a0e50ff91c8000000'),
+        'Textured material factor setup':(0x784986,'f7c600002000'),
+    }
+    for label,(va,hx) in signatures.items():
+        expected=bytes.fromhex(hx)
+        assert read(va,len(expected))==expected,(label,hex(va))
+    height=struct.unpack('<f',read(0x9154e8+29*4,4))[0]
+    center=struct.unpack('<f',read(0x9154e8+32*4,4))[0]
+    assert height==10.0 and center==struct.unpack('<f',struct.pack('<f',5.4))[0]
+    assert struct.unpack('<8I',read(0x88ae1c,32))==tuple(range(1,9))
+    print(f'PC2004 Sonic render center_height={center:.9g}, csts radius={height*0.5:g}: SOURCE VERIFIED')
+    print('PC2004 deferred-water class -> ZWRITEENABLE=0 and blend factor table: SIGNATURE VERIFIED')
     pe=RawPE(chrmodels);actions=source_actions(pe);objects={}
     for action in actions:
         if action:

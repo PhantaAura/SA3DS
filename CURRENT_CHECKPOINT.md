@@ -1,5 +1,71 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-21 Checkpoint B source-backed anchor/water/contact continuation
+
+Source parent `cfbd7ac`; only the prior local compiled binary was dirty at
+resume. No unfinished source work was discarded. Final source was host-tested,
+natively built and exercised in Azahar; broader Checkpoint B fidelity is OPEN.
+
+- Replaced the Stand-AABB-derived 4.267-unit vertical lift with the original
+  Sonic render-center equation: task origin plus rotated
+  `center_height=5.400000095367432`. Exact PC2004 `0x4915F0`, called before
+  display at `0x49BEFA`, builds the center read by `0x494A0F..0x494A1A`.
+  The inherited controller's one-unit support point is explicitly bridged to
+  a task-foot origin. Unit-length contact-frame axes orient the model on
+  supported slopes; retail angle smoothing/air orientation remain partial.
+- The bounded wall sweep now uses the recovered normal PSetPosition center
+  and five-unit radius (`height=10`), not a one-unit point near the feet.
+  Floor support still uses the inherited controller adapter. Exact retail
+  polygon arbitration and edge/corner probes are not claimed reconstructed.
+- Fixed a demonstrated adapter-ordering inconsistency: an inclined wall can
+  push an already-grounded actor below the floor accepted earlier that tick.
+  Restore signed support distance on an available imported floor after walls;
+  never snap airborne actors or fabricate missing support. A deterministic
+  leaning-wall regression covers this PORT-INTERNAL correction. A longer
+  pre-fix native wall trial fell unsupported; its complete retail/contact cause
+  is not claimed isolated. The corrected native wall trial remained grounded.
+- Preserved signed-negative land visibility; split GPU material batches by
+  original water land class too. Supported water draws after ordinary stage
+  and Sonic with depth testing, no depth writes, verified source-alpha blend,
+  and SDK state restoration. Non-water alpha/foam and the separate fade path
+  are not guessed; full original transparent sorting remains pending.
+- Focused collision/anchor tests PASS; owner 600-tick controller replay PASS;
+  visual reader PASS on synthetic and exact owner package; new executable GPU
+  host test PASS (actual batching/draw source, mocked SDK, shared materials,
+  texture reuse, depth masks, state restoration/failure cleanup).
+  Full `bash tests/run_sa3ds_current_host.sh` PASS with the new GPU gate.
+  Exact executable scale/anchor/water signatures PASS; source coordinates
+  remain unchanged (223 nodes, 4,525 Sonic vertices, 480 stage instances,
+  22,237 stage vertices). Pass11B oracle PASS: 14,049 scalar comparisons,
+  max error 4.91638197e-09. No physics movement constants were changed.
+- Final build ran in Azahar 2126.0 Old-3DS/Vulkan beyond 2,800 combined frames. Live
+  half/full movement, turn/coast, jump/landing, slope traversal, camera rotation,
+  reset and wider wall blocking were inspected. The sustained reverse/wall
+  trial reached 27 wall contacts while grounded. Sonic remained visible in the
+  tested shoreline run/landing views. Native CSV contained input Z=0.493589729
+  and Z=0.987179458, with airborne and grounded samples. Stable views measured
+  60 FPS, 29,382 KiB linear free; boot/warm-up showed lower FPS and is not a
+  steady performance result. White Zone live movement/jump passed at 59–60 FPS
+  with 30,346 KiB linear free in the same exact executable.
+- Final `tools/build_3ds.sh` PASS: local code-only 266,220-byte `.3dsx`, SHA-256
+  `a67f45ee96362732f7b79e2d96f9971b790181e0795193ef4da1473cb1030428`.
+  Temporary keyboard mappings were restored and the test-only autoboot marker
+  removed; no replay marker was active during live controls. An interrupted
+  automation attempt was restarted after the owner confirmed keyboard access.
+- REA tools absent in this session; pinned doctor attempt failed with npm
+  `ENOTFOUND registry.npmjs.org`. Used the existing Ghidra export and direct
+  exact-executable disassembly/signatures, never Hopper. No live decompile
+  success is claimed. Physical Old 3DS NOT RUN; `PHYSICS_1TO1=false`.
+
+**Next:** expand deterministic/native coverage of terrain edges, wall/floor
+corners and unsupported departures before closing Checkpoint B. The five-unit
+wall body is source-backed, but the support bridge, contact arbitration, spawn
+and follow camera remain partial/provisional. Water depth-write treatment is
+corrected, not full water/foam/sorting/lighting parity. No broad-stage guarantee
+is inferred from the inspected route. CPU uploaders, movement kernels and
+animation sampling remain unchanged. Compiled binary and owner data are excluded
+from the source commit; do not repeat extraction or the historical stall audit.
+
 ## 2026-10-21 Checkpoint B visibility / live-input validation (parent `26fe846`)
 
 - Fixed an original-game discrepancy: PC2004 `FUN_0043a900` only appends land

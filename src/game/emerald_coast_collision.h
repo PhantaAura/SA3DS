@@ -2,11 +2,13 @@
 #define SA3DS_EMERALD_COAST_COLLISION_H
 
 #include "../sa1/physics/ground.h"
+#include "sa3c_pose.h"
 #include <stddef.h>
 
 /* Bounded opening-area integration, not the retail polygon solver. The
  * existing controller retains its 1-unit support offset. */
 #define SA3DS_EC_GRID_SIDE 16u
+#define SA3DS_EC_CONTROLLER_SUPPORT 1.0f
 /* Provisional beach support on imported act-0 instance 74, triangle 49.
  * Not a recovered retail StartPosition. */
 #define SA3DS_EC_SPAWN_X 0.0f
@@ -35,5 +37,9 @@ SA1Contact sa3ds_ec_collision_contact(void *context,SA1Vec3 position,
 int sa3ds_ec_collision_spawn(SA3DSECCollision *stage,float x,float z,float hint_y);
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision *stage,
     SA1Vec3 previous,SA1PlayerState *player);
+/* Bridge the inherited controller support-center convention to PC2004's task
+ * foot origin and Sonic render center_height. No mesh-dependent foot lift. */
+SA1Vec3 sa3ds_ec_task_origin(const SA1PlayerState *player);
+void sa3ds_ec_model_transform(const SA1PlayerState *player,SA3CMatrix *out);
 
 #endif

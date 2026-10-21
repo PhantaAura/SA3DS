@@ -3,6 +3,13 @@
 int sa3ds_ec_instance_is_visible(const SA3DSECInstance *instance) {
     return instance && (instance->surface_flags & UINT32_C(0x80000000)) != 0;
 }
+int sa3ds_ec_instance_is_deferred_water(const SA3DSECInstance *instance) {
+    return instance && (instance->surface_flags & UINT32_C(0x02000002)) == 2;
+}
+int sa3ds_ec_material_has_water_blend(const SA3DSECMaterial *material) {
+    return material && (material->flags & UINT32_C(0x00200000)) &&
+        (material->flags >> 29) == 4 && ((material->flags >> 26) & 7) == 5;
+}
 #include <math.h>
 #include <string.h>
 

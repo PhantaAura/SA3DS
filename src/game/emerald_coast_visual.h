@@ -48,6 +48,13 @@ int sa3ds_ec_instance(const SA3DSECVisual *v,uint32_t i,SA3DSECInstance *out);
 /* PC2004 0x43AA5B: signed test of COL+0x20; nonnegative entries never
  * enter the land draw list. Solid bit 0 is independent of visibility. */
 int sa3ds_ec_instance_is_visible(const SA3DSECInstance *instance);
+/* EC act 0 subset of 0x43A637: COL bit 1 selects non-depth-writing
+ * deferred land drawing. The separate 0x02000000 distance/fade path is not
+ * classified as water here. This is not a general alpha-material predicate. */
+int sa3ds_ec_instance_is_deferred_water(const SA3DSECInstance *instance);
+/* 0x7849B3..0x784A38 and original table 0x88AE1C: textured material
+ * source/destination factors 5/6 (source alpha / inverse source alpha). */
+int sa3ds_ec_material_has_water_blend(const SA3DSECMaterial *material);
 int sa3ds_ec_material(const SA3DSECVisual *v,uint32_t i,SA3DSECMaterial *out);
 int sa3ds_ec_vertex(const SA3DSECVisual *v,uint32_t i,SA3DSECVertex *out);
 int sa3ds_ec_index(const SA3DSECVisual *v,uint32_t i,uint16_t *out);

@@ -2,6 +2,7 @@
 #include "sa3dspak.h"
 #include "sa3c_pose.h"
 #include "../sa1/physics/surface_frame.h"
+#include "../sa1/physics/steam_player_parameters.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +23,29 @@ static int span(uint32_t o,uint32_t n,uint32_t s,size_t size){return o<=size&&n<
 static float clamp(float x,float a,float b){return fmaxf(a,fminf(b,x));}
 static int cell(float x){return (int)clamp(floorf((x-GRID_MIN)/CELL_SIZE),0,15);}
 static int finite3(SA1Vec3 p){return isfinite(p.x)&&isfinite(p.y)&&isfinite(p.z);}
+static SA1SurfaceFrame actor_frame(const SA1PlayerState*p){
+    SA1Vec3 up=p->ground_normal;
+    if(!finite3(up)||sa1_vec3_length(up)<0.5f)up=(SA1Vec3){0,1,0};
+    return sa1_surface_frame_make(up,(SA1Vec3){sinf(p->yaw),0,cosf(p->yaw)});
+}
+SA1Vec3 sa3ds_ec_task_origin(const SA1PlayerState*p){
+    SA1SurfaceFrame f=actor_frame(p);
+    return sa1_vec3_sub(p->pos,sa1_vec3_scale(f.up,SA3DS_EC_CONTROLLER_SUPPORT));
+}
+void sa3ds_ec_model_transform(const SA1PlayerState*p,SA3CMatrix*out){
+    SA1SurfaceFrame f=actor_frame(p);
+    /* 0x4915F0 transforms (0,center_height,0), then adds task position;
+     * 0x4948C0 uses that center before actor rotations and ACTION drawing.
+     * Our contact frame supplies the orientation; retail angle smoothing and
+     * airborne orientation remain partial. Model +X is forward, +Y is up. */
+    SA1Vec3 o=sa1_vec3_add(sa3ds_ec_task_origin(p),
+        sa1_vec3_scale(f.up,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.center_height));
+    memset(out,0,sizeof(*out));
+    out->m[0]=f.forward.x;out->m[1]=f.forward.y;out->m[2]=f.forward.z;
+    out->m[4]=f.up.x;out->m[5]=f.up.y;out->m[6]=f.up.z;
+    out->m[8]=-f.right.x;out->m[9]=-f.right.y;out->m[10]=-f.right.z;
+    out->m[12]=o.x;out->m[13]=o.y;out->m[14]=o.z;out->m[15]=1;
+}
 static SA1Vec3 point(const uint8_t*p){return (SA1Vec3){rf(p),rf(p+4),rf(p+8)};}
 static SA1Vec3 xform(const SA3CMatrix*m,SA1Vec3 p){return (SA1Vec3){
     p.x*m->m[0]+p.y*m->m[4]+p.z*m->m[8]+m->m[12],
@@ -168,11 +192,18 @@ int sa3ds_ec_collision_spawn(SA3DSECCollision*s,float x,float z,float hint_y){
 
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
     if(!s||!p||!finite3(previous)||!finite3(p->pos))return;
-    /* Swept 1-unit support body, with planar sliding. This is a bounded port
-     * contact adapter; edge/corner capsules and retail body probes are pending. */
+    /* Normal PSetPosition uses task + rotated (0,height/2,0), radius height/2.
+     * Bridge from the inherited 1-unit support center without changing its
+     * movement convention. Planar sliding is still a partial contact adapter;
+     * exact retail arbitration, edge/corner capsules and probes are pending. */
+    float radius=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height*0.5f;
+    SA1Vec3 up=actor_frame(p).up;
+    SA1Vec3 shift=sa1_vec3_scale(up,radius-SA3DS_EC_CONTROLLER_SUPPORT);
+    previous=sa1_vec3_add(previous,shift);
+    SA1Vec3 center=sa1_vec3_add(p->pos,shift);
     if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*4);s->query_serial=1;}
-    int x0=cell(fminf(previous.x,p->pos.x)-1),x1=cell(fmaxf(previous.x,p->pos.x)+1);
-    int z0=cell(fminf(previous.z,p->pos.z)-1),z1=cell(fmaxf(previous.z,p->pos.z)+1);
+    int x0=cell(fminf(previous.x,center.x)-radius),x1=cell(fmaxf(previous.x,center.x)+radius);
+    int z0=cell(fminf(previous.z,center.z)-radius),z1=cell(fmaxf(previous.z,center.z)+radius);
     s->queries++;
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
         unsigned c=z*16+x;
@@ -182,17 +213,36 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             if(fabsf(t->normal.y)>0.45f)continue;
             float old=sa1_vec3_dot(sa1_vec3_sub(previous,t->a),t->normal);
             SA1Vec3 n=old<0?sa1_vec3_scale(t->normal,-1):t->normal;old=fabsf(old);
-            float now=sa1_vec3_dot(sa1_vec3_sub(p->pos,t->a),n);
-            if(now>=1.0f||now>=old)continue;
+            float now=sa1_vec3_dot(sa1_vec3_sub(center,t->a),n);
+            if(now>=radius||now>=old)continue;
             float den=old-now;
-            float fraction=den>1e-6f?clamp((old-1.0f)/den,0,1):0;
-            SA1Vec3 hit=sa1_vec3_add(previous,sa1_vec3_scale(sa1_vec3_sub(p->pos,previous),fraction));
+            float fraction=den>1e-6f?clamp((old-radius)/den,0,1):0;
+            SA1Vec3 hit=sa1_vec3_add(previous,sa1_vec3_scale(sa1_vec3_sub(center,previous),fraction));
             hit=sa1_vec3_sub(hit,sa1_vec3_scale(n,sa1_vec3_dot(sa1_vec3_sub(hit,t->a),n)));
             if(!inside(t,hit))continue;
-            p->pos=sa1_vec3_add(p->pos,sa1_vec3_scale(n,1.0f-now));
+            SA1Vec3 correction=sa1_vec3_scale(n,radius-now);
+            p->pos=sa1_vec3_add(p->pos,correction);
+            center=sa1_vec3_add(center,correction);
             float inward=sa1_vec3_dot(p->vel,n);
             if(inward<0)p->vel=sa1_vec3_sub(p->vel,sa1_vec3_scale(n,inward));
             s->wall_hits++;
+        }
+    }
+    /* The controller resolves its floor BEFORE this wall pass. An inclined
+     * wall can then push a supported actor underneath that same floor. Repair
+     * that adapter-ordering inconsistency using imported support, not gravity
+     * or movement tuning. Do not snap airborne actors or invent missing floors.
+     * Retail joint polygon arbitration/edge handling are still unresolved. */
+    if(p->grounded){
+        SA1Surface floor=sa3ds_ec_collision_surface(s,p->pos.x,p->pos.z);
+        if(floor.valid){
+            float distance=(p->pos.y-floor.ground_y)*floor.normal.y;
+            if(distance<SA3DS_EC_CONTROLLER_SUPPORT){
+                p->pos=sa1_vec3_add(p->pos,sa1_vec3_scale(floor.normal,
+                    SA3DS_EC_CONTROLLER_SUPPORT-distance));
+                float inward=sa1_vec3_dot(p->vel,floor.normal);
+                if(inward<0)p->vel=sa1_vec3_sub(p->vel,sa1_vec3_scale(floor.normal,inward));
+            }
         }
     }
 }

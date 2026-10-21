@@ -71,7 +71,6 @@ static int g_ec_replay_pause;
 static unsigned g_rendered_frames;
 static SA3DSECCollision g_ec_collision;
 static C3D_Mtx g_ec_view;
-static float g_ec_model_lift;
 static SA3CRenderStats g_stats;
 
 static SA1PlayerState g_player;
@@ -581,13 +580,10 @@ static int init_scene(void) {
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
                sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count)!=SA3C_POSE_OK||
                !sa3ds_pose_metrics(&g_character,root,g_world,g_node_count,&stand))return 0;
-            /* Align the original Stand feet to the existing 1-unit support
-             * body. This fixed presentation offset never changes physics. */
-            g_ec_model_lift=-stand.min[1]-1.0f;
             char scale_note[192];snprintf(scale_note,sizeof(scale_note),
-                "Stand source-units bounds=(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f) height=%.3f unit-scale=1 lift=%.3f provisional",
+                "Stand bounds=(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f) height=%.3f unit-scale=1 center_height=5.4; partial contact adapter",
                 stand.min[0],stand.min[1],stand.min[2],stand.max[0],stand.max[1],stand.max[2],
-                stand.max[1]-stand.min[1],g_ec_model_lift);boot_log("SCALE",scale_note);
+                stand.max[1]-stand.min[1]);boot_log("SCALE",scale_note);
         }
     } else {
         boot_checkpoint("CPU swizzle Sonic textures");
@@ -613,8 +609,8 @@ static int sample_pose(void) {
         g_ec_view=stage_mv;
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
-        if (!sa3ds_ec_gpu_draw(&g_ec_gpu)) return 0;
-        if (!g_ec_combined) return 1;
+        if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
+        if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
     SA3CPoseResult pr;
@@ -664,9 +660,11 @@ static int sample_pose(void) {
     C3D_Mtx sonic_mv;
     Mtx_Identity(&sonic_mv);
     if(g_emerald_coast){
-        sonic_mv=g_ec_view;
-        Mtx_Translate(&sonic_mv,g_player.pos.x,g_player.pos.y+g_ec_model_lift,g_player.pos.z,true);
-        Mtx_RotateY(&sonic_mv,g_player.yaw-PI*0.5f,true);
+        SA3CMatrix actor;C3D_Mtx model;
+        sa3ds_ec_model_transform(&g_player,&actor);
+        for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
+            actor.m[row],actor.m[4+row],actor.m[8+row],actor.m[12+row]);
+        Mtx_Multiply(&sonic_mv,&g_ec_view,&model);
     } else if (g_pose_lab) {
         Mtx_Translate(&sonic_mv,0.0f,-g_pose_center_y,-g_pose_distance,true);
         Mtx_RotateY(&sonic_mv,g_pose_yaw,true);
@@ -680,7 +678,13 @@ static int sample_pose(void) {
         case 1: C3D_CullFace(GPU_CULL_BACK_CCW); break;
         case 2: C3D_CullFace(GPU_CULL_FRONT_CCW); break;
     }
-    return sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats);
+    if(!sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats))return 0;
+    if(g_emerald_coast){
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
+        C3D_CullFace(GPU_CULL_NONE);
+        return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
+    }
+    return 1;
 }
 
 static void cleanup(void) {

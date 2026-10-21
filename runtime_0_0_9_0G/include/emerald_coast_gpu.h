@@ -7,7 +7,10 @@
 #include "emerald_coast_visual.h"
 #include "sonic_gpu.h"
 
-typedef struct { uint32_t first_vertex,vertex_count,material_index; } SA3DSECDraw;
+typedef struct {
+    uint32_t first_vertex,vertex_count,material_index;
+    uint8_t deferred_water;
+} SA3DSECDraw;
 typedef struct {
     const SA3DSECVisual *visual;
     SA3DSGpuVertex *vertices;
@@ -22,7 +25,9 @@ typedef struct {
 
 int sa3ds_ec_gpu_init(SA3DSECGpu *gpu,const SA3DSECVisual *visual,float subset_radius,
     SA3DSSonicTextureTrace trace,void *userdata);
-int sa3ds_ec_gpu_draw(SA3DSECGpu *gpu);
+/* Pass 0 before Sonic, pass 1 after Sonic, with the stage modelview bound.
+ * Bounded water treatment, not the complete original sorted draw queue. */
+int sa3ds_ec_gpu_draw(SA3DSECGpu *gpu,int deferred_water);
 void sa3ds_ec_gpu_destroy(SA3DSECGpu *gpu);
 
 #endif
