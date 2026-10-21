@@ -1,5 +1,26 @@
 # SA3DS mod log
 
+## 2026-10-20 — first authentic Emerald Coast render
+
+- Started from clean `f3f9b79` and generated the private act-0 visual package
+  outside the repository from the owner's exact PC2004 files.
+- Added a bounds- and reference-checked native `.sa3dspak`/`SA3DVIS`/
+  `SA3DMATL`/`SA3T` reader plus deterministic synthetic and owner-package
+  regressions.
+- Added an Emerald Coast preview boot path that preserves White Zone and Pose
+  Lab. It reuses exact Ninja instance transforms, repeat UV addressing, and the
+  validated CPU-swizzled texture uploader.
+- Kept a 500-unit opening subset resident and pre-baked 45 instances into 48
+  material batches (5,694 triangles, 17,082 vertices, 25/103 textures).
+- Azahar 2126.0 Old 3DS/Vulkan visibly rendered the authentic connected stage
+  geometry and water. The final artifact measured 59–60 app FPS at 99–100%
+  emulator speed, with 29,915 KiB linear memory free and 688 KiB of resident
+  stage textures after removing unused Sonic residency from preview mode.
+- Checkpoint B remains pending. Combined stage+Sonic submission stalled after
+  its first frame, so the validated Checkpoint A path is stage-only while the
+  existing White Zone Sonic runtime remains unchanged. No retail camera,
+  collision or physical-hardware claim is made.
+
 ## 2026-10-19 — PC2004 movement-driven animation-rate pass
 
 - Recovered the property 9/10/11 inputs from the exact owner PC2004 executable

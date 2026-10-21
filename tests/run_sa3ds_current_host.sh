@@ -36,6 +36,9 @@ printf '\n== TextureSyncFix Citro3D synchronization regression ==\n'
 python3 tests/test_texture_sync_fix.py
 printf '\n== CPUUpload2 software Morton tiling/source guards ==\n'
 python3 tests/test_cpu_texture_tiling.py
+printf '\n== Emerald Coast native visual-package reader ==\n'
+sh tests/run_emerald_coast_visual_runtime.sh
+python3 tests/test_emerald_coast_native_integration.py
 printf '\nSA3DS cumulative host (owner-data-free) gate: PASS\n'
 printf '\n== Pass10A frozen-Pose Lab and geometry metrics ==\n'
 sh tests/run_pass10a.sh

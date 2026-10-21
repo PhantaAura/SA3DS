@@ -10,8 +10,8 @@ include $(DEVKITARM)/3ds_rules
 
 TARGET      := sa3ds_0_0_9_0G_white_zone_validation
 BUILD       := build
-SOURCES     := source ../src/sa3c ../src/sa1/physics ../src/game ../src/platform/3ds
-INCLUDES    := include ../src/sa3c ../src/sa1/physics ../src/game ../src/platform/3ds
+SOURCES     := source ../src/sa3c ../src/sa1/physics ../src/game ../src/sa3dspak ../src/platform/3ds
+INCLUDES    := include ../src/sa3c ../src/sa1/physics ../src/game ../src/sa3dspak ../src/platform/3ds
 ROMFS       := romfs
 # SECURITY: the SD build MUST NOT package the normal RomFS directory, even
 # if a previous owner-side conversion left Sega-derived files there.

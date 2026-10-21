@@ -74,6 +74,20 @@ static void nj_scale(SA3CMatrix *a,float x,float y,float z) {
     for (int i=8;i<12;i++) m[i]*=z;
 }
 
+void sa3c_matrix_build_object(SA3CMatrix *out, SA3CVec3 position,
+    SA3CVec3 rotation, SA3CVec3 scale, uint32_t eval_flags) {
+    if (!out) return;
+    sa3c_matrix_identity(out);
+    if (!(eval_flags&SA3C_EVAL_UNIT_POS))
+        nj_translate(out,position.x,position.y,position.z);
+    if (!(eval_flags&SA3C_EVAL_UNIT_ANG)) {
+        if (eval_flags&SA3C_EVAL_ZXY_ANG) nj_rotate_zyx_flag(out,rotation);
+        else nj_rotate_xyz(out,rotation);
+    }
+    if (!(eval_flags&SA3C_EVAL_UNIT_SCL))
+        nj_scale(out,scale.x,scale.y,scale.z);
+}
+
 SA3CPoseResult sa3c_pose_bind(const SA3CCharacter *c, SA3CTransform *local, size_t local_count) {
     if (!c || !c->data || !local) return SA3C_POSE_ERR_ARGUMENT;
     const SA3CSection *node=&c->sections[0];

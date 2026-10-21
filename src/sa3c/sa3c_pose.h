@@ -42,6 +42,11 @@ enum {
 };
 
 void sa3c_matrix_identity(SA3CMatrix *out);
+/* Build one Ninja object transform using the same translation, rotation-flag,
+ * and scale order as hierarchy evaluation.  Stage LandTable instances and
+ * character nodes share this object contract. */
+void sa3c_matrix_build_object(SA3CMatrix *out, SA3CVec3 position,
+    SA3CVec3 rotation, SA3CVec3 scale, uint32_t eval_flags);
 
 /* Load bind transforms for every node in the package. */
 SA3CPoseResult sa3c_pose_bind(

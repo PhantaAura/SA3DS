@@ -10,10 +10,12 @@
 #include "owner_assets.h"
 #include "sonic_gpu.h"
 #include "lab_gpu.h"
+#include "emerald_coast_gpu.h"
 #include "sa3c_character.h"
 #include "sa3c_pose.h"
 #include "sa3t_texture.h"
 #include "sa3c_gpu_preflight.h"
+#include "emerald_coast_visual.h"
 #include "../../src/game/sonic_pose_metrics.h"
 #include "../../src/game/sonic_action_preflight.h"
 #include "../../src/game/parity_lab.h"
@@ -54,6 +56,11 @@ static SA3DSVisualReport g_visual_report;
 static SA3DSGeometryReport g_geometry_report;
 static SA3DSActionPreflightReport g_action_report;
 static SA3DSLabGpu g_lab_gpu;
+static uint8_t *g_ec_bytes;
+static size_t g_ec_size;
+static SA3DSECVisual g_ec_visual;
+static SA3DSECGpu g_ec_gpu;
+static int g_emerald_coast;
 static SA3CRenderStats g_stats;
 
 static SA1PlayerState g_player;
@@ -147,6 +154,10 @@ static void boot_note(const char *detail) {
 }
 
 static int boot_menu(void) {
+    /* Owner-side emulator/hardware automation hook.  The marker contains no
+       game data and avoids relying on host keyboard-to-3DS mappings. */
+    FILE *autoboot=fopen("sdmc:/3ds/SA3DS/emerald_coast_autoboot.flag","rb");
+    if (autoboot) { fclose(autoboot); return 6; }
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
     printf("SA3DS Pass10A Pose Lab\n\n");
@@ -156,6 +167,7 @@ static int boot_menu(void) {
     printf("Y = CPU texture upload only\n");
     printf("A = FULL White Zone WIP9\n");
     printf("L = Pass10A Pose Lab\n\n");
+    printf("R = Emerald Coast Act 1 preview\n\n");
     printf("START = exit\n\n");
     printf("Run B, then X, then A.\n");
     printf("No owner assets needed for B.\n");
@@ -168,6 +180,7 @@ static int boot_menu(void) {
         if (down&KEY_X) return 2;
         if (down&KEY_Y) return 4;
         if (down&KEY_L) return 5;
+        if (down&KEY_R) return 6;
         if (down&KEY_A) return 3;
         gfxFlushBuffers(); gfxScreenSwapBuffers(GFX_BOTTOM,false); gspWaitForVBlank();
     }
@@ -284,6 +297,35 @@ static void print_status(void) {
         (unsigned long long)g_tick_clock.total_ticks,
         (unsigned long long)g_tick_clock.dropped_ticks,
         g_paused ? "PAUSED" : "RUN");
+}
+
+static void emerald_coast_help(void) {
+    consoleSelect(&g_boot_console);
+    printf("\x1b[2J\x1b[1;1H");
+    printf("SA3DS - EMERALD COAST ACT 1\n\n");
+    printf("Authentic PC2004 act-0 preview.\n");
+    printf("500-unit opening residency subset.\n");
+    printf("Stage-only Checkpoint A.\n\n");
+    printf("START       exit\n\n");
+    printf("Owner package loaded from SD.\n");
+    printf("No retail camera/collision claim.\n");
+}
+
+static void emerald_coast_status(void) {
+    printf("\x1b[14;1HInstances:%4lu  Batches:%3lu       ",
+        (unsigned long)g_ec_gpu.instance_count,(unsigned long)g_ec_gpu.draw_count);
+    printf("\x1b[15;1HTris:%7lu  Vertices:%7lu    ",
+        (unsigned long)g_ec_gpu.triangle_count,(unsigned long)g_ec_gpu.vertex_count);
+    printf("\x1b[16;1HTextures:%3lu/%3lu %5luKB       ",
+        (unsigned long)g_ec_gpu.resident_texture_count,(unsigned long)g_ec_gpu.texture_count,
+        (unsigned long)(g_ec_gpu.texture_bytes/1024u));
+    printf("\x1b[17;1HPackage:%5luKB Radius:%5.0f      ",
+        (unsigned long)(g_ec_size/1024u),g_ec_gpu.subset_radius);
+    printf("\x1b[18;1HLinear free:%5luKB Frame:%3llums ",
+        (unsigned long)(linearSpaceFree()/1024u),(unsigned long long)g_last_submit_ms);
+    printf("\x1b[19;1HCPU-swizzled textures: YES       ");
+    printf("\x1b[20;1HCollision/Sonic: CHECKPOINT B    ");
+    printf("\x1b[21;1HPHYSICS_1TO1:NO                  ");
 }
 
 static void pose_lab_help(void) {
@@ -437,6 +479,20 @@ static int load_owner_packages(void) {
     return 1;
 }
 
+static int load_emerald_coast_package(void) {
+    boot_checkpoint("Loading Emerald Coast act-0 package from SD");
+    if (!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak",
+            &g_ec_bytes,&g_ec_size)) return 0;
+    boot_checkpoint("Validating Emerald Coast package and references");
+    SA3DSECVisualResult r=sa3ds_ec_visual_open(&g_ec_visual,g_ec_bytes,g_ec_size);
+    if (r!=SA3DS_EC_VISUAL_OK) {
+        printf("\nEmerald Coast visual: %s\n",sa3ds_ec_visual_result_name(r));
+        return 0;
+    }
+    boot_note("Emerald Coast act-0 package preflight passed");
+    return 1;
+}
+
 static void log_texture_stage(const char *phase, uint32_t texture_index,
     uint32_t texture_count, uint16_t width, uint16_t height, void *unused) {
     (void)unused;
@@ -471,19 +527,35 @@ static int init_scene(void) {
     AttrInfo_Init(attr);
     AttrInfo_AddLoader(attr,0,GPU_FLOAT,3);
     AttrInfo_AddLoader(attr,1,GPU_FLOAT,2);
-    Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,0.1f,1000.0f,false);
+    Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,0.1f,
+        g_emerald_coast?5000.0f:1000.0f,false);
     C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);
     C3D_AlphaTest(true,GPU_GREATER,15);
     C3D_CullFace(GPU_CULL_NONE);
-    boot_checkpoint("CPU swizzle Sonic textures");
-    if (!sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,&g_character,&g_texture_archive,
-                                   log_texture_stage,NULL)) return 0;
-    boot_checkpoint("CPU-uploaded textures OK; allocating White Zone geometry");
-    if (!sa3ds_lab_gpu_init(&g_lab_gpu)) return 0;
+    if (g_emerald_coast) {
+        boot_checkpoint("CPU-swizzling Emerald Coast opening subset");
+        if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
+        boot_note("Emerald Coast opening subset resident");
+    } else {
+        boot_checkpoint("CPU swizzle Sonic textures");
+        if (!sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,&g_character,&g_texture_archive,
+                                       log_texture_stage,NULL)) return 0;
+        boot_checkpoint("CPU-uploaded textures OK; allocating White Zone geometry");
+        if (!sa3ds_lab_gpu_init(&g_lab_gpu)) return 0;
+    }
     return 1;
 }
 
 static int sample_pose(void) {
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
+    if (g_emerald_coast) {
+        C3D_Mtx stage_mv;
+        Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
+            FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
+        C3D_CullFace(GPU_CULL_NONE);
+        return sa3ds_ec_gpu_draw(&g_ec_gpu);
+    }
     uint16_t root=INVALID_U16;
     SA3CPoseResult pr;
     if (g_pose_lab) {
@@ -549,11 +621,13 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     trace_stop();
+    sa3ds_ec_gpu_destroy(&g_ec_gpu);
     sa3ds_lab_gpu_destroy(&g_lab_gpu);
     sa3ds_sonic_gpu_destroy(&g_sonic_gpu);
     free(g_world); free(g_transition_local); free(g_local);
     g_world=NULL; g_transition_local=NULL; g_local=NULL;
     sa3ds_free_file(g_sa3t_bytes); sa3ds_free_file(g_sa3c_bytes);
+    sa3ds_free_file(g_ec_bytes); g_ec_bytes=NULL; g_ec_size=0;
     g_sa3t_bytes=g_sa3c_bytes=NULL;
     if (g_dvlb) { shaderProgramFree(&g_program); DVLB_Free(g_dvlb); g_dvlb=NULL; }
 }
@@ -607,9 +681,18 @@ int main(void) {
     g_target=C3D_RenderTargetCreate(240,400,GPU_RB_RGBA8,GPU_RB_DEPTH24_STENCIL8);
     if (!g_target) { fail_screen("render target allocation failed"); C3D_Fini(); romfsExit(); gfxExit(); return 1; }
     C3D_RenderTargetSetOutput(g_target,GFX_TOP,GFX_LEFT,DISPLAY_TRANSFER_FLAGS);
-    boot_checkpoint("FULL: loading & validating Sonic");
-    if (!load_owner_packages()) {
-        fail_screen("owner SA3C/SA3T missing or invalid (RomFS/SD)"); cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
+    g_emerald_coast=(mode==6);
+    if (g_emerald_coast) {
+        boot_checkpoint("FULL: loading Emerald Coast visual package");
+        if (!load_emerald_coast_package()) {
+            fail_screen("Emerald Coast act-0 package missing or invalid");
+            cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
+        }
+    } else {
+        boot_checkpoint("FULL: loading & validating Sonic");
+        if (!load_owner_packages()) {
+            fail_screen("owner SA3C/SA3T missing or invalid (RomFS/SD)"); cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
+        }
     }
     if (mode==4) {
         boot_checkpoint("Y-only: CPU texture uploads ENTER");
@@ -626,23 +709,28 @@ int main(void) {
         fail_screen("Citro3D White Zone init failed"); cleanup(); C3D_Fini(); romfsExit(); gfxExit(); return 1;
     }
     g_pose_lab=(mode==5);
-    boot_checkpoint(g_pose_lab?"POSE LAB: reset and freeze Stand frame 0":"FULL: reset player/animation");
-    reset_selected_zone();
+    boot_checkpoint(g_pose_lab?"POSE LAB: reset and freeze Stand frame 0":
+        (g_emerald_coast?"EMERALD COAST: reset preview":"FULL: reset player/animation"));
+    if (g_emerald_coast) {
+        sa3ds_wz_tick_reset(&g_tick_clock);
+        g_last_frame_ms=osGetTime();
+    } else reset_selected_zone();
     if(g_pose_lab) {
         mkdir("sdmc:/3ds/SA3DS",0777);
         FILE *f=fopen("sdmc:/3ds/SA3DS/pass10_pose_metrics.csv","wb");
         if(f){fputs("action,frame,bind,yaw_radians,distance,root,vertices,triangles,min_x,min_y,min_z,max_x,max_y,max_z\n",f);fclose(f);}
     }
-    boot_checkpoint(g_pose_lab?"POSE LAB: submit Stand frame 0":"FULL: submit first game frame");
-    if(g_pose_lab) pose_lab_help(); else print_help();
+    boot_checkpoint(g_pose_lab?"POSE LAB: submit Stand frame 0":
+        (g_emerald_coast?"EMERALD COAST: submit first authentic frame":"FULL: submit first game frame"));
+    if(g_pose_lab) pose_lab_help(); else if(g_emerald_coast) emerald_coast_help(); else print_help();
 
     while (aptMainLoop()) {
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
         if (down&KEY_START) break;
         if (g_pose_lab) pose_lab_keys(down);
-        int modifier=!g_pose_lab && ((held&KEY_SELECT)!=0);
-        if (!g_pose_lab && (down&KEY_SELECT) && !(held&(KEY_L|KEY_R|KEY_X|KEY_Y|KEY_DLEFT))) g_dev_overlay=!g_dev_overlay;
+        int modifier=!g_pose_lab && !g_emerald_coast && ((held&KEY_SELECT)!=0);
+        if (!g_pose_lab && !g_emerald_coast && (down&KEY_SELECT) && !(held&(KEY_L|KEY_R|KEY_X|KEY_Y|KEY_DLEFT))) g_dev_overlay=!g_dev_overlay;
         if (modifier && (down&KEY_L)) cycle_zone(-1);
         if (modifier && (down&KEY_R)) cycle_zone(1);
         if (modifier && (down&KEY_Y)) reset_selected_zone();
@@ -653,7 +741,7 @@ int main(void) {
         }
         if (modifier && (down&KEY_X)) trace_toggle();
         if (modifier && (down&KEY_DLEFT)) sa3ds_parity_camera_toggle(&g_camera);
-        if (!modifier && (down&KEY_Y)) sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
+        if (!g_emerald_coast && !modifier && (down&KEY_Y)) sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
 
         SA1Input in=sa3ds_read_logical_input(down,held,up);
         if (modifier) {
@@ -670,7 +758,7 @@ int main(void) {
             now_ms-g_last_frame_ms<=UINT32_MAX) ?
             (uint32_t)(now_ms-g_last_frame_ms) : SA3DS_WZ_MAX_ELAPSED_MS;
         g_last_frame_ms=now_ms;
-        unsigned steps=(g_pose_lab || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
+        unsigned steps=(g_pose_lab || g_emerald_coast || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
             SA1SteamFlatDebug physics_trace={0};
@@ -715,7 +803,7 @@ int main(void) {
             g_boottrace_first_frame=0;
         }
         g_last_submit_ms=osGetTime()-t0;
-        if(g_pose_lab) pose_lab_status(); else print_status();
+        if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
     }

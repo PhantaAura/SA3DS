@@ -94,3 +94,19 @@ memory budgets.  Their embedded RGBA8 `SA3T` payloads are intentionally easy
 to validate but larger than the original 16-bpp PVR data.  The future runtime
 must avoid loading every texture archive simultaneously and should perform
 PICA200-oriented texture conversion offline.
+
+## Native Checkpoint A integration (2026-10-20)
+
+The 0G native runtime now accepts the owner-generated act-0 package from
+`sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak` through boot-menu `R`.
+It validates every package region and cross-reference before allocation, then
+keeps a 500-unit opening subset resident: 45 instances, 48 material batches,
+5,694 triangles, 17,082 expanded static vertices, and 25 of 103 textures.
+Instance transforms use the existing Ninja object matrix rules; UVs remain
+unclamped and texture addressing remains repeat. The stage textures use the
+same CPU-swizzled upload path as Sonic.
+
+Azahar 2126.0 Old 3DS/Vulkan visibly rendered the authentic connected geometry
+and water. This checkpoint does not claim material-flag semantics, transparent
+sorting, original lighting/camera, collision, a retail spawn, 60 FPS, or
+physical-hardware success. White Zone remains separately accessible on `A`.

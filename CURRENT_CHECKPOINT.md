@@ -1,4 +1,72 @@
-# SA3DS current checkpoint — Azahar recovery and PC2004 flat-ground trace v2
+# SA3DS current checkpoint — first authentic Emerald Coast render
+
+**Verified source parent:** commit `f3f9b79be6ac1bf10efb31b5c7e3b36abce4bb60`.
+
+## 2026-10-20 Emerald Coast Checkpoint A
+
+- Added a strict native reader for the existing owner-generated visual
+  package contract: `.sa3dspak` v1 plus `SA3DVIS` v1, `SA3DMATL` v1, and
+  embedded `SA3T`. It validates chunk presence/order/size, every region,
+  model/mesh/instance/material/index reference, texture range, and finite
+  transform/vertex values before GPU allocation.
+- Added boot-menu `R` for the source reconstruction's internal act 0 (the
+  displayed Emerald Coast Act 1). White Zone remains on `A`; Pose Lab remains
+  on `L`. An empty owner-side SD marker can autoboot the preview for emulator
+  automation without embedding game data.
+- Reused Ninja object translation/rotation-flag/scale composition and the
+  hardware-proven CPU Morton texture uploader. No display-transfer upload was
+  reactivated.
+- The preview keeps a 500-unit opening subset: 45 original instances, 48
+  material batches, 5,694 triangles, 17,082 expanded static vertices, and 25
+  of 103 source textures. Geometry is pre-baked once and grouped by material;
+  stage UVs remain un-clamped and textures use repeat wrapping. Culling is
+  disabled pending flag-semantics evidence; raw material diffuse and texture
+  association are honored, while transparency ordering and lighting are not
+  claimed.
+- Azahar 2126.0 in Old 3DS/Vulkan mode visibly rendered the connected authentic
+  owner-derived geometry and water. The validated stage-only run measured
+  59–60 emulator application FPS at 99–100% speed on the final build, with
+  29,915 KiB linear memory free and 688 KiB of resident stage textures.
+  Physical Old 3DS performance remains unmeasured.
+- Checkpoint B (Sonic, imported collision, controller, and follow camera) is
+  intentionally not claimed. The visible renderer was isolated from Sonic
+  submission after their combined first frame stalled the next GPU frame;
+  White Zone still provides the unchanged validated Sonic runtime.
+
+### Verification
+
+- Owner act-0 package: 4,349,696 bytes; SHA-256
+  `5fbb164a27337381cea897f4dc2be01906e669aa70804b86ce0945e77efc7bce`;
+  exact counts 183 models, 578 meshes, 480 instances, 22,237 vertices, 58,794
+  indices, 237 materials, and 103 textures.
+- Native reader synthetic fixture and exact owner package: PASS, including CRC
+  corruption rejection.
+- Full owner-data-free host regression: PASS, including all inherited White
+  Zone, animation, pose, GPU-arena, loader, scheduler, and Pose Lab gates.
+- Pass11B raw owner-DLL pose oracle: PASS (223 nodes, 7 frames, 14,049
+  scalars; maximum absolute error `4.91638197e-09`). The exact executable
+  SonicAnimData reconstruction also passed.
+- Old 3DS SD-mode devkitARM build: PASS. The code-only `.3dsx` is 251,900
+  bytes with SHA-256
+  `c43e23c27c7a1026bd142a681c753b40c340ab682163a258fa2d6a4466ad7564`.
+  The sole warning is the deliberately inactive legacy GPU-transfer helper.
+- Visual Azahar Checkpoint A: PASS on the exact final artifact for authentic
+  geometry/texture display and stable repeated frames. Physical Old 3DS:
+  NOT RUN.
+- White Zone remains available through menu `A` and all its host gates pass;
+  a fresh interactive White Zone run on this final artifact was not completed.
+- `PHYSICS_1TO1` remains false. No proprietary package content is in Git.
+
+### Next objective
+
+Generate/install the separate owner collision package, add a spatially bounded
+triangle-contact query for the same opening subset, establish a source-backed
+provisional spawn, and then reintroduce Sonic under a measured combined GPU
+budget for Checkpoint B.
+
+---
+
+# Prior checkpoint — Azahar recovery and PC2004 flat-ground trace v2
 
 **Verified source parent:** commit `9130f0f316bda3daa2a3592741c2dfa3a61b9f09`.
 

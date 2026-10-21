@@ -87,7 +87,7 @@ static uint32_t morton8(uint32_t x, uint32_t y) {
            ((x & 4u) << 2u) | ((y & 4u) << 3u);
 }
 
-static int upload_rgba8_cpu(C3D_Tex *tex, uint16_t width, uint16_t height,
+int sa3ds_upload_rgba8_cpu(C3D_Tex *tex, uint16_t width, uint16_t height,
     const uint8_t *rgba, uint32_t index, uint32_t total,
     SA3DSSonicTextureTrace trace, void *userdata) {
     if (!tex || !rgba || width < 8u || height < 8u ||
@@ -226,7 +226,7 @@ int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
             tex_trace(trace,userdata,"sa3t_texture FAIL",i,r->texture_count,0,0);
             sa3ds_sonic_gpu_destroy(r); return 0;
         }
-        if (!upload_rgba8_cpu(&r->gpu_textures[i],desc.width,desc.height,rgba,
+        if (!sa3ds_upload_rgba8_cpu(&r->gpu_textures[i],desc.width,desc.height,rgba,
                               i,r->texture_count,trace,userdata)) {
             tex_trace(trace,userdata,"upload_rgba8 FAIL",i,r->texture_count,desc.width,desc.height);
             sa3ds_sonic_gpu_destroy(r); return 0;

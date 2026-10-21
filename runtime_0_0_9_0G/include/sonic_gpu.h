@@ -35,6 +35,11 @@ typedef struct {
    callback is optional; no owner texture pixels or other payloads are logged. */
 typedef void (*SA3DSSonicTextureTrace)(const char *phase, uint32_t texture_index,
     uint32_t texture_count, uint16_t width, uint16_t height, void *userdata);
+/* Shared, hardware-validated software swizzle path. Stage textures must use
+ * this function rather than the inactive display-transfer implementation. */
+int sa3ds_upload_rgba8_cpu(C3D_Tex *tex,uint16_t width,uint16_t height,
+    const uint8_t *rgba,uint32_t index,uint32_t total,
+    SA3DSSonicTextureTrace trace,void *userdata);
 int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
     const SA3TArchive *t, SA3DSSonicTextureTrace trace, void *userdata);
 int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r, const SA3CCharacter *c, const SA3TArchive *t);
