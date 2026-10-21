@@ -45,6 +45,9 @@ SA3DSECVisualResult sa3ds_ec_visual_open(SA3DSECVisual *out,const void *data,siz
 int sa3ds_ec_model(const SA3DSECVisual *v,uint32_t i,SA3DSECModel *out);
 int sa3ds_ec_mesh(const SA3DSECVisual *v,uint32_t i,SA3DSECMesh *out);
 int sa3ds_ec_instance(const SA3DSECVisual *v,uint32_t i,SA3DSECInstance *out);
+/* PC2004 0x43AA5B: signed test of COL+0x20; nonnegative entries never
+ * enter the land draw list. Solid bit 0 is independent of visibility. */
+int sa3ds_ec_instance_is_visible(const SA3DSECInstance *instance);
 int sa3ds_ec_material(const SA3DSECVisual *v,uint32_t i,SA3DSECMaterial *out);
 int sa3ds_ec_vertex(const SA3DSECVisual *v,uint32_t i,SA3DSECVertex *out);
 int sa3ds_ec_index(const SA3DSECVisual *v,uint32_t i,uint16_t *out);

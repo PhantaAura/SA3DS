@@ -1,5 +1,60 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-21 Checkpoint B visibility / live-input validation (parent `26fe846`)
+
+- Fixed an original-game discrepancy: PC2004 `FUN_0043a900` only appends land
+  entries with signed-negative COL+0x20 flags to its draw list. Exact executable
+  bytes at `0x0043AA5B` (`8b472085c0795a`) skip non-visible entries to the
+  36-byte loop stride. The existing GPU subset now requires bit 31 too, instead
+  of drawing collision-only geometry. Collision residency is unchanged.
+  Current opening render: 30 instances, 45 batches, 5,053 triangles, 15,159
+  vertices, 25 textures / 688 KiB. This does not reconstruct the other original
+  visibility masks, frustum tests, transparency ordering or sea/background.
+- Fixed pre-Citro3D boot-menu presentation: present TOP and BOTTOM with
+  `gfxSwapBuffers`, rather than only BOTTOM. The updated native menu visibly
+  runs and selects Emerald Coast and White Zone. Citro3D frame submission and
+  both CPU texture uploaders remain unchanged. The earlier combined GPU stall
+  was not reproduced; its historical root cause remains UNKNOWN.
+- Added owner-only `tools/verify_pc2004_stage_scale.py`: exact executable hash
+  and draw-filter signature; independent raw source comparison of all 223
+  Sonic NODE positions/scales and 4,525 converted local vertex positions;
+  all 480 act-0 instance positions/scales/flags/centers/radii and 22,237 local
+  vertices match source float bytes. Converted angles agree within 2e-6 rad.
+  No map or Sonic rescaling is introduced. Stand source-pose height is 9.856
+  units. This proves coordinate preservation, NOT every retail transform,
+  camera, body or pose behavior. The one-unit contact body, fixed 4.267-unit
+  presentation lift and spawn `(0,2.963578,-50)` remain explicitly provisional;
+  full retail contact-body reconstruction is still needed.
+- Exact updated build in Azahar 2126.0, Old-3DS/Vulkan: menu-selected combined
+  stage/Sonic ran past 3,300 GPU frames; live partial/full input, turning,
+  coasting, jumping/landing, repeated reset and wall blocking were exercised.
+  CSV recorded 36 ticks at input Z=0.493589729 and 60 at Z=0.987179458; source
+  contact normals included `(0.071704,0.996831,-0.034449)` and
+  `(0.119183,0.991656,-0.049137)` while moving across the beach. A reset/down
+  sequence increased wall contacts from 0 to 132 and blocked forward progress.
+  These are PORT-INTERNAL REGRESSIONS, not retail traces or complete collision
+  semantics. Following camera remained usable; it is not retail CAM behavior.
+- Measured 29,382 KiB linear free; usually 59–60 application FPS at 99–100%
+  speed, with observed 50–56 FPS dips. CPU uploads completed. White Zone loaded
+  separately in the same build and accepted live movement/jump at 60 FPS.
+  Temporary emulator keyboard mappings were restored after testing.
+- Verification: full `bash tests/run_sa3ds_current_host.sh` PASS (including
+  package, collision, CPU-upload and rendering guards); owner collision
+  600-tick replay PASS; raw scale/signature audit PASS; Pass11B pose oracle PASS
+  (223 nodes, 7 frames, 14,049 scalar comparisons, max error 4.91638197e-09).
+  `tools/build_3ds.sh` PASS: local code-only 264,404-byte `.3dsx`, SHA-256
+  `ed7a4ff51ab0dfc8d4b2b73b6747fdbb2bd7c6ca660d44afd286104bfc2c1e20`.
+- REA/Ghidra live import/decompile attempt timed out during autoanalysis; no
+  successful live decompile/xref is claimed this pass. Used the saved Ghidra
+  export plus direct exact-executable byte checks, never Hopper.
+- Basic bounded playability is demonstrated, not full Checkpoint B fidelity:
+  shoreline/model occlusion, incomplete material semantics, partial wall/body
+  contacts, provisional model anchor/spawn/camera and limited residency remain.
+  Next: reconcile retail body/ground anchoring against the visible shoreline,
+  then validate contact/visual agreement without retuning movement. Physical
+  Old 3DS testing NOT RUN; `PHYSICS_1TO1=false` remains unchanged. No owner game
+  payload or compiled binary is included in this source checkpoint.
+
 ## 2026-10-20 Checkpoint B integration (parent `6c5b0ee`)
 
 - Re-enabled stage and Sonic submission in the same frame, sharing one stage

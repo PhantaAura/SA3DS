@@ -1,4 +1,8 @@
 #include "emerald_coast_visual.h"
+
+int sa3ds_ec_instance_is_visible(const SA3DSECInstance *instance) {
+    return instance && (instance->surface_flags & UINT32_C(0x80000000)) != 0;
+}
 #include <math.h>
 #include <string.h>
 

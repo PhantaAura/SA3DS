@@ -4,6 +4,7 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
 make=(root/'runtime_0_0_9_0G/Makefile').read_text()
+menu=main[main.index('static int boot_menu(void)'):main.index('static void boot_result')]
 checks={
  '3-mode startup': ('boot_menu()' in main and 'if (mode==1)' in main and 'if (mode==2)' in main),
  'A full WIP9 retained': ('if (!init_scene())' in main and 'sa1_physics_step_steam_sonic_flat(&g_player' in main and 'sa3ds_wz_tick_begin(&g_tick_clock' in main),
@@ -11,7 +12,7 @@ checks={
  'asset-only preflight': ('if (mode==2)' in main and 'if (!load_owner_packages())' in main),
  'log checkpoint': ('pass10_boot.log' in main and 'boot_checkpoint("FULL: C3D_Init")' in main and 'boot_checkpoint("CPU swizzle Sonic textures")' in main),
  'visible bottom console': ('gfxSetDoubleBuffering(GFX_BOTTOM,false)' in main and 'gfxScreenSwapBuffers(GFX_BOTTOM,false)' in main),
- 'no whole-screen swaps': ('gfxSwapBuffers();' not in main),
+ 'whole-screen swap limited to pre-C3D menu': (main.count('gfxSwapBuffers();') == 1 and 'gfxSwapBuffers();' in menu),
  'original 60Hz/asset telemetry': ('60Hz:%llu Drop:%llu' in main and 'Assets:%s C:%luK T:%luK' in main),
  'source GPU linked': ('-lcitro3d' in make and 'ROMFS       := romfs_sd' in make),
 }

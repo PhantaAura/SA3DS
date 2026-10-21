@@ -24,6 +24,12 @@ int main(int argc,char **argv) {
     SA3DSECModel model;SA3DSECMesh mesh;SA3DSECInstance instance;SA3DSECMaterial material;SA3DSECVertex vertex;uint16_t index;
     assert(sa3ds_ec_model(&v,0,&model));assert(sa3ds_ec_mesh(&v,0,&mesh));
     assert(sa3ds_ec_instance(&v,0,&instance));assert(sa3ds_ec_material(&v,0,&material));
+    SA3DSECInstance flags={0};
+    assert(!sa3ds_ec_instance_is_visible(NULL));
+    flags.surface_flags=1;assert(!sa3ds_ec_instance_is_visible(&flags));
+    flags.surface_flags=2;assert(!sa3ds_ec_instance_is_visible(&flags));
+    flags.surface_flags=0x80000000u;assert(sa3ds_ec_instance_is_visible(&flags));
+    flags.surface_flags=0x80000001u;assert(sa3ds_ec_instance_is_visible(&flags));
     assert(sa3ds_ec_vertex(&v,0,&vertex));assert(sa3ds_ec_index(&v,0,&index));
     assert(model.mesh_count>0);assert(mesh.index_count%3u==0);assert(material.texture_id<v.textures.texture_count);assert(index<v.vertex_count);
     unsigned char saved=data[size-1];data[size-1]^=0x80;

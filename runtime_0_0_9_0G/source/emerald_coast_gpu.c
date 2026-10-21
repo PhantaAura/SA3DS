@@ -6,7 +6,8 @@
 #include <string.h>
 
 static int selected(const SA3DSECInstance *x,float radius){
-    return hypotf(x->center[0],x->center[2])-x->radius<=radius;
+    return sa3ds_ec_instance_is_visible(x) &&
+        hypotf(x->center[0],x->center[2])-x->radius<=radius;
 }
 static void transform(const SA3CMatrix*m,const float p[3],float out[3]){
     out[0]=p[0]*m->m[0]+p[1]*m->m[4]+p[2]*m->m[8]+m->m[12];

@@ -165,9 +165,11 @@ static void boot_note(const char *detail) {
 }
 
 static int boot_menu(void) {
+    boot_log("MENU","enter");
     /* Owner-side emulator/hardware automation hook.  The marker contains no
        game data and avoids relying on host keyboard-to-3DS mappings. */
     FILE *autoboot=fopen("sdmc:/3ds/SA3DS/emerald_coast_autoboot.flag","rb");
+    boot_log("MENU","autoboot marker checked");
     if (autoboot) { int selected=fgetc(autoboot);fclose(autoboot);return selected=='W'?3:6; }
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
@@ -183,6 +185,7 @@ static int boot_menu(void) {
     printf("Run B, then X, then A.\n");
     printf("No owner assets needed for B.\n");
     printf("Original physics preserved.\n");
+    boot_log("MENU","ready for mode selection");
     while (aptMainLoop()) {
         hidScanInput();
         u32 down=hidKeysDown();
@@ -193,7 +196,9 @@ static int boot_menu(void) {
         if (down&KEY_L) return 5;
         if (down&KEY_R) return 6;
         if (down&KEY_A) return 3;
-        gfxFlushBuffers(); gfxScreenSwapBuffers(GFX_BOTTOM,false); gspWaitForVBlank();
+        /* Present both screens: the emulator's frame boundary follows TOP.
+         * Bottom-only swaps can leave the startup console black at 0 FPS. */
+        gfxFlushBuffers(); gfxSwapBuffers(); gspWaitForVBlank();
     }
     return 0;
 }
@@ -579,6 +584,10 @@ static int init_scene(void) {
             /* Align the original Stand feet to the existing 1-unit support
              * body. This fixed presentation offset never changes physics. */
             g_ec_model_lift=-stand.min[1]-1.0f;
+            char scale_note[192];snprintf(scale_note,sizeof(scale_note),
+                "Stand source-units bounds=(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f) height=%.3f unit-scale=1 lift=%.3f provisional",
+                stand.min[0],stand.min[1],stand.min[2],stand.max[0],stand.max[1],stand.max[2],
+                stand.max[1]-stand.min[1],g_ec_model_lift);boot_log("SCALE",scale_note);
         }
     } else {
         boot_checkpoint("CPU swizzle Sonic textures");

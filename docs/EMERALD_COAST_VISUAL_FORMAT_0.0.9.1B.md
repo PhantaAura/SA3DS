@@ -39,6 +39,18 @@ The visual geometry stores:
 The converter deterministically expands Basic strips/quads into triangle lists
 using the same conventions already pinned by the Sonic character pipeline.
 
+### Runtime visibility subset
+
+PC2004 land draw-list builder `FUN_0043a900`, exact `sonic.exe` SHA-256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`,
+tests COL+0x20 as signed at `0x0043AA5B` and skips non-negative entries.
+The runtime therefore requires LandTable flag bit 31 for visual residency;
+the separate collision reader still uses its solid subset. Keeping all nearby
+entries visually rendered incorrectly exposed collision-only meshes. Other
+visibility-mask/frustum conditions are not claimed reconstructed here.
+`tools/verify_pc2004_stage_scale.py` checks the original branch and source
+coordinates against local owner packages without exporting game payloads.
+
 ### UV semantics
 
 Current PC2004 Basic stage UVs are signed 16-bit per-corner values.  SA Tools
