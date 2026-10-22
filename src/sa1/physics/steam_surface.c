@@ -504,6 +504,7 @@ void sa1_physics_step_steam_sonic_surface(
     SA1SteamSurfaceDebug *dbg = debug_out ? debug_out : &local_debug;
     memset(dbg, 0, sizeof(*dbg));
     dbg->used_general_contact = 1;
+    int just_jumped = 0;
 
     SA1SurfaceFrame frame = player_frame(player);
     if (!frame.valid) {
@@ -530,16 +531,16 @@ void sa1_physics_step_steam_sonic_surface(
         }
 
         if (player->grounded) {
-            int roll_jump = player->action_state == SA1_ACTION_ROLL && input->jump_pressed;
-            if (roll_jump) {
+            /* Sonic_Act1 selects jump before ground movement, including
+             * roll termination, but charging has no jump transition. */
+            if (player->action_state != SA1_ACTION_SPINDASH_CHARGE && input->jump_pressed) {
                 begin_surface_jump(player, &frame);
+                just_jumped = 1;
             } else {
                 int ball_handled = handle_surface_ball_state(player, input,
                                     camera_yaw, &frame, dbg);
                 if (!ball_handled) {
                     surface_running(player, input, camera_yaw, &frame, dbg);
-                    if (input->jump_pressed)
-                        begin_surface_jump(player, &frame);
                 }
             }
         }
@@ -549,7 +550,8 @@ void sa1_physics_step_steam_sonic_surface(
         /* Existing air kernel is still world-gravity/upright-specialized. The
          * surface jump preserves its full 3D launch velocity; air steering is
          * the next parity layer rather than being fabricated here. */
-        (void)sa1_steam_sonic_apply_jump_hold(player, input->jump_held);
+        if (!just_jumped)
+            (void)sa1_steam_sonic_apply_jump_hold(player, input->jump_held);
         sa1_steam_sonic_air_step(player, input, camera_yaw, NULL);
     }
 

@@ -112,6 +112,33 @@ int main(void) {
     assert(nearf(d.requested_force, sp->air_break * full_back.magnitude, 0.000001f));
 
     /* End-to-end candidate: holding jump produces a higher apex than tapping. */
+    /* PC2004 0x49707F selects jump before ground acceleration/charge entry.
+       Launch with thrust, turning, and simultaneous action input must match
+       an impulse followed by ONE air update, not a ground+air update. */
+    for (unsigned trial = 0; trial < 8; ++trial) {
+        SA1PlayerState expected, actual;
+        sa1_player_reset(&actual, sa3ds_movement_lab_world());
+        unsigned direction = trial % 4;
+        actual.vel.z = direction ? 3.0f : 0.0f;
+        if (direction == 3) {
+            actual.action_state = SA1_ACTION_ROLL;
+            actual.ball_form = true;
+        }
+        expected = actual;
+        SA1Input launch = {.move_z=direction==1?1.0f:0.0f,
+            .move_x=direction==2?1.0f:0.0f, .jump_pressed=true,
+            .jump_held=true, .action_pressed=trial>=4, .action_held=trial>=4};
+        sa1_steam_sonic_begin_jump(&expected);
+        sa1_steam_sonic_air_step(&expected, &launch, 0.0f, NULL);
+        step_world(&actual, launch);
+        assert(!actual.grounded && actual.action_state == SA1_ACTION_AIRBORNE);
+        assert(actual.jump_ticks == 0 && actual.spindash_ticks == 0);
+        assert(nearf(actual.vel.x, expected.vel.x, 0.000001f));
+        assert(nearf(actual.vel.y, expected.vel.y, 0.000001f));
+        assert(nearf(actual.vel.z, expected.vel.z, 0.000001f));
+        assert(nearf(actual.yaw, expected.yaw, 0.000001f));
+    }
+
     SA1PlayerState tap, hold;
     sa1_player_reset(&tap, sa3ds_movement_lab_world());
     sa1_player_reset(&hold, sa3ds_movement_lab_world());

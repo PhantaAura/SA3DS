@@ -401,21 +401,18 @@ void sa1_physics_step_steam_sonic_flat(
             return;
         }
 
-        /* Roll jump uses the already-verified normal jump impulse. Charge
-         * itself is not interrupted by jump until the exact Steam transition
-         * ordering is identified. */
-        if (player->action_state == SA1_ACTION_ROLL && input->jump_pressed) {
+        /* PC2004 Sonic_Act1 tests jump before charge entry/roll termination
+         * and before the resulting action's movement dispatch. Action 4
+         * deliberately has no jump test; action 5 does (0x497446). */
+        if (player->action_state != SA1_ACTION_SPINDASH_CHARGE && input->jump_pressed) {
             sa1_steam_sonic_begin_jump(player);
             just_jumped = 1;
+            if (debug_out) memset(debug_out, 0, sizeof(*debug_out));
         } else {
             int ball_handled = sa1_steam_sonic_ball_ground_step(
                 player, input, camera_yaw, NULL);
             if (!ball_handled) {
                 steam_flat_horizontal(player, input, camera_yaw, debug_out);
-                if (input->jump_pressed) {
-                    sa1_steam_sonic_begin_jump(player);
-                    just_jumped = 1;
-                }
             } else if (debug_out) {
                 /* Ball diagnostics live in SA1SteamBallDebug; do not expose
                  * stale flat-ground diagnostics during a ball-state tick. */

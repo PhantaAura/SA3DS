@@ -2,6 +2,7 @@
 #include "emerald_coast_replay.h"
 #include "../src/sa1/physics/movement.h"
 #include "../src/sa1/physics/steam_flat.h"
+#include "../src/sa1/physics/steam_air.h"
 #include "../src/sa1/physics/physics_constants.h"
 #include "../src/sa1/physics/surface_frame.h"
 #include "../src/sa1/physics/steam_spindash_evidence.h"
@@ -28,13 +29,37 @@ static void owner_controller_cases(SA3DSECCollision*s){
     const char*path=getenv("SA3DS_EC_CONTROLLER_TRACE");
     FILE*trace=path?fopen(path,"wb"):NULL;if(path)assert(trace);
     if(trace)assert(!sa1_trace_write_header(trace));
-    unsigned exits=0,rolls=0,charges=0;
+    unsigned exits=0,rolls=0,charges=0,launches=0;
     /* Interior starts keep the complete charge/release route within support.
      * Exploratory starts z=375/400 reach a partial-contact gap near z=413;
      * that limitation is recorded in the checkpoint. */
     const float locations[]={-50,200,250,300,325,350};
     for(unsigned k=0;k<sizeof(locations)/sizeof(*locations);k++){
         assert(sa3ds_ec_collision_spawn(s,0,locations[k],0));
+        /* Actual imported support, both normal and rolling launches, with
+         * neutral/forward/turn input. Reference is the recovered operation
+         * order, not a claim of a retail trace or full slope-air parity. */
+        for(unsigned roll=0;roll<2;roll++)for(unsigned direction=0;direction<3;direction++){
+            SA1PlayerState p;sa1_player_reset(&p,&s->world);
+            controller_tick(s,&p,(SA1Input){0},trace);assert(p.grounded);
+            p.vel=sa1_vec3_scale(p.surface_forward,3.0f);
+            p.action_state=roll?SA1_ACTION_ROLL:SA1_ACTION_GROUNDED;
+            p.ball_form=roll!=0;
+            SA1PlayerState expected=p;
+            expected.vel=sa1_vec3_add(expected.vel,sa1_vec3_scale(p.ground_normal,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jmp_y_spd));
+            expected.grounded=false;expected.action_state=SA1_ACTION_AIRBORNE;
+            SA1Input launch={.jump_pressed=true,.jump_held=true,
+                .move_z=direction==1?1.0f:0.0f,.move_x=direction==2?1.0f:0.0f};
+            sa1_steam_sonic_air_step(&expected,&launch,0,NULL);
+            controller_tick(s,&p,launch,trace);
+            assert(!p.grounded&&p.action_state==SA1_ACTION_AIRBORNE);
+            assert(p.jump_ticks==0&&p.spindash_ticks==0);
+            assert(fabsf(p.vel.x-expected.vel.x)<0.00001f);
+            assert(fabsf(p.vel.y-expected.vel.y)<0.00001f);
+            assert(fabsf(p.vel.z-expected.vel.z)<0.00001f);
+            assert(fabsf(p.yaw-expected.yaw)<0.00001f);
+            launches++;
+        }
         for(unsigned trial=0;trial<3;trial++){
             SA1PlayerState p;sa1_player_reset(&p,&s->world);
             controller_tick(s,&p,(SA1Input){0},trace);assert(p.grounded);
@@ -62,7 +87,9 @@ static void owner_controller_cases(SA3DSECCollision*s){
             float charge=moving?3.25f:2.0f;
             SA3DSSonicAnimationSync sync={0};SA3DSSonicAnimationRuntime rt={0};
             for(unsigned tick=0;tick<durations[d];tick++){
-                if(tick){controller_tick(s,&p,(SA1Input){.action_held=true},trace);if(charge<10)charge+=0.4f;}
+                /* Charging ignores jump; rolling below is separately tested
+                 * to accept it. This is the original action-4/5 distinction. */
+                if(tick){controller_tick(s,&p,(SA1Input){.action_held=true,.jump_pressed=true,.jump_held=true},trace);if(charge<10)charge+=0.4f;}
                 if(!p.grounded||p.action_state!=SA1_ACTION_SPINDASH_CHARGE)
                     fprintf(stderr,"charge case z=%.0f moving=%u duration=%u tick=%u p=%.5f,%.5f,%.5f state=%d\n",locations[k],moving,durations[d],tick,p.pos.x,p.pos.y,p.pos.z,p.action_state);
                 assert(p.grounded&&p.action_state==SA1_ACTION_SPINDASH_CHARGE);
@@ -94,6 +121,7 @@ static void owner_controller_cases(SA3DSECCollision*s){
         if(p.grounded){landed=1;break;}
     }
     assert(air_turns==12&&landed);
+    printf("Owner launch ordering: PASS (%u imported-ground normal/roll/turn launches; charging ignores jump)\n",launches);
     if(trace)assert(!fclose(trace));
     printf("Owner controller/animation: PASS (%u signed roll exits, %u retained rolls, %u stationary/moving charge-duration cases, %u air-turn ticks + landing)\n",exits,rolls,charges,air_turns);
 }

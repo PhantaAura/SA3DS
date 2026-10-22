@@ -1,5 +1,44 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-22 continuation — jump selection before movement
+
+Parent `1f5ca2c`; inherited local `.3dsx` remains excluded. Fixed normal jump
+selection before ground acceleration/turning and before charge entry in both
+existing controller paths. Surface jumps no longer receive held-jump boost on
+their initiation tick. Exact PC2004 action-1/2/5 jump calls, local-Y impulse
+and timer-reset signatures verified; action 4 deliberately ignores jump.
+No collision, renderer, input constants, pose, or texture-upload changes.
+
+Focused host suite + 19 scenarios PASS; full current host suite PASS;
+Spin Dash and Break/Inertia exact-executable verifiers PASS. Added eight flat
+launch cases and 36 owner-terrain normal/roll/turn launches; charge-jump
+immunity covered throughout the 36 held-charge duration cases. Inherited
+600-tick replay, 1,731 support probes, 344 descents, 504 corners, 694 slope
+transitions and 50 ledges PASS. The previous source fails the new flat launch
+regression; corrected source passes. Comparisons are source-order/kernel
+regressions, not captured retail trajectories.
+
+Old-3DS build PASS: 273,512 bytes; SHA-256
+`a654dd7595e82895b1d474ea60e9f67fa8f4d778e0069bd62175be0b8130143e`.
+Azahar 2126.0 Old-3DS/Vulkan ran that build past 11,300 GPU frames, showing
+56–60 FPS during inspected gameplay, 29,382 KiB linear free. Live partial/full
+movement, acceleration, turning, braking/reversal, jumps/landing, charge/release,
+subsequent roll-jump and reset exercised. Native trace: 3,091 complete rows,
+89 airborne, 81 charge, 23 roll, two landings; jump on charge release remains
+Roll, subsequent roll jump becomes Airborne with jump_ticks=0/request14.
+Trace SHA-256 `e0b93d904ab9102ef26ecfc7fc5e35370e062cf1b90f5d4bae776c0754dbb47b`
+at the external SD `traces/emerald_coast_trace.csv`. Prior trace backed up at
+`/private/tmp/sa3ds-pre-launch-fix-trace.csv`. Temporary mappings restored.
+White Zone on the same executable rendered and accepted movement, jump and
+air steering at 60 FPS / 100%, with 30,346 KiB linear free. Pose/model import
+was unchanged, so no new pose-oracle run was needed; the parent pass's exact
+owner oracle remains recorded below.
+
+Remaining: Uncurl29 request propagation, complete rolling/slope-air/contact
+semantics and genuine retail trace comparison. Existing partial collision gap
+near z=413 and provisional follow camera remain. `PHYSICS_1TO1=false`;
+physical Old 3DS untested. No global controller-parity claim.
+
 ## 2026-10-22 PC2004 controller, Spin Dash ordering and charge animation
 
 Source parent `7541180`; only the pre-existing local `.3dsx` was dirty on

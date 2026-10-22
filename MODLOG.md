@@ -98,3 +98,14 @@
 2. Build the SD-mode `.3dsx` and test on the owner's Old 3DS.
 3. Keep the CPU texture upload and boot trace until hardware proves a replacement.
 4. Advance Emerald Coast only after the current Sonic render/pose gate remains stable.
+
+# 2026-10-22 jump-order continuation
+
+PC2004 `0x49707F/0x4971B6` jump selection precedes charge entry;
+`0x497446` roll jump precedes termination. Action4 has no jump test.
+`0x495F0F..18` writes action8/local-Y impulse; `0x495F63` resets timer.
+Fixed launch ordering and first-tick hold boost in existing flat/surface paths;
+eight flat + 36 imported-terrain regressions and exact signatures added.
+Saved-export/direct-disassembly evidence reused; no new live Ghidra success
+claimed. Native Emerald Coast trace confirms charge-release jump immunity and
+subsequent roll jump. See current checkpoint for exact validation and limits.

@@ -45,6 +45,8 @@ EXPECTED_FLOATS = {
 # Exact byte signatures selected to prove semantics without embedding any
 # substantial code/data payload.
 SIGNATURES = {
+    "jump_action8_and_local_y_impulse": (0x00495F0F, "c607088b86b400000089463c"),
+    "jump_reset_hold_timer": (0x00495F63, "66c746080000"),
     "roll_end_signed_forward_vs_run": (0x004930D0, "d94138d899c4000000dfe0f6c4057a3a"),
     "roll_end_sign_and_stand": (0x004930E0, "d94138d81d2ccb7d00dfe0f6c4417a18c60201"),
     "roll_end_request_29": (0x004930F9, "66c781240100001d00"),
@@ -184,6 +186,11 @@ def main() -> int:
         raise ValueError("Sonic action table 4/5 mismatch")
 
     calls = {}
+    for site, target in ((0x49707F, 0x495E60), (0x4971B6, 0x495E60),
+                         (0x497446, 0x495E60), (0x4970B0, 0x496EE0),
+                         (0x4971E7, 0x496EE0), (0x4973D7, 0x495080)):
+        if rel32_call_target(data, image_base, sections, site) != target:
+            raise ValueError(f"jump/charge transition call mismatch at {site:#x}")
     if rel32_call_target(data, image_base, sections, 0x0049AA34) != 0x00496F50:
         raise ValueError("main must call Sonic_Act1 before timer increment/movement dispatch")
     if rel32_call_target(data, image_base, sections, 0x00496EFB) != 0x00495C30:
@@ -216,6 +223,7 @@ def main() -> int:
             "roll_end": "before movement: signed Speed.x < run_speed; Action=1 if Speed.x<=0 else 2; animation request=29",
             "tick_order": "Sonic_Act1 transitions -> ball timer increment -> movement dispatch by resulting action; release tick runs inertia",
             "charge_animation": "entry calls 0x495C30 -> request 14; property 10 rate uses shared SpindashSpeed * 0.2",
+            "jump_order": "actions 1/2 test jump before Spin Dash entry; action 5 tests jump before roll exit; action 4 runs charge transition without jump test; resulting action movement runs once",
         },
         "action_dispatch": {
             "table_va": VA["sonic_action_table"],

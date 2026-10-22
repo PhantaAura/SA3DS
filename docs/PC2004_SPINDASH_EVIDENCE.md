@@ -93,6 +93,31 @@ uses the live SpindashSpeed scalar times 0.2, rather than fixed-rate row 32.
 
 ## Exact action movement call order
 
+### Jump arbitration (2026-10-22 continuation)
+
+Exact-PC2004 disassembly and the saved private Ghidra export agree:
+Sonic_Act1 action 1 calls jump helper `0x495E60` at `0x49707F`, before
+charge entry at `0x4970B0`; action 2 does likewise at `0x4971B6` before
+`0x4971E7`. Action 5 calls jump at `0x497446` before roll termination at
+`0x497458`. Action 4 instead reaches charge logic at `0x4973D7` without
+a jump test. Thus a jump pressed while charging (including its release tick)
+does not launch; a later press from Roll does. Normal simultaneous jump/action
+input prioritizes jump.
+
+The ordinary helper writes action 8 and local Y from jmp_y_spd at
+`0x495F0F..0x495F18`, requests 14 via `0x495F43`, and resets the jump timer
+at `0x495F63`. Main then dispatches movement by that resulting action.
+SA3DS no longer runs ground movement before a normal launch, and the surface
+path now skips held-jump boost on the initiation tick like the flat path.
+The airborne-state hold helper begins on subsequent ticks. This establishes
+operation ordering, not complete slope-air or retail runtime numerical parity.
+
+Regressions cover eight flat launch/input-priority cases and 36 launches on
+six actual imported support locations (normal/roll × neutral/forward/turn),
+plus held-charge jump immunity. The old HEAD source fails the new launch test;
+the corrected source passes. Exact call/impulse/timer signatures are checked
+by `tools/verify_pc2004_spindash.py`.
+
 Action 4 at `0x0049AE2F` calls:
 
 `PGetRotation -> PGetBreak -> PGetSpeed -> PSetPosition -> PResetPosition`
