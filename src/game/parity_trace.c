@@ -4,6 +4,8 @@
 
 #include "../sa1/physics/movement.h"
 #include "../sa1/physics/surface_frame.h"
+#include "../sa1/physics/steam_input.h"
+#include <math.h>
 
 int sa3ds_parity_trace_write_header(FILE *output) {
     if (!output) return -1;
@@ -16,7 +18,8 @@ int sa3ds_parity_trace_write_header(FILE *output) {
         "local_forward_before,local_side_before,local_forward_after,local_side_after,"
         "accel_forward,accel_side,requested_force,resistance_force,angle_delta_bams,turn_step_bams,turn_kind,"
         "used_brake_branch,crossed_zero,side_stopped_at_jog_threshold,"
-        "runtime_animation_id,action_slot,animation_frame,selector_provisional\n") < 0 ? -1 : 0;
+        "runtime_animation_id,action_slot,animation_frame,selector_provisional,"
+        "spindash_charge,spindash_ticks,ball_form,jump_ticks\n") < 0 ? -1 : 0;
 }
 
 int sa3ds_parity_trace_write_frame(FILE *output,
@@ -30,17 +33,24 @@ int sa3ds_parity_trace_write_frame(FILE *output,
     if (!output || !player || !input || !physics || !animation) return -1;
     float local_forward = sa1_vec3_dot(player->vel, player->surface_forward);
     float local_side = sa1_vec3_dot(player->vel, player->surface_right);
+    if (!player->grounded) {
+        local_forward = player->vel.x*sinf(player->yaw) + player->vel.z*cosf(player->yaw);
+        local_side = player->vel.x*cosf(player->yaw) - player->vel.z*sinf(player->yaw);
+    }
+    /* Surface/ball ticks clear the flat-only debug record. Input samples must
+     * still describe the actual tick on these paths. */
+    SA1SADXFilteredAnalog analog = sa1_sadx_filter_logical_analog(input->move_x,input->move_z);
     int result = fprintf(output,
         "%d,%d,%s,%" PRIu64 ",%.9g,%.9g,%.9g,%.9g,%.9g,%u,%.9g,"
         "%d,%d,%d,%d,%d,%d,"
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,"
         "%d,%d,%" PRId32 ",%" PRIu32 ",%.9g,%.9g,%.9g,%.9g,%.9g,"
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%u,%u,%d,%d,%d,%d,"
-        "%u,%u,%.9g,%d\n",
+        "%u,%u,%.9g,%d,%.9g,%" PRIu32 ",%d,%" PRIu32 "\n",
         SA3DS_PARITY_TRACE_VERSION, (int)test_id, test_name ? test_name : "UNKNOWN", player->sim_frame,
         input->move_x, input->move_z,
-        physics->post_deadzone_x, physics->post_deadzone_z,
-        physics->filtered_input_magnitude, physics->filtered_input_angle_bams, camera_yaw,
+        analog.post_deadzone_x, analog.post_deadzone_z,
+        analog.magnitude, (unsigned)analog.angle_bams, camera_yaw,
         input->jump_pressed ? 1 : 0, input->jump_held ? 1 : 0, input->jump_released ? 1 : 0,
         input->action_pressed ? 1 : 0, input->action_held ? 1 : 0, input->action_released ? 1 : 0,
         player->pos.x, player->pos.y, player->pos.z,
@@ -58,6 +68,8 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         physics->used_brake_branch, physics->crossed_zero,
         physics->side_stopped_at_jog_threshold,
         (unsigned)animation->binding.runtime_id, (unsigned)animation->binding.action_slot,
-        animation->sample_frame, animation->selector_is_provisional ? 1 : 0);
+        animation->sample_frame, animation->selector_is_provisional ? 1 : 0,
+        player->spindash_charge, player->spindash_ticks,
+        player->ball_form ? 1 : 0, player->jump_ticks);
     return result < 0 ? -1 : 0;
 }

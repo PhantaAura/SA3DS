@@ -442,12 +442,13 @@ static int handle_surface_ball_state(SA1PlayerState *player,
     int held = input->action_held || input->spindash_shortcut_held;
 
     if (player->action_state == SA1_ACTION_SPINDASH_CHARGE) {
-        surface_ball_motion(player, input, camera_yaw, frame, dbg);
-        player->spindash_ticks++;
+        /* Sonic_Act1 transitions precede the ball timer and movement dispatch.
+         * Dispatch the new action, including inertia on the release tick. */
         if (sa1_sadx_spindash_timeout_reached(player->spindash_ticks)) {
             player->spindash_ticks = 0;
             player->action_state = SA1_ACTION_GROUNDED;
             player->ball_form = false;
+            return 0;
         } else if (held) {
             player->spindash_charge =
                 sa1_sadx_spindash_charge_held_tick(player->spindash_charge);
@@ -461,30 +462,31 @@ static int handle_surface_ball_state(SA1PlayerState *player,
             player->spindash_charge = 0.0f;
             player->spindash_ticks = 0;
         }
+        player->spindash_ticks++;
+        surface_ball_motion(player, input, camera_yaw, frame, dbg);
         return 1;
     }
 
     if (player->action_state == SA1_ACTION_ROLL) {
-        if (requested) {
+        /* Same pre-motion signed threshold as flat action 5 (0x4930D0).
+         * Surface forward is the adapter's local Speed.x specialization. */
+        if (s.forward < p->run_speed || requested) {
             player->action_state = SA1_ACTION_GROUNDED;
             player->ball_form = false;
             return 0;
         }
         surface_ball_motion(player, input, camera_yaw, frame, dbg);
-        s = world_to_surface(frame, player->vel);
-        if (fabsf(s.forward) < p->run_speed) {
-            player->action_state = SA1_ACTION_GROUNDED;
-            player->ball_form = false;
-        }
+        player->spindash_ticks++;
         return 1;
     }
 
     if (requested) {
         player->spindash_charge =
             sa1_sadx_spindash_initial_charge(s.forward);
-        player->spindash_ticks = 0;
+        player->spindash_ticks = 1;
         player->action_state = SA1_ACTION_SPINDASH_CHARGE;
         player->ball_form = true;
+        surface_ball_motion(player, input, camera_yaw, frame, dbg);
         return 1;
     }
     return 0;

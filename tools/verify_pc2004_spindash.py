@@ -45,13 +45,20 @@ EXPECTED_FLOATS = {
 # Exact byte signatures selected to prove semantics without embedding any
 # substantial code/data payload.
 SIGNATURES = {
+    "roll_end_signed_forward_vs_run": (0x004930D0, "d94138d899c4000000dfe0f6c4057a3a"),
+    "roll_end_sign_and_stand": (0x004930E0, "d94138d81d2ccb7d00dfe0f6c4417a18c60201"),
+    "roll_end_request_29": (0x004930F9, "66c781240100001d00"),
+    "roll_end_run_action": (0x00493108, "c6020266c781240100001d00"),
+    "roll_end_no_transition": (0x0049311A, "33c0c3"),
     "entry_action4": (0x00496EF8, "c60704"),
+    "charge_animation_request_14": (0x00495C70, "66c786240100000e00"),
     "entry_ball_attack_status": (0x00496F00, "804f0505"),
     "entry_compare_forward_to_2": (0x00496F04, "d94638d81d94cb7d00"),
     "entry_reset_timer": (0x00496F0D, "66c7467e0000"),
     "entry_copy_forward_charge": (0x00496F1A, "8b56388916"),
     "entry_min_2_immediate": (0x00496F21, "c70600000040"),
     "main_ball_timer_increment": (0x0049AAF2, "668b530481e2000100006685d2740466ff457e"),
+    "main_movement_dispatch": (0x0049AB29, "ff2485bcbf4900"),
     "timeout_300": (0x00495154, "663d2c017c4e"),
     "release_action5": (0x004951BE, "c60705"),
     "release_charge_to_forward": (0x004951C1, "8b0e"),
@@ -177,6 +184,12 @@ def main() -> int:
         raise ValueError("Sonic action table 4/5 mismatch")
 
     calls = {}
+    if rel32_call_target(data, image_base, sections, 0x0049AA34) != 0x00496F50:
+        raise ValueError("main must call Sonic_Act1 before timer increment/movement dispatch")
+    if rel32_call_target(data, image_base, sections, 0x00496EFB) != 0x00495C30:
+        raise ValueError("charge entry must request animation 14")
+    if rel32_call_target(data, image_base, sections, 0x00497458) != 0x004930D0:
+        raise ValueError("action-5 transition no longer calls signed roll-end helper")
     for action, entries in EXPECTED_CALLS.items():
         calls[action] = []
         for call_va, expected_target, name in entries:
@@ -200,6 +213,9 @@ def main() -> int:
             "timeout_frames": 300,
             "release": "Action=5; Speed.x=SpindashSpeed; timer=0; SpindashSpeed=0",
             "timeout": "timer=0; leave charge accumulator untouched; leave ball/attack state",
+            "roll_end": "before movement: signed Speed.x < run_speed; Action=1 if Speed.x<=0 else 2; animation request=29",
+            "tick_order": "Sonic_Act1 transitions -> ball timer increment -> movement dispatch by resulting action; release tick runs inertia",
+            "charge_animation": "entry calls 0x495C30 -> request 14; property 10 rate uses shared SpindashSpeed * 0.2",
         },
         "action_dispatch": {
             "table_va": VA["sonic_action_table"],
@@ -219,6 +235,8 @@ def main() -> int:
         print("  entry: Action 4, charge=max(forward,2.0), no 10.0 entry clamp")
         print("  held: if charge<10.0 add 0.4 (no post-add clamp)")
         print("  release: Action 5, forward=charge, timer/charge cleared")
+        print("  roll end: signed forward < run_speed before movement; request 29")
+        print("  tick: transitions -> ball timer -> movement; release runs inertia immediately")
         print("  action 4 calls: PGetRotation -> PGetBreak -> PGetSpeed -> PSetPosition -> PResetPosition")
         print("  action 5 calls: PGetRotation -> PGetInertia -> PGetSpeed -> PSetPosition -> PResetPosition")
     return 0

@@ -33,6 +33,8 @@ VA = {
     "inertia_up_limit": 0x007E0110,
     "pgetspeed_idle_factor": 0x007E0124,
     "collision_height_half": 0x007DCC98,
+    "air_turn_transformed": 0x007DFFF0,
+    "air_turn_old_local": 0x007DD568,
 }
 
 EXPECTED = {
@@ -44,9 +46,16 @@ EXPECTED = {
     "inertia_up_limit": ("d", 0.98),
     "pgetspeed_idle_factor": ("f", 0.8700000047683716),
     "collision_height_half": ("f", 0.5),
+    "air_turn_transformed": ("f", 0.8999999761581421),
+    "air_turn_old_local": ("f", 0.10000000149011612),
 }
 
 SIGNATURES = {
+    "air_acceleration_general_turn_call": (0x0044BB22, "e82981ffff"),
+    "general_turn_air_status_branch": (0x00443CCE, "8a460483c408a803754c"),
+    "general_turn_air_forward_mix": (0x00443CD8, "d94424085dd80df0ff7d00d903d80d68d57d00dec1d91b"),
+    "general_turn_air_normal_mix": (0x00443CF0, "d9473cd80d68d57d00d9442404d80df0ff7d00dec1d95f3c"),
+    "general_turn_air_side_mix": (0x00443D08, "d94740d80d68d57d00d9442408d80df0ff7d00dec1d95f40"),
     "pinitialize_entry": (0x00442750, "518b44240c538b58208b4024555657"),
     "pinitialize_param_stride_0x84": (0x00442773, "69f684000000"),
     "pinitialize_copy_0x84_to_pwp_0x9c": (0x00442781, "8dbd9c000000b921000000f3a5"),
@@ -219,6 +228,7 @@ def main() -> int:
             "PGetBreak": "uses air_resist/air_resist_y/air_resist_z, run_break, lim_frict, grd_frict, grd_frict_z and zero-cross guards before writing playerwk AddVelocity",
             "PGetInertia": "uses run_speed/Up, -8.0 inverted branch, grounded pending-impulse path, status 0x100 Up<=0.98 0.0002 drag branch, and normal air_resist terms",
             "PGetSpeed": "integrates AddVelocity into Speed, contains forward zero-cross protection, and applies the 0.87*jog_speed deadband to forward and local-Z speed",
+            "air_turn": "0x443C50 status&3==0 uses independently stored f32 constants: transformed local velocity * 0.9 + old local velocity * 0.1 on all three axes",
             "support_order": "exact calls at 0x0049AD34..0x0049AD54 execute movement, PGetAcceleration, PGetSpeed, PSetPosition, then PResetPosition",
             "surface_flag_rollover": "PSetPosition copies playerwk SurfaceFlags to SurfaceFlags_Old and clears current flags/scratch collision vectors before rebuilding contact state",
             "collision_work_setup": "both checked PSetPosition collision-helper paths consume the separate playerwk+0x64 work block and derive a scalar from player height * 0.5f before broad collision processing",
@@ -245,6 +255,7 @@ def main() -> int:
         print("  PGetBreak field/branch signatures: PASS")
         print("  PGetInertia field/branch signatures: PASS")
         print("  PGetSpeed AddVelocity integration/forward + local-Z deadband evidence: PASS")
+        print("  general-turn airborne 0.9 transformed + 0.1 old-local vector: PASS")
         print("  grounded Sonic movement -> acceleration -> speed -> position -> reset order: PASS")
         print("  PSetPosition surface-flag rollover + helper work/height setup: PASS")
         print("  PResetPosition local-speed write: PASS")

@@ -141,22 +141,21 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
                                  input->spindash_shortcut_released;
 
     if (player->action_state == SA1_ACTION_SPINDASH_CHARGE) {
-        charge_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);
-
-        /* The retail Sonic main loop increments SonicSpinTimer while the
-         * ball/attack status bit is set, before the charge transition handler.
-         * At 300 the ordinary charge times out instead of receiving another
-         * 0.4 increment. */
-        player->spindash_ticks++;
+        /* 0x49AA34 calls Sonic_Act1 before the timer increment at 0x49AB01
+         * and movement dispatch at 0x49AB29. Transitions inspect the timer
+         * left by the previous tick, then dispatch the newly selected action. */
         if (sa1_sadx_spindash_timeout_reached(player->spindash_ticks)) {
             player->spindash_ticks = 0;
             player->action_state = SA1_ACTION_GROUNDED;
             player->ball_form = false;
             dbg->timed_out_charge = 1;
+            return 0;
         } else if (held) {
             player->spindash_charge =
                 sa1_sadx_spindash_charge_held_tick(player->spindash_charge);
             dbg->charged_this_tick = 1;
+            player->spindash_ticks++;
+            charge_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);
         } else {
             SA1LocalSpeed release = world_to_local(player->yaw, player->vel);
             release.forward = player->spindash_charge;
@@ -164,8 +163,9 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
             player->action_state = SA1_ACTION_ROLL;
             player->ball_form = true;
             player->spindash_charge = 0.0f;
-            player->spindash_ticks = 0;
+            player->spindash_ticks = 1; /* ball-status increment after release */
             dbg->released_to_roll = 1;
+            roll_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);
         }
 
         dbg->charge_after = player->spindash_charge;
@@ -174,7 +174,10 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
     }
 
     if (player->action_state == SA1_ACTION_ROLL) {
-        if (requested) {
+        /* PC2004 0x4930D0, called by action-5 transitions at 0x497458:
+         * signed Speed.x < run_speed exits before this tick's movement.
+         * In particular, a negative high-magnitude roll cannot persist. */
+        if (local.forward < p->run_speed || requested) {
             player->action_state = SA1_ACTION_GROUNDED;
             player->ball_form = false;
             dbg->exited_roll = 1;
@@ -183,15 +186,8 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
         }
 
         roll_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);
+        player->spindash_ticks++;
         local = world_to_local(player->yaw, player->vel);
-
-        /* The public SADX parameter table calls this threshold RollEnd. Exact
-         * Steam transition ordering still needs a reference trace. */
-        if (fabsf(local.forward) < p->run_speed) {
-            player->action_state = SA1_ACTION_GROUNDED;
-            player->ball_form = false;
-            dbg->exited_roll = 1;
-        }
 
         dbg->charge_after = player->spindash_charge;
         dbg->forward_speed_after = local.forward;
@@ -201,12 +197,13 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
     if (requested && player->grounded) {
         player->spindash_charge =
             sa1_sadx_spindash_initial_charge(local.forward);
-        player->spindash_ticks = 0;
+        player->spindash_ticks = 1; /* entry resets, then main increments */
         player->action_state = SA1_ACTION_SPINDASH_CHARGE;
         player->ball_form = true;
         dbg->entered_charge = 1;
+        charge_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);
         dbg->charge_after = player->spindash_charge;
-        dbg->forward_speed_after = local.forward;
+        dbg->forward_speed_after = world_to_local(player->yaw, player->vel).forward;
         return 1;
     }
 

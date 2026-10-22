@@ -26,5 +26,14 @@ requested force, resistance, turn selection, braking/zero-cross flags, and the
 PC2004 local-Z jog-threshold stop flag. These are emitted after each fixed 60 Hz
 simulation tick and do not alter player state.
 
+The 2026-10-22 compatible v2 extension appends `spindash_charge`,
+`spindash_ticks`, `ball_form`, and `jump_ticks`. Native Emerald Coast traces
+use the same writer. Filtered input now comes directly from the actual input
+sample even when surface/ball ticks clear the flat-only debug record;
+airborne local speeds use the current yaw rather than a stale support frame.
+Force/turn debug columns still describe the flat kernel only; their zeros on
+surface/ball paths do not establish zero force. Animation ID/frame and
+controller action are captured together after simulation.
+
 Comparison results must be labelled `RETAIL TRACE VERIFIED`,
 `SOURCE-EQUATION VERIFIED`, `PORT-INTERNAL REGRESSION`, or `NOT VERIFIED`.

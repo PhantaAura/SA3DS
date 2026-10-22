@@ -9,7 +9,8 @@
 #define BAMS_22_5 0x1000u
 #define BAMS_45   0x2000u
 #define BAMS_135  0x6000u
-#define SADX_UPRIGHT_TURN_BLEND 0.99f
+#define PC2004_AIR_TURN_TRANSFORMED_BLEND 0.8999999761581421f
+#define PC2004_AIR_TURN_OLD_LOCAL_BLEND 0.10000000149011612f
 #define SADX_JUMP_HOLD_MULTIPLIER 0.800000011920929f
 
 typedef struct {
@@ -79,12 +80,14 @@ static SA1LocalSpeed apply_general_turn(SA1PlayerState *player,
     SA1Vec3 old_world = local_to_world(player->yaw, old_local);
     player->yaw = approach_angle_bams(player->yaw, target, step_bams);
     SA1LocalSpeed transformed = world_to_local(player->yaw, old_world);
-    transformed.forward = transformed.forward * SADX_UPRIGHT_TURN_BLEND +
-                          old_local.forward * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-    transformed.vertical = transformed.vertical * SADX_UPRIGHT_TURN_BLEND +
-                           old_local.vertical * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-    transformed.side = transformed.side * SADX_UPRIGHT_TURN_BLEND +
-                       old_local.side * (1.0f - SADX_UPRIGHT_TURN_BLEND);
+    /* 0x443CCE..0x443D23, status & 3 == 0. Both coefficients are
+     * independent f32 constants, not the grounded helper's 0.99 branch. */
+    transformed.forward = transformed.forward * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                          old_local.forward * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+    transformed.vertical = transformed.vertical * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                           old_local.vertical * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+    transformed.side = transformed.side * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                       old_local.side * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
     return transformed;
 }
 

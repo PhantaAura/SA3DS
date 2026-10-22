@@ -10,4 +10,4 @@
 - Build: `DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM sh tools/build_3ds.sh`.
 - Private owner-data test: set `CHRMODELS_PATH` to original `CHRMODELS_orig.dll`, set `SONIC_PVM_PATH`, then run `sh tests/run_pass11b_source_pose.sh`.
 - Hardware test: copy `dist/SA3DS_Pass11B_Audited.3dsx` and the locally generated `sonic.sa3c`/`sonic.sa3t` pair to the existing SD paths. Old 3DS hardware remains the rendering/performance oracle.
-- Next dependency milestone: owner-hardware screenshots/log for Pass11B-audited build, then Emerald Coast collision/visual streaming integration.
+- Current slice: bounded Emerald Coast opening area is playable; continue PC2004 controller, Spin Dash transition/movement ordering and controller-driven animation comparisons on its imported terrain. Owner-hardware validation and retail runtime traces remain outstanding.

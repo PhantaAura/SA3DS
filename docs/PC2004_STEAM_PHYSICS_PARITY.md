@@ -83,6 +83,15 @@ branch. Their semantic values are equal.
 
 ## Air acceleration
 
+2026-10-22 direct PC2004 instruction check: `PGetAccelerationAir` calls the
+general-turn helper `0x00443C50` at `0x0044BB22`. Its airborne status branch
+(`0x00443CCE..0x00443D23`, status low bits zero) uses explicit f32 constants
+at `0x007DFFF0` (0.8999999761581421) and `0x007DD568`
+(0.10000000149011612): transformed local velocity * 0.9 + old local velocity
+* 0.1 on all three axes. The port incorrectly used 0.99 here. Grounded
+turn-inertia rules are separate and unchanged. The existing Break/Inertia
+verifier now checks this call, status branch, three mixes and constants.
+
 Known entries:
 
 - Steam `PGetAccelerationAir` equivalent: `0x004DDEC0`

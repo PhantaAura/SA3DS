@@ -76,7 +76,7 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
     case SA3DS_SONIC_ANIM_AIRBORNE_BALL:
         return 14;
     case SA3DS_SONIC_ANIM_SPINDASH_CHARGE:
-        return 32;
+        return 14; /* 0x496EFB -> 0x495C30 writes request 14 */
     case SA3DS_SONIC_ANIM_ROLL:
         return 15;
     default:
@@ -174,14 +174,19 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     /* The second retail pointer targets stateful CharObj2.SpindashSpeed.
      * Ground locomotion refreshes it every selector call. The jump transition
      * that selects action 14 instead assigns 5.0 and leaves it persistent. */
-    if (requested_id >= 9 && requested_id <= 13) {
+    if (observation->intent == SA3DS_SONIC_ANIM_SPINDASH_CHARGE) {
+        /* Entry and held ticks write CharObj2.SpindashSpeed. Animation 14's
+         * property 10 consumes that same value, not jump's constant 5. */
+        runtime->speed_scalar = player->spindash_charge;
+        runtime->speed_scalar_valid = 1;
+    } else if (requested_id >= 9 && requested_id <= 13) {
         runtime->speed_scalar = local_forward_speed(player) +
             player->animation_accel_residual * 20.0f;
         runtime->speed_scalar_valid =
             player->animation_accel_residual_valid ? 1 : 0;
-    } else if ((!runtime->initialized ||
-                runtime->active_binding.runtime_id != requested_id) &&
-               requested_id == 14) {
+    } else if (requested_id == 14 &&
+               (!runtime->initialized ||
+                runtime->previous_action_state != SA1_ACTION_AIRBORNE)) {
         runtime->speed_scalar = 5.0f;
         runtime->speed_scalar_valid = 1;
     }
@@ -248,6 +253,7 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     }
 
     runtime->previous_grounded = player->grounded ? 1 : 0;
+    runtime->previous_action_state = player->action_state;
     out.binding = runtime->active_binding;
     out.ticks_in_selection = player->sim_frame >= runtime->selection_entry_frame
         ? player->sim_frame - runtime->selection_entry_frame : 0;

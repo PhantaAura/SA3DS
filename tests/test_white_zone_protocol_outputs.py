@@ -26,6 +26,14 @@ def jump_stats(name):
 
 tap=jump_stats("jump_tap"); hold=jump_stats("jump_hold"); assert hold[0]>tap[0]
 spin=rows("spindash"); assert 2 in ints(spin,"action_state") and 3 in ints(spin,"action_state")
+charging=[r for r in spin if int(r["action_state"])==2]
+assert int(charging[0]["spindash_ticks"])==1
+assert float(charging[0]["spindash_charge"])>=2
+assert all(int(r["ball_form"])==1 for r in charging)
+assert all(int(r["runtime_animation_id"])==14 for r in charging)
+rolling=[r for r in spin if int(r["action_state"])==3]
+assert int(rolling[0]["spindash_ticks"])==1
+assert float(rolling[0]["spindash_charge"])==0
 roll=rows("roll_exit"); assert fl(roll[-1],"horizontal_speed")<=fl(roll[0],"horizontal_speed")
 for n in ("uphill","downhill"):
     rs=rows(n); assert rs and all(r["selector_provisional"]=="1" for r in rs)

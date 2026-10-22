@@ -57,7 +57,7 @@ int main(void) {
     SA1Input hold = {0}; hold.action_held = true;
     for (int i = 0; i < 40; ++i) step_world(&normal, hold);
     assert(normal.action_state == SA1_ACTION_SPINDASH_CHARGE);
-    assert(normal.spindash_ticks == 40u);
+    assert(normal.spindash_ticks == 41u); /* entry is timer tick 1 */
     assert(normal.spindash_charge > SA1_SPINDASH_MAX_COMPARE_PC2004_EVIDENCE);
     assert(nearf(normal.spindash_charge, 10.3999987f, 0.00002f));
     float standing_release_charge = normal.spindash_charge;
@@ -68,9 +68,10 @@ int main(void) {
     step_world(&normal, release);
     assert(normal.action_state == SA1_ACTION_ROLL);
     assert(normal.ball_form);
-    assert(nearf(forward_speed(&normal), standing_release_charge, 0.0001f));
+    assert(nearf(forward_speed(&normal), standing_release_charge *
+        (1.0f + SA1_STEAM_SONIC_PARAMETER_EVIDENCE.air_resist), 0.0001f));
     assert(nearf(normal.spindash_charge, 0.0f, 0.000001f));
-    assert(normal.spindash_ticks == 0u);
+    assert(normal.spindash_ticks == 1u);
 
     /* The 2004 entry routine carries forward speed into charge above 2.0. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
@@ -99,8 +100,8 @@ int main(void) {
     step_world(&p, hold);
     assert(nearf(p.spindash_charge, 12.0f, 0.00001f));
 
-    /* SonicSpinTimer is incremented before the transition check. Frame 300
-       times out to ordinary grounded state without another held increment.
+    /* SonicSpinTimer is incremented after the transition check. Entry counts
+       as tick 1; a previous timer of 300 times out before held increment.
        The retail timeout path resets the timer but leaves SpindashSpeed stale;
        the neutral state mirrors that internal detail. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
@@ -108,7 +109,7 @@ int main(void) {
     for (unsigned i = 0; i < SA1_SPINDASH_TIMEOUT_FRAMES_PC2004_EVIDENCE - 1u; ++i)
         step_world(&p, hold);
     assert(p.action_state == SA1_ACTION_SPINDASH_CHARGE);
-    assert(p.spindash_ticks == SA1_SPINDASH_TIMEOUT_FRAMES_PC2004_EVIDENCE - 1u);
+    assert(p.spindash_ticks == SA1_SPINDASH_TIMEOUT_FRAMES_PC2004_EVIDENCE);
     float timeout_charge = p.spindash_charge;
     step_world(&p, hold);
     assert(p.action_state == SA1_ACTION_GROUNDED);
@@ -131,6 +132,23 @@ int main(void) {
         step_world(&p, none);
     assert(p.action_state == SA1_ACTION_GROUNDED);
     assert(!p.ball_form);
+
+    /* PC2004 0x4930D0 checks signed forward speed before rolling movement.
+       Backward rolls end even at large magnitude. Equality survives this
+       tick's resistance and exits only on the following transition check. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.action_state = SA1_ACTION_ROLL; p.ball_form = true; p.vel.z = -4.0f;
+    assert(sa1_steam_sonic_ball_ground_step(&p, &none, 0, &d) == 0);
+    assert(p.action_state == SA1_ACTION_GROUNDED && !p.ball_form);
+    assert(nearf(p.vel.z, -4.0f, 1e-6f));
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.action_state = SA1_ACTION_ROLL; p.ball_form = true;
+    p.vel.z = SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed;
+    assert(sa1_steam_sonic_ball_ground_step(&p, &none, 0, &d) == 1);
+    assert(p.action_state == SA1_ACTION_ROLL);
+    assert(p.vel.z < SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed);
+    assert(sa1_steam_sonic_ball_ground_step(&p, &none, 0, &d) == 0);
+    assert(p.action_state == SA1_ACTION_GROUNDED && !p.ball_form);
 
     /* Jumping from roll goes through the already-evidenced normal jump impulse
        instead of inventing a second ball-jump formula. */

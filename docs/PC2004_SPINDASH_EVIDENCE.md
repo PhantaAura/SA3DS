@@ -62,11 +62,34 @@ At the 300-frame timeout it leaves charge state and resets the timer. The
 observed timeout path does not clear `SpindashSpeed`; SA3DS preserves that stale
 internal value, although it is overwritten on the next Spin Dash entry.
 
-## Timer order
+## Transition, timer, and movement order (corrected 2026-10-22)
 
-The Sonic main loop around `0x0049AAF2` checks the ball-status bit and
-increments player-work `+0x7E` before the action dispatch. SA3DS therefore
-increments its neutral Spin Dash timer before checking the 300-frame timeout.
+The earlier note incorrectly placed the timer before the transition handler.
+Direct disassembly of the exact executable shows:
+
+1. `0x0049AA34` calls `Sonic_Act1` at `0x00496F50`.
+2. Action 4 transitions call `0x00495080`; action 5 calls the roll-end
+   helper `0x004930D0` at `0x00497458`.
+3. `0x0049AAF2..0x0049AB01` tests ball status and increments `+0x7E`.
+4. `0x0049AB29` dispatches movement using the resulting action.
+
+Entry therefore resets the timer and finishes its first movement tick at 1.
+Held transitions inspect the previous timer, then increment after the check.
+Release writes forward speed from charge and clears the timer/charge, then
+finishes at timer 1 with action-5 inertia already applied. The post-tick speed
+can differ from the charge by resistance and projected slope gravity. Timeout
+checks the previous timer >=300 and dispatches ordinary movement that tick.
+
+`0x004930D0` compares signed forward speed (`+0x38`) against run_speed
+(`+0xC4`) before movement. Speed below run_speed exits Roll; absolute magnitude
+is not tested. Equality remains rolling through this tick's inertia. The
+helper selects retail action 1 at nonpositive speed or action 2 otherwise and
+requests animation 29. The port's neutral GROUNDED action combines 1/2;
+dedicated Uncurl request propagation remains unresolved.
+
+Spin Dash entry calls `0x00495C30` at `0x00496EFB`. Both ordinary and alternate
+presentation branches request animation 14. Its exact metadata property 10
+uses the live SpindashSpeed scalar times 0.2, rather than fixed-rate row 32.
 
 ## Exact action movement call order
 

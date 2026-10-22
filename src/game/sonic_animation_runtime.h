@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
     int initialized;
     int previous_grounded;
+    SA1ActionState previous_action_state;
     SA3DSSonicAnimationBinding active_binding;
     uint64_t selection_entry_frame;
     uint64_t last_sim_frame;

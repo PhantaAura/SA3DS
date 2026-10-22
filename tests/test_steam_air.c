@@ -86,6 +86,21 @@ int main(void) {
     assert(d.angle_delta_bams == 0x4000u);
     assert(d.turn_step_bams == 0x0800u);
 
+    /* PC2004 0x443CCE..0x443D23: status & 3 == 0 blends the
+       old-local vector by explicit f32 0.1 and transformed vector by 0.9.
+       The airborne branch does not use the grounded 0.99 coefficient. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.grounded = false;
+    p.vel = (SA1Vec3){0.0f, 0.5f, 4.0f};
+    sa1_steam_sonic_air_step(&p, &right, 0.0f, &d);
+    float turn = 3.14159265358979323846f / 16.0f;
+    float f = 0.9f * (4.0f * cosf(turn)) + 0.1f * 4.0f;
+    float side = 0.9f * (-4.0f * sinf(turn));
+    f += sp->air_resist_air * 4.0f;
+    assert(nearf(p.yaw, turn, 0.000001f));
+    assert(nearf(p.vel.x, sinf(turn)*f + cosf(turn)*side, 0.000002f));
+    assert(nearf(p.vel.z, cosf(turn)*f - sinf(turn)*side, 0.000002f));
+
     /* High-speed >135-degree opposing input uses air_break. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     p.grounded = false;

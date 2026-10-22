@@ -1,5 +1,15 @@
 # SA3DS mod log
 
+## 2026-10-22 — controller and Spin Dash continuation
+
+- Exact PC2004 checks now cover airborne 0.9/0.1 turn blending, signed roll
+  termination at 0x4930D0, Sonic_Act1-before-timer ordering and charge request14.
+  Corrected the previous timer-order interpretation in the existing evidence note.
+- Integrated the corrections into flat/surface movement and the existing
+  animation selector; extended native traces with charge/timer state.
+- See CURRENT_CHECKPOINT.md for owner-terrain tests, exact native build and
+  Azahar trace measurements. Private executable/export/trace/assets stay external.
+
 ## 2026-10-20 — first authentic Emerald Coast render
 
 - Started from clean `f3f9b79` and generated the private act-0 visual package

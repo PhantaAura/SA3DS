@@ -81,6 +81,25 @@ static void run_landing_sequence(void) {
 }
 
 int main(void) {
+    /* PC2004 Spin Dash entry requests 14 (ACTION slot 14), whose property 10
+     * rate reads the live charge scalar. It must not play fixed-rate row 32. */
+    SA3DSSonicAnimationSync sync={0};
+    SA3DSSonicAnimationRuntime runtime={0};
+    SA1PlayerState p=player();
+    p.action_state=SA1_ACTION_SPINDASH_CHARGE;p.ball_form=true;p.spindash_charge=2.0f;
+    SA3DSSonicAnimationSelection s=tick(&sync,&runtime,&p,14,0);
+    assert(s.binding.action_slot==14&&s.playback_rate_is_source_backed);
+    p.sim_frame=1;p.spindash_charge=2.4f;
+    s=tick(&sync,&runtime,&p,14,1);
+    assert(s.sample_frame>0.47999f&&s.sample_frame<0.48001f);
+    p.sim_frame=2;p.spindash_charge=6.0f;
+    s=tick(&sync,&runtime,&p,14,2);
+    assert(s.sample_frame>1.67999f&&s.sample_frame<1.68001f);
+    /* Jump from the same animation ID restores the original jump scalar 5. */
+    p.sim_frame=3;p.action_state=SA1_ACTION_AIRBORNE;p.grounded=false;
+    s=tick(&sync,&runtime,&p,14,3);
+    assert(runtime.speed_scalar==5.0f);
+    assert(s.sample_frame>2.67999f&&s.sample_frame<2.68001f);
     for (int i=0; i<128; ++i) run_landing_sequence();
     puts("animation same-tick/landing/rewind/reset: PASS (128 deterministic replays)");
     return 0;

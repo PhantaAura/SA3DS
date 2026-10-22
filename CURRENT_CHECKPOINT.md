@@ -1,5 +1,70 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-22 PC2004 controller, Spin Dash ordering and charge animation
+
+Source parent `7541180`; only the pre-existing local `.3dsx` was dirty on
+entry and remains excluded from source commits. Collision/renderer code was
+not changed in this pass. `PHYSICS_1TO1=false`.
+
+- Exact executable SHA-256 `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`
+  verified. REA opened it with Ghidra 12.1.4; bounded headless decompilation
+  attempts did not return usable output and were cancelled. The separate GUI
+  bridge returned BACKEND_UNAVAILABLE at localhost:8080. No live decompilation
+  or retail execution is claimed. Findings use the saved private Ghidra export
+  plus direct disassembly and exact-byte/constant verifiers.
+- Air steering now uses `0x443C50`'s airborne 0.9 transformed + 0.1 old-local
+  velocity mix, replacing 0.99. `PGetAccelerationAir` calls it at `0x44BB22`.
+  Ground turn-inertia and local-Z stopping remain unchanged.
+- Corrected the earlier timer-order research: `0x49AA34` calls Sonic_Act1
+  before timer increment `0x49AB01` and movement dispatch `0x49AB29`.
+  Charge entry moves immediately; held transitions inspect the previous
+  timer; release runs roll inertia that tick; timeout dispatches normal
+  movement. Entry/release finish at timer 1. Charge constants stay unchanged.
+- Roll termination now tests signed forward speed < run_speed before motion
+  in both flat/surface paths (`0x4930D0`, caller `0x497458`). A negative
+  high-magnitude roll exits; equality survives until the next tick.
+- Charging selects original animation 14 / ACTION slot 14 via `0x495C30`,
+  replacing row 32. Property-10 playback reads live charge * 0.2. Jump restores
+  scalar 5 even when its requested animation ID remains 14. Existing pose,
+  transition and same-tick non-mutation behavior remains intact.
+- Native trace v2 compatibly appends charge/timer/ball/jump fields and records
+  actual filtered input on surface/ball ticks. Air local speeds use current
+  yaw. Flat-only force columns remain unavailable for surface/ball ticks.
+
+Validation: focused physics suite + 19 deterministic scenarios PASS; full
+`tests/run_sa3ds_current_host.sh` PASS; exact Spin Dash and Break/Inertia
+executable verifiers PASS. Owner terrain: 12 signed roll exits, 6 retained
+rolls, 36 stationary/moving charge-duration cases across six supported starts,
+12 air-turn ticks and landing PASS. The inherited 600-tick replay, 1,731 support
+probes, 344 descents, 504 corners, 694 slope transitions and 50 ledges PASS.
+Pass11B oracle: 223 nodes, 7 frames, 14,049 scalar comparisons, maximum error
+`4.91638197e-09`. Old 3DS code-only build PASS: 273,508 bytes, SHA-256
+`68a87067ec18e6fe7a4d324a341b715606248571823ab695bf7ad2a18a7cc6ce`.
+
+Azahar 2126.0 Old-3DS/Vulkan ran the exact build beyond 20,900 GPU frames at
+60 FPS / 100% in inspected views, with 29,382 KiB linear memory free. Native
+Emerald Coast trace: 4,033 completed rows; 43 half-input and 106 full-forward
+rows; 48 charge rows all request 14, 91 roll rows; one live jump/landing.
+Stationary charge entry 2/timer1 released to forward `10.3140535`/timer1/request15;
+moving entry charge `2.59170318` released to forward `6.93577051`/timer1/request15.
+Trace SHA-256 `df473cec44288148dc3eb1c6b87b8c60bc68951829921010bc469bde44a7cee8`
+at the owner's external SD `traces/emerald_coast_trace.csv`. These are port
+runtime observations, not retail comparisons. Both native charge groups pass
+source-equation checks over 46 held rows: maximum charge error `3.52e-08`,
+animation-frame error `9.58e-07`. White Zone on the same build rendered and
+accepted partial/full movement, jump and air-turn input at 60 FPS / 100%,
+30,346 KiB linear memory free. Temporary Select/analog-modifier mappings were
+restored to N/D; no replay/autoboot marker was introduced.
+
+Remaining limits: exploratory moving charge from z=400 lost support on held
+tick 4 near `(-0.07654,-18.48795,413.30515)`; z=375 can reach the same partial
+contact area on release. Interior controller fixtures use supported starts
+-50/200/250/300/325/350. Do not promote these tests to full collision parity.
+Retail Uncurl request 29 propagation, charge-jump eligibility, flat charge
+kernel details, complete rolling/contact status paths and retail runtime
+traces remain open. Next objective: source-backed charge-jump/Uncurl state
+propagation and equivalent retail/port controller traces. Physical 3DS untested.
+
 ## 2026-10-21 Gate A finite-edge and terrain-seam continuation
 
 Source parent `61ac162`. The pre-existing local compiled `.3dsx` modification
