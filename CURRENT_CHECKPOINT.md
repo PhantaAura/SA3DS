@@ -1,5 +1,42 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-21 Gate A swept-floor crossing checkpoint
+
+Source parent `0b9153c`. The pre-existing local compiled `.3dsx` modification
+was preserved and excluded from source staging. Checkpoint B remains PARTIAL:
+this pass fixes one demonstrated terrain-contact failure but does not certify
+retail corner/edge arbitration or a 1:1 controller.
+
+- Actual owner collision data reproduced endpoint tunneling on the first tick:
+  344/344 descending probes crossed resident support triangles without landing.
+  All 1,731 static near-vertex/centroid probes passed, isolating the root cause
+  to between-tick floor crossing rather than scale or package geometry.
+- Added a bounded grid sweep for descending airborne actors. It selects the
+  earliest finite imported triangle crossing at the inherited one-unit support
+  plane, carries source normal/flags into the existing surface frame, removes
+  inward normal velocity and performs the normal AIRBORNE-to-GROUNDED landing.
+  Ascending, below-plane and outside-polygon cases never attach; a zero-time
+  hit cannot retain support after leaving a ledge.
+- Added synthetic and owner-data deterministic tests for high-displacement
+  flat/inclined landing, finite ledge departure, ascent rejection, missing-floor
+  rejection and all existing wall/slope/jump behavior. Post-fix owner scan:
+  344/344 crossings landed, 1,731/1,731 static support probes remained valid;
+  the inherited 600-tick owner controller replay passed.
+- Exact-PC2004 collision-work signatures still pass: the 0x84 csts layout,
+  height/2=5 radius, polygon candidate call chain and arbitration witnesses.
+  The sweep itself is explicitly a PORT-INTERNAL integration correction, not a
+  reconstructed retail response formula. Movement constants, Spin Dash,
+  animation, renderer, CPU uploader and `PHYSICS_1TO1=false` are unchanged.
+- Full owner-data-free host suite PASS. Code-only Old 3DS build PASS: 267,636
+  bytes, SHA-256 `9162f909700927eaa1332585569f6310d93652757c00153d86429a97296f43c0`.
+  Azahar 2126.0 Old-3DS/Vulkan exercised the exact build beyond 2,000 GPU
+  frames: combined rendering, acceleration, turn, jump/land and shoreline
+  movement remained live at 59-60 FPS with 29,382 KiB linear memory free.
+
+Remaining Gate A work is deterministic interior/exterior corner coverage,
+adjacent-triangle slope-transition stress and actual ledge-route capture. Gate
+B controller comparison and Gate C Spin Dash changes remain gated on that work.
+
 ## 2026-10-21 Checkpoint B source-backed anchor/water/contact continuation
 
 Source parent `cfbd7ac`; only the prior local compiled binary was dirty at

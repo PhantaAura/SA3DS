@@ -190,8 +190,52 @@ int sa3ds_ec_collision_spawn(SA3DSECCollision*s,float x,float z,float hint_y){
     s->world.reset_position=(SA1Vec3){x,floor.ground_y+1.0f,z};return 1;
 }
 
+/* Port contact safety, NOT reconstructed retail polygon arbitration. The
+ * inherited controller only probes its endpoint; a descending tick can cross
+ * a floor completely. Stop at the earliest finite imported support crossing.
+ * No fabricated floor, expanded snap range, or movement tuning is involved. */
+static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
+    if(p->grounded||p->pos.y>=previous.y)return;
+    if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*sizeof(*s->visited));s->query_serial=1;}
+    float best=2.0f;int32_t hit_id=-1;SA1Vec3 motion=sa1_vec3_sub(p->pos,previous);
+    /* Contact point is at most SUPPORT away from the center's swept bounds. */
+    float r=SA3DS_EC_CONTROLLER_SUPPORT;
+    int x0=cell(fminf(previous.x,p->pos.x)-r),x1=cell(fmaxf(previous.x,p->pos.x)+r);
+    int z0=cell(fminf(previous.z,p->pos.z)-r),z1=cell(fmaxf(previous.z,p->pos.z)+r);
+    s->queries++;
+    for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
+        unsigned c=z*16+x;
+        for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+            uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;
+            s->visited[ti]=s->query_serial;s->triangle_tests++;
+            SA3DSECTriangle*t=&s->triangles[ti];if(t->normal.y<=0.45f)continue;
+            float a=sa1_vec3_dot(sa1_vec3_sub(previous,t->a),t->normal)-r;
+            float b=sa1_vec3_dot(sa1_vec3_sub(p->pos,t->a),t->normal)-r;
+            /* A tick starting on the support plane may be leaving its ledge;
+             * do not reattach at t=0 to a polygon behind the player. */
+            if(a<=0||b>0||a<=b)continue;
+            float fraction=a/(a-b);if(fraction>=best)continue;
+            SA1Vec3 center=sa1_vec3_add(previous,sa1_vec3_scale(motion,fraction));
+            if(!inside(t,sa1_vec3_sub(center,sa1_vec3_scale(t->normal,r))))continue;
+            best=fraction;hit_id=(int32_t)ti;
+        }
+    }
+    if(hit_id<0)return;
+    SA3DSECTriangle*t=&s->triangles[hit_id];
+    p->pos=sa1_vec3_add(previous,sa1_vec3_scale(motion,best));
+    float inward=sa1_vec3_dot(p->vel,t->normal);
+    if(inward<0)p->vel=sa1_vec3_sub(p->vel,sa1_vec3_scale(t->normal,inward));
+    SA1SurfaceFrame frame=sa1_surface_frame_make(t->normal,(SA1Vec3){sinf(p->yaw),0,cosf(p->yaw)});
+    p->ground_normal=frame.up;p->surface_forward=frame.forward;p->surface_right=frame.right;
+    p->ground_slope_radians=sa1_surface_slope_radians(frame.up);
+    p->surface_id=hit_id;p->surface_flags=t->flags;p->support_distance=r;
+    p->grounded=true;p->jump_ticks=0;
+    if(p->action_state==SA1_ACTION_AIRBORNE){p->action_state=SA1_ACTION_GROUNDED;p->ball_form=false;}
+}
+
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
     if(!s||!p||!finite3(previous)||!finite3(p->pos))return;
+    resolve_floor_crossing(s,previous,p);
     /* Normal PSetPosition uses task + rotated (0,height/2,0), radius height/2.
      * Bridge from the inherited 1-unit support center without changing its
      * movement convention. Planar sliding is still a partial contact adapter;

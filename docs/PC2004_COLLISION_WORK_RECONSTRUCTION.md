@@ -120,6 +120,33 @@ exact executable witnesses and parameter values are checked by
 `tools/verify_pc2004_stage_scale.py`. Neither changes mesh/stage scale, movement
 constants, or White Zone's synthetic support convention.
 
+## Imported-terrain crossing regression (2026-10-21)
+
+Gate A probing at source parent `0b9153c` exposed endpoint-only landing:
+344/344 descending probes on actual resident floor-triangle centroids missed
+support on their first 60 Hz tick (input velocity Y=-16). For example source
+instance 40 / triangle 2 moved from Y=22 to Y=6.08 across its Y=9 floor.
+All 1,731 near-vertex/centroid static support probes already passed; this was
+not evidence for changing scale, gravity, or contact distances.
+
+The existing stage adapter now searches its bounded grid along the tick's
+segment and stops an airborne descending actor at the earliest finite floor
+crossing of its inherited one-unit support plane. It preserves the triangle's
+normal/flags, updates the existing contact frame/action, and removes inward
+normal velocity. Zero-time contact is excluded so departing a ledge does not
+reattach to the polygon behind the player. Ascending motion, missing floors,
+and actors already below the plane do not attach.
+
+This is **PORT-INTERNAL REGRESSION** evidence, not a PC2004 solver formula.
+Remaining tick displacement is conservatively stopped at impact; retail
+remaining-time response, joint floor/wall arbitration, corner/edge probes and
+the one-unit support bridge remain unresolved. No source movement constants,
+Spin Dash equations, animation rules, renderer or uploader were changed.
+
+`tests/run_emerald_coast_collision.sh` now includes these geometric probes
+alongside the inherited controller/wall/slope tests. Pass the private owner
+collision package as its single argument to repeat the 685-triangle scan.
+
 ## Freeze decision
 
 Core movement math and retail collision architecture are frozen for the
