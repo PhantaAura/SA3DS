@@ -6,8 +6,10 @@ from tools.build_pc2004_emerald_coast_collision import HEADER,ACT,MODEL,INSTANCE
 # Two floor triangles, two slope triangles and two wall triangles; source-neutral.
 vertices=[(-32,0,0),(-32,0,64),(32,0,0),(32,0,64),
           (-32,0,64),(-32,6.4,128),(32,0,64),(32,6.4,128),
-          (32,-4,0),(32,20,0),(32,-4,64),(32,20,64)]
-indices=[0,1,2,2,1,3,4,5,6,6,5,7,8,9,10,10,9,11]
+          (32,-4,0),(32,20,0),(32,-4,64),(32,20,64),
+          (-32,-4,64),(-32,20,64)]
+indices=[0,1,2,2,1,3,4,5,6,6,5,7,8,9,10,10,9,11,
+         10,11,12,12,11,13]
 ao=64;mo=align16(ao+3*ACT.size);io=align16(mo+MODEL.size)
 vo=align16(io+INSTANCE.size);xo=align16(vo+len(vertices)*12);b=bytearray(xo+len(indices)*2)
 HEADER.pack_into(b,0,b'SA3DECOL',1,0,3,1,1,len(vertices),len(indices),ao,mo,io,vo,xo)

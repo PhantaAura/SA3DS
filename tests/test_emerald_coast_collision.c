@@ -4,6 +4,7 @@
 #include "../src/sa1/physics/steam_flat.h"
 #include "../src/sa1/physics/physics_constants.h"
 #include "../src/sa1/physics/surface_frame.h"
+#include "../src/sa1/physics/steam_spindash_evidence.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -52,6 +53,32 @@ int main(int argc,char**argv){
             if(t%30==0)printf("replay %u p=%.3f,%.3f,%.3f grounded=%d walls=%u\n",t,p.pos.x,p.pos.y,p.pos.z,p.grounded,s.wall_hits);
         }
         assert(airborne&&landed);puts("Owner collision 600-tick controller replay: PASS (port integration, not retail parity)");
+
+        /* Exercise the exact-evidence charge/release state machine on imported
+         * support, not only on the synthetic White Zone plane. */
+        sa1_player_reset(&p,&s.world);
+        SA1Input charge={0};charge.action_pressed=true;charge.action_held=true;
+        SA1Vec3 old=p.pos;s.reference_y=p.pos.y;
+        sa1_physics_step_steam_sonic_flat(&p,&charge,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+        sa3ds_ec_collision_resolve_walls(&s,old,&p);
+        assert(p.grounded&&p.action_state==SA1_ACTION_SPINDASH_CHARGE);
+        charge.action_pressed=false;float expected=p.spindash_charge;
+        for(unsigned t=0;t<21;t++){
+            expected=sa1_sadx_spindash_charge_held_tick(expected);
+            old=p.pos;s.reference_y=p.pos.y;
+            sa1_physics_step_steam_sonic_flat(&p,&charge,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+            sa3ds_ec_collision_resolve_walls(&s,old,&p);
+            assert(p.grounded&&p.action_state==SA1_ACTION_SPINDASH_CHARGE);
+        }
+        assert(fabsf(p.spindash_charge-expected)<0.00002f);
+        SA1Input release={0};release.action_released=true;
+        old=p.pos;s.reference_y=p.pos.y;
+        sa1_physics_step_steam_sonic_flat(&p,&release,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+        sa3ds_ec_collision_resolve_walls(&s,old,&p);
+        assert(p.grounded&&p.action_state==SA1_ACTION_ROLL&&p.ball_form);
+        assert(fabsf(sa1_surface_tangent_speed(&p)-expected)<0.001f);
+        printf("Owner imported-ground Spin Dash: PASS (charge=%.6f release-speed=%.6f)\n",
+            expected,sa1_surface_tangent_speed(&p));
     }else{
         assert(sa3ds_ec_collision_spawn(&s,0,20,1));assert(fabsf(s.world.reset_position.y-1)<0.0001f);
         SA1PlayerState p;sa1_player_reset(&p,&s.world);SA1Input in={0};

@@ -1,5 +1,64 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-21 Gate A finite-edge and terrain-seam continuation
+
+Source parent `61ac162`. The pre-existing local compiled `.3dsx` modification
+was preserved and excluded from source staging. This pass completes the
+deterministic Gate A edge suite for the bounded opening-area adapter; it does
+not claim the original PC2004 polygon solver or a 1:1 controller.
+
+- A five-unit planar wall face alone leaves Sonic's source-backed sphere body
+  able to pass through the finite shared edge of angled walls. On the exact
+  owner package, 40 of 42 angled shared-wall pairs reproduced this defect in
+  the initial diagnostic. The adapter now marks exposed/sharp wall edges at
+  load, suppresses smooth internal mesh diagonals, and performs a bounded
+  swept-sphere/finite-edge test after face resolution. The permanent owner
+  suite covers both sides and bisector/shallow/steep approaches: 504/504
+  corner trials remain outside the five-unit edge radius.
+- Upward triangles with continuous normals now mark their shared support edge.
+  Contact probes search every grid cell intersecting their finite range and
+  accept the one-unit edge support only at those marked seams. True boundary
+  edges are never marked. Owner results: 694/694 in-bounds adjacent-slope
+  transitions remained grounded and 50/50 boundary departures detached.
+  Out-of-domain source edges beyond the adapter's explicit +/-512 query bounds
+  are excluded from this runtime-domain test rather than treated as resets.
+- Grounded wall resolution now revalidates actual imported support. It repairs
+  the inherited leaning-wall ordering case when a floor exists, but changes to
+  AIRBORNE when neither finite contact nor the pre-step-height surface query
+  finds support. This prevents stale grounded state over empty space.
+- Existing owner checks remain clean: 1,731/1,731 static support probes,
+  344/344 high-displacement floor crossings and the 600-tick controller replay.
+  An imported-ground Spin Dash reached exact-evidence charge `10.399999` and
+  transferred `10.399999` tangent speed on release. Exact executable verifiers
+  pass for the PC2004 five-unit collision radius/candidate chain and Spin Dash
+  entry, increment, timer, release, and action-4/action-5 movement ordering.
+- The new corner/edge/support mechanics are explicitly PORT-INTERNAL bounded
+  corrections. Movement constants, input filtering, animation, renderer, CPU
+  texture upload and `PHYSICS_1TO1=false` remain unchanged. Exact retail edge
+  arbitration, roll termination and full collision-flag semantics remain open.
+
+Validation for this exact source:
+
+- Focused synthetic edge suite PASS: 16 support probes, 4 swept descents,
+  12 wall-corner approaches, 2 slope transitions and 5 true ledge departures.
+  Exact owner-package suite PASS: 1,731 support probes, 344 swept descents,
+  504 angled-corner trials, 694 in-bounds slope transitions, 50 runtime-domain
+  boundary ledges, the 600-tick controller replay, and imported-ground Spin
+  Dash charge/release. ASan+UBSan reported no address or undefined-behavior
+  failure (macOS leak detection is unavailable).
+- Full owner-data-free host suite PASS. Code-only Old 3DS build PASS: 272,916
+  bytes, SHA-256 `a1ed28df13beff0afc954c350ed710a82d309145ebf121d9e1e1b3c60fa90d2d`.
+- Azahar 2126.0 Old-3DS/Vulkan ran that exact build beyond 3,400 GPU frames.
+  Emerald Coast combined rendering, live acceleration, turn/traversal,
+  jump/land, wall blocking and action-button Spin Dash input remained live at
+  60 FPS / 100% speed in the inspected views, with 29,382 KiB linear memory
+  free. The wall-contact counter advanced while Sonic stopped at visible stage
+  geometry. White Zone then rendered and accepted movement/jump input at
+  60 FPS / 100%, with 30,346 KiB linear memory free.
+- This validates the bounded opening-area port adapter, not the original
+  polygon arbitration, full rolling/contact termination, global controller
+  parity, or physical Old 3DS behavior. Physical hardware remains untested.
+
 ## 2026-10-21 Gate A swept-floor crossing checkpoint
 
 Source parent `0b9153c`. The pre-existing local compiled `.3dsx` modification

@@ -17,6 +17,12 @@ typedef struct {
     SA1Vec3 a,b,c,normal;
     float min_x,max_x,min_z,max_z;
     uint32_t source_instance,source_triangle,flags;
+    /* Bits 0..2 identify boundary/sharp wall edges. Coplanar shared mesh
+     * diagonals are excluded so finite-edge contact cannot snag on them. */
+    uint8_t wall_edge_mask;
+    /* Shared upward edges with continuous normals. Boundary ledges are never
+     * marked, preserving genuine support departure. */
+    uint8_t support_edge_mask;
 } SA3DSECTriangle;
 typedef struct {
     SA1PhysicsWorld world;

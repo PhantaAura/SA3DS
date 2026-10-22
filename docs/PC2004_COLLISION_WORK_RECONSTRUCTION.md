@@ -147,6 +147,40 @@ Spin Dash equations, animation rules, renderer or uploader were changed.
 alongside the inherited controller/wall/slope tests. Pass the private owner
 collision package as its single argument to repeat the 685-triangle scan.
 
+## Finite edge and shared-support calibration (2026-10-21)
+
+The face-only five-unit wall sweep left a reproducible hole at the finite edge
+shared by non-coplanar wall triangles. An initial exact-owner diagnostic found
+40 failures among 42 angled shared-wall pairs. This is an adapter defect: the
+recovered `height/2=5` radius cannot be represented by infinite face planes
+alone when their finite projections miss at a corner.
+
+At package load the adapter now classifies triangle topology. Smooth shared
+wall diagonals are suppressed; exposed or sharp wall edges receive bounded
+finite-capsule sweeps. Upward shared edges are separately marked only when both
+normals are continuous (`dot > 0.9`). The contact query visits every spatial
+cell intersecting its finite range, bridges only those marked support seams,
+and never turns a boundary ledge into support. Grounded wall resolution then
+revalidates imported support, detaching instead of retaining stale grounded
+state when no finite floor exists.
+
+Owner-package deterministic results within the adapter's explicit +/-512
+opening-area domain:
+
+- 504 angled-corner approaches: zero penetrations inside the five-unit edge
+  body;
+- 694 adjacent-slope crossings: zero false airborne transitions;
+- 50 boundary-ledges: zero retained-support states;
+- 1,731 static support probes and 344 swept descents: zero regressions;
+- 600-tick movement replay: pass.
+
+These finite edge capsules, topology thresholds and one-unit shared-support
+bridge are **PORT-INTERNAL REGRESSION** corrections. They are not asserted to
+be the missing retail `normal2`/`pshbk` candidate arbitration. The exact
+PC2004 collision-work verifier still proves the 0x84 work layout, five-unit
+Sonic radius, candidate call chain and accepted-surface path; it does not prove
+this portable edge response algorithm.
+
 ## Freeze decision
 
 Core movement math and retail collision architecture are frozen for the
