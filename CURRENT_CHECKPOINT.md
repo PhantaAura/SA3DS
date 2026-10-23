@@ -1,5 +1,85 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-23 — performance isolation, moving landing and slope Roll
+
+Parent `0b7b714`; inherited local binary excluded. Renderer, CPU uploaders,
+collision, scheduler, charge timing and verified movement constants preserved.
+
+Performance comparison used detached temporary builds and a private app/profile/
+SD copy at `/private/tmp/sa3ds-perf-lab.LjfKRj`; original session preserved.
+The copied Azahar2126.0 executable matches installed SHA-256
+`595d3aa891755d061f3b4f7d9f3da715ef3764ec22a4b20a463cf663c1d65751`.
+Matched Old3DS/Vulkan, CPU100%, frame-limit100%, resolution1x, vsync/async
+presentation/disk shader cache enabled, copied/warmed cache, identical owner
+assets and600-tick Emerald Coast replay/spawn/camera. Loading excluded from
+steady-state samples. No video recording. Manual checks are not tick-equivalent
+comparisons. Full timed seven-scenario matrix remains incomplete.
+
+| Build | Exact artifact SHA-256 | Inspected performance |
+| --- | --- | --- |
+|1f5ca2c rebuilt|68a87067ec18e6fe7a4d324a341b715606248571823ab695bf7ad2a18a7cc6ce|Initially60FPS/100%; repeat7–34FPS/11–57%|
+|4105360 rebuilt|a654dd7595e82895b1d474ea60e9f67fa8f4d778e0069bd62175be0b8130143e|31–59FPS/52–98%|
+|0b7b714 archived|23f177cd98b4cd02f0681a6d0b1b9174c17e6e180ffe1f6d03572822d4cacddc|Slow too; compilation/test overlap makes this sample confounded|
+
+The rebuilt old artifact matches its historical known-good hash. Old-build
+A/repeat traces match all600 ticks exactly; intermediate/current traces also
+match exactly, zero position/velocity error. A normal test-process stop initially
+left an old instance alive; ambiguous overlap was excluded, then only one
+isolated process was retained. Private samples/logs/traces remain outside Git.
+During slowdown macOS reported load183.97,117 running processes,6757.5MiB swap
+used and high WindowServer activity. This establishes shared environmental
+variability, NOT a proven single cause or a unique new-controller regression.
+No gameplay rollback or renderer workaround was justified.
+
+Low Power Mode remained1 for AC and battery. Owner approved an AC-only test;
+on resumption the Mac was on battery97%, and `pmset -c` required root and made
+NO change. Neither setting changed; no power restoration is outstanding.
+Controlled AC-disabled testing remains pending AC connection/authorized change.
+Do not attribute recovery or slowdown to Low Power Mode without that comparison.
+
+Source-backed changes (saved export/direct disassembly; no new live REA claim):
+
+- `0x494FF0` and `0x49796E..0x4979A2`: nonzero signed forward landing uses
+  ground selector9–13, not unconditional19. Idle/movement may interrupt19;
+  removed provisional property4 lock, preserving Uncurl29/1/2 and state2 blend.
+  Input-only stationary bypass, impact classification and full idle counters
+  remain partial; stationary19 remains explicitly provisional.
+- `0x496F00` entry status0x500 retains0x100 through ordinary release. Existing
+  grounded Charge/Roll now passes this bit to the recovered surface kernel.
+  PGetBreak is unchanged; qualifying slope inertia uses0.0002 drag, not0.008,
+  with exact double0.98 boundary. Four real instance74 triangles83/85/94/95
+  at forward5 retain about0.039 speed on the tick versus the old specialization.
+
+Validation: focused host/19 scenarios, cumulative current-host suite, exact
+Spin Dash/Break/Inertia verifiers PASS. Animation128 timeline replays,
+11 moving-landing cases and2 interruption/timing cases PASS. Owner600-tick
+replay,4 slope equations,36 launches,36 charge durations,12 exits,6 retained
+rolls,12 air-turn ticks/landing plus1731 supports/344 descents/504 corners/
+694 slope transitions/50 ledges PASS. Raw-source ACTIONs1/22/122/123 pose oracle
+PASS:56196 scalars, maximum error4.99206543e-9. These are source-equation and
+port-internal checks; genuine retail runtime traces remain unavailable.
+
+Final Old3DS build PASS:274276 bytes, SHA-256
+`a10a8c504b975f1e57cbe92fb3af5aadd1c9f2a1ef89bc670711bcad92cff10a`.
+Oct23 Azahar final-build combined Emerald Coast beyond5336 GPU frames,
+29382KiB linear free,45 stage/42 Sonic draws; native HUD15ms includes sync.
+Replay and live run/jump/charge/release exercised. Final replay first differs
+from0b7b714 at frame286: moving landing request19->9, forward0.0296011604;
+all600 positions/velocities identical. Trace SHA-256
+`5c9ffb81ec580083fea3c00cd2de77567b61a20db5a394a8c48ef9b870d69951`.
+Inspected final EC59–60FPS/99–100% with42–43FPS/70–76% live/capture dips;
+White Zone movement/jump/charge responsive at56–60FPS,30346KiB free.
+Thus60FPS remains reachable without rollback, but stable performance recovery
+is NOT certified; guest timing does not prove host FPS. Power state differs
+from Oct22, so these are not a controlled before/after power experiment.
+
+Remaining: AC performance gate, stationary impact/idle state, provisional
+camera/contact and slope-air semantics, genuine retail traces. A targeted audit
+also identifies an unfixed inverted-Up normal/forward-force axis interpretation;
+see existing Spin Dash evidence note. `PHYSICS_1TO1=false`; hardware untested.
+The disposable benchmark process was closed after saving evidence; the original
+emulator session was resumed. Original SD data/control mappings were not changed.
+
 ## 2026-10-22 continuation — charge braking and Uncurl request arbitration
 
 Parent `4105360`; recovered the interrupted controller pass without replacing

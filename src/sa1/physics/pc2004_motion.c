@@ -5,7 +5,8 @@
 
 #define PC2004_INERTIA_NEGATIVE_UP_FORWARD_SCALE (-8.0f)
 #define PC2004_INERTIA_STATUS_0X100_DRAG (0.00019999999494757503f)
-#define PC2004_INERTIA_STATUS_0X100_UP_LIMIT (0.98f)
+/* Retail uses an f64 memory comparison, not a rounded f32 threshold. */
+#define PC2004_INERTIA_STATUS_0X100_UP_LIMIT (0.98)
 
 static float clamp_break_axis(float speed,
                               float accel,

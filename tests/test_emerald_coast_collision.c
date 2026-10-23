@@ -3,6 +3,7 @@
 #include "../src/sa1/physics/movement.h"
 #include "../src/sa1/physics/steam_flat.h"
 #include "../src/sa1/physics/steam_air.h"
+#include "../src/sa1/physics/steam_surface.h"
 #include "../src/sa1/physics/physics_constants.h"
 #include "../src/sa1/physics/surface_frame.h"
 #include "../src/sa1/physics/steam_spindash_evidence.h"
@@ -24,6 +25,45 @@ static void controller_tick(SA3DSECCollision*s,SA1PlayerState*p,SA1Input in,FILE
     sa1_physics_step_steam_sonic_flat(p,&in,0,&s->world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
     sa3ds_ec_collision_resolve_walls(s,old,p);
     if(trace)assert(!sa1_trace_write_frame(trace,p,&in));
+}
+static void owner_roll_slope_resistance_cases(SA3DSECCollision*s){
+    const SA1SteamPlayerParameters*params=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    unsigned cases=0;
+    /* Locate real imported support; no synthetic slope/normal substitutes.
+     * The independent equation compares the same pre-contact frame, speed
+     * and gravity against the former missing-ball-status specialization. */
+    for(uint32_t ti=0;ti<s->triangle_count&&cases<4;ti++){
+        const SA3DSECTriangle*t=&s->triangles[ti];
+        if(t->normal.y<=0.5f||(double)t->normal.y>0.98)continue;
+        SA1Vec3 center=sa1_vec3_scale(sa1_vec3_add(sa1_vec3_add(t->a,t->b),t->c),1.0f/3.0f);
+        if(!sa3ds_ec_collision_spawn(s,center.x,center.z,center.y))continue;
+        SA1PlayerState p;sa1_player_reset(&p,&s->world);
+        controller_tick(s,&p,(SA1Input){0},NULL);
+        if(!p.grounded||p.ground_normal.y<=0.5f||(double)p.ground_normal.y>0.98)continue;
+        p.action_state=SA1_ACTION_ROLL;p.ball_form=true;
+        p.vel=sa1_vec3_scale(p.surface_forward,5.0f);
+        float gravity_forward=-params->weight*p.surface_forward.y;
+        float source_forward=5.0f+gravity_forward-5.0f*0.00019999999494757503f;
+        float former_forward=5.0f+gravity_forward+5.0f*params->air_resist;
+        s->reference_y=p.pos.y;
+        SA1SteamSurfaceDebug debug;
+        sa1_physics_step_steam_sonic_surface(&p,&(SA1Input){0},0,
+            &s->world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&debug);
+        assert(debug.used_pc2004_pgetinertia);
+        assert(fabsf(debug.forward_speed_before-5.0f)<0.00001f);
+        assert(fabsf(debug.forward_speed_after-source_forward)<0.00001f);
+        assert(fabsf(debug.forward_speed_after-former_forward-0.039f)<0.00001f);
+        /* Only count starts that remain on real imported support; equation
+         * checking itself uses the exact pre-collision movement result. */
+        if(!p.grounded)continue;
+        assert(p.action_state==SA1_ACTION_ROLL&&p.ball_form);
+        printf("Owner slope roll equation: source=%u triangle=%u Up=%.6f forward=%.6f old=%.6f delta=%.6f\n",
+            t->source_instance,t->source_triangle,debug.pc2004_local_normal_force/-params->weight,
+            debug.forward_speed_after,former_forward,debug.forward_speed_after-former_forward);
+        cases++;
+    }
+    assert(cases==4);
+    printf("Owner slope roll ball-status resistance: PASS (%u imported-support equations; source-backed, not retail traces)\n",cases);
 }
 static void owner_controller_cases(SA3DSECCollision*s){
     const char*path=getenv("SA3DS_EC_CONTROLLER_TRACE");
@@ -190,7 +230,8 @@ int main(int argc,char**argv){
          * release first writes charge, then action 5 applies projected gravity
          * and resistance. Collision may project onto the next support plane. */
         const SA1SteamPlayerParameters*params=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
-        float release_forward=expected-params->weight*p.surface_forward.y+params->air_resist*expected;
+        float drag=(double)p.ground_normal.y<=0.98 ? -0.00019999999494757503f : params->air_resist;
+        float release_forward=expected-params->weight*p.surface_forward.y+drag*expected;
         float side_before=sa1_vec3_dot(p.vel,p.surface_right);
         float release_side=side_before-params->weight*p.surface_right.y+params->air_resist_z*side_before;
         float expected_speed=sqrtf(release_forward*release_forward+release_side*release_side);
@@ -202,6 +243,7 @@ int main(int argc,char**argv){
         assert(p.spindash_ticks==1);
         printf("Owner imported-ground Spin Dash: PASS (charge=%.6f release-speed=%.6f)\n",
             expected,sa1_surface_tangent_speed(&p));
+        owner_roll_slope_resistance_cases(&s);
         owner_controller_cases(&s);
     }else{
         assert(sa3ds_ec_collision_spawn(&s,0,20,1));assert(fabsf(s.world.reset_position.y-1)<0.0001f);

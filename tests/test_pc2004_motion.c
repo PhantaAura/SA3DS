@@ -66,6 +66,32 @@ int main(void) {
     assert(nearf(add.forward, 0.999f, 1e-6f));
     assert(dbg.used_inertia_status_0x100_drag);
 
+    /* Up is stored f32 but compared against retail's f64 0.98 constant.
+     * Rounded 0.98f lies ABOVE that constant and uses ordinary resistance. */
+    ctx.up_y = 0.98f;
+    add = sa1_pc2004_pgetinertia_add_velocity(speed, force, &ctx, p, &dbg);
+    assert(!dbg.used_inertia_status_0x100_drag);
+    assert(nearf(add.forward, 0.96f, 1e-6f));
+    ctx.up_y = nextafterf(0.98f, -INFINITY);
+    add = sa1_pc2004_pgetinertia_add_velocity(speed, force, &ctx, p, &dbg);
+    assert(dbg.used_inertia_status_0x100_drag);
+    assert(nearf(add.forward, 0.999f, 1e-6f));
+    ctx.status_0x100 = 0;
+    add = sa1_pc2004_pgetinertia_add_velocity(speed, force, &ctx, p, &dbg);
+    assert(!dbg.used_inertia_status_0x100_drag);
+    assert(nearf(add.forward, 0.96f, 1e-6f));
+
+    /* PGetBreak never tests status 0x100; charging arithmetic is unchanged. */
+    ctx.up_y=0.5f;
+    SA1PC2004LocalVector without_ball=sa1_pc2004_pgetbreak_add_velocity(
+        speed,force,&ctx,p,NULL);
+    ctx.status_0x100=1;
+    SA1PC2004LocalVector with_ball=sa1_pc2004_pgetbreak_add_velocity(
+        speed,force,&ctx,p,NULL);
+    assert(without_ball.forward==with_ball.forward);
+    assert(without_ball.normal==with_ball.normal);
+    assert(without_ball.side==with_ball.side);
+
     int clamped = 0;
     assert(nearf(sa1_pc2004_integrate_axis_no_cross(0.25f, -0.5f, &clamped),
                  0.0f, 1e-7f));

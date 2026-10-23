@@ -45,6 +45,10 @@ EXPECTED_FLOATS = {
 # Exact byte signatures selected to prove semantics without embedding any
 # substantial code/data payload.
 SIGNATURES = {
+    "stationary_selector_signed_forward_zero": (0x00495007, "d94638d81d2ccb7d00dfe0f6c4447a64"),
+    "landing_stationary_selector_call": (0x0049796E, "e87dd6ffff"),
+    "moving_landing_ground_selector": (0x0049799E, "c6450002e829e3ffff"),
+    "idle_replaces_nonidle_request": (0x004916D7, "66ff460e66898e24010000"),
     "idle_preserves_uncurl_request": (0x00491663, "6683be240100001d"),
     "ground_selector_preserves_uncurl": (0x00495CDD, "668b8624010000663d1d00"),
     "playanimation_changed_request": (0x0044A825, "668b06663d02007414663bc5740f663d0e007409668916"),
@@ -59,6 +63,7 @@ SIGNATURES = {
     "entry_action4": (0x00496EF8, "c60704"),
     "charge_animation_request_14": (0x00495C70, "66c786240100000e00"),
     "entry_ball_attack_status": (0x00496F00, "804f0505"),
+    "release_retains_and_tests_ball_status": (0x004951FF, "668b570483c41881e2000100006685d2750d"),
     "entry_compare_forward_to_2": (0x00496F04, "d94638d81d94cb7d00"),
     "entry_reset_timer": (0x00496F0D, "66c7467e0000"),
     "entry_copy_forward_charge": (0x00496F1A, "8b56388916"),

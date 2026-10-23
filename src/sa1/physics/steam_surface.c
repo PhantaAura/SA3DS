@@ -385,7 +385,11 @@ static void surface_ball_motion(SA1PlayerState *player,
     };
     SA1PC2004MotionContext context = {
         1, /* grounded status low bits */
-        0, /* status 0x100 is not set by the ordinary lab path */
+        /* 0x496F00 sets status 0x500 on entry; ordinary release retains
+         * its 0x100 ball bit. Model only these existing grounded actions,
+         * not persistent status semantics for unsupported retail actions. */
+        player->action_state == SA1_ACTION_SPINDASH_CHARGE ||
+            player->action_state == SA1_ACTION_ROLL,
         0, /* status 0x4000 bypass */
         frame->up.y,
         1.0f /* PInitialize default motionwk2+0x3C */

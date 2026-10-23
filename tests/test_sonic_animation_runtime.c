@@ -143,6 +143,74 @@ int main(void) {
         assert(case_s.binding.runtime_id==ground_cases[i].id);
     }
 
+    /* 0x494FF0 tests signed local Speed.x against EXACT zero before the
+     * landing branch calls 0x495CD0. These are executable-derived selector
+     * fixtures, not captured retail terrain traces. */
+    for (size_t i=0;i<sizeof(ground_cases)/sizeof(ground_cases[0])+2;i++) {
+        float speed = i < sizeof(ground_cases)/sizeof(ground_cases[0])
+            ? ground_cases[i].speed : (i == sizeof(ground_cases)/sizeof(ground_cases[0])
+                ? -1.0f : 0.000001f);
+        uint16_t expected_id = i < sizeof(ground_cases)/sizeof(ground_cases[0])
+            ? ground_cases[i].id : 9;
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_rt={0};
+        SA1PlayerState case_player=base_player();
+        case_player.grounded=false;case_player.action_state=SA1_ACTION_AIRBORNE;
+        SA3DSSonicAnimationObservation case_o=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection case_s=
+            select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==18);
+        case_player.sim_frame=1;case_player.grounded=true;
+        case_player.action_state=SA1_ACTION_GROUNDED;case_player.vel.z=speed;
+        case_o=observe(&case_sync,&case_player);
+        case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==expected_id);
+        assert(case_rt.requested_runtime_id==expected_id);
+        assert(case_s.sample_frame==0.0f);
+        assert(case_s.transition_active);
+        assert(case_s.transition_weight==
+            (expected_id==13 ? 0.5f : 0.25f));
+        SA3DSSonicAnimationRuntime before=case_rt;
+        (void)select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(memcmp(&before,&case_rt,sizeof(before))==0);
+    }
+
+    /* A provisional stationary Land request is not a property-4 lock.
+     * Ordinary upright idle requests 0 (0x4916D7), movement requests its
+     * ground clip; both retain the existing destination blend/frame rules. */
+    for (int move=0;move<2;move++) {
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_rt={0};
+        SA1PlayerState case_player=base_player();
+        case_player.grounded=false;case_player.action_state=SA1_ACTION_AIRBORNE;
+        SA3DSSonicAnimationObservation case_o=observe(&case_sync,&case_player);
+        (void)select_no_mutation(&case_rt,&case_player,&case_o);
+        case_player.sim_frame=1;case_player.grounded=true;
+        case_player.action_state=SA1_ACTION_GROUNDED;
+        case_o=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection case_s=
+            select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==19&&!case_s.transition_active);
+        case_player.sim_frame=2;case_player.vel.z=move ? 0.2f : 0;
+        case_o=observe(&case_sync,&case_player);
+        case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(case_s.binding.runtime_id==(move ? 9 : 0));
+        assert(case_s.transition_active&&case_s.sample_frame==0);
+        assert(case_s.transition_from_action_slot==11);
+        int blend_ticks=move ? 3 : 15;
+        for(int tick=0;tick<blend_ticks;tick++) {
+            case_player.sim_frame++;
+            case_o=observe(&case_sync,&case_player);
+            case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        }
+        assert(!case_s.transition_active&&case_s.sample_frame==0);
+        case_player.sim_frame++;
+        case_o=observe(&case_sync,&case_player);
+        case_s=select_no_mutation(&case_rt,&case_player,&case_o);
+        assert(fabsf(case_s.sample_frame-(move ? 0.68f : 0.5f))<1e-6f);
+    }
+    puts("PC2004 moving landing / idle and movement interruption: PASS");
+
     /* Same-root Run2 -> Walk3 uses the destination's 0.25 transition row. */
     {
         SA3DSSonicAnimationSync case_sync={0};
@@ -215,7 +283,7 @@ int main(void) {
     assert(s.playback_rate_is_source_backed);
 
     p.sim_frame = 6; p.grounded = true; p.action_state = SA1_ACTION_GROUNDED;
-    p.ball_form = false; p.vel.y = 0.0f;
+    p.ball_form = false; p.vel.y = 0.0f; p.vel.z = 0.0f;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
     assert(s.ticks_in_selection == 0);

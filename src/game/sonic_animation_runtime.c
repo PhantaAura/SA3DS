@@ -54,12 +54,20 @@ int sa3ds_sonic_animation_binding(uint16_t runtime_id,
 static uint16_t choose_runtime_id(const SA1PlayerState *player,
                                   const SA3DSSonicAnimationObservation *o,
                                   int previous_grounded) {
-    if (player->grounded && !previous_grounded)
+    int landed = player->grounded && !previous_grounded;
+    int moving_landing = landed && local_forward_speed(player) != 0.0f;
+    /* 0x494FF0 bypasses the stationary landing branch for any nonzero
+     * signed Speed.x; 0x49798E then calls the ordinary ground selector.
+     * Stationary impact classification still lacks the retail pre-contact
+     * EntityData2 velocity, so retain the explicitly provisional fallback. */
+    if (landed && !moving_landing)
         return 19;
 
     switch (o->intent) {
     case SA3DS_SONIC_ANIM_GROUNDED_IDLE:
-        return 0;
+        if (!moving_landing) return 0;
+        /* Retail tests exact zero, not the observer epsilon. */
+        /* fall through */
     case SA3DS_SONIC_ANIM_GROUNDED_BELOW_JOG:
     case SA3DS_SONIC_ANIM_GROUNDED_JOG_TO_RUN:
     case SA3DS_SONIC_ANIM_GROUNDED_RUN_PLUS: {
@@ -185,12 +193,6 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                    (runtime->requested_runtime_id == 1 ||
                     runtime->requested_runtime_id == 2)) {
             /* Idle selector retains these source idle-chain requests. */
-            requested_id = runtime->requested_runtime_id;
-        } else if (runtime->active_binding.property == 4 &&
-                   runtime->active_binding.runtime_id != 1 &&
-                   runtime->requested_runtime_id == runtime->active_binding.runtime_id) {
-            /* Preserve the existing provisional landing/ground intent bridge,
-             * but actual jump/charge/roll requests may interrupt below. */
             requested_id = runtime->requested_runtime_id;
         }
     }

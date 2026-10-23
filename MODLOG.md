@@ -1,5 +1,19 @@
 # SA3DS mod log
 
+## 2026-10-23 — performance isolation and controller continuation
+
+- Rebuilt known-good/intermediate commits in detached temporary worktrees;
+  repeated old build also slowed. Matched private-profile traces and host
+  pressure observations are recorded in CURRENT_CHECKPOINT.md. Stable
+  performance recovery is not claimed; power settings remain unchanged.
+- Moving landings use original ground selector; idle/movement no longer holds
+  provisional landing19. Existing blend/Uncurl behavior preserved.
+- Original grounded ball status now reaches surface inertia; double0.98
+  threshold and four imported slope fixtures guard source-backed resistance.
+- Host, owner geometry, executable and raw pose gates passed; native final
+  build exercised in Emerald Coast and White Zone. Retail traces/hardware
+  remain unverified. Private assets, captures and binaries stay outside Git.
+
 ## 2026-10-22 — flat charge braking and Uncurl continuation
 
 - Reused recovered PGetBreak in flat charging instead of approximate friction;

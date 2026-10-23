@@ -1,4 +1,4 @@
-/* Presentation timeline regression: same-tick sampling, property-4 landing,
+/* Presentation timeline regression: same-tick sampling, landing interruption,
  * rewind, and reset. */
 #include <assert.h>
 #include <stdio.h>
@@ -55,15 +55,19 @@ static void run_landing_sequence(void) {
     p.action_state = SA1_ACTION_GROUNDED; p.ball_form = false;
     SA3DSSonicAnimationSelection landing = tick(&sync, &runtime, &p, 19, 0);
     assert(landing.binding.action_slot == 11);
-    /* Action 11 has 16 frames. PlayAnimation advances property 4 until
-     * frame >= frames-1 and then installs NextAnim 0 without blending. */
-    for (uint64_t frame=4;frame<=17;frame++) {
+    /* The ordinary upright idle selector replaces request 19 with 0 on
+     * the next tick. Property 4 is not a lock; the original Stand row
+     * blends by 0.0625 per tick and only then resumes frame advancement. */
+    for (uint64_t frame=4;frame<=19;frame++) {
         p.sim_frame=frame;
-        SA3DSSonicAnimationSelection held=tick(&sync,&runtime,&p,19,frame-3);
-        assert(held.sample_frame==(float)(frame-3));
+        SA3DSSonicAnimationSelection idle=tick(&sync,&runtime,&p,0,frame-4);
+        assert(idle.sample_frame==0.0f);
+        assert(idle.transition_active==(frame<19));
+        if(frame<19) assert(idle.transition_weight==(float)(frame-3)*0.0625f);
     }
-    p.sim_frame=18;
-    tick(&sync,&runtime,&p,0,0);
+    p.sim_frame=20;
+    SA3DSSonicAnimationSelection idle=tick(&sync,&runtime,&p,0,16);
+    assert(idle.sample_frame==0.5f);
     /* Rewind to an earlier physics frame: old transition and elapsed ticks
      * must not survive into the new trace timeline. */
     p.sim_frame = 1; p.grounded = false;

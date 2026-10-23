@@ -159,6 +159,67 @@ These are static source-equation/data comparisons, not retail movement captures.
 Full idle behavior, landing classification, dynamic collision impulses, slope-air
 orientation, rolling contact/status paths and retail trace parity remain partial.
 
+## Landing and slope-roll continuation after 0b7b714
+
+### Landing request arbitration
+
+`0x494FF0` returns zero when normalized analog input is present or signed local
+`Speed.x != 0`. The landing path calls it at `0x49796E`; its zero-return branch
+sets action 2 at `0x49799E` and calls the ordinary ground selector at `0x4979A2`.
+SA3DS now bypasses unconditional Land 19 for nonzero signed forward speed,
+including negative and epsilon-small values, and selects the existing 9–13 rows.
+Ordinary upright idle `0x491660` retains requests 0–6 and 29; other requests are
+replaced with 0 at `0x4916D7..0x4916E1`. The provisional property-4 landing lock
+has been removed. Existing state-2 blend arbitration and explicit Uncurl/idle
+chain retention are unchanged.
+
+This is a bounded selector correction, not complete landing classification.
+The input-only branch when forward speed is exactly zero is not represented
+in the current animation observation. Stationary impact selection also needs
+the original pre-contact EntityData2 vertical velocity and prior retail action:
+the original soft/hard comparison is `impact_y > -5` versus `<= -5`, not the
+port's post-contact zero velocity. Stationary Land 19 remains a labeled fallback;
+full idle timer/tilt branches and soft landing requests 1/2 remain incomplete.
+
+### Grounded ball-status slope resistance
+
+Spin Dash entry `0x496F00` ORs EntityData1 status with 0x500, including ball bit
+0x100; ordinary release retains and tests that bit at `0x4951FF..0x49520F`.
+`PGetInertia 0x44377A..0x4437B5` uses forward resistance `-Speed.x * 0.0002f`
+when status 0x100 is set and `Up <= 0.98`; otherwise it uses
+`air_resist * Speed.x`. Existing grounded Charge/Roll action context now supplies
+that bit rather than hardcoding it clear. `PGetBreak` does not read this bit,
+so the verified charging resistance is unchanged.
+
+The threshold is an exact executable f64 constant 0.98. Stored f32 `0.98f`
+is slightly above it and must take ordinary resistance; its preceding f32 value
+takes reduced resistance. Flat Up 1 behavior is unchanged.
+
+Independent one-tick equations on four actual imported instance 74 support
+triangles, each starting at forward speed 5 with identical projected gravity:
+
+| Source triangle | Up | Corrected forward | Former forward | Difference |
+| --- | ---: | ---: | ---: | ---: |
+|83|0.978238|4.999800|4.960800|0.039001|
+|85|0.978679|5.000210|4.961210|0.039000|
+|94|0.976774|5.016129|4.977128|0.039001|
+|95|0.976670|5.016169|4.977168|0.039001|
+
+These compare the pre-contact movement result, before support reprojection;
+all four remain grounded after the tick. They are SOURCE-EQUATION VERIFIED,
+not captured retail runtime traces. Regressions cover the f64 boundary,
+charging invariance, 11 moving-landing cases, 2 interruption/frame-timing cases,
+128 timeline replays, and the inherited imported-terrain controller/contact
+suite. Exact executable signature verifiers pass for both selector branches
+and ball-status/drag evidence.
+
+One older kernel interpretation is now known to be wrong but is intentionally
+not changed in this bounded pass: the negative-Up/high-speed `-8` branch at
+`0x4436F7..0x443701` modifies local **normal** force (stack+0xC), not forward
+force (stack+8). The existing inverted-Up helper/test and earlier evidence note
+still say forward. Correcting and validating inverted contact is a separate
+follow-up; it is not covered by the four upright opening-area slope fixtures.
+
 ## Reproducible verifier
 
 Run:
