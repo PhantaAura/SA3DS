@@ -67,15 +67,18 @@ static void owner_controller_cases(SA3DSECCollision*s){
             p.vel=sa1_vec3_scale(p.surface_forward,speed);
             p.action_state=SA1_ACTION_ROLL;p.ball_form=true;
             SA3DSSonicAnimationSync sync={0};
+            SA3DSSonicAnimationRuntime rt={0};
             SA3DSSonicAnimationObservation o=sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
             assert(o.intent==SA3DS_SONIC_ANIM_ROLL);
+            assert(sa3ds_sonic_animation_select(&rt,&p,&o).binding.runtime_id==15);
             controller_tick(s,&p,(SA1Input){0},trace);
             assert(p.grounded);
             SA1PlayerState before=p;
             o=sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
+            SA3DSSonicAnimationSelection selection=sa3ds_sonic_animation_select(&rt,&p,&o);
             assert(!memcmp(&before,&p,sizeof(p)));
-            if(trial<2){assert(p.action_state==SA1_ACTION_GROUNDED&&!p.ball_form);assert(o.intent!=SA3DS_SONIC_ANIM_ROLL);exits++;}
-            else{assert(p.action_state==SA1_ACTION_ROLL&&p.ball_form);assert(o.intent==SA3DS_SONIC_ANIM_ROLL);rolls++;}
+            if(trial<2){assert(p.action_state==SA1_ACTION_GROUNDED&&!p.ball_form);assert(o.intent!=SA3DS_SONIC_ANIM_ROLL);assert(selection.binding.runtime_id==29);exits++;}
+            else{assert(p.action_state==SA1_ACTION_ROLL&&p.ball_form);assert(o.intent==SA3DS_SONIC_ANIM_ROLL);assert(selection.binding.runtime_id==15);rolls++;}
         }
         const unsigned durations[]={1,10,21};
         for(unsigned moving=0;moving<2;moving++)for(unsigned d=0;d<3;d++){

@@ -1,5 +1,17 @@
 # SA3DS mod log
 
+## 2026-10-22 — flat charge braking and Uncurl continuation
+
+- Reused recovered PGetBreak in flat charging instead of approximate friction;
+  independent first-tick/80-tick and signed/lateral regressions added.
+- Propagated Roll exit29 and original29->1->2 metadata; corrected property4
+  changed-request arbitration without changing physics or blend formulas.
+- Extended existing raw-owner pose oracle to ACTIONs1/22/122/123. All56,196
+  scalar comparisons passed. Native Emerald Coast trace verifies15-tick Uncurl
+  continuation, movement interruption and jump interruption. See checkpoint
+  for exact build/test results and this session's reduced emulator performance.
+- No owner assets, executable/export, traces or native binaries are committed.
+
 ## 2026-10-22 — controller and Spin Dash continuation
 
 - Exact PC2004 checks now cover airborne 0.9/0.1 turn blending, signed roll

@@ -85,7 +85,7 @@ checks the previous timer >=300 and dispatches ordinary movement that tick.
 is not tested. Equality remains rolling through this tick's inertia. The
 helper selects retail action 1 at nonpositive speed or action 2 otherwise and
 requests animation 29. The port's neutral GROUNDED action combines 1/2;
-dedicated Uncurl request propagation remains unresolved.
+The port now propagates Uncurl request 29 through the existing animation runtime.
 
 Spin Dash entry calls `0x00495C30` at `0x00496EFB`. Both ordinary and alternate
 presentation branches request animation 14. Its exact metadata property 10
@@ -129,6 +129,35 @@ Action 5 at `0x0049AEBB` / shared continuation `0x0049BBE2` calls:
 This is useful evidence for the next roll/surface parity pass. 0.0.8.8.6 does
 not claim that every collision side effect inside `PGetBreak`, `PGetInertia`,
 `PSetPosition`, and `PResetPosition` has already been reimplemented.
+
+## Controller/animation continuation after 4105360
+
+- Flat charging now uses the existing exact-PC2004 PGetBreak arithmetic, as
+  surface charging already did: rotation, AddVelocity, zero-cross integration.
+  With ordinary upright contact, zero extra collision force and initial forward
+  speed 5, the recovered equation gives `5 + (-0.008*5 - 0.18 + 0.008) = 4.788`.
+  The former constant-friction approximation gave 4.86 on that first tick.
+  An 80-tick independent equation fixture guards the integrated helper; the
+  previous source fails it. Charge accumulation/release constants are unchanged.
+- Both roll-end paths request animation 29. Ground selector `0x495CD0` and idle
+  selector `0x491660` preserve that request. Exact initializer metadata chains
+  29/ACTION22 (16 frames, rate1) -> 1/ACTION122 (20 frames, rate0.25) ->
+  2/ACTION123 (16 frames, looping rate0.25). All three share original root72.
+- `PlayAnimation 0x44A825..0x44A83C` restarts selection for a changed request
+  except during state2/0/14. Property4 is not an uninterruptible action lock.
+  Jump/fall/charge can therefore interrupt Uncurl or the provisional landing
+  clip outside an active blend. Ordinary ground selection retains Uncurl;
+  moving selection can replace animation1 after NextAnim installs it.
+- `0x446910` writes NextAnim to both request and active index. `0x43F230`
+  initializes frame state. The runtime now retains that request rather than
+  silently falling back because IDs1/2 were unbound.
+- Existing owner pose oracle now accepts `--action` and the inherited runner
+  checks ACTIONs1/22/122/123 against raw CHRMODELS structures, without relying
+  on the importer to construct expected poses. The generated assets stay external.
+
+These are static source-equation/data comparisons, not retail movement captures.
+Full idle behavior, landing classification, dynamic collision impulses, slope-air
+orientation, rolling contact/status paths and retail trace parity remain partial.
 
 ## Reproducible verifier
 

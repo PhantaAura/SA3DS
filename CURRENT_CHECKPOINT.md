@@ -1,5 +1,73 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-22 continuation — charge braking and Uncurl request arbitration
+
+Parent `4105360`; recovered the interrupted controller pass without replacing
+existing systems. Only the inherited local `.3dsx` was dirty on entry and is
+excluded from the source commit. Renderer, CPU uploaders, stage collision,
+movement constants, charge accumulation/release and scheduler are unchanged.
+
+- Flat charge movement now reuses the recovered PGetBreak/AddVelocity kernel
+  already used on imported terrain, after rotation and before zero-cross
+  integration. Initial forward speed 5 gives 4.788, not the old approximation's
+  4.86. Signed/zero/lateral cases and an independent 80-tick equation fixture
+  guard the actual integrated path; previous source fails the new regression.
+- Both Roll exits propagate original Uncurl29. Exact metadata supplies the
+  29/ACTION22 -> 1/ACTION122 -> 2/ACTION123 chain. Changed jump/charge/fall
+  requests interrupt property4 outside an active blend, as PlayAnimation does;
+  moving selection can replace action1. Idle/landing selection remains partial.
+- Exact executable signatures verify selector preservation, changed-request
+  arbitration and NextAnim writing request/index. Evidence is the exact private
+  PC2004 binary, direct disassembly and saved Ghidra export. REA opened the
+  executable with Ghidra12.1.4, but its bounded live decompilation/xref probe
+  remained pending and was cancelled: no live-analysis success is claimed.
+
+Final focused host/19-scenario suite PASS; cumulative
+`bash tests/run_sa3ds_current_host.sh` PASS. Owner collision regression PASS:
+600-tick replay, 36 launches, 12 signed Roll exits now checking request29,
+6 retained rolls, 36 charge-duration cases, 12 air-turn ticks plus landing;
+inherited 1,731 supports, 344 descents, 504 corners, 694 slope transitions and
+50 ledges. Exact Spin Dash and Break/Inertia verifiers PASS. Tick-stability
+128 replays PASS; owner binding preflight 19 bindings/57 poses PASS.
+
+Extended the existing raw-source Pass11B oracle to ACTIONs1/22/122/123:
+223 nodes x 7 frames x 9 scalars each, 56,196 total comparisons PASS.
+Maximum absolute errors respectively 4.91638197e-9, 4.98352049e-9,
+4.91638197e-9 and 4.99206543e-9. This verifies sampled poses, not retail
+movement trajectories or complete animation timing.
+
+Final Old-3DS native build PASS: 274,488 bytes, SHA-256
+`23f177cd98b4cd02f0681a6d0b1b9174c17e6e180ffe1f6d03572822d4cacddc`.
+Azahar2126.0 Old-3DS/Vulkan loaded that build with external owner assets.
+Emerald Coast combined rendering passed 4,967 GPU frames; linear free
+29,382 KiB, native HUD15ms. Partial/full input, charge/release, roll exit,
+jump interruption and landing exercised. Final native trace has 3,687 rows:
+71 charge-animation14, 8 Roll15, 21 Uncurl29, 1 action1, 15 landing19.
+At ticks3187/3202/3203 it records 29 -> 1 -> Walk9; the first transition
+is exactly15 ticks, moving selection then interrupts action1. Tick224
+interrupts Uncurl with jump/action14. Trace SHA-256
+`2a5aa3b47e78648944f97743e5978f04cc19ea9404e7f282abb25b7646c29d5d`
+at the external SD `traces/emerald_coast_trace.csv`.
+
+This session's emulator performance is degraded: inspected final Emerald Coast
+views 19–24 FPS at roughly32–40% speed, including23 FPS/39% in the final
+4,967-frame view. The previous executable was also slow before this pass;
+cause is not established and no60FPS result is claimed. Native60Hz scheduling
+is unchanged; performance certification remains OPEN.
+
+White Zone on the same final build rendered all16 Sonic textures and accepted
+partial/full movement, jump/air steering and charge/release. Its final short
+trace contains192 rows:23 charge,5 roll and2 airborne; max charge10.3999987,
+max horizontal speed10.3167982. Linear free30,346 KiB; inspected active views
+22–26 FPS (roughly36–43% speed), also degraded. Native boot log confirms
+repeated Sonic draws and frame-end returns. Temporary Select/Circle modifier
+bindings restored to N/D and verified in the emulator configuration.
+
+Remaining: complete idle/landing selectors, dynamic collision impulses,
+rolling/contact and slope-air semantics, known partial-terrain gap near z413,
+provisional follow camera and genuine retail trace comparisons.
+`PHYSICS_1TO1=false`; physical Old3DS untested. No full controller-parity claim.
+
 ## 2026-10-22 continuation — jump selection before movement
 
 Parent `1f5ca2c`; inherited local `.3dsx` remains excluded. Fixed normal jump

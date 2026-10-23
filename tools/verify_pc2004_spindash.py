@@ -45,6 +45,10 @@ EXPECTED_FLOATS = {
 # Exact byte signatures selected to prove semantics without embedding any
 # substantial code/data payload.
 SIGNATURES = {
+    "idle_preserves_uncurl_request": (0x00491663, "6683be240100001d"),
+    "ground_selector_preserves_uncurl": (0x00495CDD, "668b8624010000663d1d00"),
+    "playanimation_changed_request": (0x0044A825, "668b06663d02007414663bc5740f663d0e007409668916"),
+    "nextanim_writes_request_and_index": (0x00446919, "660fb65402066689510466895106"),
     "jump_action8_and_local_y_impulse": (0x00495F0F, "c607088b86b400000089463c"),
     "jump_reset_hold_timer": (0x00495F63, "66c746080000"),
     "roll_end_signed_forward_vs_run": (0x004930D0, "d94138d899c4000000dfe0f6c4057a3a"),

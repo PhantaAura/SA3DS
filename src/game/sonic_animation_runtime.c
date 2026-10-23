@@ -7,6 +7,8 @@ static const SA3DSSonicAnimationBinding kBindings[] = {
     /* Exact scalar fields recovered from PC2004 InitSonicAnimData (0x7CEC90).
      * Property meanings are verified against PlayAnimation (0x44A800). */
     { 0,  1, 73,  3,  0, 0.0625f, 0.5f, 72, 32, "Stand"},
+    { 1,122, 73,  4,  2, 0.25f,   0.25f,72, 20, "Stand transition"},
+    { 2,123, 73,  3,  2, 0.25f,   0.25f,72, 16, "Stand continuation"},
     { 9,  3, 73, 10,  9, 0.25f,   3.4f, 72, 32, "Walk1"},
     {10,  4, 73, 10, 10, 0.25f,   1.4f, 72, 32, "Walk2"},
     {11,  5, 73, 10, 11, 0.25f,   0.8f, 72, 32, "Walk3"},
@@ -129,6 +131,7 @@ static void select_binding(SA3DSSonicAnimationRuntime *runtime,
         (void)sa3ds_sonic_animation_binding(0, &runtime->active_binding);
     runtime->selection_entry_frame = sim_frame;
     runtime->accumulated_sample_frame = 0.0f;
+    runtime->requested_runtime_id = runtime_id;
 }
 
 static float current_frame_step(SA3DSSonicAnimationRuntime *runtime,
@@ -170,6 +173,28 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                                                   : player->grounded;
     uint16_t requested_id = choose_runtime_id(player, observation,
                                                previous_grounded);
+    if (runtime->initialized && player->grounded &&
+        player->action_state == SA1_ACTION_GROUNDED && previous_grounded) {
+        if (runtime->previous_action_state == SA1_ACTION_ROLL) {
+            /* 0x4930D0 and action-5 button exit both request Uncurl. */
+            requested_id = 29;
+        } else if (runtime->requested_runtime_id == 29) {
+            /* 0x495CD0 / 0x491660 leave request 29 untouched. */
+            requested_id = 29;
+        } else if (observation->intent == SA3DS_SONIC_ANIM_GROUNDED_IDLE &&
+                   (runtime->requested_runtime_id == 1 ||
+                    runtime->requested_runtime_id == 2)) {
+            /* Idle selector retains these source idle-chain requests. */
+            requested_id = runtime->requested_runtime_id;
+        } else if (runtime->active_binding.property == 4 &&
+                   runtime->active_binding.runtime_id != 1 &&
+                   runtime->requested_runtime_id == runtime->active_binding.runtime_id) {
+            /* Preserve the existing provisional landing/ground intent bridge,
+             * but actual jump/charge/roll requests may interrupt below. */
+            requested_id = runtime->requested_runtime_id;
+        }
+    }
+    runtime->requested_runtime_id = requested_id;
 
     /* The second retail pointer targets stateful CharObj2.SpindashSpeed.
      * Ground locomotion refreshes it every selector call. The jump transition
@@ -208,22 +233,8 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                 continue;
             }
 
-            /* Property 4 owns Index until its source action reaches
-             * frames-1, then installs NextAnim immediately with no blend. */
-            if (runtime->active_binding.property == 4) {
-                int backed = 0;
-                runtime->accumulated_sample_frame +=
-                    current_frame_step(runtime, player, &backed);
-                if (runtime->active_binding.source_frame_count > 0 &&
-                    runtime->accumulated_sample_frame >=
-                        (float)(runtime->active_binding.source_frame_count - 1)) {
-                    select_binding(runtime,
-                        runtime->active_binding.next_runtime_id,
-                        player->sim_frame);
-                }
-                continue;
-            }
-
+            /* PlayAnimation resets to state 1 on a changed request unless
+             * state 2 is blending (handled above). Property 4 is not a lock. */
             if (requested_id != runtime->active_binding.runtime_id) {
                 SA3DSSonicAnimationBinding destination;
                 if (!sa3ds_sonic_animation_binding(requested_id, &destination))
@@ -242,6 +253,23 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                     runtime->transition_active = 1;
                 } else {
                     select_binding(runtime, requested_id, player->sim_frame);
+                }
+                continue;
+            }
+
+            /* With an unchanged request, property 4 reaches frames-1 then
+             * NextAnim writes BOTH request and index (0x446910), no blend. */
+            if (runtime->active_binding.property == 4) {
+                int backed = 0;
+                runtime->accumulated_sample_frame +=
+                    current_frame_step(runtime, player, &backed);
+                if (runtime->active_binding.source_frame_count > 0 &&
+                    runtime->accumulated_sample_frame >=
+                        (float)(runtime->active_binding.source_frame_count - 1)) {
+                    select_binding(runtime,
+                        runtime->active_binding.next_runtime_id,
+                        player->sim_frame);
+                    requested_id = runtime->requested_runtime_id;
                 }
                 continue;
             }

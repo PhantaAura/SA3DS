@@ -1,4 +1,5 @@
 #include "steam_ball.h"
+#include "pc2004_motion.h"
 
 #include <math.h>
 #include <string.h>
@@ -55,13 +56,6 @@ static int clamp_signed_bams(int value, int limit) {
     return value;
 }
 
-static float approach_zero(float value, float amount) {
-    if (amount < 0.0f) amount = -amount;
-    if (value > 0.0f) return value <= amount ? 0.0f : value - amount;
-    if (value < 0.0f) return -value <= amount ? 0.0f : value + amount;
-    return 0.0f;
-}
-
 static void direct_ball_turn(SA1PlayerState *player, SA1LocalSpeed *local,
                              const SA1Input *input, float camera_yaw,
                              int turn_limit_bams, unsigned *step_out) {
@@ -90,18 +84,20 @@ static void charge_ground_motion(SA1PlayerState *player,
     const SA1SteamPlayerParameters *p = &SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SA1LocalSpeed local = world_to_local(player->yaw, player->vel);
 
-    /* Flat specialization of charge-state movement. The 2004 action-4 call
-     * order (PGetRotation -> PGetBreak -> PGetSpeed -> PSetPosition ->
-     * PResetPosition) is now verified; this portable helper still represents
-     * the flat mathematical specialization rather than a byte-for-byte port
-     * of every PGetBreak collision side effect. */
-    local.forward += local.forward * p->air_resist;
-    local.side += local.side * p->air_resist_z;
-    local.forward = approach_zero(local.forward, -p->grd_frict);
-    local.side = approach_zero(local.side, -p->grd_frict_z);
-    local.vertical = 0.0f;
+    /* Same verified PGetRotation -> PGetBreak -> PGetSpeed specialization
+     * already used by surface_ball_motion, with upright local gravity and
+     * zero dynamic collision force. Do not substitute a constant friction
+     * subtraction for PGetBreak's run_break/normal-force arbitration. */
     direct_ball_turn(player, &local, input, camera_yaw,
                      SPINDASH_TURN_LIMIT, turn_step_out);
+    SA1PC2004LocalVector speed = {local.forward, 0.0f, local.side};
+    SA1PC2004LocalVector force = {0.0f, -p->weight, 0.0f};
+    SA1PC2004MotionContext context = {1, 0, 0, 1.0f, 1.0f};
+    SA1PC2004LocalVector add = sa1_pc2004_pgetbreak_add_velocity(
+        speed, force, &context, p, NULL);
+    local.forward = sa1_pc2004_integrate_axis_no_cross(local.forward, add.forward, NULL);
+    local.side = sa1_pc2004_integrate_axis_no_cross(local.side, add.side, NULL);
+    local.vertical = 0.0f;
     player->vel = local_to_world(player->yaw, local);
 }
 

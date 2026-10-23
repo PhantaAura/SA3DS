@@ -42,6 +42,8 @@ typedef struct {
     int initialized;
     int previous_grounded;
     SA1ActionState previous_action_state;
+    /* Persistent retail request; NextAnim writes both request and index. */
+    uint16_t requested_runtime_id;
     SA3DSSonicAnimationBinding active_binding;
     uint64_t selection_entry_frame;
     uint64_t last_sim_frame;

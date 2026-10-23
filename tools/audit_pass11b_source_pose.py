@@ -3,7 +3,7 @@
 
 This deliberately does not import the SA3DS CHRMODELS decoder or SA3C writer.
 It reads the exact owner-owned DLL and the generated pointer-free package as
-raw binary structures, then compares source ACTION slot 1 against the C pose
+raw binary structures, then compares a selected source ACTION against the C pose
 runtime via the Pass11 node-dump executable.
 """
 from __future__ import annotations
@@ -239,15 +239,15 @@ def sample_keys(keys: list[tuple], frame_count: int, frame: float, angles: bool)
     return tuple(result)
 
 
-def expected_pose(pe: RawPE, actions, objects: dict[int, dict], node_index: dict[int, int], frame: float):
-    root_va, motion_va = actions[1]
+def expected_pose(pe: RawPE, actions, objects: dict[int, dict], node_index: dict[int, int], frame: float, action_slot: int = 1):
+    root_va, motion_va = actions[action_slot]
     local_hierarchy = hierarchy(pe, root_va)
     motion = pe.read_va(motion_va, 12)
     data_va, frame_count, packed = struct.unpack("<III", motion)
     type_bits = packed & 0xFFFF
     record_size = {3: 16, 7: 24}.get(type_bits)
     if record_size is None or motion_va - data_va != len(local_hierarchy) * record_size:
-        raise ValueError("unexpected ACTION 1 motion layout")
+        raise ValueError(f"unexpected ACTION {action_slot} motion layout")
     pose = {}
     for va, obj in objects.items():
         pose[node_index[va]] = {
@@ -273,9 +273,9 @@ def expected_pose(pe: RawPE, actions, objects: dict[int, dict], node_index: dict
     return node_index[root_va], frame_count, pose
 
 
-def read_runtime_pose(dumper: Path, sa3c: Path, frame: float, output: Path) -> tuple[int, dict[int, dict]]:
+def read_runtime_pose(dumper: Path, sa3c: Path, frame: float, output: Path, action_slot: int = 1) -> tuple[int, dict[int, dict]]:
     proc = subprocess.run(
-        [str(dumper), str(sa3c), "1", format(frame, ".9g"), "0", "--nodes", str(output)],
+        [str(dumper), str(sa3c), str(action_slot), format(frame, ".9g"), "0", "--nodes", str(output)],
         check=True,
         text=True,
         capture_output=True,
@@ -313,10 +313,13 @@ def main() -> int:
     parser.add_argument("chrmodels", type=Path)
     parser.add_argument("sa3c", type=Path)
     parser.add_argument("pose_dumper", type=Path)
+    parser.add_argument("--action", type=int, default=1)
     args = parser.parse_args()
 
     pe = RawPE(args.chrmodels)
     actions = source_actions(pe)
+    if not 0 <= args.action < len(actions) or not actions[args.action]:
+        parser.error("--action must select a non-null owner ACTION")
     all_objects = {}
     for action in actions:
         if action:
@@ -342,15 +345,15 @@ def main() -> int:
         ):
             raise AssertionError(f"topology/flags mismatch at source node {va:#x}")
 
-    root, frame_count, _ = expected_pose(pe, actions, all_objects, node_index, 0.0)
+    root, frame_count, _ = expected_pose(pe, actions, all_objects, node_index, 0.0, args.action)
     frames = (-3.0, 0.0, 0.5, 8.0, frame_count / 2.0 + 0.25, frame_count - 1.0, frame_count + 5.0)
     maximum = 0.0
     comparisons = 0
     with tempfile.TemporaryDirectory(prefix="sa3ds-pass11b-") as tmp:
         for frame in frames:
-            expected_root, _, expected = expected_pose(pe, actions, all_objects, node_index, frame)
+            expected_root, _, expected = expected_pose(pe, actions, all_objects, node_index, frame, args.action)
             runtime_root, runtime = read_runtime_pose(
-                args.pose_dumper, args.sa3c, frame, Path(tmp) / f"pose-{comparisons}.csv"
+                args.pose_dumper, args.sa3c, frame, Path(tmp) / f"pose-{comparisons}.csv", args.action
             )
             if expected_root != root or runtime_root != root or len(runtime) != node_count:
                 raise AssertionError("root/node-count mismatch")
@@ -368,7 +371,7 @@ def main() -> int:
                     comparisons += 3
 
     print(
-        "Pass11B raw CHRMODELS ACTION 1 -> C runtime pose oracle: PASS "
+        f"Pass11B raw CHRMODELS ACTION {args.action} -> C runtime pose oracle: PASS "
         f"({node_count} nodes, {len(frames)} frames, {comparisons} scalar comparisons, max_error={maximum:.9g})"
     )
     return 0

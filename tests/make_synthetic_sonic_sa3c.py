@@ -7,13 +7,14 @@ from pathlib import Path
 TAGS = (b'NODE', b'MODL', b'MESH', b'VRTX', b'INDX', b'MATL',
         b'TEXS', b'ANIM', b'CHAN', b'KEYS')
 STRIDES = (48, 32, 24, 32, 2, 32, 24, 24, 24, 16)
-COUNTS = (148, 0, 0, 0, 0, 0, 0, 23, 1, 7)
+COUNTS = (148, 0, 0, 0, 0, 0, 0, 124, 1, 7)
 
 ACTION_METADATA = {
     1: (72, 32), 3: (72, 32), 4: (72, 32), 5: (72, 32),
     6: (72, 32), 18: (72, 33), 14: (146, 7), 8: (72, 32),
     9: (72, 33), 10: (72, 32), 11: (72, 16), 7: (72, 33),
     22: (72, 16), 20: (72, 16), 19: (72, 16), 21: (147, 7),
+    122: (72, 20), 123: (72, 16),
 }
 
 def align16(n):
@@ -38,7 +39,7 @@ def build(bad_key=False):
                          0xffff, 0xffff, 0xffff)
         struct.pack_into('<fff', data, node + i * STRIDES[0] + 36, 1, 1, 1)
     anim = sections[7][2]
-    for i in range(23):
+    for i in range(COUNTS[7]):
         root, frames = ACTION_METADATA.get(i, (72, 11))
         struct.pack_into('<HHHHII', data, anim + i * 24,
                          0, root, frames, 0, 0, 1)

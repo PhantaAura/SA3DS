@@ -45,6 +45,8 @@ int main(void) {
         uint16_t root, frames;
     } expected[] = {
         { 0,  1,  0, 73,  3, 0.0625f, 0.5f, 72,32},
+        { 1,122,  2, 73,  4, 0.25f,   0.25f,72,20},
+        { 2,123,  2, 73,  3, 0.25f,   0.25f,72,16},
         { 9,  3,  9, 73, 10, 0.25f,   3.4f, 72,32},
         {10,  4, 10, 73, 10, 0.25f,   1.4f, 72,32},
         {11,  5, 11, 73, 10, 0.25f,   0.8f, 72,32},
@@ -221,12 +223,12 @@ int main(void) {
 
     p.sim_frame = 7; p.action_state = SA1_ACTION_SPINDASH_CHARGE; p.ball_form = true;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
+    assert(s.binding.runtime_id == 14 && s.binding.action_slot == 14);
     assert(s.playback_rate_is_source_backed);
 
     p.sim_frame = 8; p.action_state = SA1_ACTION_ROLL;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 19 && s.binding.action_slot == 11);
+    assert(s.binding.runtime_id == 15 && s.binding.action_slot == 14);
     assert(s.playback_rate_is_source_backed);
 
     /* Exact PlayAnimation property arithmetic. Property 11 deliberately
@@ -308,6 +310,60 @@ int main(void) {
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 18 && s.sample_frame == 1.0f);
 
+    /* Original roll exit requests 29, retained by ground selectors. Its
+     * property-4 chain is 29 -> 1 -> 2, not fallback to unbound idle zero. */
+    memset(&sync,0,sizeof(sync)); memset(&rt,0,sizeof(rt));
+    p=base_player();p.action_state=SA1_ACTION_ROLL;p.ball_form=true;
+    p.vel.z=0.1f;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==15);
+    p.sim_frame++;p.action_state=SA1_ACTION_GROUNDED;p.ball_form=false;p.vel.z=0;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==29&&s.sample_frame==0&&!s.transition_active);
+    for(unsigned tick=1;tick<=15;tick++){
+        p.sim_frame++;
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.binding.runtime_id==(tick<15?29:1));
+        assert(s.sample_frame==(tick<15?(float)tick:0.0f));
+        SA3DSSonicAnimationSelection again=select_no_mutation(&rt,&p,&o);
+        assert(!memcmp(&s,&again,sizeof(s)));
+    }
+    assert(s.binding.action_slot==122&&!s.transition_active);
+    /* Once NextAnim installs 1, moving ground selection is free to replace
+     * it; only unchanged idle input retains the 1 -> 2 idle continuation. */
+    SA3DSSonicAnimationRuntime moving_rt=rt;
+    SA3DSSonicAnimationSync moving_sync=sync;
+    SA1PlayerState moving=p;moving.sim_frame++;moving.vel.z=0.5f;
+    SA3DSSonicAnimationObservation moving_o=observe(&moving_sync,&moving);
+    SA3DSSonicAnimationSelection moving_s=select_no_mutation(&moving_rt,&moving,&moving_o);
+    assert(moving_s.binding.runtime_id==10&&moving_s.transition_active);
+    for(unsigned tick=1;tick<=76;tick++){
+        p.sim_frame++;
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.binding.runtime_id==(tick<76?1:2));
+        assert(fabsf(s.sample_frame-(tick<76?tick*0.25f:0.0f))<1e-6f);
+    }
+    p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==2&&s.binding.action_slot==123&&s.sample_frame==0.25f);
+    p.vel.z=0.5f;p.sim_frame++;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==10&&s.transition_active);
+
+    /* A changed action request interrupts a one-shot, but not an in-flight
+     * state-2 blend. Exercise charge, jump, and falling after Uncurl entry. */
+    for(unsigned next=0;next<3;next++){
+        memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));
+        p=base_player();p.action_state=SA1_ACTION_ROLL;p.ball_form=true;
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        p.sim_frame++;p.action_state=SA1_ACTION_GROUNDED;p.ball_form=false;
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);assert(s.binding.runtime_id==29);
+        p.sim_frame++;p.grounded=next==0;p.ball_form=next!=2;
+        p.action_state=next==0?SA1_ACTION_SPINDASH_CHARGE:SA1_ACTION_AIRBORNE;
+        p.spindash_charge=2;
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.binding.runtime_id==(next==2?18:14));
+    }
+    puts("PC2004 Uncurl request/idle-chain/action interruptions: PASS");
     puts("physics-synced Sonic runtime animation resolver + PC2004 rates: PASS");
     return 0;
 }

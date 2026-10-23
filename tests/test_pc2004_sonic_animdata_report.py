@@ -30,4 +30,8 @@ for name, values in expected.items():
     assert actual == values, (name, actual, values)
 
 assert report["null_dense_animation_ids"] == [75, 76]
+for dense, slot, prop, nxt, rate in ((1,122,4,2,0.25),(2,123,3,2,0.25),(29,22,4,1,1.0)):
+    row=rows[dense]
+    assert (row['source_action_slot'],row['instance'],row['property'],
+            row['next_animation'],row['animation_speed']) == (slot,73,prop,nxt,rate)
 print("PC2004 SonicAnimData v2 metadata report: PASS (146 exact rows)")

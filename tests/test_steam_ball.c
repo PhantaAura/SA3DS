@@ -34,6 +34,35 @@ int main(void) {
     assert(p.action_state == SA1_ACTION_AIRBORNE);
     assert(nearf(p.spindash_charge, 0.0f, 0.000001f));
 
+    /* Exact flat PGetBreak equation: -0.008*5 -0.18 +(-0.1)*(-0.08)
+       yields -0.212 and forward 4.788. Guard the integrated path, not just
+       the standalone recovered arithmetic helper. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.vel.z=5.0f;
+    action_press.action_held=true;
+    assert(sa1_steam_sonic_ball_ground_step(&p,&action_press,0,&d)==1);
+    assert(nearf(p.vel.z,4.788f,0.000001f));
+    assert(nearf(p.spindash_charge,5.0f,0.000001f));
+    for(unsigned tick=0;tick<80;tick++){
+        float old=p.vel.z;
+        SA1Input held={.action_held=true};
+        assert(sa1_steam_sonic_ball_ground_step(&p,&held,0,&d)==1);
+        float add=old*(-0.008f)-0.18f+0.008f;
+        float expected=old>0?fmaxf(0.0f,old+add):0.0f;
+        assert(nearf(p.vel.z,expected,0.000002f));
+    }
+    const float starts[]={-5.0f,-0.1f,0.0f,0.1f,5.0f};
+    for(unsigned i=0;i<sizeof(starts)/sizeof(*starts);i++){
+        sa1_player_reset(&p,sa3ds_movement_lab_world());
+        p.vel.z=starts[i];p.vel.x=2.0f;
+        assert(sa1_steam_sonic_ball_ground_step(&p,&action_press,0,&d)==1);
+        float expected=fmaxf(0.0f,fabsf(starts[i])*0.992f-0.172f);
+        expected=copysignf(expected,starts[i]);
+        assert(nearf(p.vel.z,expected,0.000002f));
+        /* Lateral drag/friction differ: 2 -0.4*2 -0.18 +0.6*0.08. */
+        assert(nearf(p.vel.x,1.068f,0.000002f));
+    }
+
     /* Normal ACTION and restored D-down are semantic aliases into the exact
        same state machine rather than independent physics shortcuts. */
     sa1_player_reset(&normal, sa3ds_movement_lab_world());
