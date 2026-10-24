@@ -4,7 +4,11 @@
 #include <string.h>
 
 static SA1Input sample(void) {
-    SA1Input x={0}; x.move_z=0.75f; x.jump_held=true; return x;
+    SA1Input x={0}; x.move_z=0.75f; x.jump_held=true;
+    x.device_sample_valid=1; x.device_raw_x=78; x.device_raw_y=-39;
+    x.device_normalized_magnitude=0.559016994f;
+    x.device_normalized_angle_bams=0x52e4; x.device_full_scale=156.0f;
+    return x;
 }
 int main(void) {
     SA3DSWhiteZoneTick c;
@@ -18,6 +22,8 @@ int main(void) {
         for (unsigned j=0;j<n;j++) {
             SA1Input x=sa3ds_wz_tick_input(&c,j);
             assert(x.move_z==0.75f && x.jump_held);
+            assert(x.device_sample_valid && x.device_raw_x==78 && x.device_raw_y==-39);
+            assert(x.device_full_scale==156.0f);
         }
     }
     assert(ticks==60 && c.total_ticks==60 && c.phase==0 && c.dropped_ticks==0);

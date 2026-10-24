@@ -9,7 +9,7 @@
 #include "../sa1/physics/player_state.h"
 #include "../sa1/physics/steam_flat.h"
 
-#define SA3DS_PARITY_TRACE_VERSION 2
+#define SA3DS_PARITY_TRACE_VERSION 3
 
 int sa3ds_parity_trace_write_header(FILE *output);
 int sa3ds_parity_trace_write_frame(FILE *output,

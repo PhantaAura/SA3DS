@@ -20,6 +20,12 @@ unsigned sa3ds_wz_tick_begin(SA3DSWhiteZoneTick *clock,
     p->lightspeed_shortcut_released |= input->lightspeed_shortcut_released;
     p->move_x = input->move_x;
     p->move_z = input->move_z;
+    p->device_sample_valid = input->device_sample_valid;
+    p->device_raw_x = input->device_raw_x;
+    p->device_raw_y = input->device_raw_y;
+    p->device_normalized_magnitude = input->device_normalized_magnitude;
+    p->device_normalized_angle_bams = input->device_normalized_angle_bams;
+    p->device_full_scale = input->device_full_scale;
     p->jump_held = input->jump_held;
     p->action_held = input->action_held;
     p->spindash_shortcut_held = input->spindash_shortcut_held;

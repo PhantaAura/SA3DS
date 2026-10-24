@@ -13,12 +13,14 @@ typedef struct {
 } SA1SADXFilteredAnalog;
 
 /*
- * Reconstructs the Steam SADX controller shaping routine at 0x004C3FC0.
+ * Reconstructs the exact PC2004 controller shaping routine at 0x0040F170.
  * The caller supplies device-independent axes in -1..1. They are first mapped
  * onto the signed 8-bit range used by the PC game's peripheral data, then the
  * original component deadzone and cubic magnitude curve are applied.
  *
- * This preserves SADX's shaping while keeping the physical 3DS Circle Pad
+ * Exact-executable instructions use signed raw axes <<8, component deadzone
+ * 3072 and the cubic scale 1/(29441^3). This preserves SADX's shaping while
+ * keeping the physical 3DS Circle Pad
  * calibration in the platform adapter.
  */
 SA1SADXFilteredAnalog sa1_sadx_filter_logical_analog(float x, float z);

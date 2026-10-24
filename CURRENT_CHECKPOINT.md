@@ -1,5 +1,55 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-24 — PC2004 retail trace endpoint and input provenance
+
+Parent `c9b6f75`; inherited dirty compiled 3DSX preserved and excluded. Renderer,
+CPU texture uploads, controller equations, collision, animation and 60Hz cadence
+are unchanged. `PHYSICS_1TO1=false`.
+
+Direct GhidraMCP UI bridge was unavailable at localhost:8080. REA's Ghidra
+12.1.4 provider opened the exact PE32/x86 SHA256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`,
+completed live decompilation and xrefs for PGetAcceleration `0x44C270`, Sonic
+Act1 `0x496F50` and input filter `0x40F170`. The old `0x4C3FC0` input lead is a
+mid-function instruction in this EXE and is corrected. Exact code confirms the
+existing deadzone3072 and cubic `1/(29441^3)` equation, so no physics tuning was
+made.
+
+Added a portable, hash-gated Windows x86 Frida capture endpoint. It reads raw
+input/filter globals and post-Act1 Sonic state without game-memory writes, emits
+scenario CSV+authority/digest sidecar, and labels synthetic validation NOT
+VERIFIED. Retail comparator now refuses retail authority without exact metadata,
+checks the trace digest/core observed fields and supports explicit frame shifts.
+Seven initial scenarios are documented. No retail values are fabricated.
+
+The attached Wineskin app exposed the exact game as Rosetta-translated x86_64
+`wine64`. REA enumerated it but Frida attach failed `Unable to access process`.
+An x86_64 debugger probe stopped/exited that wrapper and was not used for trace
+capture; the unmodified app was relaunched successfully. No retail trace was
+captured. Native Windows x86 Frida (or a Wine-guest injector) remains the exact
+external dependency.
+
+Native trace v3 preserves all 67 columns and appends raw Circle Pad X/Y,
+pre-filter normalized magnitude/angle, sample validity and full-scale. The 156
+libctru convention is unchanged; physical Old3DS calibration remains NOT
+VERIFIED. Host synthetic neutral/small/half/full/diagonal mapping, scheduler
+propagation, 17 scenario trace suite, capture schema, authority rejection and
+exact input signature verifier pass.
+
+Final validation: focused comparator/capture/input/scheduler tests PASS and
+`bash tests/run_sa3ds_current_host.sh` PASS. Exact input, Spin Dash and
+Break/Inertia executable verifiers PASS against the pinned SHA. devkitARM built
+the code-only 3DSX successfully (276300 bytes, SHA256
+`f01e03b50b97c783a7a1a007f2f4f386ada778e461a28a4f3e8e675ccd8d4f0d`;
+existing unused `upload_rgba8` warning only). The exact updated artifact ran in
+Azahar 2126.0, Old3DS/Vulkan/CPU100/1x/VSync: owner Emerald Coast package loaded,
+Sonic moved from X=2 to X=117 under full forward input, jumped with AIR state,
+landed back in GND, and combined rendering remained live at 59-60 FPS/99-100%
+speed. HUD reported 29382 KiB linear free, 30 instances, 45 batches, 5053
+triangles, 15159 vertices and 25 resident textures. White Zone also rendered
+Sonic and owner assets before the Emerald Coast restart; no physical Old3DS
+measurement or genuine retail row is claimed.
+
 ## 2026-10-23 — stationary landing/idle and inverted-Up normal force
 
 Parent `43d91e2`; initial tree contained only the inherited dirty3DSX. That

@@ -22,7 +22,9 @@ int sa3ds_parity_trace_write_header(FILE *output) {
         "spindash_charge,spindash_ticks,ball_form,jump_ticks,"
         "animation_requested_id,landing_classification_valid,landing_classified_request,"
         "landing_impact_world_y,landing_impact_valid,landing_air_action,"
-        "processed_analog_active,processed_analog_valid,idle_counter\n") < 0 ? -1 : 0;
+        "processed_analog_active,processed_analog_valid,idle_counter,"
+        "circle_sample_valid,circle_raw_x,circle_raw_y,circle_normalized_magnitude,"
+        "circle_normalized_angle_bams,circle_full_scale\n") < 0 ? -1 : 0;
 }
 
 int sa3ds_parity_trace_write_frame(FILE *output,
@@ -50,7 +52,8 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         "%d,%d,%" PRId32 ",%" PRIu32 ",%.9g,%.9g,%.9g,%.9g,%.9g,"
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%u,%u,%d,%d,%d,%d,"
         "%u,%u,%.9g,%d,%.9g,%" PRIu32 ",%d,%" PRIu32 ","
-        "%u,%u,%u,%.9g,%u,%u,%u,%u,%u\n",
+        "%u,%u,%u,%.9g,%u,%u,%u,%u,%u,"
+        "%d,%d,%d,%.9g,%u,%.9g\n",
         SA3DS_PARITY_TRACE_VERSION, (int)test_id, test_name ? test_name : "UNKNOWN", player->sim_frame,
         input->move_x, input->move_z,
         analog.post_deadzone_x, analog.post_deadzone_z,
@@ -83,6 +86,11 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         (unsigned)player->animation_landing_air_action,
         player->animation_input_active ? 1u : 0u,
         player->animation_input_valid ? 1u : 0u,
-        (unsigned)animation->idle_counter);
+        (unsigned)animation->idle_counter,
+        input->device_sample_valid ? 1 : 0,
+        input->device_raw_x, input->device_raw_y,
+        input->device_normalized_magnitude,
+        input->device_normalized_angle_bams,
+        input->device_full_scale);
     return result < 0 ? -1 : 0;
 }

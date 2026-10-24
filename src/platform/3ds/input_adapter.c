@@ -1,6 +1,5 @@
 #include "input_adapter.h"
-
-#define CLAMP(v,a,b) ((v)<(a)?(a):((v)>(b)?(b):(v)))
+#include "input_adapter_math.h"
 
 SA1Input sa3ds_read_logical_input(u32 keys_down, u32 keys_held, u32 keys_up) {
     circlePosition circle;
@@ -15,8 +14,16 @@ SA1Input sa3ds_read_logical_input(u32 keys_down, u32 keys_held, u32 keys_up) {
      * mapping is a 3DS hardware choice, not a claim about Dreamcast/PC ADCs.
      */
     const float device_max = 156.0f;
-    input.move_x = CLAMP((float)circle.dx / device_max, -1.0f, 1.0f);
-    input.move_z = CLAMP((float)circle.dy / device_max, -1.0f, 1.0f);
+    SA3DSCirclePadSample sample =
+        sa3ds_circle_pad_map(circle.dx, circle.dy, device_max);
+    input.move_x = sample.normalized_x;
+    input.move_z = sample.normalized_y;
+    input.device_sample_valid = 1;
+    input.device_raw_x = sample.raw_x;
+    input.device_raw_y = sample.raw_y;
+    input.device_normalized_magnitude = sample.normalized_magnitude;
+    input.device_normalized_angle_bams = sample.normalized_angle_bams;
+    input.device_full_scale = sample.full_scale;
 
     input.jump_pressed = (keys_down & KEY_A) != 0;
     input.jump_held = (keys_held & KEY_A) != 0;

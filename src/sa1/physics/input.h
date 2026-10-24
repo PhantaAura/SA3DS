@@ -21,6 +21,16 @@ typedef struct {
     float move_x; /* camera-relative, nominal range -1..1 */
     float move_z; /* camera-relative, nominal range -1..1 */
 
+    /* Optional platform-sample provenance. Physics consumes only move_x/z;
+     * these fields let native traces distinguish hardware calibration from
+     * the verified PC2004 response curve. Zero/invalid for host fixtures. */
+    int device_sample_valid;
+    int device_raw_x;
+    int device_raw_y;
+    float device_normalized_magnitude;
+    unsigned device_normalized_angle_bams;
+    float device_full_scale;
+
     bool jump_pressed;
     bool jump_held;
     bool jump_released;
