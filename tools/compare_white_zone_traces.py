@@ -23,6 +23,7 @@ INTEGER_FIELDS={
     "processed_analog_valid","idle_counter",
     "circle_sample_valid","circle_raw_x","circle_raw_y",
     "circle_normalized_angle_bams",
+    "sonic_act1_ran","animation_transition_state","animation_transition_source_id",
 }
 IGNORE_EXACT={"test_name"}
 PC2004_SHA256="6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74"
@@ -32,6 +33,7 @@ RETAIL_CORE_FIELDS={
     "filtered_input_angle_bams","camera_yaw","pos_x","pos_y","pos_z",
     "vel_x","vel_y","vel_z","local_forward_speed","local_side_speed",
     "heading","grounded","action_state","animation_requested_id",
+    "runtime_animation_id","animation_frame","sonic_act1_ran","tick_phase",
 }
 
 def validate_retail_metadata(path, reference_path):
@@ -39,7 +41,7 @@ def validate_retail_metadata(path, reference_path):
         raise SystemExit("retail-trace authority requires --reference-metadata")
     with open(path,encoding="utf-8") as f: meta=json.load(f)
     required={
-        "schema":"sa3ds-pc2004-retail-capture-v1",
+        "schema":"sa3ds-pc2004-retail-capture-v2",
         "authority":"RETAIL TRACE VERIFIED",
         "executable_sha256":PC2004_SHA256,
         "runtime_capture":True,

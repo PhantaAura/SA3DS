@@ -61,11 +61,16 @@ confirm signed axes shifted by 8, component deadzone 3072 and cubic radial
 coefficient `1/(29441^3)`.
 
 `tools/pc2004_retail_capture/` is the portable Windows x86 Frida endpoint. It
-hash-gates the owner executable, reads the filter globals, and emits one state
-row after Sonic Act1 `0x00496F50`; it does not write game memory. The comparator
-now requires the capture sidecar and matching trace digest before it can emit
-`RETAIL TRACE VERIFIED`, and supports explicit frame shifts for measured tick
-alignment. Its synthetic self-test is always `NOT VERIFIED`.
+hash-gates the owner executable and reads the filter globals without writing
+game memory. Capture v2 observes Sonic Act1 `0x00496F50`, but emits only after
+Sonic main `0x0049A9B0` returns so movement dispatch and animation arbitration
+have completed. Exact instructions establish that motion-work `+0` is the
+CharObj2 pointer and world velocity is `+4/+8/+C`; v1's shifted velocity fields
+must not be used as retail evidence. v2 also records requested/effective
+animation ID, frame and transition provenance. The comparator requires the v2
+sidecar, matching digest and post-main timing/animation fields before it can
+emit `RETAIL TRACE VERIFIED`, and supports explicit frame shifts for measured
+tick alignment. Its synthetic self-test is always `NOT VERIFIED`.
 
 The locally attached Wineskin build runs the exact owner game, but its PE is
 hosted inside Rosetta-translated x86_64 `wine64`. REA Frida could enumerate the

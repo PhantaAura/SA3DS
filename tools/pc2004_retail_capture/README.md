@@ -16,10 +16,22 @@ py -3-32 capture_pc2004.py --exe "C:\path\to\sonic.exe" --scenario neutral_stand
 ```
 
 The launcher verifies the executable before spawning it. `--pid PID` attaches
-to an already running process instead. The agent reads the original filter at
-`0x0040F170` and emits a row after Sonic's `0x00496F50` update. It does not
-write game memory or call game functions. Stop after the requested test with
-Ctrl+C, or use `--frames` for a bounded capture.
+to an already running process instead. The agent observes the original input
+filter at `0x0040F170`, counts `Sonic_Act1` at `0x00496F50`, and emits a row
+when Sonic's main routine at `0x0049A9B0` returns. This post-main endpoint is
+after the movement and animation dispatches. It does not write game memory or
+call game functions. Stop after the requested test with Ctrl+C, or use
+`--frames` for a bounded capture.
+
+The exact PC2004 instructions establish that the motion-work world-velocity
+vector begins at `+0x04` (not `+0x00`, which is the CharObj2 pointer). The
+capture also records the requested animation, transition state/source,
+effective runtime animation ID, and frame. Run the owner-data verifier before a
+live session:
+
+```powershell
+py -3-32 ..\verify_pc2004_retail_capture.py "C:\path\to\sonic.exe"
+```
 
 Initial protocol (restart the same Emerald Coast act, position and camera before
 each capture): neutral standing; partial acceleration; full acceleration;

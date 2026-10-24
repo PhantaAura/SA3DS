@@ -21,13 +21,15 @@ EXPECTED_SHA="6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74"
 SCENARIOS=("neutral_standing","partial_acceleration","full_acceleration",
            "release_coasting","direction_reversal","running_jump_landing",
            "spindash_charge_release")
-FIELDS=("trace_version","test_id","test_name","frame","move_x","move_z",
+FIELDS=("trace_version","test_id","test_name","tick_phase","sonic_act1_ran",
+        "frame","move_x","move_z",
         "filtered_input_magnitude","filtered_input_angle_bams","camera_yaw",
         "circle_raw_x","circle_raw_y","pos_x","pos_y","pos_z",
         "vel_x","vel_y","vel_z","local_forward_speed","local_side_speed",
         "heading","grounded","action_state","status_bits","player_status_bits",
         "accel_forward","accel_normal","accel_side","spindash_charge",
-        "spindash_ticks","animation_requested_id")
+        "spindash_ticks","animation_requested_id","runtime_animation_id",
+        "animation_frame","animation_transition_state","animation_transition_source_id")
 OBSERVED_FIELDS=[x for x in FIELDS if x not in ("test_name",)]
 
 def sha256(path:Path)->str:
@@ -46,7 +48,7 @@ def write_capture(rows:list[dict],output:Path,scenario:str,live:bool,extra:dict|
             row=dict(row); row.update(test_id=test_id,test_name=scenario)
             writer.writerow(row)
     meta={
-        "schema":"sa3ds-pc2004-retail-capture-v1",
+        "schema":"sa3ds-pc2004-retail-capture-v2",
         "authority":"RETAIL TRACE VERIFIED" if live else "NOT VERIFIED",
         "executable_sha256":EXPECTED_SHA,
         "runtime_capture":bool(live),"synthetic":not live,"observational":True,
@@ -56,12 +58,12 @@ def write_capture(rows:list[dict],output:Path,scenario:str,live:bool,extra:dict|
         "coordinate_contract":{
             "units":"native PC2004 stage units",
             "position":"EntityData1.Position x/y/z",
-            "world_velocity":"motion-work x/y/z",
+            "world_velocity":"motion-work offsets +0x04/+0x08/+0x0c (x/y/z)",
             "local_velocity":"CharObj2 Speed.x/Speed.z",
             "angles":"PC2004 BAMS converted to radians",
             "sa3ds_mapping":"identity pending matched-spawn confirmation"
         },
-        "tick_contract":"one row after each Sonic_Act1 return; alignment to SA3DS must be measured",
+        "tick_contract":"one row after each Sonic main return, after movement and animation dispatch; alignment to SA3DS must still be measured",
         "host":{"system":platform.system(),"release":platform.release(),"machine":platform.machine()},
     }
     if extra: meta.update(extra)
@@ -70,7 +72,8 @@ def write_capture(rows:list[dict],output:Path,scenario:str,live:bool,extra:dict|
     return sidecar
 
 def synthetic_rows():
-    return [{"trace_version":3,"frame":i,"move_x":0.0,"move_z":0.0,
+    return [{"trace_version":3,"tick_phase":"post_sonic_main","sonic_act1_ran":1,
+             "frame":i,"move_x":0.0,"move_z":0.0,
              "filtered_input_magnitude":0.0,"filtered_input_angle_bams":0,
              "camera_yaw":0.0,"circle_raw_x":0,"circle_raw_y":0,
              "pos_x":0.0,"pos_y":0.0,"pos_z":0.0,"vel_x":0.0,"vel_y":0.0,
@@ -78,7 +81,9 @@ def synthetic_rows():
              "heading":0.0,"grounded":1,"action_state":1,"status_bits":3,
              "player_status_bits":0,"accel_forward":0.0,"accel_normal":0.0,
              "accel_side":0.0,"spindash_charge":0.0,"spindash_ticks":0,
-             "animation_requested_id":0} for i in range(3)]
+             "animation_requested_id":0,"runtime_animation_id":0,
+             "animation_frame":0.0,"animation_transition_state":0,
+             "animation_transition_source_id":0} for i in range(3)]
 
 def live_capture(args):
     exe=args.exe.resolve()
@@ -125,9 +130,9 @@ def live_capture(args):
         raise SystemExit("capture agent did not report a verified ready state")
     if errors:
         raise SystemExit("capture aborted after instrumentation error(s): " + "; ".join(errors))
-    if not rows: raise SystemExit("no Sonic_Act1 rows captured")
+    if not rows: raise SystemExit("no post-Sonic-main rows captured")
     sidecar=write_capture(rows,args.output,args.scenario,True,{
-        "capture_tool":"sa3ds-pc2004-frida-v1",
+        "capture_tool":"sa3ds-pc2004-frida-v2",
         "frida_version":getattr(frida,"__version__","unknown"),
         "pid":pid,"agent_ready":ready,"capture_errors":errors,
         "exe_path_recorded_locally":str(exe),
@@ -145,7 +150,7 @@ def main():
     args=ap.parse_args()
     if args.self_test:
         sidecar=write_capture(synthetic_rows(),args.output,args.scenario,False,
-                              {"capture_tool":"sa3ds-pc2004-frida-v1-self-test"})
+                              {"capture_tool":"sa3ds-pc2004-frida-v2-self-test"})
         meta=json.loads(sidecar.read_text())
         assert meta["authority"]=="NOT VERIFIED" and meta["synthetic"]
         assert meta["trace_sha256"]==sha256(args.output)

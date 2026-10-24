@@ -1,5 +1,53 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-24 — retail trace v2 post-main correction
+
+Parent `2904afe`; inherited dirty compiled 3DSX remains preserved and excluded.
+No runtime controller, renderer, collision, animation, asset-loader or texture-
+upload code changed. `PHYSICS_1TO1=false`.
+
+Targeted exact-executable verification found two defects in the portable retail
+capture endpoint. It emitted at the return of `Sonic_Act1` (`0x00496F50`),
+before Sonic main performed movement dispatch and animation arbitration, and it
+treated `motionwk+0` as world velocity even though that field is the CharObj2
+pointer. Exact instructions in the pinned PE32 establish the Sonic main task
+layout and Act1 call at `0x0049A9B0..0x0049AA39`, later dispatch through the
+main body, world Y access at `motionwk+8`, and animation state/request/source/
+frame accesses at CharObj2 `+0x120/+0x124/+0x126/+0x130`.
+
+Retail capture v2 now observes Act1 but emits only after Sonic main returns,
+reads world velocity from `motionwk+4/+8/+C`, and records effective animation
+ID/frame plus transition provenance. The effective ID follows the original
+rule: state 2 selects `+0x126`; otherwise `+0x124`. The authority sidecar now
+requires schema v2 and the comparator requires these timing/animation fields
+before it may emit `RETAIL TRACE VERIFIED`. A new owner-side verifier hash-
+gates the exact executable and checks six instruction regions supporting the
+capture contract.
+
+REA selected Ghidra 12.1.4 and opened the exact SHA-256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+This pass's fresh full import exceeded the 330-second provider autoanalysis
+limit; direct GhidraMCP also reported its GUI backend absent at
+`127.0.0.1:8080`. Increasing the standalone CLI timeout was independently
+blocked by a local Swift/SDK mismatch and sandboxed clang cache. Therefore no
+new live decompilation is claimed for this pass. Exact instruction signatures,
+the private saved Ghidra export and previously verified live addresses provide
+the bounded evidence; Hopper was not used.
+
+Focused capture-schema/comparator tests, JavaScript syntax, Python syntax and
+the new exact-executable verifier pass. The complete owner-data-free host suite
+passes. The code-only Old3DS build passes at 276300 bytes, SHA-256
+`f01e03b50b97c783a7a1a007f2f4f386ada778e461a28a4f3e8e675ccd8d4f0d`;
+this is byte-identical to the already validated Azahar artifact because native
+runtime sources are unchanged. Its existing Azahar 2126.0 Old3DS/Vulkan result
+remains 59-60 FPS/99-100%, live Emerald Coast run/jump/landing, 29382 KiB
+linear free, and White Zone visual PASS. No new emulator run or physical
+Old3DS measurement is claimed. Genuine retail rows remain NOT VERIFIED:
+the available Wineskin process is Rosetta-hosted x86_64 Wine and denies Frida
+attach; a compatible Windows x86 Frida session or Wine-guest injector is still
+required. Synthetic rows remain explicitly NOT VERIFIED and no PC2004 runtime
+values were invented.
+
 ## 2026-10-24 — PC2004 retail trace endpoint and input provenance
 
 Parent `c9b6f75`; inherited dirty compiled 3DSX preserved and excluded. Renderer,

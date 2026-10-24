@@ -7,11 +7,12 @@ import sys
 import tempfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-HEADER=["trace_version","test_id","test_name","frame","move_x","move_z",
+HEADER=["trace_version","test_id","test_name","tick_phase","sonic_act1_ran",
+    "frame","move_x","move_z",
     "filtered_input_magnitude","filtered_input_angle_bams","camera_yaw",
     "pos_x","pos_y","pos_z","vel_x","vel_y","vel_z",
     "local_forward_speed","local_side_speed","heading","grounded","action_state",
-    "animation_requested_id"]
+    "animation_requested_id","runtime_animation_id","animation_frame"]
 LANDING_INTEGER_FIELDS=("animation_requested_id","landing_classification_valid",
     "landing_classified_request","landing_impact_valid","landing_air_action",
     "processed_analog_active","processed_analog_valid","idle_counter")
@@ -20,11 +21,13 @@ def write(path,dx=0.0):
     with open(path,"w",newline="",encoding="utf-8") as f:
         w=csv.DictWriter(f,fieldnames=HEADER); w.writeheader()
         for frame in range(3):
-            w.writerow(dict(trace_version=1,test_id=3,test_name="TURN",frame=frame,
+            w.writerow(dict(trace_version=3,test_id=3,test_name="TURN",
+                tick_phase="post_sonic_main",sonic_act1_ran=1,frame=frame,
                 move_x=0,move_z=1,filtered_input_magnitude=1,filtered_input_angle_bams=0,
                 camera_yaw=0,pos_x=frame+dx,pos_y=1,pos_z=154+frame,
                 vel_x=1,vel_y=0,vel_z=0,local_forward_speed=1,local_side_speed=0,
-                heading=0,grounded=1,action_state=1,animation_requested_id=9))
+                heading=0,grounded=1,action_state=1,animation_requested_id=9,
+                runtime_animation_id=9,animation_frame=frame))
 
 def run(*args):
     return subprocess.run([sys.executable,str(ROOT/"tools/compare_white_zone_traces.py"),*map(str,args)],text=True,capture_output=True)
@@ -41,7 +44,7 @@ def main():
         assert p.returncode!=0 and "requires --reference-metadata" in p.stderr
         meta=td/"retail.json"
         meta.write_text(json.dumps({
-            "schema":"sa3ds-pc2004-retail-capture-v1",
+            "schema":"sa3ds-pc2004-retail-capture-v2",
             "authority":"RETAIL TRACE VERIFIED",
             "executable_sha256":"6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74",
             "runtime_capture":True,"synthetic":False,"observational":True,
