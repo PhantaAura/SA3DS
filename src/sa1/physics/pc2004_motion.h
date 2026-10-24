@@ -58,8 +58,9 @@ SA1PC2004LocalVector sa1_pc2004_pgetinertia_add_velocity(
     const SA1SteamPlayerParameters *p,
     SA1PC2004MotionDebug *debug_out);
 
-/* PGetSpeed always prevents a per-axis AddVelocity step from crossing through
- * zero. This helper implements that proven invariant without promoting the
+/* PGetSpeed prevents forward/side AddVelocity steps from crossing through
+ * zero; local normal is integrated directly at 0x444031. This helper
+ * implements the tangential invariant without promoting the
  * remaining low-speed/status checks to a claim about every action. */
 float sa1_pc2004_integrate_axis_no_cross(float speed, float add_velocity,
                                          int *clamped_out);

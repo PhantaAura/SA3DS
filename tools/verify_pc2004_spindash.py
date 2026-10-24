@@ -45,6 +45,17 @@ EXPECTED_FLOATS = {
 # Exact byte signatures selected to prove semantics without embedding any
 # substantial code/data payload.
 SIGNATURES = {
+    "jump_landing_world_y_compare": (0x00497727, "d94708d81d6cff7d00"),
+    "jump_soft_landing_request_2": (0x00497738, "66c783240100000200"),
+    "jump_hard_landing_request_19": (0x0049774D, "66c783240100001300"),
+    "fall_landing_world_y_compare": (0x00497A6A, "d94708d81d6cff7d00"),
+    "fall_soft_landing_request_1": (0x00497A81, "66c783240100000100"),
+    "idle_signed_counter_threshold": (0x004916E7, "66817e0e08070f8e16010000"),
+    "idle_counter_reset_request_4": (0x004916F4, "66894e0e66c786240100000400"),
+    "idle_cosine_bams_11c7": (0x00491683, "b9c7110000"),
+    "main_idle_after_reset_call": (0x0049AD54, "e81741faff568bf5e8ff68ffff"),
+    "reverse_initial_frame_minus_one": (0x0043F290, "d82510cb7d00d95910"),
+    "reverse_property6_nextanim": (0x0044ABF5, "e916bdffff"),
     "stationary_selector_signed_forward_zero": (0x00495007, "d94638d81d2ccb7d00dfe0f6c4447a64"),
     "landing_stationary_selector_call": (0x0049796E, "e87dd6ffff"),
     "moving_landing_ground_selector": (0x0049799E, "c6450002e829e3ffff"),

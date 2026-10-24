@@ -43,6 +43,14 @@ typedef struct {
      * into SA3DS movement. */
     float animation_accel_residual;
     bool animation_accel_residual_valid;
+
+    /* Presentation-only bridge for ordinary static-contact landing/idle
+     * selection. Never feeds movement, forces, or collision arbitration. */
+    bool animation_input_active;
+    bool animation_input_valid;
+    float animation_landing_world_y;
+    uint8_t animation_landing_air_action; /* supported retail equivalents 8/12 */
+    bool animation_landing_valid;
 } SA1PlayerState;
 
 #endif

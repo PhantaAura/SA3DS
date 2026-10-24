@@ -36,6 +36,10 @@ typedef struct {
     uint16_t transition_from_action_slot;
     float transition_from_frame;
     float transition_weight;
+    uint16_t requested_runtime_id;
+    uint16_t idle_counter;
+    uint16_t landing_classified_request;
+    uint8_t landing_classification_valid;
 } SA3DSSonicAnimationSelection;
 
 typedef struct {
@@ -44,6 +48,10 @@ typedef struct {
     SA1ActionState previous_action_state;
     /* Persistent retail request; NextAnim writes both request and index. */
     uint16_t requested_runtime_id;
+    uint16_t idle_counter; /* retail signed-short counter, explicit wrap */
+    uint8_t idle_selector_active;
+    uint16_t landing_classified_request; /* Act1 phase before main idle selector */
+    uint8_t landing_classification_valid;
     SA3DSSonicAnimationBinding active_binding;
     uint64_t selection_entry_frame;
     uint64_t last_sim_frame;
@@ -80,8 +88,9 @@ int sa3ds_sonic_animation_frame_step(
 /*
  * Presentation-only selector. Dense-ID -> ACTION mappings, the five ground
  * speed bands, and PlayAnimation transition mechanics are source-backed.
- * The broader intent bridge remains provisional where Sonic action-state
- * inputs (including soft-versus-hard landing) are not yet represented.
+ * Ordinary upright static-ground landing uses retained pre-contact impact
+ * velocity and source idle arbitration. Tilted/event/exceptional contact
+ * branches of the broader intent bridge remain provisional.
  * Selection is stable across repeated queries of one completed sim_frame;
  * rewind clears the prior transition history. Explicit reset is required
  * when switching zones/players at the same sim_frame.

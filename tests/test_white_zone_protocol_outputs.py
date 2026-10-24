@@ -9,6 +9,14 @@ def fl(r,k): return float(r[k])
 def ints(rs,k): return {int(r[k]) for r in rs}
 
 acc=rows("flat_accel"); assert fl(acc[-1],"horizontal_speed")>fl(acc[0],"horizontal_speed")
+headers=list(acc[0])
+assert len(headers)==67 and headers[57]=='jump_ticks'
+assert headers[-9:]==['animation_requested_id','landing_classification_valid',
+    'landing_classified_request','landing_impact_world_y','landing_impact_valid',
+    'landing_air_action','processed_analog_active','processed_analog_valid','idle_counter']
+assert headers[:6]==['trace_version','test_id','test_name','frame','move_x','move_z']
+assert all(None not in row and len(row)==67 for row in acc)
+assert all(row['processed_analog_valid']=='1' and row['processed_analog_active']=='1' for row in acc)
 coast=rows("coast"); assert fl(coast[-1],"horizontal_speed")<fl(coast[0],"horizontal_speed")
 brake=rows("brake"); assert max(abs(fl(r,"heading")) for r in brake)>1.0
 for n in ("turn_low","turn_high"):
@@ -22,6 +30,14 @@ def jump_stats(name):
         if int(r["grounded"])==0: airborne_seen=True
         elif airborne_seen: landing=i; break
     assert landing is not None and landing>apex
+    landed=rs[landing]
+    assert landed['landing_impact_valid']=='1'
+    assert landed['landing_air_action']=='8'
+    assert fl(landed,'landing_impact_world_y')<0
+    assert landed['landing_classification_valid']=='1'
+    classified=int(landed['landing_classified_request'])
+    assert classified==(19 if fl(landed,'landing_impact_world_y')<=-5 else 2)
+    assert int(landed['animation_requested_id'])==(0 if classified==19 else 2)
     return max(fl(r,"pos_y") for r in rs),apex,landing
 
 tap=jump_stats("jump_tap"); hold=jump_stats("jump_hold"); assert hold[0]>tap[0]

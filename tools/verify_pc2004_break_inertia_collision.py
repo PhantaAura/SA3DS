@@ -74,8 +74,14 @@ SIGNATURES = {
     "pgetbreak_write_addvelocity": (0x004491CB, "83c72c890f895704894708"),
 
     "pgetinertia_entry": (0x00443650, "83ec188b44242083c010"),
+    "pgetinertia_force_world_to_local_call": (0x004436CF, "e82cb5ffff"),
     "pgetinertia_speed_vs_run": (0x004436D4, "d9463883c408d89ec4000000"),
     "pgetinertia_up_negative_neg8": (0x004436E7, "d9461cd81d2ccb7d00dfe0f6c4057a0ed944240cd80db4f17d00"),
+    "pgetinertia_neg8_normal_stack_store": (0x004436F7, "d944240cd80db4f17d00d95c240c"),
+    "pgetinertia_forward_stack_drag": (0x004437B1, "d8442408d95c24088b542408"),
+    "pgetinertia_normal_stack_drag": (0x004437C3, "83c62cd84e10d844240cd95c240c8b44240c"),
+    "pgetinertia_forward_normal_output": (0x004437DE, "8916894604"),
+    "pgetspeed_normal_direct_integration": (0x00444031, "d94730d8473cd95f3c"),
     "pgetinertia_pending_impulse_scale": (0x0044370B, "d986140100008b4664d80d08017e00"),
     "pgetinertia_status_0x100": (0x0044377A, "668b4f0481e1000100006685c9741f"),
     "pgetinertia_up_0_98": (0x00443789, "d9461cdc1d10017e00"),
@@ -226,7 +232,7 @@ def main() -> int:
             "collision_work_allocation": "PInitialize allocates a separate 0x84-byte work block and stores its pointer at playerwk+0x64",
             "default_acceleration_multiplier": "normal PInitialize path writes 1.0f to motionwk2+0x3C",
             "PGetBreak": "uses air_resist/air_resist_y/air_resist_z, run_break, lim_frict, grd_frict, grd_frict_z and zero-cross guards before writing playerwk AddVelocity",
-            "PGetInertia": "uses run_speed/Up, -8.0 inverted branch, grounded pending-impulse path, status 0x100 Up<=0.98 0.0002 drag branch, and normal air_resist terms",
+            "PGetInertia": "uses run_speed/Up, -8.0 local NORMAL-force inverted branch (stack+0xC -> AddVelocity+4), grounded pending-impulse path, status 0x100 Up<=0.98 0.0002 forward drag branch, and normal air_resist terms",
             "PGetSpeed": "integrates AddVelocity into Speed, contains forward zero-cross protection, and applies the 0.87*jog_speed deadband to forward and local-Z speed",
             "air_turn": "0x443C50 status&3==0 uses independently stored f32 constants: transformed local velocity * 0.9 + old local velocity * 0.1 on all three axes",
             "support_order": "exact calls at 0x0049AD34..0x0049AD54 execute movement, PGetAcceleration, PGetSpeed, PSetPosition, then PResetPosition",
@@ -254,6 +260,7 @@ def main() -> int:
         print("  default motionwk2 acceleration multiplier 1.0f: PASS")
         print("  PGetBreak field/branch signatures: PASS")
         print("  PGetInertia field/branch signatures: PASS")
+        print("  inverted-Up NORMAL-force stack/output axis + direct normal integration: PASS")
         print("  PGetSpeed AddVelocity integration/forward + local-Z deadband evidence: PASS")
         print("  general-turn airborne 0.9 transformed + 0.1 old-local vector: PASS")
         print("  grounded Sonic movement -> acceleration -> speed -> position -> reset order: PASS")

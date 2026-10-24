@@ -70,6 +70,31 @@ static void owner_controller_cases(SA3DSECCollision*s){
     FILE*trace=path?fopen(path,"wb"):NULL;if(path)assert(trace);
     if(trace)assert(!sa1_trace_write_header(trace));
     unsigned exits=0,rolls=0,charges=0,launches=0;
+    /* Controlled ordinary static landings on actual imported beach support.
+     * Validate both the Act1 classification and final main-idle request. */
+    for(unsigned ball=0;ball<2;ball++)for(unsigned hard=0;hard<2;hard++){
+        assert(sa3ds_ec_collision_spawn(s,0,SA3DS_EC_SPAWN_Z,0));
+        SA1PlayerState p;sa1_player_reset(&p,&s->world);
+        p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;p.ball_form=ball!=0;
+        p.vel=(SA1Vec3){0,hard?-5.5f:-0.5f,0};
+        SA1PlayerState expected=p;
+        sa1_steam_sonic_air_step(&expected,&(SA1Input){0},0,NULL);
+        p.pos.y=s->world.reset_position.y-expected.vel.y;
+        SA3DSSonicAnimationSync sync={0};SA3DSSonicAnimationRuntime rt={0};
+        SA3DSSonicAnimationObservation o=sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
+        (void)sa3ds_sonic_animation_select(&rt,&p,&o);
+        controller_tick(s,&p,(SA1Input){0},trace);
+        assert(p.grounded&&p.animation_landing_valid);
+        assert(p.animation_landing_world_y==expected.vel.y);
+        assert(p.animation_landing_air_action==(ball?8:12));
+        o=sa3ds_sonic_animation_observe(&sync,&p,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
+        SA3DSSonicAnimationSelection selected=sa3ds_sonic_animation_select(&rt,&p,&o);
+        assert(selected.landing_classification_valid);
+        assert(selected.landing_classified_request==(hard?19:(ball?2:1)));
+        assert(selected.requested_runtime_id==(hard?0:(ball?2:1)));
+        assert(selected.idle_counter==2);
+    }
+    puts("Owner stationary landing arbitration: PASS (4 imported beach soft/hard ball/upright cases)");
     /* Interior starts keep the complete charge/release route within support.
      * Exploratory starts z=375/400 reach a partial-contact gap near z=413;
      * that limitation is recorded in the checkpoint. */
@@ -161,7 +186,13 @@ static void owner_controller_cases(SA3DSECCollision*s){
     for(unsigned t=0;t<150;t++){
         controller_tick(s,&p,(SA1Input){.move_x=t<12?1.0f:0.0f,.jump_held=t<7},trace);
         if(!p.grounded&&t<12)air_turns++;
-        if(p.grounded){landed=1;break;}
+        if(p.grounded){
+            assert(p.animation_landing_valid);
+            assert(p.animation_landing_air_action==8);
+            assert(p.animation_landing_world_y<=0);
+            assert(p.animation_input_valid);
+            landed=1;break;
+        }
     }
     assert(air_turns==12&&landed);
     printf("Owner launch ordering: PASS (%u imported-ground normal/roll/turn launches; charging ignores jump)\n",launches);

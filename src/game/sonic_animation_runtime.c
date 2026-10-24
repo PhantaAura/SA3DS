@@ -9,6 +9,9 @@ static const SA3DSSonicAnimationBinding kBindings[] = {
     { 0,  1, 73,  3,  0, 0.0625f, 0.5f, 72, 32, "Stand"},
     { 1,122, 73,  4,  2, 0.25f,   0.25f,72, 20, "Stand transition"},
     { 2,123, 73,  3,  2, 0.25f,   0.25f,72, 16, "Stand continuation"},
+    { 4,120, 73,  4,  5, 0.25f,   0.25f,72, 20, "Idle entry"},
+    { 5,121, 73,  4,  6, 0.25f,   0.25f,72, 39, "Idle wait"},
+    { 6,120, 73,  6,  0, 0.25f,   0.25f,72, 20, "Idle return"},
     { 9,  3, 73, 10,  9, 0.25f,   3.4f, 72, 32, "Walk1"},
     {10,  4, 73, 10, 10, 0.25f,   1.4f, 72, 32, "Walk2"},
     {11,  5, 73, 10, 11, 0.25f,   0.8f, 72, 32, "Walk3"},
@@ -55,17 +58,28 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
                                   const SA3DSSonicAnimationObservation *o,
                                   int previous_grounded) {
     int landed = player->grounded && !previous_grounded;
-    int moving_landing = landed && local_forward_speed(player) != 0.0f;
+    int input_active = player->animation_input_valid && player->animation_input_active;
+    int moving_landing = landed &&
+        (local_forward_speed(player) != 0.0f || input_active);
     /* 0x494FF0 bypasses the stationary landing branch for any nonzero
      * signed Speed.x; 0x49798E then calls the ordinary ground selector.
-     * Stationary impact classification still lacks the retail pre-contact
-     * EntityData2 velocity, so retain the explicitly provisional fallback. */
-    if (landed && !moving_landing)
+     * The bridge preserves world Y before ordinary static support projection,
+     * corresponding to motionwk+8 retained separately from player-local Speed. */
+    if (landed && !moving_landing) {
+        if (player->animation_landing_valid &&
+            isfinite(player->animation_landing_world_y) &&
+            (player->animation_landing_air_action == 8 ||
+             player->animation_landing_air_action == 12)) {
+            if (player->animation_landing_world_y <= -5.0f) return 19;
+            return player->animation_landing_air_action == 8 ? 2 : 1;
+        }
+        /* Unsupported/missing collision provenance retains the old fallback. */
         return 19;
+    }
 
     switch (o->intent) {
     case SA3DS_SONIC_ANIM_GROUNDED_IDLE:
-        if (!moving_landing) return 0;
+        if (!moving_landing && !input_active) return 0;
         /* Retail tests exact zero, not the observer epsilon. */
         /* fall through */
     case SA3DS_SONIC_ANIM_GROUNDED_BELOW_JOG:
@@ -106,7 +120,7 @@ int sa3ds_sonic_animation_frame_step(
     case 8: /* advance then transition with blend bookkeeping */
         *out_step = binding->animation_speed;
         return 1;
-    case 6: /* loop backward */
+    case 6: /* reverse then transition to NextAnim */
     case 7: /* reverse and clamp */
         *out_step = -binding->animation_speed;
         return 1;
@@ -138,7 +152,9 @@ static void select_binding(SA3DSSonicAnimationRuntime *runtime,
     if (!sa3ds_sonic_animation_binding(runtime_id, &runtime->active_binding))
         (void)sa3ds_sonic_animation_binding(0, &runtime->active_binding);
     runtime->selection_entry_frame = sim_frame;
-    runtime->accumulated_sample_frame = 0.0f;
+    runtime->accumulated_sample_frame =
+        runtime->active_binding.property == 6 || runtime->active_binding.property == 7
+        ? (float)(runtime->active_binding.source_frame_count - 1) : 0.0f;
     runtime->requested_runtime_id = runtime_id;
 }
 
@@ -181,6 +197,7 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                                                   : player->grounded;
     uint16_t requested_id = choose_runtime_id(player, observation,
                                                previous_grounded);
+    runtime->landing_classification_valid = 0;
     if (runtime->initialized && player->grounded &&
         player->action_state == SA1_ACTION_GROUNDED && previous_grounded) {
         if (runtime->previous_action_state == SA1_ACTION_ROLL) {
@@ -190,12 +207,54 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
             /* 0x495CD0 / 0x491660 leave request 29 untouched. */
             requested_id = 29;
         } else if (observation->intent == SA3DS_SONIC_ANIM_GROUNDED_IDLE &&
-                   (runtime->requested_runtime_id == 1 ||
-                    runtime->requested_runtime_id == 2)) {
+                   !(player->animation_input_valid && player->animation_input_active) &&
+                   runtime->requested_runtime_id >= 1 &&
+                   runtime->requested_runtime_id <= 6) {
             /* Idle selector retains these source idle-chain requests. */
             requested_id = runtime->requested_runtime_id;
         }
     }
+
+    /* Ordinary world-gravity/upright idle branch only. The original compares
+     * -dot(Gravity, normal) with the interpolated NJS cosine at BAMS 0x11C7.
+     * Exact table endpoints 0x88BB08/04 yield this threshold. Tilt requests
+     * 7/8, alternate-character presentation and environment events are not
+     * inferred here. Return-to-idle resets the original work counter. */
+    int ordinary_idle_contact = player->grounded &&
+        player->action_state == SA1_ACTION_GROUNDED &&
+        observation->intent == SA3DS_SONIC_ANIM_GROUNDED_IDLE &&
+        local_forward_speed(player) == 0.0f &&
+        !(player->animation_input_valid && player->animation_input_active) &&
+        player->ground_normal.y > 0.9063120782375336;
+    int classified_landing = ordinary_idle_contact && !previous_grounded &&
+        player->animation_landing_valid && isfinite(player->animation_landing_world_y) &&
+        (player->animation_landing_air_action == 8 ||
+         player->animation_landing_air_action == 12);
+    int normal_idle = ordinary_idle_contact && previous_grounded;
+    if (classified_landing) {
+        /* Act1 first calls 0x494FF0: action1, counter0, idle selector; then
+         * writes soft1/2 or hard19. Main dispatches the NEW action1 and calls
+         * idle again at 0x49AD5C after PResetPosition. On ordinary upright
+         * support this retains1/2 but replaces19 with0 in the SAME frame. */
+        runtime->landing_classified_request = requested_id;
+        runtime->landing_classification_valid = 1;
+        runtime->idle_counter = runtime->requested_runtime_id == 29 ? 0 : 1;
+        if (requested_id > 6) requested_id = 0;
+        runtime->idle_counter = (uint16_t)(runtime->idle_counter + 1u);
+    } else if (normal_idle && requested_id != 29) {
+        /* Ordinary moving->idle transition also invokes 0x494FF0 before
+         * main's idle call. Do not reset a counter frozen by Uncurl29. */
+        if (!runtime->idle_selector_active && runtime->initialized &&
+            runtime->requested_runtime_id >= 9 && runtime->requested_runtime_id <= 13)
+            runtime->idle_counter = 1;
+        if (runtime->requested_runtime_id <= 6 &&
+            runtime->idle_counter > 1800 && runtime->idle_counter < 32768) {
+            runtime->idle_counter = 0;
+            requested_id = 4;
+        }
+        runtime->idle_counter = (uint16_t)(runtime->idle_counter + 1u);
+    }
+    runtime->idle_selector_active = (normal_idle || classified_landing) && requested_id != 29;
     runtime->requested_runtime_id = requested_id;
 
     /* The second retail pointer targets stateful CharObj2.SpindashSpeed.
@@ -230,7 +289,9 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                 if (runtime->transition_progress >= 1.0f) {
                     runtime->transition_active = 0;
                     runtime->transition_progress = 0.0f;
-                    runtime->accumulated_sample_frame = 0.0f;
+                    runtime->accumulated_sample_frame =
+                        runtime->active_binding.property == 6 || runtime->active_binding.property == 7
+                        ? (float)(runtime->active_binding.source_frame_count - 1) : 0.0f;
                 }
                 continue;
             }
@@ -261,13 +322,17 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
 
             /* With an unchanged request, property 4 reaches frames-1 then
              * NextAnim writes BOTH request and index (0x446910), no blend. */
-            if (runtime->active_binding.property == 4) {
+            if (runtime->active_binding.property == 4 ||
+                runtime->active_binding.property == 6) {
                 int backed = 0;
                 runtime->accumulated_sample_frame +=
                     current_frame_step(runtime, player, &backed);
-                if (runtime->active_binding.source_frame_count > 0 &&
-                    runtime->accumulated_sample_frame >=
-                        (float)(runtime->active_binding.source_frame_count - 1)) {
+                if ((runtime->active_binding.property == 6 &&
+                     runtime->accumulated_sample_frame < 0.0f) ||
+                    (runtime->active_binding.property == 4 &&
+                     runtime->active_binding.source_frame_count > 0 &&
+                     runtime->accumulated_sample_frame >=
+                        (float)(runtime->active_binding.source_frame_count - 1))) {
                     select_binding(runtime,
                         runtime->active_binding.next_runtime_id,
                         player->sim_frame);
@@ -295,6 +360,10 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     out.transition_from_action_slot = runtime->transition_from_action_slot;
     out.transition_from_frame = runtime->transition_from_frame;
     out.transition_weight = runtime->transition_progress;
+    out.requested_runtime_id = runtime->requested_runtime_id;
+    out.idle_counter = runtime->idle_counter;
+    out.landing_classified_request = runtime->landing_classified_request;
+    out.landing_classification_valid = runtime->landing_classification_valid;
     runtime->last_sim_frame = player->sim_frame;
     runtime->cached_selection = out;
     return out;

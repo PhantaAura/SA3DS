@@ -29,10 +29,28 @@ friction/deadband logic, axis zero-cross protection, then writes AddVelocity.
 
 Recovered direct branches:
 
-- `Speed.x > run_speed && Up < 0` -> multiply local forward force by `-8.0f`
+- `Speed.x > run_speed && Up < 0` -> multiply local **normal** force by `-8.0f`
 - status `0x100` and `Up <= 0.98` -> subtract `Speed.x * 0.0002f`
 - otherwise ordinary forward drag uses `air_resist * Speed.x`
 - normal/side drag use `air_resist_y` / `air_resist_z`
+
+Axis correction (2026-10-23): exact `0x4436F7..0x443701` loads, multiplies
+and stores stack+0xC. Forward drag instead uses stack+8 at `0x4437B1`.
+Normal drag reads Speed+0x3C and stack+0xC at `0x4437C3..CD`, then writes
+AddVelocity+4 at `0x4437E0`; forward writes AddVelocity+0. PGetSpeed
+`0x444031..37` adds AddVelocity+0x30 directly to local Speed+0x3C.
+This operand/dataflow proof supersedes the older forward-force interpretation.
+The input force is gravity*weight plus collision force, already transformed
+world-to-player-local by `0x43EC00`; normal is contact-local Y, not world Y
+on slopes/inverted frames. Pending dynamic impulses remain excluded below.
+The portable helper now scales only normal before ordinary normal drag.
+The source-equation regression uses 98 signed-speed/Up/status cases, including
+strict run-speed and zero-Up boundaries. It fails on the former source.
+These synthetic inverted frames do not establish retail inverted-contact parity.
+An additional120-tick synthetic inverted basis checks direct normal-speed
+integration against the closed-form drag recurrence and finite world position;
+the existing Emerald Coast upright-support regressions remain the real-geometry
+guard. The resident opening floor adapter does not support inverted contact.
 
 A grounded branch consumes and clears data through the separate
 `playerwk+0x64` collision/support work block. 0.0.8.8.8 intentionally models the

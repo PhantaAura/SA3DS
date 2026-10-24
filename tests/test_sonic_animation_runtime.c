@@ -47,6 +47,9 @@ int main(void) {
         { 0,  1,  0, 73,  3, 0.0625f, 0.5f, 72,32},
         { 1,122,  2, 73,  4, 0.25f,   0.25f,72,20},
         { 2,123,  2, 73,  3, 0.25f,   0.25f,72,16},
+        { 4,120,  5, 73,  4, 0.25f,   0.25f,72,20},
+        { 5,121,  6, 73,  4, 0.25f,   0.25f,72,39},
+        { 6,120,  0, 73,  6, 0.25f,   0.25f,72,20},
         { 9,  3,  9, 73, 10, 0.25f,   3.4f, 72,32},
         {10,  4, 10, 73, 10, 0.25f,   1.4f, 72,32},
         {11,  5, 11, 73, 10, 0.25f,   0.8f, 72,32},
@@ -432,6 +435,75 @@ int main(void) {
         assert(s.binding.runtime_id==(next==2?18:14));
     }
     puts("PC2004 Uncurl request/idle-chain/action interruptions: PASS");
+
+    /* Supported ordinary static landings retain pre-projection WORLD Y.
+     * Ball retail action8 and upright action12 have different soft requests. */
+    for(unsigned ball=0;ball<2;ball++)for(unsigned hard=0;hard<3;hard++){
+        memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));
+        p=base_player();p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;
+        p.ball_form=ball!=0;p.vel.y=-2;
+        o=observe(&sync,&p);(void)select_no_mutation(&rt,&p,&o);
+        p.sim_frame=1;p.grounded=true;p.action_state=SA1_ACTION_GROUNDED;
+        p.ball_form=false;p.vel.y=0;
+        p.animation_landing_valid=true;p.animation_landing_air_action=ball?8:12;
+        p.animation_landing_world_y=hard==0?-4.999f:(hard==1?-5.0f:-5.001f);
+        o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.binding.runtime_id==(hard?0:(ball?2:1)));
+        assert(s.sample_frame==0);
+        assert(rt.landing_classification_valid);
+        assert(rt.landing_classified_request==(hard?19:(ball?2:1)));
+        assert(rt.requested_runtime_id==(hard?0:(ball?2:1)));
+        assert(rt.idle_counter==2);
+    }
+    /* Active processed input at EXACT zero local speed bypasses stationary
+     * landing and also starts locomotion from idle; no magnitude is changed. */
+    memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));
+    p=base_player();p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;
+    o=observe(&sync,&p);(void)select_no_mutation(&rt,&p,&o);
+    p.sim_frame=1;p.grounded=true;p.action_state=SA1_ACTION_GROUNDED;
+    p.animation_input_valid=true;p.animation_input_active=true;
+    p.animation_landing_valid=true;p.animation_landing_air_action=12;
+    p.animation_landing_world_y=-8;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==9&&rt.requested_runtime_id==9);
+
+    /* Original signed idle counter compares >1800 BEFORE increment. From
+     * zero the 1802nd selector call requests4, not after an invented duration. */
+    memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));p=base_player();
+    for(uint64_t tick=0;tick<=1800;tick++){
+        p.sim_frame=tick;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.binding.runtime_id==0&&rt.idle_counter==tick+1);
+    }
+    p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==4&&s.transition_active&&rt.idle_counter==1);
+    for(unsigned tick=0;tick<3;tick++){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    }
+    assert(!s.transition_active&&s.sample_frame==0);
+    for(unsigned tick=0;tick<76;tick++){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    }
+    assert(s.binding.runtime_id==5&&s.sample_frame==0&&!s.transition_active);
+    for(unsigned tick=0;tick<152;tick++){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    }
+    assert(s.binding.runtime_id==6&&s.sample_frame==19&&!s.transition_active);
+    for(unsigned tick=0;tick<76;tick++){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    }
+    assert(s.binding.runtime_id==6&&s.sample_frame==0);
+    p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==0&&s.sample_frame==0);
+    /* Same-tick reads do not increment counters or consume another request. */
+    uint16_t idle_counter=rt.idle_counter;
+    (void)select_no_mutation(&rt,&p,&o);assert(rt.idle_counter==idle_counter);
+    rt.idle_counter=0xffff;rt.idle_selector_active=1;
+    p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==0&&rt.idle_counter==0);
+    rt.idle_counter=1801;p.ground_normal.y=0.8f;
+    p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==0&&rt.idle_counter==1801);
+    puts("PC2004 static landing/input + upright idle counter/reverse chain: PASS");
     puts("physics-synced Sonic runtime animation resolver + PC2004 rates: PASS");
     return 0;
 }

@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#define PC2004_INERTIA_NEGATIVE_UP_FORWARD_SCALE (-8.0f)
+#define PC2004_INERTIA_NEGATIVE_UP_NORMAL_SCALE (-8.0f)
 #define PC2004_INERTIA_STATUS_0X100_DRAG (0.00019999999494757503f)
 /* Retail uses an f64 memory comparison, not a rounded f32 threshold. */
 #define PC2004_INERTIA_STATUS_0X100_UP_LIMIT (0.98)
@@ -118,10 +118,10 @@ SA1PC2004LocalVector sa1_pc2004_pgetinertia_add_velocity(
 
     SA1PC2004LocalVector out = local_force;
 
-    /* 0x4436D4..0x443705: if forward speed is above run_speed while Up is
-     * negative, the local forward force is multiplied by -8.0f. */
+    /* 0x4436F7..0x443701 scales stack+0xC: local NORMAL force, later
+     * written to AddVelocity+4 (0x4437E0), not stack+8/forward. */
     if (speed.forward > p->run_speed && context->up_y < 0.0f) {
-        out.forward *= PC2004_INERTIA_NEGATIVE_UP_FORWARD_SCALE;
+        out.normal *= PC2004_INERTIA_NEGATIVE_UP_NORMAL_SCALE;
         dbg->used_inertia_negative_up_flip = 1;
     }
 

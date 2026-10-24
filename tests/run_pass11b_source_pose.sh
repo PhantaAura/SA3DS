@@ -16,7 +16,7 @@ python3 tools/build_pc2004_sonic_sa3c.py \
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
   src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c src/sa3c/sa3c_render.c \
   audits/pass11a/tools/pass11_pose_diag.c -lm -o "$tmp/pass11_pose_diag"
-for action in 1 22 122 123; do
+for action in 1 22 120 121 122 123; do
   python3 tools/audit_pass11b_source_pose.py \
     "$CHRMODELS_PATH" "$tmp/sonic.sa3c" "$tmp/pass11_pose_diag" --action "$action"
 done

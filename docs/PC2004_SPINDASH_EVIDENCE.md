@@ -213,12 +213,44 @@ charging invariance, 11 moving-landing cases, 2 interruption/frame-timing cases,
 suite. Exact executable signature verifiers pass for both selector branches
 and ball-status/drag evidence.
 
-One older kernel interpretation is now known to be wrong but is intentionally
-not changed in this bounded pass: the negative-Up/high-speed `-8` branch at
+The `43d91e2` audit identified an older kernel interpretation as wrong: the
+negative-Up/high-speed `-8` branch at
 `0x4436F7..0x443701` modifies local **normal** force (stack+0xC), not forward
-force (stack+8). The existing inverted-Up helper/test and earlier evidence note
-still say forward. Correcting and validating inverted contact is a separate
-follow-up; it is not covered by the four upright opening-area slope fixtures.
+force (stack+8). The following checkpoint corrects the helper, tests and earlier
+evidence note: see `PC2004_BREAK_INERTIA_COLLISION_EVIDENCE.md` for operand and
+output-field proof,98 component fixtures and120 synthetic integration ticks.
+Actual inverted retail contact remains outside the upright opening-area fixtures.
+
+## Stationary landing and ordinary upright idle continuation (after43d91e2)
+
+Exact SHA-256-pinned PC2004 instructions and the private Ghidra export establish:
+
+- `0x494FF0` bypasses stationary landing when filtered input is active OR signed
+  local forward speed is nonzero. Input-only zero-speed selection now follows
+  the existing ground rows9–13 rather than forcing Land19.
+- The action8/12 landing branches compare retained world `motionwk+8` against
+  -5: greater selects2/1 respectively; equality or less classifies19. The
+  static-support adapters now retain this value before contact projection,
+  rather than reading the subsequently zeroed local normal velocity.
+- Classification is NOT the final animation request. Act1 runs before main's
+  dispatch of the new action1; `0x49AD5C` invokes `0x491660` again. Ordinary
+  upright idle retains1/2 but overwrites19 with0 in that same simulation frame.
+  Traces record both classification and final request, avoiding false Land19
+  parity claims. Exceptional/dynamic contact can alter motionwk and is not
+  reconstructed by this bridge.
+- `0x491660` tests the signed16-bit idle counter against1800 BEFORE increment.
+  The recovered ordinary branch and exact table-interpolated cosine threshold
+  at BAMS0x11C7 are used; no invented timer. Uncurl29 retains its special
+  behavior. Requests4/5/6 use original ACTION120/121/120 metadata; property6
+  starts at frame19, reverses and advances to NextAnim0 only below frame0.
+
+Tilt requests7/8, environment events, alternate-character branches and retail
+contact arbitration remain partial. Missing impact provenance retains the
+explicitly provisional19 fallback. Source-equation and deterministic host
+checks are not executed-retail traces. Four controlled soft/hard ball/upright
+landings on the real imported beach exercise the bridge; full animation timing,
+zero-speed/input selection, signed counter wrap and reverse playback have
+focused regressions. Six ACTIONs now run through the independent raw-DLL oracle.
 
 ## Reproducible verifier
 

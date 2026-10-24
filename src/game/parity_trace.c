@@ -19,7 +19,10 @@ int sa3ds_parity_trace_write_header(FILE *output) {
         "accel_forward,accel_side,requested_force,resistance_force,angle_delta_bams,turn_step_bams,turn_kind,"
         "used_brake_branch,crossed_zero,side_stopped_at_jog_threshold,"
         "runtime_animation_id,action_slot,animation_frame,selector_provisional,"
-        "spindash_charge,spindash_ticks,ball_form,jump_ticks\n") < 0 ? -1 : 0;
+        "spindash_charge,spindash_ticks,ball_form,jump_ticks,"
+        "animation_requested_id,landing_classification_valid,landing_classified_request,"
+        "landing_impact_world_y,landing_impact_valid,landing_air_action,"
+        "processed_analog_active,processed_analog_valid,idle_counter\n") < 0 ? -1 : 0;
 }
 
 int sa3ds_parity_trace_write_frame(FILE *output,
@@ -46,7 +49,8 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,"
         "%d,%d,%" PRId32 ",%" PRIu32 ",%.9g,%.9g,%.9g,%.9g,%.9g,"
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%u,%u,%d,%d,%d,%d,"
-        "%u,%u,%.9g,%d,%.9g,%" PRIu32 ",%d,%" PRIu32 "\n",
+        "%u,%u,%.9g,%d,%.9g,%" PRIu32 ",%d,%" PRIu32 ","
+        "%u,%u,%u,%.9g,%u,%u,%u,%u,%u\n",
         SA3DS_PARITY_TRACE_VERSION, (int)test_id, test_name ? test_name : "UNKNOWN", player->sim_frame,
         input->move_x, input->move_z,
         analog.post_deadzone_x, analog.post_deadzone_z,
@@ -70,6 +74,15 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         (unsigned)animation->binding.runtime_id, (unsigned)animation->binding.action_slot,
         animation->sample_frame, animation->selector_is_provisional ? 1 : 0,
         player->spindash_charge, player->spindash_ticks,
-        player->ball_form ? 1 : 0, player->jump_ticks);
+        player->ball_form ? 1 : 0, player->jump_ticks,
+        (unsigned)animation->requested_runtime_id,
+        (unsigned)animation->landing_classification_valid,
+        (unsigned)animation->landing_classified_request,
+        player->animation_landing_world_y,
+        player->animation_landing_valid ? 1u : 0u,
+        (unsigned)player->animation_landing_air_action,
+        player->animation_input_active ? 1u : 0u,
+        player->animation_input_valid ? 1u : 0u,
+        (unsigned)animation->idle_counter);
     return result < 0 ? -1 : 0;
 }

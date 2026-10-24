@@ -35,5 +35,23 @@ Force/turn debug columns still describe the flat kernel only; their zeros on
 surface/ball paths do not establish zero force. Animation ID/frame and
 controller action are captured together after simulation.
 
+The 2026-10-23 v2 extension preserves the first58 columns and appends9:
+`animation_requested_id`, `landing_classification_valid`,
+`landing_classified_request`, `landing_impact_world_y`, `landing_impact_valid`,
+`landing_air_action`, `processed_analog_active`, `processed_analog_valid`,
+`idle_counter`. Classification records the Act1 phase; requested ID records
+the later main-selector arbitration, which can overwrite hard19 with0 in the
+same tick. Active animation may still differ during an original state2 blend.
+Impact is retained pre-projection worldY for ordinary static contact only.
+The comparator treats the8 integer additions exactly and impactY numerically.
+Different column sets are reported, not silently promoted to complete matches.
+
+Retail capture remains blocked on the current ARM macOS host: the exact PE32
+x86 owner executable cannot be spawned natively (actual REA/Frida probe:
+`Exec format error`); no Wine/x86 Windows runtime is available. The original
+file was not altered; the identical executable temporary probe copy was removed.
+A compatible owner Windows execution/instrumentation endpoint is needed before
+any static-equation/port fixtures can be replaced by genuine retail traces.
+
 Comparison results must be labelled `RETAIL TRACE VERIFIED`,
 `SOURCE-EQUATION VERIFIED`, `PORT-INTERNAL REGRESSION`, or `NOT VERIFIED`.

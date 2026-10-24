@@ -1,5 +1,87 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-23 — stationary landing/idle and inverted-Up normal force
+
+Parent `43d91e2`; initial tree contained only the inherited dirty3DSX. That
+binary remains excluded. CPU uploads, renderer, contact solver, upright slope
+Roll resistance, verified movement constants and60Hz scheduler are unchanged.
+
+Continued the existing private performance lab/profile, not another audit.
+One Azahar2126.0 process, Old3DS/Vulkan/CPU100/frame100/1x, same warmed cache,
+owner assets and600-tick replay. Separated warmed observations: exact1f5ca2c
+artifact `68a87067ec18e6fe7a4d324a341b715606248571823ab695bf7ad2a18a7cc6ce`
+60FPS/100% (3.62–4.57ms); exact43d91e2 artifact
+`a10a8c504b975f1e57cbe92fb3af5aadd1c9f2a1ef89bc670711bcad92cff10a`
+60FPS/100% (2.69–4.33ms), later59FPS/99%. Historical7–34FPS old-build runs
+are still valid; current bounded samples do not certify long-session stability.
+Shared host variability remains the isolated confounder, not a proven controller
+regression or a proven single root cause. Initial battery73%, LowPower1,
+load6.38/2.62/1.82, swap6392MiB; later AC71%, load9.49/9.70/7.33,
+swap7793MiB and WindowServer43.7% snapshot. Power settings were NOT changed;
+AC-disabled comparison remains blocked by root authorization mechanism. No
+restoration is outstanding. Full timed seven-scenario matrix remains incomplete.
+
+Original evidence: pinned EXE SHA256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`,
+saved private Ghidra export and exact raw disassembly/signatures. No new live
+Ghidra decompilation success claimed. Reused494FF0/491660/Act1/main ordering:
+ordinary stationary soft impact>-5 requests2(ball action8)/1(upright12);
+<=-5 classifies19, then ordinary main idle overwrites19 with0 SAME tick.
+Retain worldY before static support projection; filtered input with zero speed
+bypasses idle. Recovered signed16-bit idle timer and4->5->6->0 ACTION chain,
+including reverse property6. Tilt/event/exceptional-contact branches remain
+partial, missing impact provenance retains provisional19. See Spin Dash evidence.
+
+Corrected4436F7..443701 `-8` to local NORMAL force, not forward: stack+C versus
+stack+8, outputAddVelocity+4, directSpeed+3c integration verified independently.
+Strict forward>run_speed andUp<0 conditions preserved. Old helper fails the
+new regression; corrected helper passes98 component cases and120 finite
+synthetic inverted-frame ticks. Resident floor adapter does not support inverted
+contact: no invented retail/terrain result. Four actual upright slope equations
+and inherited contact checks remain passing.
+
+Trace-v2 now appends9 compatible diagnostics (67 total), including classification,
+final request and retained impact;8 integer fields compare exactly. Actual REA
+Frida spawn of an identical temporary executable copy returned `Exec format
+error` on ARM macOS; original PE32 cannot execute natively and no compatible
+Windows x86 runtime is available. Temporary copy removed, original untouched.
+No genuine retail capture occurred. Old-vs43 replay first differs frame241
+posX40.4033699 vs40.4428215 (known intervening jump-order correction); max
+position error3.00501273, velocity1.66773265. This is a port-version comparison,
+NOT retail parity. Final-vs43 all600 common fields match exactly; added columns
+correctly prevent whole-schema match. Position/velocity error0. Native frame286
+retains impactY-1.64194489/action8 and moving request9, not stationary classification.
+
+Validation: current-host cumulative suite PASS; run_host_tests PASS19 scenarios;
+both exact-executable verifiers PASS. Animation128 replays, soft/hard/-5/input
+boundaries, signed idle wrap/reverse chain and observer nonmutation PASS.
+Owner685-triangle suite PASS:4 new stationary beach landings,600-tick replay,
+36 launches/36 charges/12 exits/6 rolls/12 air turns,4 slope equations,
+1731 supports/344 descents/504 corners/694 transitions/50 ledges.
+Pass11B raw-DLL ACTIONs1/22/120/121/122/123 PASS84294 scalar comparisons,
+max absolute error4.99206543e-9. Source-equation/port regression, not retail traces.
+
+Native build PASS275612 bytes, SHA256
+`93828f83954e2f2ad9a50765efe8dc57458b76add40b43ce7d3191005342e959`;
+existing unusedupload_rgba8 warning only. Exact updated build in isolated
+Azahar rendered EC beyond1939GPUframes with live run/jump and600-tick replay,
+60FPS/100% inspected,29382KiB linear free,45 stage/42 Sonic draws.
+Replay SHA256 `4f0c4449c038fe0f161a5108e461643073b8c44db7278166a2244c4fd9ae5741`.
+White Zone59–60FPS/99–100%,30346KiB free: idleACTION121/request5 then0,
+stationary jump->grounded request2/ACTION123, movement interruption and charge/
+release15 exercised. Full native stationary hard-impact/tilted cases are not
+claimed. Repeated final600-tick traces match exactly in all67 columns. Later
+EC53FPS/88% and24FPS/41% samples are EXCLUDED from matched comparisons: a
+second, other-project `/Applications/Azahar.app` process appeared during final
+checks (our private PID29389 versus other PID41939). Neither the other process
+nor its SD/session was modified. At that time load12.58,swap8119MiB,
+WindowServer44.7% and WebContent78.3% were observed. This is a concrete shared
+contention confounder, not proof of a unique cause for every historical dip.
+AC became available but `sudo -n true` requires a password; no power change.
+Our disposable process was closed after evidence capture. Physical Old3DS
+untested; PHYSICS_1TO1=false. Next: compatible original
+Windows runtime trace endpoint, then exceptional/tilted selector/contact inputs.
+
 ## 2026-10-23 — performance isolation, moving landing and slope Roll
 
 Parent `0b7b714`; inherited local binary excluded. Renderer, CPU uploaders,

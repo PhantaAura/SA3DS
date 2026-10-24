@@ -4,6 +4,7 @@
 #include "stage.h"
 #include "steam_flat.h"
 #include "steam_input.h"
+#include "steam_air.h"
 
 static void step(SA1PlayerState *p, SA1Input in, SA1SteamFlatDebug *dbg) {
     sa1_physics_step_steam_sonic_flat(p, &in, 0.0f,
@@ -123,6 +124,30 @@ int main(void) {
     assert(d.turn_kind == SA1_STEAM_TURN_SLOW);
     assert((int)d.turn_step_bams == (int)expected_slow_step(6.0f));
     assert(d.turn_step_bams < 0x100u);
+
+    /* Presentation landing provenance is the pre-projection world Y after
+     * the existing air kernel. Capturing it must not alter that kernel. */
+    for(unsigned ball=0;ball<2;ball++)for(unsigned hard=0;hard<2;hard++){
+        sa1_player_reset(&p,sa3ds_movement_lab_world());
+        p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;p.ball_form=ball!=0;
+        p.vel=(SA1Vec3){0,hard?-5.5f:-0.5f,0};
+        SA1PlayerState expected=p;
+        sa1_steam_sonic_air_step(&expected,&none,0,NULL);
+        p.pos.y=1.0f-expected.vel.y;
+        step(&p,none,NULL);
+        assert(p.grounded&&p.vel.y==0);
+        assert(p.animation_landing_valid);
+        assert(p.animation_landing_air_action==(ball?8:12));
+        assert(p.animation_landing_world_y==expected.vel.y);
+        assert(p.animation_input_valid&&!p.animation_input_active);
+        step(&p,none,NULL);
+        assert(!p.animation_landing_valid);
+    }
+    for(unsigned active=0;active<2;active++){
+        sa1_player_reset(&p,sa3ds_movement_lab_world());
+        step(&p,(SA1Input){.move_z=active?half_post_deadzone:0.05f},NULL);
+        assert(p.animation_input_valid&&p.animation_input_active==(active!=0));
+    }
 
     printf("steam ground-parity candidate tests: PASS\n");
     return 0;

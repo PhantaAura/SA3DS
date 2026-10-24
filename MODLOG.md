@@ -120,6 +120,15 @@
 
 ## Next
 
+2026-10-23 continuation after43d91e2: corrected inverted-Up PGetInertia local
+normal-force axis using exact stack/output/integration operands; retained
+pre-contact worldY for ordinary stationary landing and recovered later main
+idle arbitration/counter/ACTION120/121 reverse chain. Trace-v2 appends9 diagnostic
+fields. Host, owner terrain, six-ACTION raw-source oracle, native and bounded
+Azahar checks pass. Genuine PC2004 capture blocked by PE32 execution format on
+ARM macOS, not substituted by static analysis. See CURRENT_CHECKPOINT and existing
+Break/Inertia/Spin Dash evidence for exact results and incomplete branches.
+
 1. Run Pass11B oracle and cumulative host tests after every pose/runtime change.
 2. Build the SD-mode `.3dsx` and test on the owner's Old 3DS.
 3. Keep the CPU texture upload and boot trace until hardware proves a replacement.

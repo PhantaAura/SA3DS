@@ -378,6 +378,10 @@ void sa1_physics_step_steam_sonic_flat(
         world->query_surface(world->context, player->pos.x, player->pos.z) :
         (SA1Surface){0};
     int just_jumped = 0;
+    player->animation_input_active = sa1_sadx_filter_logical_analog(
+        input->move_x, input->move_z).active != 0;
+    player->animation_input_valid = true;
+    player->animation_landing_valid = false;
 
     /* Mirrors the per-tick clear at PC2004 0x00446F10. A path marks the value
      * valid only where its residual behavior has been recovered. */
@@ -442,6 +446,14 @@ void sa1_physics_step_steam_sonic_flat(
     if (surface.valid && player->vel.y <= 0.0f &&
         player->pos.y >= surface.ground_y - 0.35f &&
         player->pos.y <= surface.ground_y + 1.6f) {
+        if (!player->grounded && player->action_state == SA1_ACTION_AIRBORNE) {
+            /* Retail motionwk+8 is world Y, separate from the local normal
+             * zeroed by PResetPosition. Preserve the corresponding velocity
+             * before this static-floor adapter destroys it. */
+            player->animation_landing_world_y = player->vel.y;
+            player->animation_landing_air_action = player->ball_form ? 8 : 12;
+            player->animation_landing_valid = isfinite(player->vel.y);
+        }
         player->pos.y = surface.ground_y + 1.0f;
         player->vel.y = 0.0f;
         player->grounded = true;

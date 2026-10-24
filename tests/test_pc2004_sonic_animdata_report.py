@@ -30,7 +30,8 @@ for name, values in expected.items():
     assert actual == values, (name, actual, values)
 
 assert report["null_dense_animation_ids"] == [75, 76]
-for dense, slot, prop, nxt, rate in ((1,122,4,2,0.25),(2,123,3,2,0.25),(29,22,4,1,1.0)):
+for dense, slot, prop, nxt, rate in ((1,122,4,2,0.25),(2,123,3,2,0.25),
+        (4,120,4,5,0.25),(5,121,4,6,0.25),(6,120,6,0,0.25),(29,22,4,1,1.0)):
     row=rows[dense]
     assert (row['source_action_slot'],row['instance'],row['property'],
             row['next_animation'],row['animation_speed']) == (slot,73,prop,nxt,rate)

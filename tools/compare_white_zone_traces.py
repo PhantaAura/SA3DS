@@ -16,6 +16,9 @@ INTEGER_FIELDS={
     "trace_version","test_id","frame","jump_pressed","jump_held","jump_released",
     "action_pressed","action_held","action_released","grounded","action_state",
     "surface_id","surface_flags","runtime_animation_id","action_slot","selector_provisional",
+    "animation_requested_id","landing_classification_valid","landing_classified_request",
+    "landing_impact_valid","landing_air_action","processed_analog_active",
+    "processed_analog_valid","idle_counter",
 }
 IGNORE_EXACT={"test_name"}
 

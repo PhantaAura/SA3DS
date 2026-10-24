@@ -509,6 +509,10 @@ void sa1_physics_step_steam_sonic_surface(
     memset(dbg, 0, sizeof(*dbg));
     dbg->used_general_contact = 1;
     int just_jumped = 0;
+    player->animation_input_active = sa1_sadx_filter_logical_analog(
+        input->move_x, input->move_z).active != 0;
+    player->animation_input_valid = true;
+    player->animation_landing_valid = false;
 
     SA1SurfaceFrame frame = player_frame(player);
     if (!frame.valid) {
@@ -579,6 +583,13 @@ void sa1_physics_step_steam_sonic_surface(
         if (landing.valid && player->vel.y <= 0.0f && landing.normal.y > 0.45f &&
             landing.signed_distance >= 0.0f &&
             landing.signed_distance <= SA1_SUPPORT_QUERY_RANGE_CANDIDATE) {
+            if (player->action_state == SA1_ACTION_AIRBORNE) {
+                /* Ordinary static-support equivalent of retained motionwk Y.
+                 * Do not classify from the post-projection local normal zero. */
+                player->animation_landing_world_y = player->vel.y;
+                player->animation_landing_air_action = player->ball_form ? 8 : 12;
+                player->animation_landing_valid = isfinite(player->vel.y);
+            }
             frame = sa1_surface_frame_make(landing.normal,
                                            horizontal_from_yaw(player->yaw));
             player->pos = sa1_vec3_add(landing.point,
