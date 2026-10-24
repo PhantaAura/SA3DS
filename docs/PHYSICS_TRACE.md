@@ -72,6 +72,14 @@ sidecar, matching digest and post-main timing/animation fields before it can
 emit `RETAIL TRACE VERIFIED`, and supports explicit frame shifts for measured
 tick alignment. Its synthetic self-test is always `NOT VERIFIED`.
 
+The filter result is snapshotted when Sonic main enters and carries an
+`input_filter_sequence`; a later filter invocation therefore cannot be paired
+with the state emitted on main return. Missing input provenance aborts capture.
+Retail-only provenance columns have no native counterpart, so the comparator
+reports them as `UNPAIRED_REFERENCE_PROVENANCE` while still requiring every
+shared retail/core movement and animation field on both sides. This supports
+the intentionally asymmetric schemas without weakening the numerical gate.
+
 The locally attached Wineskin build runs the exact owner game, but its PE is
 hosted inside Rosetta-translated x86_64 `wine64`. REA Frida could enumerate the
 process but returned `Unable to access process`; a native x86_64 debugger probe

@@ -22,6 +22,7 @@ SCENARIOS=("neutral_standing","partial_acceleration","full_acceleration",
            "release_coasting","direction_reversal","running_jump_landing",
            "spindash_charge_release")
 FIELDS=("trace_version","test_id","test_name","tick_phase","sonic_act1_ran",
+        "input_filter_sequence",
         "frame","move_x","move_z",
         "filtered_input_magnitude","filtered_input_angle_bams","camera_yaw",
         "circle_raw_x","circle_raw_y","pos_x","pos_y","pos_z",
@@ -63,7 +64,7 @@ def write_capture(rows:list[dict],output:Path,scenario:str,live:bool,extra:dict|
             "angles":"PC2004 BAMS converted to radians",
             "sa3ds_mapping":"identity pending matched-spawn confirmation"
         },
-        "tick_contract":"one row after each Sonic main return, after movement and animation dispatch; alignment to SA3DS must still be measured",
+        "tick_contract":"input is snapshotted on Sonic main entry; one row is emitted on return, after movement and animation dispatch; alignment to SA3DS must still be measured",
         "host":{"system":platform.system(),"release":platform.release(),"machine":platform.machine()},
     }
     if extra: meta.update(extra)
@@ -73,6 +74,7 @@ def write_capture(rows:list[dict],output:Path,scenario:str,live:bool,extra:dict|
 
 def synthetic_rows():
     return [{"trace_version":3,"tick_phase":"post_sonic_main","sonic_act1_ran":1,
+             "input_filter_sequence":i + 1,
              "frame":i,"move_x":0.0,"move_z":0.0,
              "filtered_input_magnitude":0.0,"filtered_input_angle_bams":0,
              "camera_yaw":0.0,"circle_raw_x":0,"circle_raw_y":0,
@@ -131,6 +133,8 @@ def live_capture(args):
     if errors:
         raise SystemExit("capture aborted after instrumentation error(s): " + "; ".join(errors))
     if not rows: raise SystemExit("no post-Sonic-main rows captured")
+    if not any(int(row.get("sonic_act1_ran",0)) for row in rows):
+        raise SystemExit("no Sonic Act1 row observed; capture is not gameplay evidence")
     sidecar=write_capture(rows,args.output,args.scenario,True,{
         "capture_tool":"sa3ds-pc2004-frida-v2",
         "frida_version":getattr(frida,"__version__","unknown"),

@@ -20,7 +20,10 @@ to an already running process instead. The agent observes the original input
 filter at `0x0040F170`, counts `Sonic_Act1` at `0x00496F50`, and emits a row
 when Sonic's main routine at `0x0049A9B0` returns. This post-main endpoint is
 after the movement and animation dispatches. It does not write game memory or
-call game functions. Stop after the requested test with Ctrl+C, or use
+call game functions. The input-filter result is snapshotted at Sonic-main
+entry and carries a monotonically increasing sequence, so a later filter call
+cannot be paired with the wrong completed state. Capture aborts if no input
+sample or no Sonic Act1 gameplay update was observed. Stop after the requested test with Ctrl+C, or use
 `--frames` for a bounded capture.
 
 The exact PC2004 instructions establish that the motion-work world-velocity

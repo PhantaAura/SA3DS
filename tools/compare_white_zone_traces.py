@@ -36,6 +36,12 @@ RETAIL_CORE_FIELDS={
     "runtime_animation_id","animation_frame","sonic_act1_ran","tick_phase",
 }
 
+# Fields which must exist on both sides before a retail comparison can be
+# authoritative.  Retail-only provenance (tick_phase, sonic_act1_ran and the
+# input-filter sequence) is validated from the signed capture sidecar but has
+# no native equivalent and must not make every comparison fail by construction.
+RETAIL_COMPARABLE_FIELDS=RETAIL_CORE_FIELDS-{"tick_phase","sonic_act1_ran"}
+
 def validate_retail_metadata(path, reference_path):
     if not path:
         raise SystemExit("retail-trace authority requires --reference-metadata")
@@ -96,7 +102,7 @@ def close_field(field,a,b,abs_tol,rel_tol):
 
 def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,
             reference_kind="port-regression",observed_fields=None,
-            reference_frame_shift=0,sa3ds_frame_shift=0):
+            reference_frame_shift=0,sa3ds_frame_shift=0,required_fields=None):
     ref_fields,ref=load(ref_path,reference_frame_shift)
     sa_fields,sa=load(sa3ds_path,sa3ds_frame_shift)
     if observed_fields is not None:
@@ -104,7 +110,14 @@ def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,
         common=[f for f in ref_fields if f in sa_fields and f in observed]
     else:
         common=[f for f in ref_fields if f in sa_fields]
-    missing=[f for f in ref_fields if f not in sa_fields]
+    unpaired=[f for f in ref_fields if f not in sa_fields]
+    if required_fields is None:
+        missing=unpaired
+        unpaired_reference=[]
+    else:
+        missing=sorted(f for f in required_fields
+                       if f not in ref_fields or f not in sa_fields)
+        unpaired_reference=unpaired
     extra=[f for f in sa_fields if f not in ref_fields]
     keys=sorted(set(ref)|set(sa),key=lambda k:(int(k[0] or -1),int(k[1] or -1)))
     mismatches=Counter(); first=None; exact=True; tolerance_match=True
@@ -136,6 +149,7 @@ def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,
     return {
         "status":status,"exact":exact,"tolerance_match":tolerance_match,
         "first":first,"mismatches":mismatches,"missing":missing,"extra":extra,
+        "unpaired_reference":unpaired_reference,
         "pos_max":max(pos_err,default=0.0),"pos_mean":sum(pos_err)/len(pos_err) if pos_err else 0.0,
         "vel_max":max(vel_err,default=0.0),"vel_mean":sum(vel_err)/len(vel_err) if vel_err else 0.0,
         "frames":len(keys),
@@ -161,7 +175,8 @@ def main():
     meta=validate_retail_metadata(args.reference_metadata,args.reference) if kind=="retail-trace" else None
     r=compare(args.reference,args.sa3ds,args.abs_tol,args.rel_tol,kind,
               meta.get("observed_fields") if meta else None,
-              args.reference_frame_shift,args.sa3ds_frame_shift)
+              args.reference_frame_shift,args.sa3ds_frame_shift,
+              RETAIL_COMPARABLE_FIELDS if kind=="retail-trace" else None)
     print(f"STATUS: {r['status']}")
     print(f"ALIGNED_KEYS: {r['frames']}")
     print(f"EXACT_MATCH: {'YES' if r['exact'] else 'NO'}")
@@ -177,6 +192,8 @@ def main():
         print("FIELD_MISMATCH_COUNTS:")
         for field,count in sorted(r['mismatches'].items()): print(f"  {field}: {count}")
     if r['missing']: print("MISSING_SA3DS_FIELDS: "+",".join(r['missing']))
+    if r['unpaired_reference']:
+        print("UNPAIRED_REFERENCE_PROVENANCE: "+",".join(r['unpaired_reference']))
     if r['extra']: print("EXTRA_SA3DS_FIELDS: "+",".join(r['extra']))
     return 0 if r['status']!="NOT VERIFIED" else 1
 

@@ -28,6 +28,7 @@ function logicalAxis(raw) { return raw >= 0 ? raw / 127.0 : raw / 128.0; }
 
 let latestInput = null;
 let frame = 0;
+let inputSequence = 0;
 const act1Sequence = new Map();
 
 Interceptor.attach(at(RVA_INPUT_FILTER), {
@@ -39,6 +40,7 @@ Interceptor.attach(at(RVA_INPUT_FILTER), {
       const rawY = s16(peripheral, 0x1e);
       const camera = at(RVA_CAMERA_PTR).readPointer();
       latestInput = {
+        sequence: ++inputSequence,
         raw_x: rawX,
         raw_y: rawY,
         move_x: logicalAxis(rawX),
@@ -64,6 +66,10 @@ Interceptor.attach(at(RVA_SONIC_MAIN), {
   onEnter(args) {
     this.tid = Process.getCurrentThreadId();
     this.act1Before = act1Sequence.get(this.tid) || 0;
+    /* Snapshot the input that the original update is about to consume.  Do
+     * not read latestInput onLeave: a later filter call would associate the
+     * wrong device sample with the completed simulation state. */
+    this.input = latestInput;
     this.task = args[0];
     try {
       this.entity = this.task.add(0x20).readPointer();
@@ -78,10 +84,12 @@ Interceptor.attach(at(RVA_SONIC_MAIN), {
     try {
       const e=this.entity, m=this.motion, p=this.player;
       if (e.isNull() || m.isNull() || p.isNull()) return;
-      const input=latestInput || {
-        raw_x:0,raw_y:0,move_x:0,move_z:0,
-        filtered_input_angle_bams:0,filtered_input_magnitude:0,camera_yaw:0
-      };
+      const input=this.input;
+      if (input === null) {
+        send({kind:'capture_error', stage:'sonic_main_input',
+              message:'Sonic main ran before an observed input-filter sample'});
+        return;
+      }
       const status=u16(e,0x04);
       const transitionState=s16(p,0x120);
       const requestedAnimation=s16(p,0x124);
@@ -90,6 +98,7 @@ Interceptor.attach(at(RVA_SONIC_MAIN), {
         trace_version:3,
         tick_phase:'post_sonic_main',
         sonic_act1_ran:(act1Sequence.get(this.tid) || 0) > this.act1Before ? 1 : 0,
+        input_filter_sequence:input.sequence,
         frame:frame++,
         move_x:input.move_x,
         move_z:input.move_z,

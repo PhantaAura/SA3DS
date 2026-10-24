@@ -1,5 +1,36 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-24 — live Ghidra and retail-trace provenance correction
+
+Parent `dece3d9`; the inherited dirty compiled 3DSX remains preserved and
+excluded. Controller, renderer, collision, animation and input equations are
+unchanged; `PHYSICS_1TO1=false`.
+
+GhidraMCP 2.0 is operational with Ghidra 12.1.4/Java 21. Live program identity
+is the exact PE32 x86 owner executable, SHA-256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
+Fresh live decompilation and xrefs verify input filter `0x0040F170`, its caller
+`0x0040FDC0`, Sonic Act1 `0x00496F50`, PGetAcceleration `0x0044C270`, and the
+animation state machine `0x0044A800`. Main instructions establish Act1 call
+`0x0049AA34`, later action dispatch, then animation call `0x0049AC2B`; sampling
+on the return of Sonic main `0x0049A9B0` remains the correct bounded endpoint.
+
+The portable retail capture now snapshots the observed input-filter result on
+Sonic-main entry and records a monotonic filter sequence. It aborts rather than
+substituting zero input when main executes before a filter sample, and refuses
+retail authority when no Sonic Act1 gameplay update was observed. The strict
+comparator now requires every numerically comparable retail/core field on both
+sides while reporting retail-only provenance columns separately; previously
+those valid extra columns made a real retail-vs-native comparison fail by
+construction.
+
+Focused capture and comparator regressions pass, including the asymmetric real
+schemas and exact executable verifier. Genuine retail rows are still NOT
+VERIFIED because the local Rosetta/Wineskin process is not attachable; a native
+Windows x86 Frida run of the documented seven-scenario protocol remains the
+external dependency. Physical Circle Pad calibration is also NOT VERIFIED. No
+new movement discrepancy or physics correction is claimed without those rows.
+
 ## 2026-10-24 — retail trace v2 post-main correction
 
 Parent `2904afe`; inherited dirty compiled 3DSX remains preserved and excluded.

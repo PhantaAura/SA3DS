@@ -54,6 +54,23 @@ def main():
         }))
         p=run(a,b,"--retail-live","--reference-metadata",meta)
         assert p.returncode==0 and "STATUS: RETAIL TRACE VERIFIED" in p.stdout
+        # Retail-only provenance columns are validated by metadata but have no
+        # native trace counterpart.  They must be reported, not treated as a
+        # numerical physics divergence.
+        retail_extra=td/"retail-extra.csv"
+        extra_header=HEADER+["input_filter_sequence","status_bits"]
+        with retail_extra.open("w",newline="",encoding="utf-8") as f:
+            w=csv.DictWriter(f,fieldnames=extra_header); w.writeheader()
+            for row in csv.DictReader(a.open()):
+                row.update(input_filter_sequence=str(int(row["frame"])+1),status_bits="3")
+                w.writerow(row)
+        retail_meta=json.loads(meta.read_text())
+        retail_meta["trace_sha256"]=hashlib.sha256(retail_extra.read_bytes()).hexdigest()
+        retail_meta["observed_fields"]=extra_header
+        meta.write_text(json.dumps(retail_meta))
+        p=run(retail_extra,b,"--retail-live","--reference-metadata",meta)
+        assert p.returncode==0 and "STATUS: RETAIL TRACE VERIFIED" in p.stdout
+        assert "UNPAIRED_REFERENCE_PROVENANCE: input_filter_sequence,status_bits" in p.stdout
         bad=json.loads(meta.read_text()); bad["synthetic"]=True
         meta.write_text(json.dumps(bad))
         assert run(a,b,"--retail-live","--reference-metadata",meta).returncode!=0
