@@ -116,6 +116,22 @@ checked path:
 The compiler output is not byte-identical, but the checked algorithmic
 structure is strongly aligned.
 
+### Retained surface-frame air correction
+
+The exact PC2004 instructions at `0x0044B9F0..0x0044BA53` first construct
+world `Gravity * weight` plus collision force and call `0x0043EC00`, which
+rotates that vector through all three task angles into Sonic's local frame.
+They then apply `air_resist_air`, `air_resist_y`, and `air_resist_z` to local
+forward, normal, and side speed before writing AddVelocity at
+`0x0044BB3B..0x0044BB4B`.
+
+SA3DS now preserves the support/task frame after an inclined launch. Held-jump
+boost updates local `Speed.y`; gravity, drag, and airborne turning use that
+retained frame. The former surface path instead reused the flat yaw/world-Y
+specialization, which produced measurably different uphill/downhill launch
+motion. This is **SOURCE-EQUATION VERIFIED**; genuine retail movement traces
+remain unavailable.
+
 ## What this lets SA3DS do
 
 For the checked core movement components, 2004 PC can become the primary

@@ -51,9 +51,12 @@ The exact Steam routine:
 `(0,-1,0)` and zero free-air collision force. SA3DS stores world velocity, so
 it converts to/from a Sonic-local forward/vertical/side frame around yaw.
 
-This is deliberately **not** the final slope/loop implementation. Surface
-normal orientation, arbitrary gravity frames, wall/ceiling collision and
-adhesion belong to 0.0.8.7.
+The general-surface runtime now has a separate PC2004 task-frame path. It
+retains the launch support frame, applies held-jump impulse to local `Speed.y`,
+transforms world gravity into that frame, and applies the three anisotropic
+air-resistance fields before converting velocity back to world space. This is
+source-equation verified against `0x0044B9C0` and `0x0043EC00`; it is not a
+retail runtime trace or a complete wall/ceiling adhesion implementation.
 
 ## Remaining validation
 

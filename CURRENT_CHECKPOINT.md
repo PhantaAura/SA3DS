@@ -1,5 +1,48 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-24 — PC2004 retained-frame slope-air correction
+
+Parent `faa696f`; the inherited dirty compiled `dist/SA3DS_Pass11B_Audited.3dsx`
+was preserved and excluded. The CPU texture uploader, renderer, collision
+package, input scaling, animation selector and 60 Hz scheduler are unchanged.
+`PHYSICS_1TO1=false`.
+
+The highest-impact confirmed controller discrepancy was the first airborne
+tick after an inclined launch. SA3DS retained the support frame for the launch
+itself, then immediately collapsed jump hold, gravity, resistance and steering
+to world-Y/yaw-only calculations. Exact PC2004 `PGetAccelerationAir`
+instructions at `0x0044B9F0..0x0044BB4B` construct world gravity plus collision
+force, transform through the full task rotation, apply the three local
+resistance components at parameter offsets `+0xEC/+0xF4/+0xF8`, call the
+general turn helper `0x00443C50`, then write AddVelocity. The saved exact-EXE
+decompilation of `0x00443C50` confirms that its airborne branch also rotates
+through the full task frame and blends transformed local speed by `0.9` with
+old local speed by `0.1`. The live GhidraMCP bridge became unavailable during
+this pass, so no fresh live decompilation is claimed; the exact executable
+signature verifier now independently covers these instruction regions.
+
+The surface runtime now preserves its orthonormal support frame through jump
+hold and airborne acceleration. Jump hold modifies local normal velocity;
+gravity and forward/normal/side drag are evaluated in the retained frame;
+camera input is projected into the retained plane; and the resulting local
+velocity is transformed back to world space. The established flat-air kernel
+is unchanged. A 30-degree source-equation fixture fails the old world-Y path
+and passes the corrected component-specific path. Roll-to-air action identity,
+the world-down landing probe and full retail camera coupling remain open.
+
+Validation: focused air/surface tests PASS; the full owner-data-free host suite
+PASS; the exact PC2004 Break/Inertia/air verifier PASS; and the owner Emerald
+Coast package replay PASS (685 triangles, 1731/1731 probes, 344/344 swept
+descents, 504/504 corner approaches, 694/694 slope transitions and 50/50 ledge
+departures). A clean devkitARM build produced a 278972-byte code-only 3DSX,
+SHA-256 `70d66d44f13c9ae5158feace932b8868689c76094fee79e9744c20eaac4cb6e8`.
+That exact build ran in Azahar 2126.0 Old3DS/Vulkan: Emerald Coast rendered
+Sonic, full Circle Pad movement changed position, A produced an observed AIR
+state followed by GND landing, and sustained samples were 59-60 FPS at
+99-100% speed with 29382 KiB linear free. White Zone also rendered Sonic and
+settled at 60 FPS with 30346 KiB linear free. Physical Old3DS and genuine
+retail movement traces remain NOT VERIFIED.
+
 ## 2026-10-24 — live Ghidra and retail-trace provenance correction
 
 Parent `dece3d9`; the inherited dirty compiled 3DSX remains preserved and

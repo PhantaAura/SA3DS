@@ -42,6 +42,38 @@ int main(void) {
     assert(p.jump_ticks == (unsigned)sp->jump2_timer + 1u);
     assert(nearf(p.vel.y, before, 0.000001f));
 
+    /* PC2004 0x44B9F0..0x44BA53 transforms Gravity*weight through the
+       complete task rotation.  A 30-degree uphill launch therefore applies
+       jump hold to local Speed.y and projects gravity/drag into all retained
+       task-frame components; the former world-Y/yaw-only path fails this. */
+    SA1SurfaceFrame incline = sa1_surface_frame_make(
+        sa1_vec3_normalize((SA1Vec3){0.0f, 0.8660254038f, -0.5f}),
+        (SA1Vec3){0.0f, 0.5f, 0.8660254038f});
+    assert(incline.valid);
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.grounded = false;
+    p.vel = sa1_vec3_add(sa1_vec3_scale(incline.forward, 4.0f),
+                         sa1_vec3_scale(incline.up, sp->jmp_y_spd));
+    before = sa1_vec3_dot(p.vel, incline.up);
+    assert(sa1_steam_sonic_apply_jump_hold_surface(&p, &incline, 1) == 1);
+    float held_normal = before + sp->jmp_addit * 0.800000011920929f;
+    assert(nearf(sa1_vec3_dot(p.vel, incline.up), held_normal, 0.000002f));
+    assert(nearf(sa1_vec3_dot(p.vel, incline.forward), 4.0f, 0.000002f));
+    SA1SteamAirDebug incline_debug;
+    sa1_steam_sonic_air_step_surface(&p, &none, 0.0f, &incline,
+                                     &incline_debug);
+    float expected_forward_add = -sp->weight * incline.forward.y +
+                                 sp->air_resist_air * 4.0f;
+    float expected_normal_add = -sp->weight * incline.up.y +
+                                sp->air_resist_y * held_normal;
+    assert(nearf(incline_debug.accel_forward, expected_forward_add, 0.000002f));
+    assert(nearf(incline_debug.accel_vertical, expected_normal_add, 0.000002f));
+    assert(nearf(incline_debug.accel_side, 0.0f, 0.000002f));
+    assert(nearf(sa1_vec3_dot(p.vel, incline.forward),
+                 4.0f + expected_forward_add, 0.000003f));
+    assert(nearf(sa1_vec3_dot(p.vel, incline.up),
+                 held_normal + expected_normal_add, 0.000003f));
+
     /* No-input air acceleration is Gravity*weight + the three verified air
        resistance terms. There is no old 0.56 multiplicative jump cut. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());

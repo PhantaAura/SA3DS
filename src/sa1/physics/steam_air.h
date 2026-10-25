@@ -2,6 +2,7 @@
 #define SA1_PHYSICS_STEAM_AIR_H
 
 #include "movement.h"
+#include "surface_frame.h"
 #include "steam_input.h"
 #include "steam_player_parameters.h"
 
@@ -37,12 +38,27 @@ void sa1_steam_sonic_begin_jump(SA1PlayerState *player);
  * then adds jmp_addit * 0.8 to vertical speed. Returns 1 when applied. */
 int sa1_steam_sonic_apply_jump_hold(SA1PlayerState *player, int jump_held);
 
+/* PC2004 stores jump velocity in player-local Speed.y.  This variant keeps
+ * that operation in the retained ground/task frame after an inclined launch. */
+int sa1_steam_sonic_apply_jump_hold_surface(SA1PlayerState *player,
+                                            const SA1SurfaceFrame *frame,
+                                            int jump_held);
+
 /* Flat-world specialization of Steam PGetAccelerationAir (0x004DDEC0) plus
- * the relevant PGetSpeed integration. Surface-relative gravity/collision is
- * deliberately deferred to 0.0.8.7. */
+ * the relevant PGetSpeed integration. */
 void sa1_steam_sonic_air_step(SA1PlayerState *player,
                               const SA1Input *input,
                               float camera_yaw,
                               SA1SteamAirDebug *debug_out);
+
+/* Full-frame specialization of PC2004 PGetAccelerationAir (0x0044B9C0).
+ * The executable transforms Gravity*weight through the task rotation before
+ * applying the three local resistance fields.  The frame is updated when the
+ * general-turn helper changes Sonic's facing. */
+void sa1_steam_sonic_air_step_surface(SA1PlayerState *player,
+                                      const SA1Input *input,
+                                      float camera_yaw,
+                                      SA1SurfaceFrame *frame,
+                                      SA1SteamAirDebug *debug_out);
 
 #endif

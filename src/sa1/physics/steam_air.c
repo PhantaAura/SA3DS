@@ -66,6 +66,22 @@ static SA1Vec3 local_to_world(float yaw, SA1LocalSpeed speed) {
     return out;
 }
 
+static SA1LocalSpeed world_to_frame(const SA1SurfaceFrame *frame,
+                                    SA1Vec3 velocity) {
+    SA1LocalSpeed out;
+    out.forward = sa1_vec3_dot(velocity, frame->forward);
+    out.vertical = sa1_vec3_dot(velocity, frame->up);
+    out.side = sa1_vec3_dot(velocity, frame->right);
+    return out;
+}
+
+static SA1Vec3 frame_to_world(const SA1SurfaceFrame *frame,
+                              SA1LocalSpeed speed) {
+    SA1Vec3 out = sa1_vec3_scale(frame->forward, speed.forward);
+    out = sa1_vec3_add(out, sa1_vec3_scale(frame->up, speed.vertical));
+    return sa1_vec3_add(out, sa1_vec3_scale(frame->right, speed.side));
+}
+
 /* Steam general turn helper 0x004E2480, flat/upright specialization. */
 static unsigned steam_general_turn_step(unsigned delta_bams) {
     if (delta_bams > BAMS_45) return 0x0800u;
@@ -123,6 +139,161 @@ int sa1_steam_sonic_apply_jump_hold(SA1PlayerState *player, int jump_held) {
                             (double)p->jmp_addit *
                             (double)SADX_JUMP_HOLD_MULTIPLIER);
     return 1;
+}
+
+int sa1_steam_sonic_apply_jump_hold_surface(SA1PlayerState *player,
+                                            const SA1SurfaceFrame *frame,
+                                            int jump_held) {
+    const SA1SteamPlayerParameters *p = &SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    if (!frame || !frame->valid || !jump_held) return 0;
+
+    uint32_t old_timer = player->jump_ticks;
+    player->jump_ticks++;
+    if (old_timer >= (uint32_t)p->jump2_timer) return 0;
+
+    SA1LocalSpeed local = world_to_frame(frame, player->vel);
+    local.vertical = (float)((double)local.vertical +
+                             (double)p->jmp_addit *
+                             (double)SADX_JUMP_HOLD_MULTIPLIER);
+    player->vel = frame_to_world(frame, local);
+    return 1;
+}
+
+static float signed_angle_on_plane(SA1Vec3 from, SA1Vec3 to, SA1Vec3 up) {
+    from = sa1_vec3_normalize(from);
+    to = sa1_vec3_normalize(to);
+    float cosine = clampf(sa1_vec3_dot(from, to), -1.0f, 1.0f);
+    float sine = sa1_vec3_dot(sa1_vec3_cross(from, to), up);
+    return atan2f(sine, cosine);
+}
+
+static float yaw_from_forward(SA1Vec3 forward, float fallback) {
+    float horizontal2 = forward.x * forward.x + forward.z * forward.z;
+    return horizontal2 > 1e-8f ? atan2f(forward.x, forward.z) : fallback;
+}
+
+static void air_step_frame(SA1PlayerState *player,
+                           const SA1Input *input,
+                           float camera_yaw,
+                           SA1SurfaceFrame *frame,
+                           SA1SteamAirDebug *debug_out) {
+    const SA1SteamPlayerParameters *p = &SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    SA1SADXFilteredAnalog analog =
+        sa1_sadx_filter_logical_analog(input->move_x, input->move_z);
+    SA1LocalSpeed local = world_to_frame(frame, player->vel);
+    SA1LocalSpeed before = local;
+    const SA1Vec3 gravity = {0.0f, -1.0f, 0.0f};
+
+    /* 0x44B9F0..0x44BA53 constructs Gravity*weight plus collision force,
+     * then 0x43EC00 converts that world vector through the full task angles.
+     * Free air has no collision-force contribution. */
+    SA1LocalSpeed accel;
+    accel.forward = p->weight * sa1_vec3_dot(gravity, frame->forward) +
+                    p->air_resist_air * local.forward;
+    accel.vertical = p->weight * sa1_vec3_dot(gravity, frame->up) +
+                     p->air_resist_y * local.vertical;
+    accel.side = p->weight * sa1_vec3_dot(gravity, frame->right) +
+                 p->air_resist_z * local.side;
+
+    float force = 0.0f;
+    unsigned delta_bams = 0;
+    unsigned turn_step = 0;
+    int air_brake = 0;
+    int wide_angle_block = 0;
+    int doubled_accel = 0;
+
+    if (analog.active) {
+        SA1Vec3 desired = {sinf(camera_yaw + analog.angle_radians), 0.0f,
+                           cosf(camera_yaw + analog.angle_radians)};
+        desired = sa1_project_on_plane(desired, frame->up);
+        if (sa1_vec3_length(desired) < 1e-5f) desired = frame->forward;
+        desired = sa1_vec3_normalize(desired);
+        float signed_delta = signed_angle_on_plane(frame->forward, desired,
+                                                   frame->up);
+        delta_bams = rad_to_bams_abs(signed_delta);
+        int preserve_facing = 0;
+
+        if (local.forward > p->run_speed && delta_bams > BAMS_135) {
+            force = p->air_break * analog.magnitude;
+            air_brake = 1;
+            preserve_facing = 1;
+        } else if (delta_bams > BAMS_22_5) {
+            wide_angle_block = 1;
+        } else {
+            force = p->air_accel * analog.magnitude;
+            /* The original test is the local movement-direction Y field.
+             * In the retained task frame this is the forward basis Y, not
+             * world vertical velocity. */
+            if (frame->forward.y < 0.0f) {
+                force *= 2.0f;
+                doubled_accel = 1;
+            }
+        }
+
+        turn_step = steam_general_turn_step(delta_bams);
+        if (!preserve_facing && turn_step) {
+            float maximum = bams_to_rad(turn_step);
+            float step = clampf(signed_delta, -maximum, maximum);
+            SA1Vec3 old_world = frame_to_world(frame, local);
+            SA1LocalSpeed old_local = local;
+            frame->forward = sa1_vec3_normalize(
+                sa1_rotate_around_axis(frame->forward, frame->up, step));
+            frame->right = sa1_vec3_normalize(
+                sa1_vec3_cross(frame->up, frame->forward));
+            frame->forward = sa1_vec3_normalize(
+                sa1_vec3_cross(frame->right, frame->up));
+            SA1LocalSpeed transformed = world_to_frame(frame, old_world);
+            local.forward = transformed.forward * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                            old_local.forward * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+            local.vertical = transformed.vertical * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                             old_local.vertical * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+            local.side = transformed.side * PC2004_AIR_TURN_TRANSFORMED_BLEND +
+                         old_local.side * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+        }
+        accel.forward += force;
+    }
+
+    local.forward = integrate_axis_no_cross(local.forward, accel.forward);
+    local.vertical += accel.vertical;
+    local.side = integrate_axis_no_cross(local.side, accel.side);
+    local.forward = clampf(local.forward, -p->lim_h_spd, p->lim_h_spd);
+    local.side = clampf(local.side, -p->lim_h_spd, p->lim_h_spd);
+    local.vertical = clampf(local.vertical, -p->lim_v_spd, p->lim_v_spd);
+    player->vel = frame_to_world(frame, local);
+    player->yaw = yaw_from_forward(frame->forward, player->yaw);
+
+    if (debug_out) {
+        memset(debug_out, 0, sizeof(*debug_out));
+        debug_out->forward_speed_before = before.forward;
+        debug_out->vertical_speed_before = before.vertical;
+        debug_out->side_speed_before = before.side;
+        debug_out->forward_speed_after = local.forward;
+        debug_out->vertical_speed_after = local.vertical;
+        debug_out->side_speed_after = local.side;
+        debug_out->accel_forward = accel.forward;
+        debug_out->accel_vertical = accel.vertical;
+        debug_out->accel_side = accel.side;
+        debug_out->requested_force = force;
+        debug_out->filtered_input_magnitude = analog.magnitude;
+        debug_out->angle_delta_bams = delta_bams;
+        debug_out->turn_step_bams = turn_step;
+        debug_out->had_analog = analog.active;
+        debug_out->used_air_brake = air_brake;
+        debug_out->blocked_wide_angle_accel = wide_angle_block;
+        debug_out->doubled_air_accel = doubled_accel;
+    }
+}
+
+void sa1_steam_sonic_air_step_surface(SA1PlayerState *player,
+                                      const SA1Input *input,
+                                      float camera_yaw,
+                                      SA1SurfaceFrame *frame,
+                                      SA1SteamAirDebug *debug_out) {
+    if (!frame || !frame->valid) {
+        sa1_steam_sonic_air_step(player, input, camera_yaw, debug_out);
+        return;
+    }
+    air_step_frame(player, input, camera_yaw, frame, debug_out);
 }
 
 void sa1_steam_sonic_air_step(SA1PlayerState *player,

@@ -23,6 +23,7 @@ VA = {
     "PGetInertia": (0x00443650, 0x004437F8),
     "PGetSpeed": (0x00443F50, 0x004441AB),
     "PGetBreak": (0x00448E50, 0x004491DD),
+    "PGetAccelerationAir": (0x0044B9C0, 0x0044BB55),
     "PSetPosition": (0x0044CDF0, 0x0044D49B),
     "PResetPosition": (0x0043EE70, 0x0043F001),
     "const_zero": 0x007DCB2C,
@@ -51,6 +52,14 @@ EXPECTED = {
 }
 
 SIGNATURES = {
+    "pgetaccelerationair_entry": (0x0044B9C0, "83ec10568b74241833c0668b46042500400000"),
+    "pgetaccelerationair_gravity_weight_x": (0x0044B9F0, "d905f8f0b003538b5c2420578b7c2428d88f14010000"),
+    "pgetaccelerationair_world_to_local_call": (0x0044BA53, "e8a831ffff"),
+    "pgetaccelerationair_local_forward_resist": (0x0044BA58, "d987ec0000008d542428d84f38"),
+    "pgetaccelerationair_local_normal_resist": (0x0044BA74, "d987f4000000d84f3c"),
+    "pgetaccelerationair_local_side_resist": (0x0044BA85, "d987f8000000d84f40"),
+    "pgetaccelerationair_direction_y_test": (0x0044BAFD, "d94308d81d2ccb7d00"),
+    "pgetaccelerationair_write_local_addvelocity": (0x0044BB3B, "83c72cd95c24108b4c2410890f895704894708"),
     "air_acceleration_general_turn_call": (0x0044BB22, "e82981ffff"),
     "general_turn_air_status_branch": (0x00443CCE, "8a460483c408a803754c"),
     "general_turn_air_forward_mix": (0x00443CD8, "d94424085dd80df0ff7d00d903d80d68d57d00dec1d91b"),
@@ -234,6 +243,7 @@ def main() -> int:
             "PGetBreak": "uses air_resist/air_resist_y/air_resist_z, run_break, lim_frict, grd_frict, grd_frict_z and zero-cross guards before writing playerwk AddVelocity",
             "PGetInertia": "uses run_speed/Up, -8.0 local NORMAL-force inverted branch (stack+0xC -> AddVelocity+4), grounded pending-impulse path, status 0x100 Up<=0.98 0.0002 forward drag branch, and normal air_resist terms",
             "PGetSpeed": "integrates AddVelocity into Speed, contains forward zero-cross protection, and applies the 0.87*jog_speed deadband to forward and local-Z speed",
+            "PGetAccelerationAir": "builds world Gravity*weight, converts it through the full task rotation at 0x43EC00, applies separate local forward/normal/side resistance, tests movement-direction Y, and writes local AddVelocity",
             "air_turn": "0x443C50 status&3==0 uses independently stored f32 constants: transformed local velocity * 0.9 + old local velocity * 0.1 on all three axes",
             "support_order": "exact calls at 0x0049AD34..0x0049AD54 execute movement, PGetAcceleration, PGetSpeed, PSetPosition, then PResetPosition",
             "surface_flag_rollover": "PSetPosition copies playerwk SurfaceFlags to SurfaceFlags_Old and clears current flags/scratch collision vectors before rebuilding contact state",
@@ -262,6 +272,7 @@ def main() -> int:
         print("  PGetInertia field/branch signatures: PASS")
         print("  inverted-Up NORMAL-force stack/output axis + direct normal integration: PASS")
         print("  PGetSpeed AddVelocity integration/forward + local-Z deadband evidence: PASS")
+        print("  PGetAccelerationAir full task-frame gravity/local resistance evidence: PASS")
         print("  general-turn airborne 0.9 transformed + 0.1 old-local vector: PASS")
         print("  grounded Sonic movement -> acceleration -> speed -> position -> reset order: PASS")
         print("  PSetPosition surface-flag rollover + helper work/height setup: PASS")

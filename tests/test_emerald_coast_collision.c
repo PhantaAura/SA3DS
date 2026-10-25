@@ -115,7 +115,10 @@ static void owner_controller_cases(SA3DSECCollision*s){
             expected.grounded=false;expected.action_state=SA1_ACTION_AIRBORNE;
             SA1Input launch={.jump_pressed=true,.jump_held=true,
                 .move_z=direction==1?1.0f:0.0f,.move_x=direction==2?1.0f:0.0f};
-            sa1_steam_sonic_air_step(&expected,&launch,0,NULL);
+            SA1SurfaceFrame expected_frame=sa1_surface_frame_make(
+                p.ground_normal,p.surface_forward);
+            sa1_steam_sonic_air_step_surface(&expected,&launch,0,
+                &expected_frame,NULL);
             controller_tick(s,&p,launch,trace);
             assert(!p.grounded&&p.action_state==SA1_ACTION_AIRBORNE);
             assert(p.jump_ticks==0&&p.spindash_ticks==0);

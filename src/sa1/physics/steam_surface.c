@@ -555,12 +555,15 @@ void sa1_physics_step_steam_sonic_surface(
     }
 
     if (!player->grounded) {
-        /* Existing air kernel is still world-gravity/upright-specialized. The
-         * surface jump preserves its full 3D launch velocity; air steering is
-         * the next parity layer rather than being fabricated here. */
+        /* PC2004 PGetAccelerationAir transforms gravity through Sonic's full
+         * task rotation. Retain the launch/support frame for local Speed.y,
+         * anisotropic drag, and general-turn steering instead of collapsing
+         * inclined launches into the flat world-Y specialization. */
         if (!just_jumped)
-            (void)sa1_steam_sonic_apply_jump_hold(player, input->jump_held);
-        sa1_steam_sonic_air_step(player, input, camera_yaw, NULL);
+            (void)sa1_steam_sonic_apply_jump_hold_surface(
+                player, &frame, input->jump_held);
+        sa1_steam_sonic_air_step_surface(player, input, camera_yaw, &frame, NULL);
+        sync_player_frame(player, &frame, NULL);
     }
 
     player->pos = sa1_vec3_add(player->pos, player->vel);
