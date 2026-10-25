@@ -98,6 +98,10 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
     case SA3DS_SONIC_ANIM_AIRBORNE_UPRIGHT:
         return 18;
     case SA3DS_SONIC_ANIM_AIRBORNE_BALL:
+        if (player->animation_airborne_request_valid &&
+            (player->animation_airborne_request == 14 ||
+             player->animation_airborne_request == 15))
+            return player->animation_airborne_request;
         return 14;
     case SA3DS_SONIC_ANIM_SPINDASH_CHARGE:
         return 14; /* 0x496EFB -> 0x495C30 writes request 14 */

@@ -1,4 +1,4 @@
-# Physics traces — format v6 / native parity trace v3
+# Physics traces — format v6 / native parity trace v4
 
 Trace rows are emitted after each deterministic simulation tick. v6 preserves
 all v5 input/position/velocity/action/ball fields and appends general-surface
@@ -53,6 +53,26 @@ physical adapter before the exact PC2004 filter; the existing `move_x/z`,
 post-deadzone and filtered fields describe the later stages. Host fixtures set
 the device sample invalid. Native samples currently record the practical
 libctru full scale of 156 without claiming physical Old 3DS calibration.
+
+The 2026-10-25 v4 extension preserves all first 73 v3 columns and appends
+`pc2004_action_state` plus `pc2004_action_state_valid`. The port's broad
+`SA1ActionState` is a control implementation detail and is not numerically
+comparable with retail `EntityData1.Action`. The new field is written only
+from source-reconstructed transitions. A retail comparison aliases retail
+`action_state` to this field and fails rather than guessing when validity is
+zero. Existing port-internal comparisons continue to compare the broad state.
+Reset and verified landing/ball/air transitions establish a value. Ordinary
+ground movement invalidates a reset action when its deciding condition changes,
+because the general PC2004 action1/action2 selector remains unreconstructed;
+the trace must not silently carry a stale action1 through acceleration.
+
+Exact executable control flow distinguishes two action-8 entries that the
+former trace could not represent. The jump helper `0x00495E60` writes action 8
+and requests animation 14. Action 5 instead calls support helper `0x00494F70`;
+loss of support with ball status writes action 8 without replacing the current
+Roll request 15. SA3DS now records this provenance and retains request 15 when
+rolling leaves terrain. This is SOURCE-EQUATION VERIFIED; no retail rows have
+yet been captured.
 
 Live REA/Ghidra 12.1.4 now verifies the exact PE32 SHA and decompiles/xrefs the
 input filter at `0x0040F170` and `PGetAcceleration` at `0x0044C270`. The older

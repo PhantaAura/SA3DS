@@ -25,6 +25,10 @@ typedef struct {
     float ground_slope_radians;
     int32_t surface_id;
     SA1ActionState action_state;
+    /* Exact PC2004 EntityData1.Action when the current reconstructed path
+     * establishes it. The broad SA1ActionState remains the control state. */
+    uint8_t pc2004_action_state;
+    bool pc2004_action_state_valid;
     uint32_t jump_ticks;
     bool ball_form;
     float spindash_charge;
@@ -51,6 +55,11 @@ typedef struct {
     float animation_landing_world_y;
     uint8_t animation_landing_air_action; /* supported retail equivalents 8/12 */
     bool animation_landing_valid;
+
+    /* Action 8 can be reached by a jump (request 14) or by rolling off
+     * support (retain request 15). This is presentation-only provenance. */
+    uint16_t animation_airborne_request;
+    bool animation_airborne_request_valid;
 } SA1PlayerState;
 
 #endif

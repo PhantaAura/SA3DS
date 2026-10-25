@@ -54,6 +54,26 @@ def main():
         }))
         p=run(a,b,"--retail-live","--reference-metadata",meta)
         assert p.returncode==0 and "STATUS: RETAIL TRACE VERIFIED" in p.stdout
+        # The native controller's broad enum is not the retail EntityData1
+        # action. v4 exposes the independently reconstructed PC2004 action;
+        # retail comparison must use it and require explicit validity.
+        native_action=td/"native-action.csv"
+        native_fields=HEADER+["pc2004_action_state","pc2004_action_state_valid"]
+        with native_action.open("w",newline="",encoding="utf-8") as f:
+            w=csv.DictWriter(f,fieldnames=native_fields);w.writeheader()
+            for row in csv.DictReader(b.open()):
+                row.update(action_state="3",pc2004_action_state="1",
+                           pc2004_action_state_valid="1")
+                w.writerow(row)
+        p=run(a,native_action,"--retail-live","--reference-metadata",meta)
+        assert p.returncode==0 and "STATUS: RETAIL TRACE VERIFIED" in p.stdout
+        rows=list(csv.DictReader(native_action.open()))
+        rows[0]["pc2004_action_state_valid"]="0"
+        with native_action.open("w",newline="",encoding="utf-8") as f:
+            w=csv.DictWriter(f,fieldnames=native_fields);w.writeheader();w.writerows(rows)
+        p=run(a,native_action,"--retail-live","--reference-metadata",meta)
+        assert p.returncode==1
+        assert "field=pc2004_action_state_valid" in p.stdout
         # Retail-only provenance columns are validated by metadata but have no
         # native trace counterpart.  They must be reported, not treated as a
         # numerical physics divergence.

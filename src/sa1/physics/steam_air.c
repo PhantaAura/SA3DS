@@ -120,9 +120,28 @@ void sa1_steam_sonic_begin_jump(SA1PlayerState *player) {
     player->vel.y = p->jmp_y_spd;
     player->grounded = false;
     player->action_state = SA1_ACTION_AIRBORNE;
+    player->pc2004_action_state = 8;
+    player->pc2004_action_state_valid = true;
+    player->animation_airborne_request = 14;
+    player->animation_airborne_request_valid = true;
     player->ball_form = true;
     player->spindash_charge = 0.0f;
     player->spindash_ticks = 0;
+    player->jump_ticks = 0;
+}
+
+void sa1_steam_sonic_begin_ground_departure(SA1PlayerState *player) {
+    SA1ActionState previous = player->action_state;
+    int ball = player->ball_form || previous == SA1_ACTION_ROLL ||
+               previous == SA1_ACTION_SPINDASH_CHARGE;
+
+    player->grounded = false;
+    player->action_state = SA1_ACTION_AIRBORNE;
+    player->pc2004_action_state = ball ? 8 : 12;
+    player->pc2004_action_state_valid = true;
+    player->animation_airborne_request = previous == SA1_ACTION_ROLL ? 15 :
+        (ball ? 14 : 18);
+    player->animation_airborne_request_valid = true;
     player->jump_ticks = 0;
 }
 

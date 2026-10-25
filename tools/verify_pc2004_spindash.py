@@ -71,6 +71,7 @@ SIGNATURES = {
     "roll_end_request_29": (0x004930F9, "66c781240100001d00"),
     "roll_end_run_action": (0x00493108, "c6020266c781240100001d00"),
     "roll_end_no_transition": (0x0049311A, "33c0c3"),
+    "ground_departure_ball_action8": (0x00494F80, "8bc881e1000100006685c9740bc60708"),
     "entry_action4": (0x00496EF8, "c60704"),
     "charge_animation_request_14": (0x00495C70, "66c786240100000e00"),
     "entry_ball_attack_status": (0x00496F00, "804f0505"),
@@ -217,6 +218,8 @@ def main() -> int:
         raise ValueError("charge entry must request animation 14")
     if rel32_call_target(data, image_base, sections, 0x00497458) != 0x004930D0:
         raise ValueError("action-5 transition no longer calls signed roll-end helper")
+    if rel32_call_target(data, image_base, sections, 0x00497405) != 0x00494F70:
+        raise ValueError("action-5 transition no longer checks support before jump/roll end")
     for action, entries in EXPECTED_CALLS.items():
         calls[action] = []
         for call_va, expected_target, name in entries:
@@ -244,6 +247,7 @@ def main() -> int:
             "tick_order": "Sonic_Act1 transitions -> ball timer increment -> movement dispatch by resulting action; release tick runs inertia",
             "charge_animation": "entry calls 0x495C30 -> request 14; property 10 rate uses shared SpindashSpeed * 0.2",
             "jump_order": "actions 1/2 test jump before Spin Dash entry; action 5 tests jump before roll exit; action 4 runs charge transition without jump test; resulting action movement runs once",
+            "roll_ground_departure": "action 5 calls 0x494F70; no support plus ball status selects action 8 without replacing animation request 15",
         },
         "action_dispatch": {
             "table_va": VA["sonic_action_table"],

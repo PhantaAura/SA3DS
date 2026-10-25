@@ -436,6 +436,20 @@ int main(void) {
     }
     puts("PC2004 Uncurl request/idle-chain/action interruptions: PASS");
 
+    /* PC2004 0x494F70 reaches action 8 on unsupported Ball status without
+     * issuing a new animation request. A Roll departure therefore retains
+     * request 15, while the jump helper 0x495C30 explicitly requests 14. */
+    memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));
+    p=base_player();p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;
+    p.ball_form=true;p.animation_airborne_request_valid=true;
+    p.animation_airborne_request=15;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==15&&s.requested_runtime_id==15);
+    p.sim_frame++;p.animation_airborne_request=14;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.binding.runtime_id==14&&s.requested_runtime_id==14);
+    puts("PC2004 Roll-departure request15 versus jump request14: PASS");
+
     /* Supported ordinary static landings retain pre-projection WORLD Y.
      * Ball retail action8 and upright action12 have different soft requests. */
     for(unsigned ball=0;ball<2;ball++)for(unsigned hard=0;hard<3;hard++){

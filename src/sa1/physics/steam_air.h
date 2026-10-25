@@ -32,6 +32,8 @@ typedef struct {
  * is directly evidenced in the supported Steam EXE: pwp->Speed.y =
  * pwp->p.jmp_y_spd. */
 void sa1_steam_sonic_begin_jump(SA1PlayerState *player);
+/* Exact no-support transition used by PC2004 0x494F70. */
+void sa1_steam_sonic_begin_ground_departure(SA1PlayerState *player);
 
 /* Steam helper 0x004DBA90 increments the jump timer while the jump input is
  * held and the previous timer is below jump2_timer. Sonic's airborne state

@@ -229,9 +229,7 @@ static int refresh_support(SA1PlayerState *player,
 
 static void detach_player(SA1PlayerState *player,
                           SA1SteamSurfaceDebug *dbg) {
-    player->grounded = false;
-    player->action_state = SA1_ACTION_AIRBORNE;
-    player->jump_ticks = 0;
+    sa1_steam_sonic_begin_ground_departure(player);
     if (dbg) dbg->detached = 1;
 }
 
@@ -242,6 +240,10 @@ static void begin_surface_jump(SA1PlayerState *player,
     player->vel = sa1_vec3_add(player->vel, jump);
     player->grounded = false;
     player->action_state = SA1_ACTION_AIRBORNE;
+    player->pc2004_action_state = 8;
+    player->pc2004_action_state_valid = true;
+    player->animation_airborne_request = 14;
+    player->animation_airborne_request_valid = true;
     player->ball_form = true;
     player->spindash_charge = 0.0f;
     player->spindash_ticks = 0;
@@ -451,6 +453,7 @@ static int handle_surface_ball_state(SA1PlayerState *player,
         if (sa1_sadx_spindash_timeout_reached(player->spindash_ticks)) {
             player->spindash_ticks = 0;
             player->action_state = SA1_ACTION_GROUNDED;
+            player->pc2004_action_state_valid = false;
             player->ball_form = false;
             return 0;
         } else if (held) {
@@ -462,6 +465,8 @@ static int handle_surface_ball_state(SA1PlayerState *player,
             s.normal = 0.0f;
             player->vel = surface_to_world(frame, s);
             player->action_state = SA1_ACTION_ROLL;
+            player->pc2004_action_state = 5;
+            player->pc2004_action_state_valid = true;
             player->ball_form = true;
             player->spindash_charge = 0.0f;
             player->spindash_ticks = 0;
@@ -476,6 +481,8 @@ static int handle_surface_ball_state(SA1PlayerState *player,
          * Surface forward is the adapter's local Speed.x specialization. */
         if (s.forward < p->run_speed || requested) {
             player->action_state = SA1_ACTION_GROUNDED;
+            player->pc2004_action_state = s.forward <= 0.0f ? 1 : 2;
+            player->pc2004_action_state_valid = true;
             player->ball_form = false;
             return 0;
         }
@@ -489,6 +496,8 @@ static int handle_surface_ball_state(SA1PlayerState *player,
             sa1_sadx_spindash_initial_charge(s.forward);
         player->spindash_ticks = 1;
         player->action_state = SA1_ACTION_SPINDASH_CHARGE;
+        player->pc2004_action_state = 4;
+        player->pc2004_action_state_valid = true;
         player->ball_form = true;
         surface_ball_motion(player, input, camera_yaw, frame, dbg);
         return 1;
@@ -549,6 +558,13 @@ void sa1_physics_step_steam_sonic_surface(
                                     camera_yaw, &frame, dbg);
                 if (!ball_handled) {
                     surface_running(player, input, camera_yaw, &frame, dbg);
+                    float forward = sa1_vec3_dot(player->vel, frame.forward);
+                    if (player->pc2004_action_state_valid &&
+                        ((player->pc2004_action_state == 1 &&
+                          (player->animation_input_active || forward != 0.0f)) ||
+                         (player->pc2004_action_state == 2 &&
+                          !player->animation_input_active && forward == 0.0f)))
+                        player->pc2004_action_state_valid = false;
                 }
             }
         }
@@ -590,7 +606,11 @@ void sa1_physics_step_steam_sonic_surface(
                 /* Ordinary static-support equivalent of retained motionwk Y.
                  * Do not classify from the post-projection local normal zero. */
                 player->animation_landing_world_y = player->vel.y;
-                player->animation_landing_air_action = player->ball_form ? 8 : 12;
+                player->animation_landing_air_action =
+                    (player->pc2004_action_state_valid &&
+                     (player->pc2004_action_state == 8 ||
+                      player->pc2004_action_state == 12)) ?
+                    player->pc2004_action_state : (player->ball_form ? 8 : 12);
                 player->animation_landing_valid = isfinite(player->vel.y);
             }
             frame = sa1_surface_frame_make(landing.normal,
@@ -606,6 +626,10 @@ void sa1_physics_step_steam_sonic_surface(
                 player->action_state = SA1_ACTION_GROUNDED;
                 player->ball_form = false;
             }
+            player->pc2004_action_state =
+                (player->animation_input_active || s.forward != 0.0f) ? 2 : 1;
+            player->pc2004_action_state_valid = true;
+            player->animation_airborne_request_valid = false;
             sync_player_frame(player, &frame, &landing);
             sa1_pc2004_collision_work_mirror_static_contact(&collision_work, &landing, 0);
         }

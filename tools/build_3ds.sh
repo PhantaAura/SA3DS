@@ -19,7 +19,8 @@ fi
 
 stage="$(mktemp -d "${TMPDIR:-/tmp}/sa3ds-build.XXXXXX")"
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
-mkdir -p "$stage/project/$runtime" "$root/dist"
+output_dir="${SA3DS_BUILD_OUTPUT_DIR:-$root/dist}"
+mkdir -p "$stage/project/$runtime" "$output_dir"
 cp -R "$root/src" "$stage/project/src"
 # Copy only build inputs used by ASSET_SOURCE=sd. In particular, never stage
 # the normal RomFS tree, stale build products, or locally converted assets.
@@ -37,7 +38,7 @@ for ext in 3dsx elf smdh map; do
     source_file="$stage/project/$runtime/build/$target.map"
   fi
   if [ -f "$source_file" ]; then
-    cp "$source_file" "$root/dist/SA3DS_Pass11B_Audited.$ext"
+    cp "$source_file" "$output_dir/SA3DS_Pass11B_Audited.$ext"
   fi
 done
-echo "Built code-only artifacts in $root/dist"
+echo "Built code-only artifacts in $output_dir"

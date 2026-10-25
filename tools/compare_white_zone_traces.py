@@ -17,6 +17,7 @@ VEL_FIELDS=("vel_x","vel_y","vel_z")
 INTEGER_FIELDS={
     "trace_version","test_id","frame","jump_pressed","jump_held","jump_released",
     "action_pressed","action_held","action_released","grounded","action_state",
+    "pc2004_action_state","pc2004_action_state_valid",
     "surface_id","surface_flags","runtime_animation_id","action_slot","selector_provisional",
     "animation_requested_id","landing_classification_valid","landing_classified_request",
     "landing_impact_valid","landing_air_action","processed_analog_active",
@@ -133,6 +134,16 @@ def compare(ref_path,sa3ds_path,abs_tol=1e-6,rel_tol=1e-6,
         if ve is not None: vel_err.append(ve)
         for field in common:
             a=rr[field]; b=ss[field]
+            if (reference_kind=="retail-trace" and field=="action_state" and
+                    "pc2004_action_state" in ss):
+                if ss.get("pc2004_action_state_valid")!="1":
+                    exact=False; tolerance_match=False
+                    mismatches["pc2004_action_state_valid"]+=1
+                    if first is None:
+                        first=(key,"pc2004_action_state_valid","1",
+                               ss.get("pc2004_action_state_valid"))
+                    continue
+                b=ss["pc2004_action_state"]
             if a!=b:
                 exact=False; mismatches[field]+=1
                 if first is None: first=(key,field,a,b)

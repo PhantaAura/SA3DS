@@ -35,6 +35,8 @@ void sa1_player_reset(SA1PlayerState *player, const SA1PhysicsWorld *world) {
     player->surface_flags = 0u;
     player->surface_id = -1;
     player->action_state = SA1_ACTION_GROUNDED;
+    player->pc2004_action_state = 1;
+    player->pc2004_action_state_valid = true;
 }
 
 static void update_surface_state(SA1PlayerState *player, SA1Surface surface) {

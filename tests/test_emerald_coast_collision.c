@@ -306,6 +306,13 @@ int main(int argc,char**argv){
         sa1_player_reset(&p,&s.world);p.pos.x=100;
         s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
         assert(!p.grounded); /* Departing imported support is not a heightfield. */
+        assert(p.pc2004_action_state_valid&&p.pc2004_action_state==12);
+        assert(p.animation_airborne_request_valid&&p.animation_airborne_request==18);
+        sa1_player_reset(&p,&s.world);p.pos.x=100;p.vel.z=5;
+        p.action_state=SA1_ACTION_ROLL;p.ball_form=true;
+        s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+        assert(!p.grounded&&p.pc2004_action_state==8);
+        assert(p.animation_airborne_request_valid&&p.animation_airborne_request==15);
         p.pos.y=-100;s.reference_y=p.pos.y;
         sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
         assert(fabsf(p.pos.x-s.world.reset_position.x)<0.001f);

@@ -143,6 +143,7 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
         if (sa1_sadx_spindash_timeout_reached(player->spindash_ticks)) {
             player->spindash_ticks = 0;
             player->action_state = SA1_ACTION_GROUNDED;
+            player->pc2004_action_state_valid = false;
             player->ball_form = false;
             dbg->timed_out_charge = 1;
             return 0;
@@ -157,6 +158,8 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
             release.forward = player->spindash_charge;
             player->vel = local_to_world(player->yaw, release);
             player->action_state = SA1_ACTION_ROLL;
+            player->pc2004_action_state = 5;
+            player->pc2004_action_state_valid = true;
             player->ball_form = true;
             player->spindash_charge = 0.0f;
             player->spindash_ticks = 1; /* ball-status increment after release */
@@ -175,6 +178,8 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
          * In particular, a negative high-magnitude roll cannot persist. */
         if (local.forward < p->run_speed || requested) {
             player->action_state = SA1_ACTION_GROUNDED;
+            player->pc2004_action_state = local.forward <= 0.0f ? 1 : 2;
+            player->pc2004_action_state_valid = true;
             player->ball_form = false;
             dbg->exited_roll = 1;
             dbg->forward_speed_after = local.forward;
@@ -195,6 +200,8 @@ int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,
             sa1_sadx_spindash_initial_charge(local.forward);
         player->spindash_ticks = 1; /* entry resets, then main increments */
         player->action_state = SA1_ACTION_SPINDASH_CHARGE;
+        player->pc2004_action_state = 4;
+        player->pc2004_action_state_valid = true;
         player->ball_form = true;
         dbg->entered_charge = 1;
         charge_ground_motion(player, input, camera_yaw, &dbg->turn_step_bams);

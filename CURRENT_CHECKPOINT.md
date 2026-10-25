@@ -1,5 +1,53 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-25 — PC2004 Roll terrain-departure action/animation provenance
+
+Parent `6eb8570`; the inherited dirty compiled
+`dist/SA3DS_Pass11B_Audited.3dsx` was preserved and excluded. Renderer, CPU
+texture upload, package loading, Circle Pad scaling, collision geometry and
+the 60 Hz scheduler are unchanged. `PHYSICS_1TO1=false`.
+
+Bounded exact-executable analysis identified a controller/animation mismatch
+hidden by the port's broad action enum. In Sonic action 5, call `0x00497405`
+targets support helper `0x00494F70`. Loss of support with ball status writes
+original action 8 but makes no animation request, retaining Roll request 15.
+The later action-5 jump call `0x00497446` targets `0x00495E60`, which also
+writes action 8 but explicitly requests 14. SA3DS previously selected 14 for
+both cases. The runtime now retains request 15 only for a Roll terrain
+departure, while genuine jumps remain request 14 and upright departure remains
+action12/request18.
+
+The native parity trace is v4: all 73 v3 columns remain in their original
+positions and two fields are appended for reconstructed PC2004 action and its
+validity. Retail comparisons use that value instead of incorrectly comparing
+retail `EntityData1.Action` with the port's broad `SA1ActionState`; unknown
+provenance fails the retail gate. Ordinary ground acceleration invalidates a
+reset action1 rather than presenting it as a reconstructed 1->2 transition.
+The Windows x86 capture endpoint remains ready and exact-hash gated, but no
+genuine retail row is claimed because the
+available ARM-macOS/Rosetta Wineskin process is not attachable.
+
+Focused controller, animation, comparator and exact-executable signature tests
+PASS. The complete owner-data-free host suite PASS. The owner Emerald Coast
+package PASS covers 685 triangles, its 600-tick replay, imported-ground Spin
+Dash, 1731/1731 support probes, 344/344 descents, 504/504 corners, 694/694
+slope transitions and 50/50 boundary ledges. The Pass11B raw-source oracle
+PASSes 84,294 scalar comparisons across ACTIONs1/22/120/121/122/123 with
+maximum error 4.99206543e-9.
+
+The standard native build compiled and linked, but its final copy was correctly
+prevented from overwriting the inherited dirty dist binary. `tools/build_3ds.sh`
+now accepts optional `SA3DS_BUILD_OUTPUT_DIR` while preserving its default.
+An isolated code-only build PASS produced 279,908 bytes, SHA-256
+`4202a0b1f8c02ba4a64968697c1770fb5b91237f85434392cba030711edc092c`.
+That exact artifact ran in Azahar 2126.0 Old3DS/Vulkan. Emerald Coast rendered
+Sonic and the owner stage past 1,160 GPU frames at 60 FPS/100%; full Circle Pad
+input moved from approximately Z 3.9 to 128.6, and jump visibly entered AIR
+with animation14 then returned GND. Linear free was 29,382 KiB. Restarting the
+same artifact into White Zone rendered Sonic at 59-60 FPS/99-100% with 30,346
+KiB free; action input remained live. Physical Old 3DS, physical
+Circle Pad calibration and genuine retail movement rows remain NOT VERIFIED.
+
 ## 2026-10-24 — PC2004 retained-frame slope-air correction
 
 Parent `faa696f`; the inherited dirty compiled `dist/SA3DS_Pass11B_Audited.3dsx`

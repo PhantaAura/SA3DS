@@ -24,7 +24,8 @@ int sa3ds_parity_trace_write_header(FILE *output) {
         "landing_impact_world_y,landing_impact_valid,landing_air_action,"
         "processed_analog_active,processed_analog_valid,idle_counter,"
         "circle_sample_valid,circle_raw_x,circle_raw_y,circle_normalized_magnitude,"
-        "circle_normalized_angle_bams,circle_full_scale\n") < 0 ? -1 : 0;
+        "circle_normalized_angle_bams,circle_full_scale,"
+        "pc2004_action_state,pc2004_action_state_valid\n") < 0 ? -1 : 0;
 }
 
 int sa3ds_parity_trace_write_frame(FILE *output,
@@ -53,7 +54,7 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         "%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%.9g,%u,%u,%d,%d,%d,%d,"
         "%u,%u,%.9g,%d,%.9g,%" PRIu32 ",%d,%" PRIu32 ","
         "%u,%u,%u,%.9g,%u,%u,%u,%u,%u,"
-        "%d,%d,%d,%.9g,%u,%.9g\n",
+        "%d,%d,%d,%.9g,%u,%.9g,%u,%u\n",
         SA3DS_PARITY_TRACE_VERSION, (int)test_id, test_name ? test_name : "UNKNOWN", player->sim_frame,
         input->move_x, input->move_z,
         analog.post_deadzone_x, analog.post_deadzone_z,
@@ -91,6 +92,8 @@ int sa3ds_parity_trace_write_frame(FILE *output,
         input->device_raw_x, input->device_raw_y,
         input->device_normalized_magnitude,
         input->device_normalized_angle_bams,
-        input->device_full_scale);
+        input->device_full_scale,
+        (unsigned)player->pc2004_action_state,
+        player->pc2004_action_state_valid ? 1u : 0u);
     return result < 0 ? -1 : 0;
 }

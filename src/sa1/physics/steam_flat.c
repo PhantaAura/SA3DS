@@ -417,6 +417,18 @@ void sa1_physics_step_steam_sonic_flat(
                 player, input, camera_yaw, NULL);
             if (!ball_handled) {
                 steam_flat_horizontal(player, input, camera_yaw, debug_out);
+                /* Reset/landing can establish retail action 1/2, but the
+                 * ordinary 1<->2 ground transition remains unreconstructed.
+                 * Do not carry a known starting action past a changed
+                 * deciding condition as stale retail evidence. */
+                float forward = player->vel.x * sinf(player->yaw) +
+                                player->vel.z * cosf(player->yaw);
+                if (player->pc2004_action_state_valid &&
+                    ((player->pc2004_action_state == 1 &&
+                      (player->animation_input_active || forward != 0.0f)) ||
+                     (player->pc2004_action_state == 2 &&
+                      !player->animation_input_active && forward == 0.0f)))
+                    player->pc2004_action_state_valid = false;
             } else if (debug_out) {
                 /* Ball diagnostics live in SA1SteamBallDebug; do not expose
                  * stale flat-ground diagnostics during a ball-state tick. */
@@ -446,12 +458,18 @@ void sa1_physics_step_steam_sonic_flat(
     if (surface.valid && player->vel.y <= 0.0f &&
         player->pos.y >= surface.ground_y - 0.35f &&
         player->pos.y <= surface.ground_y + 1.6f) {
-        if (!player->grounded && player->action_state == SA1_ACTION_AIRBORNE) {
+        int landed_from_air = !player->grounded &&
+                              player->action_state == SA1_ACTION_AIRBORNE;
+        if (landed_from_air) {
             /* Retail motionwk+8 is world Y, separate from the local normal
              * zeroed by PResetPosition. Preserve the corresponding velocity
              * before this static-floor adapter destroys it. */
             player->animation_landing_world_y = player->vel.y;
-            player->animation_landing_air_action = player->ball_form ? 8 : 12;
+            player->animation_landing_air_action =
+                (player->pc2004_action_state_valid &&
+                 (player->pc2004_action_state == 8 ||
+                  player->pc2004_action_state == 12)) ?
+                player->pc2004_action_state : (player->ball_form ? 8 : 12);
             player->animation_landing_valid = isfinite(player->vel.y);
         }
         player->pos.y = surface.ground_y + 1.0f;
@@ -462,8 +480,19 @@ void sa1_physics_step_steam_sonic_flat(
             player->action_state = SA1_ACTION_GROUNDED;
             player->ball_form = false;
         }
+        if (landed_from_air) {
+            player->pc2004_action_state =
+                (player->animation_input_active ||
+                 (player->vel.x * sinf(player->yaw) +
+                  player->vel.z * cosf(player->yaw)) != 0.0f) ? 2 : 1;
+            player->pc2004_action_state_valid = true;
+            player->animation_airborne_request_valid = false;
+        }
     } else if (!surface.valid || player->pos.y > surface.ground_y + 1.6f) {
-        player->grounded = false;
+        if (player->grounded)
+            sa1_steam_sonic_begin_ground_departure(player);
+        else
+            player->grounded = false;
     }
 
     if (surface.valid) {

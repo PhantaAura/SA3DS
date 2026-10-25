@@ -112,6 +112,16 @@ path now skips held-jump boost on the initiation tick like the flat path.
 The airborne-state hold helper begins on subsequent ticks. This establishes
 operation ordering, not complete slope-air or retail runtime numerical parity.
 
+Action 5 first calls the common support transition at `0x00497405`, targeting
+`0x00494F70`. When status bits 0/1 are clear, that helper masks ball status
+`0x100`; the ball branch writes action 8 and returns without an animation
+request write. Consequently a rolling terrain departure retains request 15.
+This differs from the later action-5 jump call at `0x00497446`, which targets
+`0x00495E60`, writes action 8, and requests 14 through `0x00495C30`. The port
+now preserves this distinction instead of mapping every airborne ball state to
+request 14. The native parity trace records the original action independently
+from its broader controller enum.
+
 Regressions cover eight flat launch/input-priority cases and 36 launches on
 six actual imported support locations (normal/roll × neutral/forward/turn),
 plus held-charge jump immunity. The old HEAD source fails the new launch test;

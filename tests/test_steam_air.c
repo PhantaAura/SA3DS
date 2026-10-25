@@ -29,6 +29,25 @@ int main(void) {
     assert(p.action_state == SA1_ACTION_AIRBORNE);
     assert(nearf(p.vel.y, sp->jmp_y_spd, 0.000001f));
     assert(p.jump_ticks == 0);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 8);
+    assert(p.animation_airborne_request_valid &&
+           p.animation_airborne_request == 14);
+
+    /* 0x494F70 is distinct from the jump helper: loss of support while
+       action 5/ball status is active selects action 8 but does not overwrite
+       Roll request 15. Ordinary upright departure selects action 12/Fall18. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.action_state = SA1_ACTION_ROLL;
+    p.ball_form = true;
+    sa1_steam_sonic_begin_ground_departure(&p);
+    assert(!p.grounded && p.action_state == SA1_ACTION_AIRBORNE);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 8);
+    assert(p.animation_airborne_request_valid &&
+           p.animation_airborne_request == 15);
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    sa1_steam_sonic_begin_ground_departure(&p);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 12);
+    assert(p.animation_airborne_request == 18);
 
     /* 0x004DBA90 + Sonic jump state: jmp_addit * 0.8 while held and the
        pre-increment timer remains below jump2_timer. */

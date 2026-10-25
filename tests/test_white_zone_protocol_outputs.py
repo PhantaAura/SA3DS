@@ -10,14 +10,19 @@ def ints(rs,k): return {int(r[k]) for r in rs}
 
 acc=rows("flat_accel"); assert fl(acc[-1],"horizontal_speed")>fl(acc[0],"horizontal_speed")
 headers=list(acc[0])
-assert len(headers)==73 and headers[57]=='jump_ticks'
-assert headers[-15:-6]==['animation_requested_id','landing_classification_valid',
+assert len(headers)==75 and headers[57]=='jump_ticks'
+assert headers[-17:-8]==['animation_requested_id','landing_classification_valid',
     'landing_classified_request','landing_impact_world_y','landing_impact_valid',
     'landing_air_action','processed_analog_active','processed_analog_valid','idle_counter']
-assert headers[-6:]==['circle_sample_valid','circle_raw_x','circle_raw_y',
+assert headers[-8:-2]==['circle_sample_valid','circle_raw_x','circle_raw_y',
     'circle_normalized_magnitude','circle_normalized_angle_bams','circle_full_scale']
+assert headers[-2:]==['pc2004_action_state','pc2004_action_state_valid']
 assert headers[:6]==['trace_version','test_id','test_name','frame','move_x','move_z']
-assert all(None not in row and len(row)==73 for row in acc)
+assert all(None not in row and len(row)==75 for row in acc)
+# Acceleration changes the reset action's deciding condition. Until the
+# ordinary retail 1<->2 selector is reconstructed, provenance must fail closed.
+assert any(row['pc2004_action_state_valid']=='0' for row in acc)
+assert acc[-1]['pc2004_action_state_valid']=='0'
 assert all(row['circle_sample_valid']=='0' for row in acc)
 assert all(row['processed_analog_valid']=='1' and row['processed_analog_active']=='1' for row in acc)
 coast=rows("coast"); assert fl(coast[-1],"horizontal_speed")<fl(coast[0],"horizontal_speed")
