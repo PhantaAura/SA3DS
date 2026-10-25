@@ -19,10 +19,11 @@ assert headers[-8:-2]==['circle_sample_valid','circle_raw_x','circle_raw_y',
 assert headers[-2:]==['pc2004_action_state','pc2004_action_state_valid']
 assert headers[:6]==['trace_version','test_id','test_name','frame','move_x','move_z']
 assert all(None not in row and len(row)==75 for row in acc)
-# Acceleration changes the reset action's deciding condition. Until the
-# ordinary retail 1<->2 selector is reconstructed, provenance must fail closed.
-assert any(row['pc2004_action_state_valid']=='0' for row in acc)
-assert acc[-1]['pc2004_action_state_valid']=='0'
+# Exact PC2004 action-1 processed-input dispatch reaches action 2 before the
+# movement update. The reconstructed provenance remains valid throughout this
+# full-input acceleration protocol.
+assert all(row['pc2004_action_state_valid']=='1' for row in acc)
+assert all(row['pc2004_action_state']=='2' for row in acc)
 assert all(row['circle_sample_valid']=='0' for row in acc)
 assert all(row['processed_analog_valid']=='1' and row['processed_analog_active']=='1' for row in acc)
 coast=rows("coast"); assert fl(coast[-1],"horizontal_speed")<fl(coast[0],"horizontal_speed")

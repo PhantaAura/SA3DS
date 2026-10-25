@@ -416,19 +416,27 @@ void sa1_physics_step_steam_sonic_flat(
             int ball_handled = sa1_steam_sonic_ball_ground_step(
                 player, input, camera_yaw, NULL);
             if (!ball_handled) {
+                /* Sonic_Act1 action 2 calls 0x494FF0 before its movement
+                 * update.  Preserve that entry-state deciding condition;
+                 * using the post-acceleration speed can miss the exact
+                 * action-2 -> action-1 stop transition. */
+                float selector_forward = player->vel.x * sinf(player->yaw) +
+                                         player->vel.z * cosf(player->yaw);
+                int selector_input_active = player->animation_input_active;
                 steam_flat_horizontal(player, input, camera_yaw, debug_out);
-                /* Reset/landing can establish retail action 1/2, but the
-                 * ordinary 1<->2 ground transition remains unreconstructed.
-                 * Do not carry a known starting action past a changed
-                 * deciding condition as stale retail evidence. */
-                float forward = player->vel.x * sinf(player->yaw) +
-                                player->vel.z * cosf(player->yaw);
-                if (player->pc2004_action_state_valid &&
-                    ((player->pc2004_action_state == 1 &&
-                      (player->animation_input_active || forward != 0.0f)) ||
-                     (player->pc2004_action_state == 2 &&
-                      !player->animation_input_active && forward == 0.0f)))
-                    player->pc2004_action_state_valid = false;
+                if (player->pc2004_action_state_valid) {
+                    if (player->pc2004_action_state == 2 &&
+                        !selector_input_active && selector_forward == 0.0f) {
+                        player->pc2004_action_state = 1;
+                    } else if (player->pc2004_action_state == 1 &&
+                               selector_input_active) {
+                        /* Action 1 reaches the shared 0x49A83B write when
+                         * 0x43BDC0 reports processed analog: action 2 and
+                         * animation request 9. Residual speed alone does not
+                         * take that branch. */
+                        player->pc2004_action_state = 2;
+                    }
+                }
             } else if (debug_out) {
                 /* Ball diagnostics live in SA1SteamBallDebug; do not expose
                  * stale flat-ground diagnostics during a ball-state tick. */

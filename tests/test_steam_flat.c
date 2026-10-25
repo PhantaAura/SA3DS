@@ -85,6 +85,37 @@ int main(void) {
     assert(d.crossed_zero == 1);
     assert(fabsf(d.forward_speed_after) < 0.000001f);
 
+    /* PC2004 Sonic_Act1 action 2 invokes 0x494FF0 before the movement
+       update.  A speed that reaches zero during PGetSpeed remains action 2
+       for this tick; the following zero-entry tick writes exact action 1.
+       The former port inspected post-update speed and discarded provenance. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.pc2004_action_state = 2;
+    p.pc2004_action_state_valid = true;
+    p.vel.z = 0.03f;
+    step(&p, none, &d);
+    assert(d.crossed_zero == 1);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 2);
+    step(&p, none, &d);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 1);
+
+    /* Active filtered analog bypasses 0x494FF0's action-1 write even when
+       the incoming local forward component is exactly zero. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.pc2004_action_state = 2;
+    p.pc2004_action_state_valid = true;
+    step(&p, fwd, &d);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 2);
+
+    /* Action 1 reaches PC2004's shared 0x49A83B action-2 write on processed
+       analog. Without analog, residual speed by itself retains action 1. */
+    sa1_player_reset(&p, sa3ds_movement_lab_world());
+    p.vel.z = 0.5f;
+    step(&p, none, &d);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 1);
+    step(&p, fwd, &d);
+    assert(p.pc2004_action_state_valid && p.pc2004_action_state == 2);
+
     /* PC2004 0x443C50 retains 99% of pre-turn local velocity and mixes 1% of
        the transformed velocity. This is intentionally not the inverse blend. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());

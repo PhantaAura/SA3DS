@@ -57,6 +57,8 @@ SIGNATURES = {
     "reverse_initial_frame_minus_one": (0x0043F290, "d82510cb7d00d95910"),
     "reverse_property6_nextanim": (0x0044ABF5, "e916bdffff"),
     "stationary_selector_signed_forward_zero": (0x00495007, "d94638d81d2ccb7d00dfe0f6c4447a64"),
+    "ground_action1_processed_input_to_action2": (0x00497109, "6a006a0055e8ad4cfaff83c40c85c00f851d370000"),
+    "ground_action2_write_and_request9": (0x0049A83B, "c645000266c783240100000900"),
     "landing_stationary_selector_call": (0x0049796E, "e87dd6ffff"),
     "moving_landing_ground_selector": (0x0049799E, "c6450002e829e3ffff"),
     "idle_replaces_nonidle_request": (0x004916D7, "66ff460e66898e24010000"),
@@ -220,6 +222,10 @@ def main() -> int:
         raise ValueError("action-5 transition no longer calls signed roll-end helper")
     if rel32_call_target(data, image_base, sections, 0x00497405) != 0x00494F70:
         raise ValueError("action-5 transition no longer checks support before jump/roll end")
+    if rel32_call_target(data, image_base, sections, 0x0049710E) != 0x0043BDC0:
+        raise ValueError("action-1 transition no longer samples processed analog")
+    if rel32_call_target(data, image_base, sections, 0x004971FC) != 0x00494FF0:
+        raise ValueError("action-2 transition no longer calls the zero-speed selector")
     for action, entries in EXPECTED_CALLS.items():
         calls[action] = []
         for call_va, expected_target, name in entries:
@@ -248,6 +254,7 @@ def main() -> int:
             "charge_animation": "entry calls 0x495C30 -> request 14; property 10 rate uses shared SpindashSpeed * 0.2",
             "jump_order": "actions 1/2 test jump before Spin Dash entry; action 5 tests jump before roll exit; action 4 runs charge transition without jump test; resulting action movement runs once",
             "roll_ground_departure": "action 5 calls 0x494F70; no support plus ball status selects action 8 without replacing animation request 15",
+            "ordinary_ground_actions": "action 1 processed analog writes action 2/request 9; action 2 calls 0x494FF0 before movement and writes action 1 only for inactive processed analog plus exact zero signed forward speed",
         },
         "action_dispatch": {
             "table_va": VA["sonic_action_table"],

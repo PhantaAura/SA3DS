@@ -262,6 +262,22 @@ landings on the real imported beach exercise the bridge; full animation timing,
 zero-speed/input selection, signed counter wrap and reverse playback have
 focused regressions. Six ACTIONs now run through the independent raw-DLL oracle.
 
+## Ordinary grounded action 1/2 provenance (2026-10-25)
+
+Fresh live REA/Ghidra 12.1.4 analysis of the exact SHA-256-pinned executable
+decompiled `0x00494FF0` and returned its complete incoming-reference set. In
+`Sonic_Act1` action 2, the helper is called before the movement dispatch. It
+returns without changing action when processed analog is active or signed local
+forward speed is nonzero; otherwise it writes action 1. The action-1 handler's
+processed-analog branch reaches shared write `0x0049A83B`, which writes action 2
+and request 9. Residual speed alone does not take that action-1 branch.
+
+SA3DS now evaluates these decisions from the incoming tick state in both the
+flat and arbitrary-support adapters. In particular, braking that crosses zero
+retains action 2 for the crossing tick and becomes action 1 on the next tick.
+This improves trace provenance; it does not claim an executed retail trajectory
+or reconstruct unrelated exceptional action transitions.
+
 ## Reproducible verifier
 
 Run:

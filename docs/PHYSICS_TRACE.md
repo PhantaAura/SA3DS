@@ -61,10 +61,14 @@ comparable with retail `EntityData1.Action`. The new field is written only
 from source-reconstructed transitions. A retail comparison aliases retail
 `action_state` to this field and fails rather than guessing when validity is
 zero. Existing port-internal comparisons continue to compare the broad state.
-Reset and verified landing/ball/air transitions establish a value. Ordinary
-ground movement invalidates a reset action when its deciding condition changes,
-because the general PC2004 action1/action2 selector remains unreconstructed;
-the trace must not silently carry a stale action1 through acceleration.
+Reset and verified landing/ball/air transitions establish a value. Live
+Ghidra 12.1.4 decompilation of exact-executable selector `0x00494FF0` and its
+`Sonic_Act1` caller `0x00496F50` now cover the ordinary action 1/2 boundary.
+Action 1 writes action 2 when the processed-analog helper is active. Action 2
+calls `0x00494FF0` before movement and writes action 1 only when processed
+analog is inactive and signed local forward speed is exactly zero. Therefore a
+speed that crosses zero during that tick remains action 2 until the following
+tick. Flat and arbitrary-support paths preserve this pre-movement ordering.
 
 Exact executable control flow distinguishes two action-8 entries that the
 former trace could not represent. The jump helper `0x00495E60` writes action 8

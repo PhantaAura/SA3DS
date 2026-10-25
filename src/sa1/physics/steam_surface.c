@@ -557,14 +557,23 @@ void sa1_physics_step_steam_sonic_surface(
                 int ball_handled = handle_surface_ball_state(player, input,
                                     camera_yaw, &frame, dbg);
                 if (!ball_handled) {
+                    /* Action 2 evaluates 0x494FF0 before PGetRotation /
+                     * acceleration / speed.  Snapshot the local forward
+                     * component in the incoming support frame. */
+                    float selector_forward =
+                        sa1_vec3_dot(player->vel, frame.forward);
+                    int selector_input_active = player->animation_input_active;
                     surface_running(player, input, camera_yaw, &frame, dbg);
-                    float forward = sa1_vec3_dot(player->vel, frame.forward);
-                    if (player->pc2004_action_state_valid &&
-                        ((player->pc2004_action_state == 1 &&
-                          (player->animation_input_active || forward != 0.0f)) ||
-                         (player->pc2004_action_state == 2 &&
-                          !player->animation_input_active && forward == 0.0f)))
-                        player->pc2004_action_state_valid = false;
+                    if (player->pc2004_action_state_valid) {
+                        if (player->pc2004_action_state == 2 &&
+                            !selector_input_active &&
+                            selector_forward == 0.0f) {
+                            player->pc2004_action_state = 1;
+                        } else if (player->pc2004_action_state == 1 &&
+                                   selector_input_active) {
+                            player->pc2004_action_state = 2;
+                        }
+                    }
                 }
             }
         }

@@ -1,5 +1,58 @@
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
+## 2026-10-25 — PC2004 ordinary grounded action selector and live Ghidra recovery
+
+Parent `639be03`; the inherited dirty compiled
+`dist/SA3DS_Pass11B_Audited.3dsx` was preserved and excluded. Renderer, CPU
+texture upload, owner package loading, Circle Pad scaling, collision and the
+60 Hz scheduler are unchanged. `PHYSICS_1TO1=false`.
+
+REA's Ghidra provider again performed a genuine live decompilation and incoming
+cross-reference lookup on the exact PE32/x86 executable, SHA-256
+`6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`, using
+Ghidra 12.1.4 and IBM Semeru Java 21. The first 330-second import timed out;
+raising `REA_GHIDRA_STARTUP_TIMEOUT_MS` to 600000 completed analysis in about
+309 seconds. The optional GUI HTTP bridge still refused `127.0.0.1:8080`, but
+that did not prevent the headless provider from returning the decompilation and
+xrefs. Hopper was not used.
+
+The recovered ordinary grounded selector closes a trace and controller-state
+gap. Sonic action 2 calls `0x00494FF0` before movement. It becomes action 1 only
+when processed analog is inactive and signed local forward speed is exactly
+zero. Sonic action 1 calls processed-input helper `0x0043BDC0`; active input
+reaches shared write `0x0049A83B`, which selects action 2/request 9. Residual
+speed alone does not take that action-1 branch. Both flat and arbitrary-support
+paths now evaluate the decision from the incoming tick state. Consequently a
+braking tick that crosses zero remains action 2 until the following zero-entry
+tick, and trace-v4 action provenance remains valid instead of failing closed.
+
+Focused flat/surface/action-provenance tests PASS. The 17-scenario deterministic
+trace protocol, Circle Pad diagnostic fixtures, strict comparator and portable
+retail-capture schema self-test PASS. The exact-executable verifier covers the
+new calls/signatures and PASSes. The complete owner-data-free host suite PASSes.
+The owner Emerald Coast collision replay PASSes 685 triangles, imported-ground
+Spin Dash, 1731 support probes, 344 descents, 504 corners, 694 slope transitions
+and 50 ledges. No pose/animation sampling code changed, so the Pass11B pose
+oracle was not rerun.
+
+An isolated native build PASS produced a 279,908-byte code-only 3DSX, SHA-256
+`e9d3dd1951621fd4d11b3f62db7ace99bd31e7ff42d3ab8b33393e66db63ad9a`.
+That exact artifact ran in Azahar 2126.0 Old3DS/Vulkan. Emerald Coast loaded the
+owner package (30 instances, 45 batches, 5,053 triangles, 15,159 vertices and
+25 textures), rendered Sonic beyond 6,000 GPU frames, accepted Circle Pad
+movement across imported terrain, visibly entered `AIR` on jump and returned to
+`GND`. Inspected samples were 58-60 FPS at 97-100% speed with 29,382 KiB linear
+memory free. Restarting the same artifact into White Zone rendered Sonic and
+accepted action input at 58 FPS/97% with 30,346 KiB free.
+
+The portable exact-hash Windows x86 capture endpoint remains ready, but this
+Mac's Rosetta/Wineskin process is still not a verified attachable retail target.
+Zero genuine PC2004 rows were captured: retail trajectory comparison remains
+`NOT VERIFIED` and still requires a compatible native Windows x86 Frida session
+or Wine-guest injector. Synthetic input diagnostics retain the practical 156
+full-scale convention; physical Old 3DS Circle Pad calibration and hardware
+performance remain `NOT VERIFIED`.
+
 ## 2026-10-25 — PC2004 Roll terrain-departure action/animation provenance
 
 Parent `6eb8570`; the inherited dirty compiled

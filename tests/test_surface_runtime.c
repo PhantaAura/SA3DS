@@ -53,6 +53,36 @@ int main(void) {
     assert(dbg.post_motion_support_queries == 1u);
     assert(dbg.support_queries == 1u);
 
+    /* The arbitrary-support adapter mirrors action 2's pre-movement call to
+       PC2004 0x494FF0. Exact zero speed with inactive processed analog writes
+       action 1; active analog bypasses that write. */
+    fresh.pc2004_action_state = 2;
+    fresh.pc2004_action_state_valid = true;
+    fresh.vel = (SA1Vec3){0};
+    sa1_physics_step_steam_sonic_surface(&fresh, &input, 0.0f, world,
+                                         &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,
+                                         &dbg);
+    assert(fresh.pc2004_action_state_valid &&
+           fresh.pc2004_action_state == 1);
+    fresh.pc2004_action_state = 2;
+    fresh.pc2004_action_state_valid = true;
+    fresh.vel = (SA1Vec3){0};
+    input.move_z = 1.0f;
+    sa1_physics_step_steam_sonic_surface(&fresh, &input, 0.0f, world,
+                                         &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,
+                                         &dbg);
+    assert(fresh.pc2004_action_state_valid &&
+           fresh.pc2004_action_state == 2);
+    fresh.pc2004_action_state = 1;
+    fresh.pc2004_action_state_valid = true;
+    fresh.vel = (SA1Vec3){0};
+    sa1_physics_step_steam_sonic_surface(&fresh, &input, 0.0f, world,
+                                         &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,
+                                         &dbg);
+    assert(fresh.pc2004_action_state_valid &&
+           fresh.pc2004_action_state == 2);
+    input.move_z = 0.0f;
+
     /* 0.0.8.8's forced 0.3/1.16 wall fall was not binary-backed for the exact
        2004 PSetPosition/PResetPosition bodies. It must no longer force a
        detach in the primary PC profile. Geometric support loss remains active. */
