@@ -37,13 +37,15 @@ void sa3ds_ec_model_transform(const SA1PlayerState*p,SA3CMatrix*out){
     /* 0x4915F0 transforms (0,center_height,0), then adds task position;
      * 0x4948C0 uses that center before actor rotations and ACTION drawing.
      * Our contact frame supplies the orientation; retail angle smoothing and
-     * airborne orientation remain partial. Model +X is forward, +Y is up. */
+     * airborne orientation remain partial. PC2004 movement 0x43ECE3 uses
+     * -taskY, while display 0x494A41 uses 0x8000-taskY: model -X is
+     * forward, +Y is up. Preserve that half-turn about the support normal. */
     SA1Vec3 o=sa1_vec3_add(sa3ds_ec_task_origin(p),
         sa1_vec3_scale(f.up,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.center_height));
     memset(out,0,sizeof(*out));
-    out->m[0]=f.forward.x;out->m[1]=f.forward.y;out->m[2]=f.forward.z;
+    out->m[0]=-f.forward.x;out->m[1]=-f.forward.y;out->m[2]=-f.forward.z;
     out->m[4]=f.up.x;out->m[5]=f.up.y;out->m[6]=f.up.z;
-    out->m[8]=-f.right.x;out->m[9]=-f.right.y;out->m[10]=-f.right.z;
+    out->m[8]=f.right.x;out->m[9]=f.right.y;out->m[10]=f.right.z;
     out->m[12]=o.x;out->m[13]=o.y;out->m[14]=o.z;out->m[15]=1;
 }
 static SA1Vec3 point(const uint8_t*p){return (SA1Vec3){rf(p),rf(p+4),rf(p+8)};}

@@ -1,3 +1,40 @@
+# SA3DS 0.0.10.0 — World Comes Alive, CP1 in progress
+
+2026-10-31; starting commit `48615c1` (clean checkout, GitHub main confirmed).
+The unified CP0–CP9 ledger is [docs/WCA_0_0_10_0.md](docs/WCA_0_0_10_0.md).
+
+Reproduced and corrected native screen/core X disagreement, White Zone camera
+rotation signs, and Sonic display-frame orientation. Exact PC2004 instructions
+establish movement `-taskY` versus display `0x8000-taskY`: model -X follows
+physical forward. The earlier +X-forward comment was incorrect. The native
+input bridge preserves raw Circle Pad provenance, full-scale156, the PC2004
+filter, controller equations, turn inertia and 60Hz simulation.
+
+Validation: full host suite PASS; 144 direction/camera cases plus movement-state
+transitions PASS; 64 x20-tick owner-terrain direction/camera cases PASS; inherited
+owner collision replay/probes PASS; six-ACTION source-pose oracle PASS
+(84,294 comparisons, max error4.99206543e-9); exact-EXE facing verifier PASS.
+Final devkitARM build PASS: 279,964 bytes, SHA256
+`e36273141980c8b85252c5cab487038aff53908ac4edfdf4d9fc15f5098004a9`.
+That artifact booted both modes in Azahar2126.0 Old3DS/Vulkan. Its 600-tick
+Emerald Coast replay completed, AIR241–285 -> GND286, with progressing animation
+frames; free linear29382KiB. White Zone rendered Sonic facing along the course,
+accepted directional input and had30346KiB free. Inspected render HUD samples
+were15ms (EC) and5–16ms (White Zone); no sustained FPS or hardware claim.
+
+REA confirmed the exact owner PE hash; fresh Ghidra import timed out at330s.
+Private saved decompilation plus independently checked executable instructions
+support the correction. No new live Ghidra result, retail movement capture,
+physical Circle Pad calibration or Old3DS hardware validation is claimed.
+`PHYSICS_1TO1=false`; full Emerald Coast gameplay is incomplete.
+
+Next: extend native replay to the complete CP1 direction/camera/transition matrix
+and CP2 charge/roll/uncurl/landing playback sequences, including requested versus
+active animation and blend timing. Full route, objects, whale, audio, completion,
+mod override and hardware gates remain outstanding.
+
+---
+
 # SA3DS current checkpoint — Emerald Coast combined rendering and partial playability
 
 ## 2026-10-25 — PC2004 ordinary grounded action selector and live Ghidra recovery

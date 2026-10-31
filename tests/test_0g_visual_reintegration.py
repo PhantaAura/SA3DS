@@ -11,8 +11,13 @@ root=Path(__file__).resolve().parents[1]
 f=root/'runtime_0_0_9_0F'
 g=root/'runtime_0_0_9_0G'
 # TextureSyncFix intentionally changes the texture upload/init sections only.
-# Retain exact 0F mesh submission, draw/render counters, cleanup and lab GPU.
-assert (f/'source/lab_gpu.c').read_bytes()==(g/'source/lab_gpu.c').read_bytes()
+# Retain exact 0F lab submission/cleanup outside the CP1 camera correction.
+f_lab=(f/'source/lab_gpu.c').read_text()
+g_lab=(g/'source/lab_gpu.c').read_text().replace('#include "player_view.h"\n','')
+old_camera=f_lab[f_lab.index('static void camera_relative('):f_lab.index('static void write_vertex(')]
+new_camera=g_lab[g_lab.index('static void camera_relative('):g_lab.index('static void write_vertex(')]
+assert 'sa3ds_view_point(' in new_camera
+assert g_lab.replace(new_camera,old_camera)==f_lab, 'lab submission/cleanup changed outside camera conversion'
 f_gpu=(f/'source/sonic_gpu.c').read_text()
 g_gpu=(g/'source/sonic_gpu.c').read_text()
 assert f_gpu[f_gpu.index('static void xform('):f_gpu.index('int sa3ds_sonic_gpu_init(')] == \

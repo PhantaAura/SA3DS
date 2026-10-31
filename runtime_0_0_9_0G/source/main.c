@@ -1,3 +1,4 @@
+#include "player_view.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -670,7 +671,7 @@ static int sample_pose(void) {
         Mtx_RotateY(&sonic_mv,g_pose_yaw,true);
     } else {
         Mtx_Translate(&sonic_mv,-1.2f,-0.3f,-18.0f,true);
-        Mtx_RotateY(&sonic_mv,wrap_angle(g_player.yaw-g_camera.yaw),true);
+        Mtx_RotateY(&sonic_mv,sa3ds_view_model_yaw(g_player.yaw,g_camera.yaw),true);
     }
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&sonic_mv);
     switch(g_cull_mode) {
@@ -847,6 +848,8 @@ int main(void) {
                 /* Fixed camera for equivalent scripted directional inputs. */
                 g_camera.yaw=0;
             }
+            /* Screen input -> RH chase view; physics turn inertia is unchanged. */
+            tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
             if (!modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
             if (!modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);

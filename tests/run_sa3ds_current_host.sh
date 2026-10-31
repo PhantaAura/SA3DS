@@ -44,3 +44,6 @@ python3 tests/test_emerald_coast_native_integration.py
 printf '\nSA3DS cumulative host (owner-data-free) gate: PASS\n'
 printf '\n== Pass10A frozen-Pose Lab and geometry metrics ==\n'
 sh tests/run_pass10a.sh
+
+printf "\n== Native view/input/facing regression ==\n"
+sh tests/run_player_view.sh

@@ -1,4 +1,5 @@
 #include "lab_gpu.h"
+#include "player_view.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -13,10 +14,10 @@ static void camera_relative(const SA1PlayerState *p, float camera_yaw,
     float dx = x - p->pos.x;
     float dy = y - p->pos.y;
     float dz = z - p->pos.z;
-    float c = cosf(-camera_yaw), s = sinf(-camera_yaw);
-    out[0] = dx*c - dz*s;
-    out[1] = dy;
-    out[2] = dx*s + dz*c;
+    SA1Vec3 view=sa3ds_view_point((SA1Vec3){dx,dy,dz},camera_yaw);
+    out[0] = view.x;
+    out[1] = view.y;
+    out[2] = view.z;
 }
 
 static void write_vertex(SA3DSLabVertex *v, const SA1PlayerState *p,

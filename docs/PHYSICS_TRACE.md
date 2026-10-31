@@ -115,3 +115,26 @@ report ready, any instrumentation read fails, or no Sonic Act1 row is observed.
 
 Comparison results must be labelled `RETAIL TRACE VERIFIED`,
 `SOURCE-EQUATION VERIFIED`, `PORT-INTERNAL REGRESSION`, or `NOT VERIFIED`.
+
+
+## WCA CP1 native screen-input bridge (2026-10-31)
+
+Native Circle Pad and `sa3ds_ec_replay_input` values describe screen directions.
+`sa3ds_view_input` negates X exactly once, after replay selection and before the
+60 Hz controller. The RH chase camera's screen-right axis is
+`(-cos(camera_yaw),0,sin(camera_yaw))`, while the portable kernel's positive
+analog angle points along the opposite tangent. `move_x`, post-deadzone and
+filtered fields describe the resulting **core** input. `circle_raw_x/y`,
+normalized magnitude/angle and full-scale remain the unmodified hardware
+sample. Host core equation fixtures still supply core coordinates directly.
+The owner Emerald Coast replay test now applies the same bridge as native.
+Do not compare a raw screen X sample directly with the core filter X without
+this documented coordinate conversion. No trace schema columns were changed.
+
+Sonic's display frame also differs from its movement frame by a half-turn:
+exact-PC2004 movement `0x43ECE3..0x43ECFA` uses `-taskY`, and display
+`0x494A41..0x494A5E` uses `0x8000-taskY` through the same Ninja rotation helper.
+Thus model **-X** follows physical forward. This supersedes the former +X
+assumption in the Emerald Coast adapter. The correction rotates the model
+frame, with no per-frame snapping to stick input or changes to turn inertia.
+See [the unified WCA checkpoint](WCA_0_0_10_0.md) for bounded native evidence.

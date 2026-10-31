@@ -1,3 +1,4 @@
+#include "player_view.h"
 #include "emerald_coast_collision.h"
 #include "emerald_coast_replay.h"
 #include "../src/sa1/physics/movement.h"
@@ -214,7 +215,7 @@ int main(int argc,char**argv){
     SA1Vec3 foot=sa3ds_ec_task_origin(&actor);
     assert(fabsf(foot.y)<1e-6f);
     assert(fabsf(transform.m[12]-10)<1e-6f&&fabsf(transform.m[13]-5.4f)<1e-6f);
-    assert(fabsf(transform.m[14]-20)<1e-6f&&fabsf(transform.m[2]-1)<1e-6f);
+    assert(fabsf(transform.m[14]-20)<1e-6f&&fabsf(transform.m[2]+1)<1e-6f);
     actor.ground_normal=sa1_vec3_normalize((SA1Vec3){0,1,-0.1f});
     actor.pos=sa1_vec3_add((SA1Vec3){0,3.6f,100},actor.ground_normal);
     foot=sa3ds_ec_task_origin(&actor);sa3ds_ec_model_transform(&actor,&transform);
@@ -232,7 +233,7 @@ int main(int argc,char**argv){
         assert(sa3ds_ec_collision_spawn(&s,0,spawn_z,0));
         SA1PlayerState p;sa1_player_reset(&p,&s.world);int airborne=0,landed=0;
         for(unsigned t=0;t<600;t++){
-            SA1Input in=sa3ds_ec_replay_input(t);SA1Vec3 old=p.pos;s.reference_y=p.pos.y;
+            SA1Input in=sa3ds_view_input(sa3ds_ec_replay_input(t));SA1Vec3 old=p.pos;s.reference_y=p.pos.y;
             sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
             sa3ds_ec_collision_resolve_walls(&s,old,&p);
             assert(isfinite(p.pos.x)&&isfinite(p.pos.y)&&isfinite(p.pos.z));
