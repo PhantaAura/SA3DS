@@ -41,6 +41,12 @@ typedef struct {
     float support_distance;
     uint32_t surface_flags;
 
+    /* Completed general-surface tick's signed player-local Speed.x.
+     * The flat specialization leaves this invalid and uses its yaw projection.
+     * Presentation only: never feeds forces, steering, or collision. */
+    float animation_forward_speed;
+    bool animation_forward_speed_valid;
+
     /* PC2004 EntityData2+0x38 scratch input used only to pace animation.
      * It is cleared before each movement tick and receives the forward force
      * left over by specific ground-friction clamps. It must never feed back

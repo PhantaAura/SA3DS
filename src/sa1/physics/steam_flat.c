@@ -383,6 +383,7 @@ void sa1_physics_step_steam_sonic_flat(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;
     player->animation_landing_valid = false;
+    player->animation_forward_speed_valid = false;
 
     /* Mirrors the per-tick clear at PC2004 0x00446F10. A path marks the value
      * valid only where its residual behavior has been recovered. */

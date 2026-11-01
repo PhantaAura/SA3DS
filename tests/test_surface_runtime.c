@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "movement.h"
 #include "steam_flat.h"
@@ -90,6 +91,11 @@ int main(void) {
     sa1_physics_step_steam_sonic_surface(&slow, &input, 0.0f, world,
                                          &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,
                                          &dbg);
+    assert(slow.animation_forward_speed_valid);
+    assert(fabsf(slow.animation_forward_speed -
+        (slow.vel.x * slow.surface_forward.x + slow.vel.y * slow.surface_forward.y +
+         slow.vel.z * slow.surface_forward.z)) < 1e-6f);
+    assert(slow.animation_forward_speed > 0.0f);
     assert(slow.grounded);
     assert(slow.surface_id == 100);
     assert(dbg.legacy_low_speed_fall_disabled == 1);
@@ -102,6 +108,15 @@ int main(void) {
                                          &dbg);
     assert(fast.grounded);
     assert(fast.surface_id == 100);
+
+    /* Crossing to the flat specialization must discard the old wall speed. */
+    SA1PlayerState flat;
+    sa1_player_reset(&flat, world);
+    flat.animation_forward_speed = 99.0f;
+    flat.animation_forward_speed_valid = true;
+    sa1_physics_step_steam_sonic_flat(&flat, &input, 0.0f, world,
+        &SA1_PHYSICS_PLACEHOLDER_CONSTANTS, NULL);
+    assert(!flat.animation_forward_speed_valid);
 
     printf("surface runtime support-order tests: PASS\n");
     return 0;

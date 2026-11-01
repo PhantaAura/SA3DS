@@ -522,6 +522,7 @@ void sa1_physics_step_steam_sonic_surface(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;
     player->animation_landing_valid = false;
+    player->animation_forward_speed_valid = false;
 
     SA1SurfaceFrame frame = player_frame(player);
     if (!frame.valid) {
@@ -658,6 +659,14 @@ void sa1_physics_step_steam_sonic_surface(
         sa1_player_reset(player, world);
         return;
     }
+
+    /* Match the local coordinate system used by surface movement. Horizontal
+     * yaw projection loses vertical motion on ramps/walls and under-paces
+     * animation. Capture after support/landing has finalized the frame. */
+    player->animation_forward_speed =
+        sa1_vec3_dot(player->vel, player->surface_forward);
+    player->animation_forward_speed_valid =
+        isfinite(player->animation_forward_speed);
 
     float speed = sa1_surface_tangent_speed(player);
     if (speed > player->peak_speed) player->peak_speed = speed;

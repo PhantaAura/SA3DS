@@ -122,6 +122,30 @@ int main(void) {
     assert(sa3ds_sonic_animation_binding(32, &b));
     assert(b.instance == 1 && b.property == 3 && b.animation_speed == 1.0f);
 
+    /* Full-frame local Speed.x must drive both band selection and pacing.
+     * Vertical wall travel has zero horizontal speed, yet is moving locally.
+     * Signed backwards motion must remain signed; a magnitude is incorrect. */
+    for (int sign = -1; sign <= 1; sign += 2) {
+        SA1PlayerState wall = base_player();
+        wall.ground_normal = (SA1Vec3){0,0,-1};
+        wall.surface_forward = (SA1Vec3){0,1,0};
+        wall.vel = (SA1Vec3){0,2.0f * sign,0};
+        wall.animation_forward_speed = 2.0f * sign;
+        wall.animation_forward_speed_valid = true;
+        SA3DSSonicAnimationSync sync = {0};
+        SA3DSSonicAnimationRuntime rt = {0};
+        SA3DSSonicAnimationObservation o = observe(&sync, &wall);
+        SA3DSSonicAnimationSelection selected = select_no_mutation(&rt, &wall, &o);
+        assert(selected.binding.runtime_id == (sign > 0 ? 11 : 9));
+        wall.sim_frame++;
+        o = observe(&sync, &wall);
+        selected = select_no_mutation(&rt, &wall, &o);
+        float step = sign > 0 ? 1.6f : -6.8f;
+        float phase = step < 0 ? 32.0f + step : step;
+        assert(fabsf(selected.sample_frame - phase) < 1e-5f);
+        assert(selected.playback_rate_is_source_backed);
+    }
+
     /* 0x00495CD0 compares Speed.x + 5*residual against Sonic's exact
      * jog/run/rush/dash thresholds and selects all five ground clips. */
     static const struct { float speed; uint16_t id; } ground_cases[] = {

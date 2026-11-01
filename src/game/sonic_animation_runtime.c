@@ -146,7 +146,10 @@ int sa3ds_sonic_animation_frame_step(
 }
 
 static float local_forward_speed(const SA1PlayerState *player) {
-    /* Matches CharObj2.Speed.x for the verified flat/upright runtime path. */
+    if (player->animation_forward_speed_valid &&
+        isfinite(player->animation_forward_speed))
+        return player->animation_forward_speed;
+    /* Flat/upright specialization (surface_forward may be stale here). */
     return player->vel.x * sinf(player->yaw) +
            player->vel.z * cosf(player->yaw);
 }

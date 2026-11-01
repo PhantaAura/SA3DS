@@ -1,3 +1,34 @@
+# WCA active checkpoint — signed surface-local animation speed
+
+Parent `fbfe348`. General-surface animation previously reconstructed Speed.x
+from horizontal yaw, dropping vertical motion on ramps/walls. Completed surface
+ticks now snapshot dot(velocity, finalized surface_forward) for presentation.
+Flat ticks clear that bridge and retain their existing yaw projection, avoiding
+stale tangent data. The bridge drives band selection, moving-landing detection,
+property9 Roll/Run2 playback and property10 scalar preparation where residual
+provenance is valid. Does not change movement/forces/collision or owner assets.
+
+Important remaining gap: general running does not yet recover the ground-force
+clamp residual, so property10 playback still reports unbacked and retains its
+existing .5 fallback on that path. The new signed speed fixes a coordinate error;
+it does not establish complete slope animation pacing or retail parity.
+Focused tests cover both signs of vertical travel, animation bands/phase, actual
+surface tick capture, and invalidation when returning to the flat specialization.
+
+Native build PASS: SHA256
+`4ff6c77a97013f0ce705edbe1418f3add8d4da7edf642496913ebdf7ad309c5c`.
+Exact build completed 9792tick/152case isolated Azahar replay; host comparison
+PASS, all discrete/animation/charge fields exact, maxposition9.15e-5units.
+8786renderframes/172515ms (~50.9FPS runtimeclock), maxsubmit566ms,
+minlinear30087680, maxcommand.114258; host contention not controlled. E/M flags
+removed after evidence saved. This is PORT-INTERNAL, not retail/hardware.
+Full cumulative owner-data-free host suite PASS; physics suite PASS including19scenarios.
+Previous horizontal-only code fails the new signed vertical-travel phase regression. Source report
+`docs/PC2004_GROUND_ACCELERATION.md` records next residual/order work; all7short
+instruction witnesses were independently matched against exact ownerEXE.
+
+---
+
 # WCA active checkpoint — walking/running animated rig correction
 
 Parent `47f0f99`. User reported walking/running pose or speed differs from supplied
