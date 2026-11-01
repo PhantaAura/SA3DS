@@ -61,3 +61,7 @@ printf "\n== Emerald Coast owner route metadata and residency ==\n"
 sh tests/run_emerald_coast_route.sh
 sh tests/run_emerald_coast_residency.sh
 python3 tests/test_emerald_coast_full_integration.py
+
+printf '\n== Direct ring runtime and importer ==\n'
+bash tests/run_ring_runtime.sh
+python3 tests/test_pc2004_ring_importer.py

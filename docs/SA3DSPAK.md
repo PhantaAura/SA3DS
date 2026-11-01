@@ -29,3 +29,26 @@ trace or a claim that the full stage is playable.
 Visual packages accept the four required chunks and optional single `SET` and
 `CAMERA` banks. These optional banks are CRC-checked and retained, but their
 presence alone does not activate gameplay objects or original cameras.
+
+
+## Direct ring resources (partial gameplay object support)
+
+`tools/build_pc2004_ring_assets.py OWNER_EXE SYSTEM EXTERNAL_OUTPUT` emits
+`ring_visual.sa3dspak` (one identity Basic model and its one compactly remapped
+source texture) and `ring_placements.sa3dspak` (`METADATA` + `RINGS`). Original
+mesh vertices, UVs, material values and32-byte placement records remain external.
+The current scope is direct class0 placements in the normal Sonic S variants;
+line/group expansion is not implied. Missing/invalid optional resources retain
+the existing terrain/controller profile and report the incomplete object state.
+
+`RINGS` uses32-byte `<8sHHIIIII>` header: magic`SA3DRING`, version1, flags0,
+actCount2, rowCount(1..2046), rowOffset32, specOffset(32+rowCount*40), totalSize.
+Each40-byte row `<II32s>` contains act0/1, original SET row index(<1023), and
+unaltered32-byte source row. Rows are strictly ordered by act then source index;
+duplicate references, non-class0 entries and nonfinite floats are rejected.
+The trailing32-byte spec `<ffffffII>` contains collision centerXYZ/radius,
+load/unload squared ranges, unsigned16-compatible rotation step and cliplevel0..2.
+The importer verifies the executable, source registry, normal Sonic suffix and
+collision/display instructions. Cliplevel comes from owner`sonicDX.ini`, with
+executable fallback1; high placement bits retain source clipping semantics.
+No PC pointers or addresses occur in runtime payloads.

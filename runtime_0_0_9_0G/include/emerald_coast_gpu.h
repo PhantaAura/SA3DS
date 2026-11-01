@@ -44,6 +44,7 @@ int sa3ds_ec_gpu_init_full(SA3DSECGpu *gpu,const SA3DSECVisual *visual,
  * Invalid views conservatively disable culling. Only full-act mode culls. */
 void sa3ds_ec_gpu_set_view(SA3DSECGpu *gpu,const float eye[3],const float target[3],
     float fovy,float aspect,float near_clip,float far_clip);
+int sa3ds_ec_gpu_sphere_visible(const SA3DSECGpu *gpu,const float center[3],float radius);
 /* Pass 0 before Sonic, pass 1 after Sonic, with the stage modelview bound.
  * Bounded water treatment, not the complete original sorted draw queue. */
 int sa3ds_ec_gpu_draw(SA3DSECGpu *gpu,int deferred_water);

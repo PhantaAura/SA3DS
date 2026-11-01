@@ -2,6 +2,8 @@
 #include "wca_replay.h"
 #include "emerald_coast_route.h"
 #include "emerald_coast_residency.h"
+#include "ring_runtime.h"
+#include "ring_replay.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -81,6 +83,15 @@ static int g_ec_failed_region_valid=0;
 static float g_ec_failed_region_x=0,g_ec_failed_region_z=0;
 static SA3DSECVisual g_ec_visual;
 static SA3DSECGpu g_ec_gpu;
+static uint8_t *g_ring_visual_bytes,*g_ring_placement_bytes;
+static size_t g_ring_visual_size,g_ring_placement_size;
+static SA3DSECVisual g_ring_visual;
+static SA3DSECGpu g_ring_gpu;
+static SA3DSRings g_rings;
+static int g_rings_ready=0;
+static int g_ring_probe=0;
+static unsigned g_ring_probe_tick=0;
+static unsigned g_ring_frame_draws=0;
 static int g_emerald_coast;
 static int g_ec_combined;
 static int g_ec_replay;
@@ -267,6 +278,7 @@ static void reset_selected_zone(void) {
         if(start)sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);
         else sa1_player_reset(&g_player,&g_ec_collision.world);
         g_ec_collision.reference_y=g_player.pos.y;
+        if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
     } else (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
     memset(&g_anim_sync,0,sizeof(g_anim_sync));
     memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
@@ -351,7 +363,7 @@ static void emerald_coast_help(void) {
     printf("SA3DS - EMERALD COAST ACT 1\n\n");
     if(g_ec_full_route){
         printf("Authentic PC2004 Sonic route.\n");
-        printf("Complete geometry; objects pending.\n");
+        printf("Full terrain; route objects partial.\n");
     }else{
         printf("Authentic PC2004 opening subset.\n");
         printf("500-unit opening residency subset.\n");
@@ -384,7 +396,8 @@ static void emerald_coast_status(void) {
     printf("\x1b[22;1HCollision:%lu Q:%lu Tests:%lu  ",(unsigned long)g_ec_collision.triangle_count,(unsigned long)g_ec_collision.queries,(unsigned long)g_ec_collision.triangle_tests);
     printf("\x1b[23;1HSonic D:%lu Anim:%u Fr:%.1f    ",(unsigned long)g_sonic_gpu.frame_draws,g_selection.binding.runtime_id,g_selection.sample_frame);
     printf("\x1b[24;1HTick:%llu GPU frames:%u       ",(unsigned long long)g_player.sim_frame,g_rendered_frames);
-    printf("\x1b[25;1HPartial collision/follow camera ");
+    if(g_rings_ready)printf("\x1b[25;1HRings:%5d Direct draws:%3u     ",g_rings.rings,g_ring_frame_draws);
+    else printf("\x1b[25;1HPartial collision/follow camera ");
     printf("\x1b[26;1HPHYSICS_1TO1:NO                ");
 }
 
@@ -674,6 +687,53 @@ static void ec_refresh_collision_region(void){
     }
 }
 
+static void load_direct_rings(void){
+    if(!g_ec_full_route)return;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_visual.sa3dspak",
+            &g_ring_visual_bytes,&g_ring_visual_size)||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_placements.sa3dspak",
+            &g_ring_placement_bytes,&g_ring_placement_size))goto fail;
+    if(g_ring_visual_size>1024*1024||g_ring_placement_size>128*1024||
+       sa3ds_ec_visual_open(&g_ring_visual,g_ring_visual_bytes,g_ring_visual_size)!=SA3DS_EC_VISUAL_OK||
+       g_ring_visual.instance_count!=1||g_ring_visual.model_count!=1||
+       g_ring_visual.index_count>32768||
+       !sa3ds_rings_open(&g_rings,g_ring_placement_bytes,g_ring_placement_size)||
+       !sa3ds_ec_gpu_init(&g_ring_gpu,&g_ring_visual,500.0f,log_texture_stage,NULL))goto fail;
+    g_rings_ready=1;sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
+    FILE*probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_ring_replay.flag","rb");
+    if(probe){fclose(probe);g_ring_probe=1;
+        boot_log("VALIDATION","Opening direct-ring input-only replay; no teleports or forced collection");}
+    char note[128];snprintf(note,sizeof(note),"direct placements=%lu clip=%u shared triangles=%lu textures=%lu",
+        (unsigned long)g_rings.count,g_rings.clip_level,(unsigned long)g_ring_gpu.triangle_count,
+        (unsigned long)g_ring_gpu.resident_texture_count);boot_log("RINGS",note);return;
+fail:
+    sa3ds_ec_gpu_destroy(&g_ring_gpu);sa3ds_rings_destroy(&g_rings);
+    sa3ds_free_file(g_ring_visual_bytes);sa3ds_free_file(g_ring_placement_bytes);
+    g_ring_visual_bytes=g_ring_placement_bytes=NULL;
+    g_ring_visual_size=g_ring_placement_size=0;
+    boot_note("Direct ring assets unavailable/invalid; route objects remain incomplete");
+}
+static int draw_direct_rings(void){
+    g_ring_frame_draws=0;if(!g_rings_ready)return 1;
+    for(uint32_t i=0;i<g_rings.count;i++){
+        SA3DSRingState*state=&g_rings.states[i];SA3DSRingPlacement p;
+        if(state->action!=1||state->collected||!sa3ds_rings_placement(&g_rings,i,&p)||p.act!=g_ec_act_index)continue;
+        float center[3]={p.position.x,p.position.y,p.position.z};
+        /* Original Ring_Display IsVisible uses a20-unit culling sphere. */
+        if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,20.0f))continue;
+        SA3CMatrix actor;C3D_Mtx model,mv;
+        sa3c_matrix_build_object(&actor,(SA3CVec3){p.position.x,p.position.y,p.position.z},
+            (SA3CVec3){0,(float)state->yaw*(2.0f*PI/65536.0f),0},(SA3CVec3){1,1,1},0);
+        for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
+            actor.m[row],actor.m[4+row],actor.m[8+row],actor.m[12+row]);
+        Mtx_Multiply(&mv,&g_ec_view,&model);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+        if(!sa3ds_ec_gpu_draw(&g_ring_gpu,0))return 0;
+        g_ring_frame_draws++;
+    }
+    return 1;
+}
+
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
@@ -699,9 +759,10 @@ static int init_scene(void) {
         if(g_ec_full_route){
             if(!sa3ds_ec_gpu_init_full(&g_ec_gpu,&g_ec_visual,log_texture_stage,NULL))return 0;
         }else if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
-        boot_note("Emerald Coast opening subset resident");
+        boot_note(g_ec_full_route?"Emerald Coast complete act terrain resident":"Emerald Coast opening subset resident");
         if (g_ec_combined && !sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
+        load_direct_rings();
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
@@ -744,6 +805,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
+        if (!draw_direct_rings())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -823,6 +885,9 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     trace_stop();
+    sa3ds_ec_gpu_destroy(&g_ring_gpu);sa3ds_rings_destroy(&g_rings);g_rings_ready=0;
+    sa3ds_free_file(g_ring_visual_bytes);sa3ds_free_file(g_ring_placement_bytes);
+    g_ring_visual_bytes=g_ring_placement_bytes=NULL;
     sa3ds_ec_gpu_destroy(&g_ec_gpu);
     sa3ds_ec_collision_destroy(&g_ec_collision);
     sa3ds_lab_gpu_destroy(&g_lab_gpu);
@@ -1002,11 +1067,15 @@ int main(void) {
                     g_camera.yaw=0;
                 }
             }
+            if(g_ring_probe){
+                g_camera.yaw=0;
+                tick_input=sa3ds_ring_replay_input(&g_rings,&g_player,0,g_ring_probe_tick);
+            }
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
-            if (!g_ec_replay && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
-            if (!g_ec_replay && !modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
+            if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
+            if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
             if(g_ec_full_route){
                 uint32_t next_act;
                 if(sa3ds_ec_route_next(&g_ec_route,g_ec_act_index,sa3ds_ec_task_origin(&g_player),&next_act)){
@@ -1022,7 +1091,28 @@ int main(void) {
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
             if(g_emerald_coast && !(previous_tick && g_player.sim_frame==1))
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
-            if(g_ec_full_route && previous_tick && g_player.sim_frame==1)reset_selected_zone();
+            if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
+                g_rings.rings=0;reset_selected_zone();
+            }
+            if(g_rings_ready){
+                SA3CMatrix actor;sa3ds_ec_model_transform(&g_player,&actor);
+                SA1Vec3 center={actor.m[12],actor.m[13],actor.m[14]};
+                unsigned collected=sa3ds_rings_tick(&g_rings,sa3ds_ec_task_origin(&g_player),center,
+                    SA1_STEAM_SONIC_PARAMETER_EVIDENCE.rad,0,1,g_rings.clip_level);
+                if(collected){char note[96];snprintf(note,sizeof(note),"tick=%llu collected=%u rings=%d",
+                    (unsigned long long)g_player.sim_frame,collected,g_rings.rings);boot_log("RINGS",note);}
+            }
+            if(g_ring_probe){
+                if(g_ring_probe_tick%120==0){char note[144];snprintf(note,sizeof(note),
+                    "tick=%u p=%.3f,%.3f,%.3f input=%.3f,%.3f rings=%d",g_ring_probe_tick,
+                    g_player.pos.x,g_player.pos.y,g_player.pos.z,tick_input.move_x,tick_input.move_z,g_rings.rings);
+                    boot_log("RING_PROBE",note);}
+                if(++g_ring_probe_tick>=1200||g_rings.collected_events>=3){
+                    char note[144];snprintf(note,sizeof(note),"%s ticks=%u events=%lu; opening only, not stage completion",
+                        g_rings.collected_events>=3?"PASS":"FAIL",g_ring_probe_tick,(unsigned long)g_rings.collected_events);
+                    boot_log("RING_PROBE",note);g_ring_probe=0;g_paused=1;
+                }
+            }
             SA1PlayerState physics_done=g_player;
             g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
             g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
@@ -1043,7 +1133,7 @@ int main(void) {
                 else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
-                (g_ec_replay || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
+                (g_ec_replay || g_ring_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
             if(g_ec_replay) {
                 if(g_ec_replay_tick%30==0 || tick_input.jump_pressed) {
                     char line[180];snprintf(line,sizeof(line),
@@ -1079,7 +1169,7 @@ int main(void) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
-        if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices);boot_log("FRAME",frame_line);}
+        if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count));boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;

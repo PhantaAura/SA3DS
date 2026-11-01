@@ -149,13 +149,15 @@ void sa3ds_ec_gpu_set_view(SA3DSECGpu*g,const float eye[3],const float target[3]
     if(!isfinite(g->tan_x)||!isfinite(g->tan_y))return;
     g->near_clip=near_clip;g->far_clip=far_clip;g->view_valid=1;
 }
-static int span_visible(const SA3DSECGpu*g,const SA3DSECSpan*s){
+int sa3ds_ec_gpu_sphere_visible(const SA3DSECGpu*g,const float center[3],float radius){
+    if(!g||!g->view_valid||!center||!isfinite(radius)||radius<0)return 1;
+    for(int c=0;c<3;c++)if(!isfinite(center[c]))return 1;
     float depth=0,x=0,y=0;
     for(int c=0;c<3;c++){
-        float d=s->center[c]-g->eye[c];
+        float d=center[c]-g->eye[c];
         depth+=d*g->forward[c];x+=d*g->right[c];y+=d*g->up[c];
     }
-    float r=s->radius;
+    float r=radius;
     return depth+r>=g->near_clip && depth-r<=g->far_clip &&
         fabsf(x)<=depth*g->tan_x+r*sqrtf(1+g->tan_x*g->tan_x) &&
         fabsf(y)<=depth*g->tan_y+r*sqrtf(1+g->tan_y*g->tan_y);
@@ -189,7 +191,7 @@ int sa3ds_ec_gpu_draw(SA3DSECGpu*g,int deferred_water){
             uint32_t first=0,count=0;
             for(uint32_t j=d->first_span;j<d->first_span+d->span_count;j++){
                 SA3DSECSpan*s=&g->spans[j];
-                if(span_visible(g,s)){
+                if(sa3ds_ec_gpu_sphere_visible(g,s->center,s->radius)){
                     if(!count)first=s->first_vertex;
                     count+=s->vertex_count;
                 } else if(count){submit_range(g,first,count);count=0;}

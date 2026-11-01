@@ -1,3 +1,21 @@
+# WCA active checkpoint — direct ring interactions
+
+Parentcf89778. Direct-ring runtime/importer now supports the original source
+activation, clipping, three-tick init, Y rotation, delayed collision result and
+one-time signed-counter collection. Host and actual isolated Azahar Old3DS
+input-only opening replays both collected three rings in413ticks from the source
+start. No teleports or forced collection. Full host suite, source-pose oracle,
+exact-owner witnesses and native build pass. Final299900-byte candidate
+SHA256eee5e537 also logged4–5real ring GPU draws per sampled frame. See [the ledger](docs/WCA_0_0_10_0.md).
+
+CP5 remains IN PROGRESS: normal data has74direct act0 rings and0act1 rings;
+line/group rings and all other required object categories still need integration.
+Rasterized visual inspection, audio/effects, full lives/damage/checkpoint state,
+whale, natural stage completion, override and real hardware gates remain open.
+Continue the milestone; the overall goal is not complete.
+
+---
+
 # WCA active checkpoint — full Sonic terrain residency
 
 Parent36242b8. Both source Sonic terrain acts now have one-act GPU residency,
