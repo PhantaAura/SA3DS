@@ -328,7 +328,11 @@ static int sweep_edge(SA1Vec3 previous,SA1Vec3 current,SA1Vec3 a,SA1Vec3 b,
     }else{
         float me=sa1_vec3_dot(sa1_vec3_sub(previous,a),edge)/ee;
         float ve=sa1_vec3_dot(motion,edge)/ee;
-        SA1Vec3 mp=sa1_vec3_sub(sa1_vec3_sub(previous,a),sa1_vec3_scale(edge,me));
+        /* Use the SAME start-distance projection as the overlap test. Two
+         * algebraically equal float projections can straddle radius^2 and
+         * turn a boundary entry into a negative root (missed collision). */
+        SA1Vec3 mp=me>=0&&me<=1?old_delta:
+            sa1_vec3_sub(sa1_vec3_sub(previous,a),sa1_vec3_scale(edge,me));
         SA1Vec3 vp=sa1_vec3_sub(motion,sa1_vec3_scale(edge,ve));
         float aa=sa1_vec3_dot(vp,vp),bb=2*sa1_vec3_dot(mp,vp),cc=sa1_vec3_dot(mp,mp)-radius*radius;
         float disc=bb*bb-4*aa*cc;

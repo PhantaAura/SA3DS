@@ -81,3 +81,9 @@ bash tests/run_pc2004_rotation_quantization.sh
 
 printf '\n== PC2004 animated world hierarchy ==\n'
 bash tests/run_sa3c_animated_world.sh
+
+printf "\n== PC2004 grounded steering and force frame ==\n"
+bash tests/run_pc2004_ground_steering.sh
+
+printf "\n== EC capsule boundary precision ==\n"
+bash tests/run_ec_edge_precision.sh

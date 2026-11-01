@@ -187,9 +187,11 @@ acceleration plus a zero-initialized residual. It should preserve the branch
 ordering above, including asymmetric negative-force behavior. Integration should
 be restricted to contexts with backed force, friction, flag, and timing inputs.
 
-The existing general-surface path lacks complete source collision-force-buffer
-and normal-force provenance and currently projects gravity after steering.
-Copying input force into the residual, or declaring zero residual valid for all
+The general-surface path lacks complete source collision-force-buffer and
+normal-force provenance. The grounded-steering correction after `d1abe82` now
+captures gravity and side resistance before steering; complete normal-force,
+unstick and clamp integration remains open. Copying input force into the
+residual, or declaring zero residual valid for all
 surfaces, would not implement the source clamp. Gravity alone can yield nonzero
 `N` and a positive friction limit: supported contact must not be assumed to
 cancel it without evidence for the reaction-force buffer and update order.

@@ -58,6 +58,25 @@ SA1PC2004LocalVector sa1_pc2004_pgetinertia_add_velocity(
     const SA1SteamPlayerParameters *p,
     SA1PC2004MotionDebug *debug_out);
 
+typedef enum {
+    SA1_PC2004_TURN_GENERAL,
+    SA1_PC2004_TURN_SLOW,
+    SA1_PC2004_TURN_QUICK
+} SA1PC2004GroundTurnKind;
+
+/* Grounded 0x443C50/0x443E60/0x443DF0 local-velocity writeback. The caller
+ * supplies the old local velocity and the same world velocity transformed
+ * into the new task frame. Friction multiplier provenance remains caller-owned.
+ * Uses retained double intermediates, not an exact x87 precision model. */
+SA1PC2004LocalVector sa1_pc2004_ground_turn_velocity(
+    SA1PC2004LocalVector old_local, SA1PC2004LocalVector transformed,
+    SA1PC2004GroundTurnKind kind, int analog_active, float up_y,
+    float friction_multiplier);
+
+/* 0x443E60 truncates sqrt(float((speed-dash_speed)/16))*256. Contract:
+ * ordinary Sonic local speeds within the original horizontal speed limit. */
+unsigned sa1_pc2004_slow_turn_step(float speed, float dash_speed);
+
 /* PGetSpeed prevents forward/side AddVelocity steps from crossing through
  * zero; local normal is integrated directly at 0x444031. This helper
  * implements the tangential invariant without promoting the

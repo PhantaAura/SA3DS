@@ -161,3 +161,35 @@ float sa1_pc2004_turn_delta(float delta) {
         return pi;
     return delta;
 }
+
+
+SA1PC2004LocalVector sa1_pc2004_ground_turn_velocity(
+    SA1PC2004LocalVector old_local, SA1PC2004LocalVector transformed,
+    SA1PC2004GroundTurnKind kind, int analog_active, float up_y,
+    float friction_multiplier) {
+    if (kind == SA1_PC2004_TURN_QUICK) return transformed;
+    double old_weight;
+    if (kind == SA1_PC2004_TURN_SLOW) {
+        old_weight = up_y <= 0.4f ? 0.5 : (double)0.99f;
+    } else {
+        float base = !analog_active ? 0.05f : up_y <= 0.4f ? 0.5f : 0.99f;
+        old_weight = (double)base *
+            (friction_multiplier < 1.0f ? (double)friction_multiplier : 1.0);
+    }
+    double new_weight = 1.0 - old_weight;
+    /* Separate products retain source ordering rather than host FMA behavior. */
+    volatile double of = (double)old_local.forward * old_weight;
+    volatile double on = (double)old_local.normal * old_weight;
+    volatile double os = (double)old_local.side * old_weight;
+    volatile double tf = (double)transformed.forward * new_weight;
+    volatile double tn = (double)transformed.normal * new_weight;
+    volatile double ts = (double)transformed.side * new_weight;
+    return (SA1PC2004LocalVector){(float)(of + tf), (float)(on + tn), (float)(os + ts)};
+}
+
+unsigned sa1_pc2004_slow_turn_step(float speed, float dash_speed) {
+    if (speed <= dash_speed) return 0x100u;
+    float argument = (speed - dash_speed) * 0.0625f;
+    int reduction = (int)(sqrt((double)argument) * 256.0);
+    return (unsigned)(0x100 - reduction);
+}

@@ -23,6 +23,12 @@ int main(void) {
     sa1_sadx_surface_force_scales(0.40f, 0.2f, p, &f, &s);
     assert(nearf(f, 4.225f, 1e-6f) && nearf(s, 4.225f, 1e-6f));
 
+    /* Source third interval is -run < v < jog, not abs(v) < jog. */
+    sa1_sadx_surface_force_scales(0.80f, -0.8f, p, &f, &s);
+    assert(nearf(f, 1.0f, 1e-6f) && nearf(s, 1.4f, 1e-6f));
+    sa1_sadx_surface_force_scales(0.80f, -p->run_speed, p, &f, &s);
+    assert(nearf(f, 1.0f, 1e-6f) && nearf(s, 1.0f, 1e-6f));
+
     /* Speed bypasses the steep low-speed force scaling branch. */
     sa1_sadx_surface_force_scales(0.40f, p->run_speed, p, &f, &s);
     assert(nearf(f, 1.0f, 1e-6f) && nearf(s, 1.0f, 1e-6f));

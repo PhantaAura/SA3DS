@@ -1,3 +1,54 @@
+# WCA active checkpoint — grounded steering and pre-turn force frame
+
+Parent `d1abe82`. Owner updated CP8 to renderer fidelity and CP9 to SD asset
+modding (locally converted Dreamcast EC texture/model, runtime enable/disable).
+Hardware/final performance are separate owner tasks. Unified scope remains the
+entire Sonic course, naturally completable without debug intervention.
+
+Reproduced general-surface steering discrepancies versus PC2004 helpers:
+old/new velocity blend reversed; quick turn retained old local rather than
+transformed velocity; ball rotation used quick instead of general; slow turn
+rounded instead of truncating; ordinary gravity/side drag projected after
+steering; third surface scaling interval incorrectly used abs(speed).
+Corrected helper modes/Up-dependent blend, ball/general selection, shared
+flat/surface slow step, pre-turn force capture and signed scaling interval.
+
+Focused runtime tests PASS for run/quick/Roll/charge, helper Up/friction modes,
+flat truncation, and incline force ordering with FMA fast/off. Previous surface
+runtime independently FAILS source-equation regression (1.90195501 vs1.93961573).
+Full cumulative host suite +19scenario physics suite +native build PASS.
+Exact-owner steering verifier PASS:4functiondigests,8calltargets,10witnesses.
+First307440B/500252a3 native candidate completed the152case replay, but failed
+host comparison at running-reversal row7916. Diagnosed existing edge-capsule
+float projection inconsistency: overlap distance and cylinder-root distance
+used different roundoff near radius². Reuse the same start projection for
+interior edge hits; no margin, body/terrain rescale or trace tolerance change.
+Old code FAILS new4096synthetic angled-boundary regressions; corrected code
+PASS with FMAfast/off and preserves outward movement. Updated cumulative host
+suite and native build PASS. Saved first native trace also matches corrected
+host as a diagnostic (maxpos.000138), independently isolating the missed-hit bug.
+Final candidate307512bytes SHA256
+`789553289e607008f33048fc790cbe915c6cdfd71f7db1e77c9fbae981f65958`.
+Exact rebuilt candidate completed9792tick/152case isolated Azahar replay:
+comparison PASS; all discrete/animation/charge fields exact, maxposition8.13e-5,
+maxheading1.848e-6. 8787renderframes/164877ms (~53.3FPS runtimeclock),
+maxsubmit416ms, minlinear30087680, maxcommand.114258. Source and host/native
+consistency evidence only, not retail parity. E/M flags removed after evidence
+saved; owner assets and binaries excluded fromGit.
+
+Runtime still uses ordinary default friction M1. Original contact flag/M update
+ordering, force-buffer context, friction clamp/residual, PGetSpeed tails,
+no-input slope orientation and exact task-angle/full x87 behavior remain open.
+Public-dispatch slope-jump probe also reproduced a follow-on gap: second-tick
+velocity differs from retained-frame general path by.0141716441units/tick.
+Private source-neutral probe `/private/tmp/sa3ds-wca19-air-dispatch-probe.c`
+records setup. Next: multi-tick public-dispatch launch-frame preservation and
+steered support departure, then friction clamp/residual integration.
+Surface property10 animation rate remains explicitly unbacked. No new skin
+weights, physical constants or simulation-rate changes. WCA incomplete.
+
+---
+
 # WCA active checkpoint — signed surface-local animation speed
 
 Parent `fbfe348`. General-surface animation previously reconstructed Speed.x

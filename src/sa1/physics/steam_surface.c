@@ -23,7 +23,6 @@
 #define SA1_SUPPORT_QUERY_RANGE_CANDIDATE 2.35f
 #define SA1_NORMAL_CONTINUITY_MIN_CANDIDATE -0.10f
 #define SA1_UPRIGHT_EPS 0.99995f
-#define SADX_UPRIGHT_TURN_BLEND 0.99f
 
 typedef struct {
     float forward;
@@ -55,18 +54,6 @@ static unsigned general_turn_step(unsigned delta_bams) {
     if (delta_bams > BAMS_45) return 0x0800u;
     if (delta_bams > BAMS_22_5) return delta_bams >> 2;
     return delta_bams >> 3;
-}
-
-static unsigned slow_turn_step(float speed,
-                               const SA1SteamPlayerParameters *p) {
-    int step = 0x100;
-    if (speed >= p->dash_speed) {
-        float excess = (speed - p->dash_speed) / 16.0f;
-        int reduction = (int)lroundf(sqrtf(excess > 0.0f ? excess : 0.0f) * 256.0f);
-        step -= reduction;
-        if (step < 1) step = 1;
-    }
-    return (unsigned)step;
 }
 
 static float select_analog_force(float speed, float magnitude,
@@ -133,7 +120,7 @@ static void rotate_frame_toward(SA1SurfaceFrame *frame,
                                 SurfaceSpeed *speed,
                                 SA1Vec3 desired,
                                 unsigned step_bams,
-                                int quick_turn) {
+                                SA1PC2004GroundTurnKind kind) {
     float delta = signed_angle_on_plane(frame->forward, desired, frame->up);
     float max_step = bams_to_rad(step_bams);
     float step = clampf(delta, -max_step, max_step);
@@ -145,17 +132,13 @@ static void rotate_frame_toward(SA1SurfaceFrame *frame,
     frame->right = sa1_vec3_normalize(sa1_vec3_cross(frame->up, frame->forward));
     frame->forward = sa1_vec3_normalize(sa1_vec3_cross(frame->right, frame->up));
 
-    if (quick_turn) {
-        *speed = old_local;
-    } else {
-        SurfaceSpeed transformed = world_to_surface(frame, old_world);
-        transformed.forward = transformed.forward * SADX_UPRIGHT_TURN_BLEND +
-                              old_local.forward * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-        transformed.side = transformed.side * SADX_UPRIGHT_TURN_BLEND +
-                           old_local.side * (1.0f - SADX_UPRIGHT_TURN_BLEND);
-        transformed.normal = 0.0f;
-        *speed = transformed;
-    }
+    SurfaceSpeed transformed = world_to_surface(frame, old_world);
+    SA1PC2004LocalVector blended = sa1_pc2004_ground_turn_velocity(
+        (SA1PC2004LocalVector){old_local.forward, old_local.normal, old_local.side},
+        (SA1PC2004LocalVector){transformed.forward, transformed.normal, transformed.side},
+        kind, 1, frame->up.y,
+        1.0f /* Existing ordinary default-friction specialization; contact mapping pending. */);
+    *speed = (SurfaceSpeed){blended.forward, blended.side, blended.normal};
 }
 
 static SA1Vec3 desired_surface_direction(const SA1SurfaceFrame *frame,
@@ -271,42 +254,6 @@ static void surface_running(SA1PlayerState *player,
         resistance = p->air_resist * s.forward;
     }
 
-    float force = 0.0f;
-    if (analog.active) {
-        SA1Vec3 desired = desired_surface_direction(frame, camera_yaw, &analog);
-        float signed_delta = signed_angle_on_plane(frame->forward, desired, frame->up);
-        unsigned delta_bams = radians_to_bams_abs(signed_delta);
-        force = select_analog_force(s.forward, analog.magnitude, p);
-
-        unsigned step;
-        int quick = 0;
-        if (s.forward == 0.0f && delta_bams > BAMS_22_5) {
-            force = 0.0f;
-            step = BAMS_45;
-            quick = 1;
-        } else {
-            float low_turn_boundary = (p->run_speed + p->jog_speed) * 0.5f;
-            if (low_turn_boundary > s.forward || delta_bams <= BAMS_22_5) {
-                if (s.forward >= p->jog_speed && delta_bams < BAMS_22_5)
-                    step = slow_turn_step(s.forward, p);
-                else {
-                    if (s.forward >= p->jog_speed && s.forward <= p->rush_speed &&
-                        delta_bams > BAMS_45)
-                        force *= 0.8f;
-                    step = general_turn_step(delta_bams);
-                }
-            } else {
-                force = p->slow_down;
-                step = general_turn_step(delta_bams);
-            }
-        }
-        rotate_frame_toward(frame, &s, desired, step, quick);
-        if (dbg) dbg->turn_step_bams = step;
-    } else {
-        if (s.forward > 0.0f) force = p->slow_down;
-        else if (s.forward < 0.0f) force = -p->slow_down;
-    }
-
     SA1Vec3 gravity_world = {0.0f, -p->weight, 0.0f};
     float g_forward = sa1_vec3_dot(gravity_world, frame->forward);
     float g_side = sa1_vec3_dot(gravity_world, frame->right);
@@ -323,14 +270,54 @@ static void surface_running(SA1PlayerState *player,
     g_forward *= forward_scale;
     g_side *= side_scale;
 
+    float side_resistance = s.side * p->air_resist_z;
+    float unstick_bias = sa1_sadx_surface_unstick_normal_bias(
+        frame->up.y, s.forward, weight);
+
+    float force = 0.0f;
+    if (analog.active) {
+        SA1Vec3 desired = desired_surface_direction(frame, camera_yaw, &analog);
+        float signed_delta = signed_angle_on_plane(frame->forward, desired, frame->up);
+        unsigned delta_bams = radians_to_bams_abs(signed_delta);
+        force = select_analog_force(s.forward, analog.magnitude, p);
+
+        unsigned step;
+        SA1PC2004GroundTurnKind kind = SA1_PC2004_TURN_GENERAL;
+        if (s.forward == 0.0f && delta_bams > BAMS_22_5) {
+            force = 0.0f;
+            step = BAMS_45;
+            kind = SA1_PC2004_TURN_QUICK;
+        } else {
+            float low_turn_boundary = (p->run_speed + p->jog_speed) * 0.5f;
+            if (low_turn_boundary > s.forward || delta_bams <= BAMS_22_5) {
+                if (s.forward >= p->jog_speed && delta_bams < BAMS_22_5) {
+                    step = sa1_pc2004_slow_turn_step(s.forward, p->dash_speed);
+                    kind = SA1_PC2004_TURN_SLOW;
+                } else {
+                    if (s.forward >= p->jog_speed && s.forward <= p->rush_speed &&
+                        delta_bams > BAMS_45)
+                        force *= 0.8f;
+                    step = general_turn_step(delta_bams);
+                }
+            } else {
+                force = p->slow_down;
+                step = general_turn_step(delta_bams);
+            }
+        }
+        rotate_frame_toward(frame, &s, desired, step, kind);
+        if (dbg) dbg->turn_step_bams = step;
+    } else {
+        if (s.forward > 0.0f) force = p->slow_down;
+        else if (s.forward < 0.0f) force = -p->slow_down;
+    }
+
     s.forward += resistance + force + g_forward;
-    s.side += s.side * p->air_resist_z + g_side;
+    s.side += side_resistance + g_side;
 
     if (dbg) {
         dbg->surface_force_forward_scale = forward_scale;
         dbg->surface_force_side_scale = side_scale;
-        dbg->normal_unstick_bias = sa1_sadx_surface_unstick_normal_bias(
-            frame->up.y, s.forward, weight);
+        dbg->normal_unstick_bias = unstick_bias;
     }
 
     /* The recovered routine also has local-normal unstick branches.  We expose
@@ -365,11 +352,8 @@ static void surface_ball_motion(SA1PlayerState *player,
     if (analog.active) {
         SA1Vec3 desired = desired_surface_direction(frame, camera_yaw, &analog);
         float delta = signed_angle_on_plane(frame->forward, desired, frame->up);
-        unsigned limit = player->action_state == SA1_ACTION_SPINDASH_CHARGE ?
-                         BAMS_22_5 : 0x0800u;
-        unsigned abs_delta = radians_to_bams_abs(delta);
-        unsigned step = abs_delta < limit ? abs_delta : limit;
-        rotate_frame_toward(frame, &s, desired, step, 1);
+        unsigned step = general_turn_step(radians_to_bams_abs(delta));
+        rotate_frame_toward(frame, &s, desired, step, SA1_PC2004_TURN_GENERAL);
         if (dbg) dbg->turn_step_bams = step;
     }
 

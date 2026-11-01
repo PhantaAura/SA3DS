@@ -82,19 +82,10 @@ static unsigned steam_quick_turn_step(void) {
     return BAMS_45;
 }
 
-/* Steam helper 0x004E2800. Above dash speed the maximum turn step shrinks as
- * 0x100 - round(sqrt((speed - dash_speed) / 16) * 256). Sonic's horizontal
- * limit keeps the result positive for the normal parameter range. */
+/* PC2004 0x443E60 uses truncation after the stored sqrt argument. */
 static unsigned steam_slow_turn_step(float speed,
                                      const SA1SteamPlayerParameters *p) {
-    int step = 0x100;
-    if (speed >= p->dash_speed) {
-        float excess = (speed - p->dash_speed) / 16.0f;
-        int reduction = (int)lroundf(sqrtf(excess > 0.0f ? excess : 0.0f) * 256.0f);
-        step -= reduction;
-        if (step < 1) step = 1;
-    }
-    return (unsigned)step;
+    return sa1_pc2004_slow_turn_step(speed, p->dash_speed);
 }
 
 /* The PC2004 turn helpers rotate the player frame and then transform/blend the

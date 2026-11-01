@@ -9,18 +9,14 @@ void sa1_sadx_surface_force_scales(float up_y,
                                    float *out_side_scale) {
     float forward_scale = 1.0f;
     float side_scale = 1.0f;
-    float speed = fabsf(forward_speed);
-
-    if (up_y >= 0.5f || speed >= p->run_speed) {
-        if (up_y >= 0.7f || speed >= p->run_speed) {
-            if (!(up_y >= 0.87f || speed >= p->jog_speed))
-                side_scale = 1.4f;
-        } else {
-            side_scale = 2.0f;
-        }
-    } else {
+    /* The third interval is signed and asymmetric in 0x44C270. */
+    if (up_y < 0.5f && forward_speed > -p->run_speed && forward_speed < p->run_speed) {
         forward_scale = 4.225f;
         side_scale = 4.225f;
+    } else if (up_y < 0.7f && forward_speed > -p->run_speed && forward_speed < p->run_speed) {
+        side_scale = 2.0f;
+    } else if (up_y < 0.87f && forward_speed > -p->run_speed && forward_speed < p->jog_speed) {
+        side_scale = 1.4f;
     }
 
     if (out_forward_scale) *out_forward_scale = forward_scale;
