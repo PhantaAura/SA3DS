@@ -24,7 +24,6 @@ IMAGE_BASE = 0x10000000
 ACTION_COUNT = 149
 OBJECT_SIZE = 0x34
 BAMS_TO_RAD = (2.0 * math.pi) / 65536.0
-RAD_TO_BAMS = 65536.0 / (2.0 * math.pi)
 INVALID_U16 = 0xFFFF
 TOLERANCE = 4.0e-5
 
@@ -39,10 +38,6 @@ def u32(data: bytes, off: int) -> int:
 
 def f32(value: float) -> float:
     return struct.unpack("<f", struct.pack("<f", value))[0]
-
-
-def round_away(value: float) -> float:
-    return float(math.floor(value + 0.5) if value >= 0.0 else math.ceil(value - 0.5))
 
 
 class RawPE:
@@ -184,7 +179,7 @@ def source_key_vec(pe: RawPE, va: int, count: int, angles: bool) -> list[tuple]:
     for index in range(count):
         if angles:
             frame, x, y, z = struct.unpack_from("<Iiii", raw, index * 16)
-            keys.append((frame, f32(x * BAMS_TO_RAD), f32(y * BAMS_TO_RAD), f32(z * BAMS_TO_RAD)))
+            keys.append((frame, x, y, z))
         else:
             frame, x, y, z = struct.unpack_from("<Ifff", raw, index * 16)
             keys.append((frame, x, y, z))
@@ -202,6 +197,19 @@ def normalize_frame(frame: float, frame_count: int) -> float:
 def sample_keys(keys: list[tuple], frame_count: int, frame: float, angles: bool) -> tuple[float, float, float]:
     if not keys:
         return (0.0, 0.0, 0.0)
+    if angles:
+        # Independent raw int32 keys: PC2004 404B20/404C10, then 644340.
+        # No conversion to package radians or shared key-recovery arithmetic.
+        current = 0
+        for index, key in enumerate(keys[1:], 1):
+            if key[0] > math.trunc(frame):
+                break
+            current = index
+        following = (current + 1) % len(keys)
+        a, b = keys[current], keys[following]
+        delta = b[0] - a[0]
+        t = (frame - a[0]) / (f32(delta) if delta > 0 else 1.0)
+        return tuple(f32(math.trunc(a[i] * (1.0-t) + b[i] * t) * f32(BAMS_TO_RAD)) for i in (1,2,3))
     if len(keys) == 1:
         return keys[0][1:]
     prev = next_index = None
@@ -229,13 +237,7 @@ def sample_keys(keys: list[tuple], frame_count: int, frame: float, angles: bool)
     for component in range(1, 4):
         a = f32(keys[prev][component])
         b = f32(keys[next_index][component])
-        if angles:
-            a_bams = round_away(f32(a * f32(RAD_TO_BAMS)))
-            b_bams = round_away(f32(b * f32(RAD_TO_BAMS)))
-            value = round_away(f32(a_bams + f32(f32(b_bams - a_bams) * t)))
-            result.append(f32(value * f32(BAMS_TO_RAD)))
-        else:
-            result.append(f32(a + f32(f32(b - a) * t)))
+        result.append(f32(a + f32(f32(b - a) * t)))
     return tuple(result)
 
 

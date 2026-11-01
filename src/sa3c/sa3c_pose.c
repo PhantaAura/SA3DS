@@ -141,33 +141,39 @@ static SA3CVec3 sample_vec_linear(const uint8_t *keys,uint32_t first,uint16_t co
     return (SA3CVec3){a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,a.z+(b.z-a.z)*t};
 }
 
-static float bams_lerp_component(float arad,float brad,float t) {
-    /* SA Tools GetRotation linearly interpolates raw signed BAMS and rounds
-     * midpoint away from zero. Reconstruct source BAMS from lossless-enough
-     * float32 radians, interpolate, quantize, and return radians. */
-    float a=roundf(arad*SA3C_RAD_TO_BAMS);
-    float b=roundf(brad*SA3C_RAD_TO_BAMS);
-    return roundf(a+(b-a)*t)*SA3C_BAMS_TO_RAD;
+static float bams_lerp_component(float arad,float brad,double t) {
+    /* PC2004 404C10 loads signed integer keys and retains a*(1-t)+b*t
+     * before 644340 truncates toward zero. Rounding only recovers original
+     * integer keys from the package's float radians; it is not interpolation.
+     * double preserves the ratio beyond f32, without claiming x87 trace parity. */
+    double a=roundf(arad*SA3C_RAD_TO_BAMS);
+    double b=roundf(brad*SA3C_RAD_TO_BAMS);
+    /* Separate product stores prevent a host FMA from changing an integer
+     * truncation boundary. Original x87 retained80 precision is not emulated. */
+    volatile double left=a*(1.0-t),right=b*t;
+    return (float)trunc(left+right)*SA3C_BAMS_TO_RAD;
 }
 static SA3CVec3 sample_rot_linear(const uint8_t *keys,uint32_t first,uint16_t count,uint16_t frames,float frame) {
+    (void)frames;
     const uint8_t *base=keys+(size_t)first*16u;
     SA3CVec3 a={0,0,0},b={0,0,0};
     if (count==0) return a;
     if (count==1) { key_vec(base,&a); return a; }
-    int prev=-1,next=-1;
-    for (uint16_t i=0;i<count;i++) {
-        uint32_t f=key_frame(base+(size_t)i*16u);
-        if ((float)f==frame) { key_vec(base+(size_t)i*16u,&a); return a; }
-        if ((float)f<frame) prev=(int)i;
-        if ((float)f>frame) { next=(int)i; break; }
+    /* 404B20 selects the last key <= trunc(frame), with initial index0.
+     * 404C10 wraps the next index, but uses denominator1 for nonpositive
+     * signed time differences. Do not invent a shortest-angle path. */
+    uint16_t prev=0;
+    uint32_t integer_frame=(uint32_t)frame;
+    for(uint16_t i=1;i<count;i++){
+        if(key_frame(base+(size_t)i*16u)>integer_frame)break;
+        prev=i;
     }
-    float af,bf;
-    if (prev<0) { prev=(int)count-1; af=(float)key_frame(base+(size_t)prev*16u)-(float)frames; }
-    else af=(float)key_frame(base+(size_t)prev*16u);
-    if (next<0) { next=0; bf=(float)key_frame(base)+(float)frames; }
-    else bf=(float)key_frame(base+(size_t)next*16u);
-    key_vec(base+(size_t)prev*16u,&a); key_vec(base+(size_t)next*16u,&b);
-    float den=bf-af; float t=den!=0.0f?(frame-af)/den:0.0f;
+    uint16_t next=(uint16_t)((prev+1u)%count);
+    uint32_t af=key_frame(base+(size_t)prev*16u),bf=key_frame(base+(size_t)next*16u);
+    key_vec(base+(size_t)prev*16u,&a);key_vec(base+(size_t)next*16u,&b);
+    if((double)frame==af)return a;
+    double denominator=bf>af?(double)(float)(bf-af):1.0;
+    double t=((double)frame-(double)af)/denominator;
     return (SA3CVec3){bams_lerp_component(a.x,b.x,t),bams_lerp_component(a.y,b.y,t),bams_lerp_component(a.z,b.z,t)};
 }
 

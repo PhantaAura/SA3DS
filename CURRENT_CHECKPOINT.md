@@ -1,3 +1,25 @@
+# WCA active checkpoint — source angle truncation correction
+
+Parent `e031e14`. Reproduced fractional BAMS discrepancy: pose sampler and old
+oracle rounded away fromzero; exact PC2004 ordinary rotation evaluator truncates
+towardzero. Corrected sampler and independent raw-int32-key oracle. New positive,
+negative, gap/end-pair fixtures fail the old implementation and PASS the correction.
+Exact-owner27movement ACTION regression PASS379323scalars,maxerror4.81759034e-7.
+Previous low-error round-away oracle results prove converter consistency only;
+they must not be read as proving the original game's quantization behavior.
+
+Full host suite, source witnesses, sanitizer and native build PASS. Candidate
+305396bytes SHAa58f888168e1a35b5361de62867dd1e95949b9826f4ffafc40d9bcdbacc42370
+PASSed isolated Azahar all-direction/SpinDash replay:9792ticks/152cases.
+Animationframes/charge/discrete fields matchhost; maxposerror9.15e-5units.
+8787renderframes/164877ms (~53.3FPS),maxsubmit416ms,minlinear30087680,
+maxcommand0.114258. Savedprivateevidence; testprocess and exactflags cleaned.
+64-bit retained products prevent host FMA differences; exact original x8780
+boundary parity and rendered retail rig comparisons remainOPEN. No guessed skin
+weights or changed physicalweight were introduced. WCA/1:1goal remains incomplete.
+
+---
+
 # WCA active checkpoint — movement pose coverage and spring launch preparation
 
 Parent `03c918a`. Expanded exact-owner pose regression to all27source ACTION

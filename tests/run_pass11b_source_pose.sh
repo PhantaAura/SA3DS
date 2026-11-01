@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 : "${SONIC_EXE_PATH:?Set SONIC_EXE_PATH to owner-owned original PC2004 sonic.exe}"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/sa3ds-pass11b.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+python3 tools/verify_pc2004_pose_angles.py "$SONIC_EXE_PATH"
 python3 tools/recon_pc2004_sonic_animdata.py \
   "$SONIC_EXE_PATH" --json "$tmp/pc2004_animdata.json" >/dev/null
 cmp docs/PC2004_SONIC_ANIMDATA_REMAP.json "$tmp/pc2004_animdata.json"

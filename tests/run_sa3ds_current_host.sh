@@ -75,3 +75,6 @@ bash tests/run_movement_objects.sh
 
 printf '\n== Source spring launch preparation ==\n'
 bash tests/run_spring_launch.sh
+
+printf '\n== PC2004 source rotation quantization ==\n'
+bash tests/run_pc2004_rotation_quantization.sh
