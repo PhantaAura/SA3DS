@@ -137,7 +137,7 @@ SA3DSActionPreflightResult sa3ds_action_preflight(
                     result = SA3DS_ACTION_PREFLIGHT_NONFINITE; goto done;
                 }
             }
-            r.pose_error = sa3c_pose_build_world(c, root, local, nodes,
+            r.pose_error = sa3c_pose_build_world_animated(c, root, local, nodes,
                                                  world, nodes);
             if (r.pose_error != SA3C_POSE_OK) {
                 result = SA3DS_ACTION_PREFLIGHT_POSE; goto done;

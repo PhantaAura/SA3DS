@@ -1,3 +1,35 @@
+# WCA active checkpoint — walking/running animated rig correction
+
+Parent `47f0f99`. User reported walking/running pose or speed differs from supplied
+video. Found major rendered-hierarchy defect: static UNIT flags suppressed15
+walking angle tracks and root translation; SpinDash root rotation was suppressed.
+New explicit animated world builder follows PC2004 motion callbacks, applying
+motion/bind-fallback TRS independently of UNIT bits. Static/bind evaluation stays
+separate. Shipping native rendering and active diagnostics use the motion mode.
+Also corrected separate retained-transition capture and final weighted truncation.
+
+Full host suite + native build PASS; owner local/transition/world oracles PASS:
+379323local scalars,15822transition angles,126208world matrix components across
+108poses (worldmaxerror1.09625085e-5). Oldstatic evaluator fails ownerworldoracle.
+Same-walk-frame diagnostic before/after exists outsideGit. Native normalact0 boot
+and renderedidle inspected; timedmanual moving capture was unreliable. Exact new
+306776B/e4244f70 build PASSed9792tick/152case Azahar matrix with host comparison;
+all discrete/animation/charge fields exact, maxpos9.15e-5. No retail raster match,
+full-cycle video match, hardware or overall1:1 claim. Source rate/band equations
+were checked; no video-based rate retuning was justified.
+
+BuildSHA256 e4244f709cd885804475f041a99f7beb6e050b9eaacb394873e76ec974d78ae1.
+Latest matrix8784frames/168738ms (~52.1FPS runtimeclock),maxsubmit458ms,
+minlinear30087680,maxcommand0.114258; host/UI contention possible, not hardware.
+TemporaryE/M flags removed and evidence saved. Separate preview identity uses
+identical installed Azahar executable; original shared other-game instance was
+not interrupted. Source CP0–CP9 and full course gates remain unfinished.
+
+Next: matched native walking/run visual-cycle comparison with supplied footage,
+then source-timed spring/controller integration. Preserve evidence distinctions.
+
+---
+
 # WCA active checkpoint — source angle truncation correction
 
 Parent `e031e14`. Reproduced fractional BAMS discrepancy: pose sampler and old

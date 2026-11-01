@@ -95,6 +95,16 @@ SA3CPoseResult sa3c_pose_build_world(
     SA3CMatrix *world,
     size_t world_count);
 
+/* PC2004 animated-node evaluator (4050C0): apply sampled/fallback TRS even
+ * when bind UNIT flags are set, and recurse through BREAK nodes. SKIP uses
+ * bind TRS instead of the supplied sampled transform. Static object/bind
+ * evaluation above retains its existing UNIT/BREAK contract. Mixed per-node
+ * rotation-order flags are not verified against retail (none in owner Sonic). */
+SA3CPoseResult sa3c_pose_build_world_animated(
+    const SA3CCharacter *c, uint16_t root_node,
+    const SA3CTransform *local, size_t local_count,
+    SA3CMatrix *world, size_t world_count);
+
 const char *sa3c_pose_result_name(SA3CPoseResult result);
 
 #endif

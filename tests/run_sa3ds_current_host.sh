@@ -78,3 +78,6 @@ bash tests/run_spring_launch.sh
 
 printf '\n== PC2004 source rotation quantization ==\n'
 bash tests/run_pc2004_rotation_quantization.sh
+
+printf '\n== PC2004 animated world hierarchy ==\n'
+bash tests/run_sa3c_animated_world.sh

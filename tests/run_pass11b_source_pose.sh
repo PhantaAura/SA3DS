@@ -33,3 +33,15 @@ while IFS= read -r action; do
   python3 tools/audit_pass11b_source_pose.py \
     "$CHRMODELS_PATH" "$tmp/sonic.sa3c" "$tmp/pass11_pose_diag" --action "$action"
 done < "$tmp/movement_actions.txt"
+
+cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
+  src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c \
+  tests/transition_pose_dump.c -lm -o "$tmp/transition_pose_dump"
+python3 tools/audit_pc2004_transition_pose.py \
+  "$CHRMODELS_PATH" "$tmp/sonic.sa3c" "$tmp/transition_pose_dump"
+
+cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
+  src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c \
+  tests/animated_world_dump.c -lm -o "$tmp/animated_world_dump"
+python3 tools/audit_pc2004_animated_world.py \
+  "$CHRMODELS_PATH" "$SONIC_EXE_PATH" "$tmp/sonic.sa3c" "$tmp/animated_world_dump"

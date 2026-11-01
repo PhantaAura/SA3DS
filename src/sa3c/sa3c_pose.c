@@ -205,10 +205,61 @@ static float transition_lerp(float a,float b,float t) {
 }
 
 static float transition_bams_lerp(float arad,float brad,float t) {
+    /* 43F6CC normalizes both synthetic keys to signed16; 4383D0 unwraps
+     * destination along the signed16 delta (half-turn tie is negative).
+     * The resulting two-key motion is drawn by ordinary 404C10. */
+    int32_t a=(int16_t)(int32_t)roundf(arad*SA3C_RAD_TO_BAMS);
+    int32_t b=(int16_t)(int32_t)roundf(brad*SA3C_RAD_TO_BAMS);
+    int16_t delta=(int16_t)(b-a);
+    volatile double left=(double)a*(1.0-(double)t),right=(double)(a+delta)*(double)t;
+    return (float)trunc(left+right)*SA3C_BAMS_TO_RAD;
+}
+
+static float capture_bams(float arad,float brad,float ratio) {
     int32_t a=(int32_t)roundf(arad*SA3C_RAD_TO_BAMS);
     int32_t b=(int32_t)roundf(brad*SA3C_RAD_TO_BAMS);
-    int16_t delta=(int16_t)(b-a);
-    return roundf((float)a+(float)delta*t)*SA3C_BAMS_TO_RAD;
+    /* 43F612 stores the ratio as f32; 43F627 truncates the increment
+     * before adding it to the original key, unlike ordinary sampling. */
+    int32_t captured=a+(int32_t)trunc((double)(int16_t)(b-a)*(double)ratio);
+    return (float)(int16_t)captured*SA3C_BAMS_TO_RAD;
+}
+
+static SA3CVec3 sample_rot_capture(const uint8_t *keys,uint32_t first,
+    uint16_t count,uint16_t frames,float frame) {
+    const uint8_t *base=keys+(size_t)first*16u;
+    SA3CVec3 a={0,0,0},b={0,0,0};
+    if(!count)return a;
+    uint16_t prev=0,next=0;
+    /* 43F54C..59F: retain the predecessor of the first key >= frame.
+     * At the first key the source simply copies it. */
+    if((double)key_frame(base)<(double)frame){
+        for(next=1;next<count;next++){
+            prev=(uint16_t)(next-1);
+            if((double)key_frame(base+(size_t)next*16u)>=(double)frame)break;
+        }
+        if(next==count){prev=(uint16_t)(count-1);next=0;}
+    }
+    key_vec(base+(size_t)prev*16u,&a);key_vec(base+(size_t)next*16u,&b);
+    float ratio=0;
+    if(prev!=next){
+        uint32_t af=key_frame(base+(size_t)prev*16u),bf=key_frame(base+(size_t)next*16u);
+        double denominator=(double)bf-(double)af+(next<prev?(double)frames:0.0);
+        if(denominator!=0.0)ratio=(float)(((double)frame-(double)af)/denominator);
+    }
+    return (SA3CVec3){capture_bams(a.x,b.x,ratio),capture_bams(a.y,b.y,ratio),capture_bams(a.z,b.z,ratio)};
+}
+
+static void capture_source_rotations(const SA3CCharacter*c,uint16_t action,
+    float frame,SA3CTransform *local) {
+    const uint8_t*a=section_data(c,7)+(size_t)action*c->sections[7].stride;
+    uint16_t frames=rd16(a+4);
+    frame=normalize_frame(frame,frames,1);
+    uint32_t first=rd32(a+8),count=rd32(a+12);
+    for(uint32_t i=0;i<count;i++){
+        const uint8_t*ch=section_data(c,8)+(size_t)(first+i)*c->sections[8].stride;
+        if(rd16(ch+2)&2u)local[rd16(ch)].rotation=sample_rot_capture(section_data(c,9),
+            rd32(ch+12),rd16(ch+10),frames,frame);
+    }
 }
 
 SA3CPoseResult sa3c_pose_sample_transition(const SA3CCharacter *c,
@@ -227,6 +278,7 @@ SA3CPoseResult sa3c_pose_sample_transition(const SA3CCharacter *c,
     if(pr!=SA3C_POSE_OK)return pr;
     if(source_root!=destination_root)return SA3C_POSE_ERR_HIERARCHY;
     if(local_count<c->sections[0].count)return SA3C_POSE_ERR_RANGE;
+    capture_source_rotations(c,source_action_index,source_frame,scratch);
     for(uint32_t i=0;i<c->sections[0].count;i++) {
         local[i].position.x=transition_lerp(scratch[i].position.x,local[i].position.x,weight);
         local[i].position.y=transition_lerp(scratch[i].position.y,local[i].position.y,weight);
@@ -242,23 +294,33 @@ SA3CPoseResult sa3c_pose_sample_transition(const SA3CCharacter *c,
     return SA3C_POSE_OK;
 }
 
-static SA3CPoseResult walk_world(const SA3CCharacter *c,uint16_t node_index,const SA3CTransform *local,SA3CMatrix *world,const SA3CMatrix *parent,uint32_t depth) {
+static SA3CPoseResult walk_world(const SA3CCharacter *c,uint16_t node_index,const SA3CTransform *local,SA3CMatrix *world,const SA3CMatrix *parent,uint32_t depth,int animated) {
     if(node_index==SA3C_INVALID_U16)return SA3C_POSE_OK;
     if((uint32_t)node_index>=c->sections[0].count || depth>c->sections[0].count)return SA3C_POSE_ERR_HIERARCHY;
     const uint8_t *r=section_data(c,0)+(size_t)node_index*c->sections[0].stride;
     uint16_t child=rd16(r+2), sibling=rd16(r+4); uint32_t flags=rd32(r+8);
+    const SA3CTransform *transform=&local[node_index];
+    SA3CTransform bind;
+    if(animated&&(flags&SA3C_EVAL_SKIP)){
+        /* 4050DB bypasses motion callbacks and applies the node's bind TRS,
+         * including components marked UNIT by the static evaluator. */
+        bind.position=(SA3CVec3){rdf(r+12),rdf(r+16),rdf(r+20)};
+        bind.rotation=(SA3CVec3){rdf(r+24),rdf(r+28),rdf(r+32)};
+        bind.scale=(SA3CVec3){rdf(r+36),rdf(r+40),rdf(r+44)};
+        transform=&bind;
+    }
     SA3CMatrix m=*parent;
-    if(!(flags&SA3C_EVAL_UNIT_POS)) nj_translate(&m,local[node_index].position.x,local[node_index].position.y,local[node_index].position.z);
-    if(!(flags&SA3C_EVAL_UNIT_ANG)) {
-        if(flags&SA3C_EVAL_ZXY_ANG) nj_rotate_zyx_flag(&m,local[node_index].rotation);
-        else nj_rotate_xyz(&m,local[node_index].rotation);
+    if(animated||!(flags&SA3C_EVAL_UNIT_POS)) nj_translate(&m,transform->position.x,transform->position.y,transform->position.z);
+    if(animated||!(flags&SA3C_EVAL_UNIT_ANG)) {
+        if(flags&SA3C_EVAL_ZXY_ANG) nj_rotate_zyx_flag(&m,transform->rotation);
+        else nj_rotate_xyz(&m,transform->rotation);
     }
-    if(!(flags&SA3C_EVAL_UNIT_SCL)) nj_scale(&m,local[node_index].scale.x,local[node_index].scale.y,local[node_index].scale.z);
+    if(animated||!(flags&SA3C_EVAL_UNIT_SCL)) nj_scale(&m,transform->scale.x,transform->scale.y,transform->scale.z);
     world[node_index]=m;
-    if(!(flags&SA3C_EVAL_BREAK) && child!=SA3C_INVALID_U16) {
-        SA3CPoseResult pr=walk_world(c,child,local,world,&m,depth+1); if(pr!=SA3C_POSE_OK)return pr;
+    if((animated||!(flags&SA3C_EVAL_BREAK)) && child!=SA3C_INVALID_U16) {
+        SA3CPoseResult pr=walk_world(c,child,local,world,&m,depth+1,animated); if(pr!=SA3C_POSE_OK)return pr;
     }
-    if(sibling!=SA3C_INVALID_U16) return walk_world(c,sibling,local,world,parent,depth+1);
+    if(sibling!=SA3C_INVALID_U16) return walk_world(c,sibling,local,world,parent,depth+1,animated);
     return SA3C_POSE_OK;
 }
 
@@ -266,7 +328,14 @@ SA3CPoseResult sa3c_pose_build_world(const SA3CCharacter *c,uint16_t root_node,c
     if(!c||!c->data||!local||!world)return SA3C_POSE_ERR_ARGUMENT;
     if(local_count<c->sections[0].count||world_count<c->sections[0].count||(uint32_t)root_node>=c->sections[0].count)return SA3C_POSE_ERR_RANGE;
     SA3CMatrix identity; sa3c_matrix_identity(&identity);
-    return walk_world(c,root_node,local,world,&identity,0);
+    return walk_world(c,root_node,local,world,&identity,0,0);
+}
+
+SA3CPoseResult sa3c_pose_build_world_animated(const SA3CCharacter *c,uint16_t root_node,const SA3CTransform *local,size_t local_count,SA3CMatrix *world,size_t world_count) {
+    if(!c||!c->data||!local||!world)return SA3C_POSE_ERR_ARGUMENT;
+    if(local_count<c->sections[0].count||world_count<c->sections[0].count||(uint32_t)root_node>=c->sections[0].count)return SA3C_POSE_ERR_RANGE;
+    SA3CMatrix identity;sa3c_matrix_identity(&identity);
+    return walk_world(c,root_node,local,world,&identity,0,1);
 }
 
 const char *sa3c_pose_result_name(SA3CPoseResult r) {

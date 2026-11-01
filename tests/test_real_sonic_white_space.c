@@ -36,7 +36,7 @@ int main(int argc,char**argv){
     size_t n=c.sections[0].count;SA3CTransform*local=calloc(n,sizeof(*local));SA3CTransform*local2=calloc(n,sizeof(*local2));SA3CMatrix*world=calloc(n,sizeof(*world));if(!local||!local2||!world)return 2;
     uint16_t root=0xffff;SA3CPoseResult r=sa3c_pose_sample_action(&c,0,0.0f,1,local,n,&root);if(r!=SA3C_POSE_OK){fprintf(stderr,"sample0 %s\n",sa3c_pose_result_name(r));return 1;}
     if(root==0xffff)return 1;
-    r=sa3c_pose_build_world(&c,root,local,n,world,n);if(r!=SA3C_POSE_OK){fprintf(stderr,"world %s\n",sa3c_pose_result_name(r));return 1;}
+    r=sa3c_pose_build_world_animated(&c,root,local,n,world,n);if(r!=SA3C_POSE_OK){fprintf(stderr,"world %s\n",sa3c_pose_result_name(r));return 1;}
     BoundsCtx bc={.c=&c,.minv={FLT_MAX,FLT_MAX,FLT_MAX},.maxv={-FLT_MAX,-FLT_MAX,-FLT_MAX},.commands=0};SA3CRenderStats st;
     r=sa3c_render_emit(&c,root,world,n,visit,&bc,&st);if(r!=SA3C_POSE_OK){fprintf(stderr,"emit %s\n",sa3c_pose_result_name(r));return 1;}
     if(!st.draw_calls||st.draw_calls!=bc.commands||!st.triangles||st.indices!=st.triangles*3u)return 1;

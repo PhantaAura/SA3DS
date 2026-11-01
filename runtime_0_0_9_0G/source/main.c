@@ -768,7 +768,7 @@ static int init_scene(void) {
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
-               sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count)!=SA3C_POSE_OK||
+               sa3c_pose_build_world_animated(&g_character,root,g_local,g_node_count,g_world,g_node_count)!=SA3C_POSE_OK||
                !sa3ds_pose_metrics(&g_character,root,g_world,g_node_count,&stand))return 0;
             char scale_note[192];snprintf(scale_note,sizeof(scale_note),
                 "Stand bounds=(%.3f,%.3f,%.3f)..(%.3f,%.3f,%.3f) height=%.3f unit-scale=1 center_height=5.4; partial contact adapter",
@@ -833,7 +833,9 @@ static int sample_pose(void) {
         }
     }
     if (pr!=SA3C_POSE_OK || root==INVALID_U16) return 0;
-    pr=sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count);
+    pr=(g_pose_lab && g_pose_bind) ?
+        sa3c_pose_build_world(&g_character,root,g_local,g_node_count,g_world,g_node_count) :
+        sa3c_pose_build_world_animated(&g_character,root,g_local,g_node_count,g_world,g_node_count);
     if (pr!=SA3C_POSE_OK) return 0;
 
     if (g_pose_lab && g_pose_metrics_dirty) {

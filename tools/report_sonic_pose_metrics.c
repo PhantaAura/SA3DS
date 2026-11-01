@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
         for(unsigned frame=0;frame<=2;frame+=2) {
             uint16_t root=0xFFFF;
             if(sa3c_pose_sample_action(&c,slots[si],(float)frame,0,local,n,&root)!=SA3C_POSE_OK ||
-               sa3c_pose_build_world(&c,root,local,n,world,n)!=SA3C_POSE_OK) {fail=1;continue;}
+               sa3c_pose_build_world_animated(&c,root,local,n,world,n)!=SA3C_POSE_OK) {fail=1;continue;}
             SA3DSPoseMetrics m;
             if(!sa3ds_pose_metrics(&c,root,world,n,&m)){fail=1;continue;}
             printf("%u,%u,%u,%lu,%u,%u,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f\n",
