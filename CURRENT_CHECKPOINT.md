@@ -1,3 +1,24 @@
+# WCA active checkpoint — published groups and exact native rerun
+
+Published through `680dc63` to PhantaAura/SA3DS main; Desktop checkout synchronized.
+Exact305316-byte/c83c5578 code-only build PASSed isolated Azahar2126 Old3DS/Vulkan
+act1 group replay:3 pickups at156/163/170, no death/reset. Host trajectory agrees.
+The pickup normal draw pulse is consumed; post-pause ring draws3/864vertices.
+300frames/170ticks/6715ms includes automatic paused tail, not gameplay FPS.
+Min linear27822208, max command0.157349, max submit416ms. Private log retained.
+Isolated test PID77028 stopped and exact private flags removed. Shared emulator
+was not stopped. Tested group owner data installed to external SD, build copied
+to Desktop dist/SA3DS_WCA_CP5_RingGroups_20261101.3dsx; neither is in Git.
+
+Spring/panel owner definitions and command decoding are HOST VERIFIED; no native
+spring interactions yet. Next: source SpringB hit/order, launch placement and
+physical-frame integration. Source distinguishes positional +SETY rotation from
+SpringB velocity SETY-0x4000; do not substitute one for the other.
+
+Overall WCA remains incomplete; all full-route and hardware gates still apply.
+
+---
+
 # WCA active checkpoint — spring/panel definitions and command decoding
 
 Parent `c4f46ab`. Added exact-profile owner importer and bounded C reader for
