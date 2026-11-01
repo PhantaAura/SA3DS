@@ -65,12 +65,29 @@ SA3DSECVisualResult sa3ds_ec_visual_open(SA3DSECVisual*out,const void*data,size_
     memset(out,0,sizeof(*out));
     if(sa3dspak_open(&out->package,data,size)!=SA3DSPAK_OK)return SA3DS_EC_VISUAL_ERR_PACKAGE;
     SA3DSPakChunk metadata,g,m,t;
-    if(out->package.toc_count!=4||
+    if(out->package.toc_count<4||out->package.toc_count>6||
        sa3dspak_find(&out->package,"METADATA",&metadata)!=SA3DSPAK_OK||
        sa3dspak_find(&out->package,"GEOMETRY",&g)!=SA3DSPAK_OK||
        sa3dspak_find(&out->package,"MATERIALS",&m)!=SA3DSPAK_OK||
        sa3dspak_find(&out->package,"TEXTURES",&t)!=SA3DSPAK_OK)
         return SA3DS_EC_VISUAL_ERR_MISSING_CHUNK;
+    /* SET/CAMERA are existing optional owner importer extensions. Preserve
+     * their CRC-checked payloads for their subsystems; geometry loading must
+     * not reject an otherwise identical stage merely because they are present.
+     * Unknown or duplicate chunk classes still fail closed. */
+    unsigned seen=0;
+    for(uint32_t i=0;i<out->package.toc_count;i++){
+        SA3DSPakChunk chunk;unsigned bit=0;
+        if(sa3dspak_chunk_at(&out->package,i,&chunk)!=SA3DSPAK_OK)return SA3DS_EC_VISUAL_ERR_PACKAGE;
+        if(!strcmp(chunk.type,"GEOMETRY"))bit=1;
+        else if(!strcmp(chunk.type,"MATERIALS"))bit=2;
+        else if(!strcmp(chunk.type,"TEXTURES"))bit=4;
+        else if(!strcmp(chunk.type,"METADATA"))bit=8;
+        else if(!strcmp(chunk.type,"SET"))bit=16;
+        else if(!strcmp(chunk.type,"CAMERA"))bit=32;
+        if(!bit || (seen&bit))return SA3DS_EC_VISUAL_ERR_FORMAT;
+        seen|=bit;
+    }
     if(g.size<EC_VIS_HEADER||memcmp(g.data,"SA3DVIS\0",8)||r16(g.data+8)!=1||r16(g.data+10)!=0)return SA3DS_EC_VISUAL_ERR_FORMAT;
     out->geometry=g.data;out->geometry_size=(size_t)g.size;out->model_count=r32(g.data+12);out->mesh_count=r32(g.data+16);out->instance_count=r32(g.data+20);out->vertex_count=r32(g.data+24);out->index_count=r32(g.data+28);
     out->model_offset=r32(g.data+32);out->mesh_offset=r32(g.data+36);out->instance_offset=r32(g.data+40);out->vertex_offset=r32(g.data+44);out->index_offset=r32(g.data+48);

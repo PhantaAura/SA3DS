@@ -1,3 +1,21 @@
+# WCA active checkpoint — full Sonic terrain residency
+
+Parent36242b8. Both source Sonic terrain acts now have one-act GPU residency,
+source start/strict handoff metadata, moving bounded collision, conservative
+full-act mesh culling and transactional replacement. Full host and native builds
+pass. Culling candidate294176bytes/2c4d001b actually profiled both acts in Azahar:
+300-frame samples46.54/54.10renderFPS, minimum linear27.26/27.84MB; hardware
+NOT RUN. The shared emulator changed sessions before final visual inspection. The pre-culling build loaded/rendered both acts in Azahar with an explicit
+geometry cycle probe; natural traversal and completion remain unverified.
+Owner coverage passed247 solid-instance windows, max4682triangles/7896references.
+See [the unified ledger](docs/WCA_0_0_10_0.md) for exact identities and limitations.
+
+CP3 remains IN PROGRESS. CP4–CP9, objects, whale, normal camera, audio, death,
+checkpoints, goal, optional override and real Old3DS verification remain required.
+`PHYSICS_1TO1=false`. Continue the milestone; do not mark the goal complete.
+
+---
+
 # WCA continuation — native matrix and animation playback verified locally
 
 Parent6375f2b; see [the unified WCA ledger](docs/WCA_0_0_10_0.md) for exact

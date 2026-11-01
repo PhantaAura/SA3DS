@@ -61,5 +61,7 @@
   "wca_native_facing": "SOURCE-EQUATION VERIFIED + HOST VERIFIED + NATIVE BUILD VERIFIED + AZAHAR VERIFIED (bounded): exact-EXE movement -taskY/display 0x8000-taskY establishes model -X forward; native screen X bridge and White Zone RH projection corrected;144 direction/camera cases +64x20-tick owner-terrain cases; full native matrix and physical hardware OPEN",
   "wca_native_replay": "AZAHAR VERIFIED bounded9792ticks/152cases; discrete states and animation frames match unfused host oracle; max coordinate9.15e-5; source half-turn tie corrected; NOT RETAIL VERIFIED",
   "wca_animation_playback": "SOURCE-EQUATION VERIFIED + HOST VERIFIED + NATIVE BUILD VERIFIED + AZAHAR VERIFIED bounded: state2 uses current requested row, retains source index; properties3/9/10 stored frames wrap by motion count; full retail transitions OPEN",
-  "wca_half_turn": "EXACT EXECUTABLE + HOST + AZAHAR VERIFIED: signed16 task-angle tie0x8000 -> negative task turn/positive port yaw;256neighboring plane/camera fixtures; non-tie inertia retained"
+  "wca_half_turn": "EXACT EXECUTABLE + HOST + AZAHAR VERIFIED: signed16 task-angle tie0x8000 -> negative task turn/positive port yaw;256neighboring plane/camera fixtures; non-tie inertia retained",
+  "wca_full_terrain_residency": "SOURCE ROUTE + HOST + NATIVE BUILD VERIFIED; pre-culling candidate AZAHAR both-act LOADER SMOKE: 247 owner solid-instance windows; transactional act0->1 loading; full-stage traversal, backgrounds, objects and natural handoff NOT VERIFIED",
+  "wca_full_terrain_culling": "HOST + NATIVE BUILD + AZAHAR EXECUTION/PROFILE VERIFIED:294176-byte 2c4d001b candidate; act0/1 mean12406/4411 terrain triangles; emulator46.54/54.10 renderFPS; visual culling inspection/traversal/hardware OPEN"
 }

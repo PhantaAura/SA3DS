@@ -56,3 +56,8 @@ sh tests/run_pc2004_half_turn.sh
 
 printf "\n== Emerald Coast bounded collision regions ==\n"
 sh tests/run_emerald_coast_regions.sh
+
+printf "\n== Emerald Coast owner route metadata and residency ==\n"
+sh tests/run_emerald_coast_route.sh
+sh tests/run_emerald_coast_residency.sh
+python3 tests/test_emerald_coast_full_integration.py

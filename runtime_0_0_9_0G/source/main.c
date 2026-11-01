@@ -1,5 +1,7 @@
 #include "player_view.h"
 #include "wca_replay.h"
+#include "emerald_coast_route.h"
+#include "emerald_coast_residency.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -63,6 +65,20 @@ static SA3DSActionPreflightReport g_action_report;
 static SA3DSLabGpu g_lab_gpu;
 static uint8_t *g_ec_bytes;
 static size_t g_ec_size;
+static uint8_t *g_ec_collision_bytes;
+static size_t g_ec_collision_size;
+static SA3DSECRoute g_ec_route;
+static int g_ec_full_route=0;
+static int g_ec_transition_failed=0;
+static uint32_t g_ec_act_index=0;
+static int g_ec_cycle_probe=0;
+static struct {
+    uint64_t start_ms,submit_ms,triangles,draws;
+    uint32_t frames,ticks,max_submit_ms,min_linear;
+    float max_cmd;
+} g_ec_perf;
+static int g_ec_failed_region_valid=0;
+static float g_ec_failed_region_x=0,g_ec_failed_region_z=0;
 static SA3DSECVisual g_ec_visual;
 static SA3DSECGpu g_ec_gpu;
 static int g_emerald_coast;
@@ -247,7 +263,9 @@ static void reset_selected_zone(void) {
     sa3ds_wz_tick_reset(&g_tick_clock);
     g_last_frame_ms=osGetTime();
     if (g_emerald_coast && g_ec_combined) {
-        sa1_player_reset(&g_player,&g_ec_collision.world);
+        const SA3DSECStart *start=g_ec_full_route?sa3ds_ec_route_start(&g_ec_route,g_ec_act_index):NULL;
+        if(start)sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);
+        else sa1_player_reset(&g_player,&g_ec_collision.world);
         g_ec_collision.reference_y=g_player.pos.y;
     } else (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
     memset(&g_anim_sync,0,sizeof(g_anim_sync));
@@ -331,8 +349,13 @@ static void emerald_coast_help(void) {
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
     printf("SA3DS - EMERALD COAST ACT 1\n\n");
-    printf("Authentic PC2004 opening subset.\n");
-    printf("500-unit opening residency subset.\n");
+    if(g_ec_full_route){
+        printf("Authentic PC2004 Sonic route.\n");
+        printf("Complete geometry; objects pending.\n");
+    }else{
+        printf("Authentic PC2004 opening subset.\n");
+        printf("500-unit opening residency subset.\n");
+    }
     printf("Circle Pad move / A jump\n");
     printf("L/R camera / Y recenter\n");
     printf("SELECT+Y reset / SELECT+X trace\n");
@@ -349,7 +372,9 @@ static void emerald_coast_status(void) {
     printf("\x1b[16;1HTextures:%3lu/%3lu %5luKB       ",
         (unsigned long)g_ec_gpu.resident_texture_count,(unsigned long)g_ec_gpu.texture_count,
         (unsigned long)(g_ec_gpu.texture_bytes/1024u));
-    printf("\x1b[17;1HPackage:%5luKB Radius:%5.0f      ",
+    if(g_ec_full_route)printf("\x1b[17;1HPackage:%5luKB Act:%lu FULL       ",
+        (unsigned long)(g_ec_size/1024u),(unsigned long)g_ec_act_index);
+    else printf("\x1b[17;1HPackage:%5luKB Radius:%5.0f      ",
         (unsigned long)(g_ec_size/1024u),g_ec_gpu.subset_radius);
     printf("\x1b[18;1HLinear free:%5luKB Frame:%3llums ",
         (unsigned long)(linearSpaceFree()/1024u),(unsigned long long)g_last_submit_ms);
@@ -514,26 +539,69 @@ static int load_owner_packages(void) {
     return 1;
 }
 
-static int load_emerald_coast_package(void) {
-    boot_checkpoint("Loading Emerald Coast act-0 package from SD");
-    if (!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak",
-            &g_ec_bytes,&g_ec_size)) return 0;
-    boot_checkpoint("Validating Emerald Coast package and references");
-    SA3DSECVisualResult r=sa3ds_ec_visual_open(&g_ec_visual,g_ec_bytes,g_ec_size);
-    if (r!=SA3DS_EC_VISUAL_OK) {
-        printf("\nEmerald Coast visual: %s\n",sa3ds_ec_visual_result_name(r));
-        return 0;
+static void ec_world_bounds(SA3DSECCollision *collision,const SA3DSECVisual *visual){
+    float min_x=1e30f,max_x=-1e30f,min_z=1e30f,max_z=-1e30f;
+    for(uint32_t i=0;i<visual->instance_count;i++){
+        SA3DSECInstance in;if(!sa3ds_ec_instance(visual,i,&in))continue;
+        min_x=fminf(min_x,in.center[0]-in.radius);max_x=fmaxf(max_x,in.center[0]+in.radius);
+        min_z=fminf(min_z,in.center[2]-in.radius);max_z=fmaxf(max_z,in.center[2]+in.radius);
     }
-    boot_note("Emerald Coast act-0 package preflight passed");
+    collision->world.reset_min_x=min_x;collision->world.reset_max_x=max_x;
+    collision->world.reset_min_z=min_z;collision->world.reset_max_z=max_z;
+    /* The inherited Y fallback remains provisional. Original finite death
+     * meshes are a separate gameplay gate; no retail scalar plane is claimed. */
+}
+
+static int load_emerald_coast_package(void) {
+    uint8_t *route_bytes=NULL;size_t route_size=0;
+    if(g_ec_combined&&!g_ec_replay&&sa3ds_read_file(
+            "sdmc:/3ds/SA3DS/assets/emerald_coast_route.sa3dspak",&route_bytes,&route_size)){
+        g_ec_full_route=sa3ds_ec_route_open(&g_ec_route,route_bytes,route_size);
+        if(g_ec_full_route && (g_ec_route.start_count!=2||g_ec_route.edge_count!=1||
+                !sa3ds_ec_route_start(&g_ec_route,0)||!sa3ds_ec_route_start(&g_ec_route,1)||
+                g_ec_route.edges[0].from_act!=0||g_ec_route.edges[0].to_act!=1))g_ec_full_route=0;
+        sa3ds_free_file(route_bytes);
+        if(!g_ec_full_route)boot_note("Owner route metadata invalid; retaining opening regression profile");
+    }
+    g_ec_act_index=0;
+    if(g_ec_full_route){
+        FILE *cycle=fopen("sdmc:/3ds/SA3DS/emerald_coast_act_cycle.flag","rb");
+        g_ec_cycle_probe=cycle!=NULL;if(cycle)fclose(cycle);
+        /* Explicit owner geometry-validation hook, not natural progression. */
+        FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_act.flag","rb");
+        if(probe){int act=fgetc(probe);fclose(probe);
+            if(act=='1'&&sa3ds_ec_route_start(&g_ec_route,1))g_ec_act_index=1;
+        }
+    }
+    const char *path=g_ec_act_index==1?
+        "sdmc:/3ds/SA3DS/assets/emerald_coast_act1.sa3dspak":
+        "sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak";
+    boot_checkpoint("Loading Emerald Coast owner act package from SD");
+    if(!sa3ds_read_file(path,&g_ec_bytes,&g_ec_size))return 0;
+    boot_checkpoint("Validating Emerald Coast package and references");
+    SA3DSECVisualResult result=sa3ds_ec_visual_open(&g_ec_visual,g_ec_bytes,g_ec_size);
+    if(result!=SA3DS_EC_VISUAL_OK){
+        printf("\nEmerald Coast visual: %s\n",sa3ds_ec_visual_result_name(result));return 0;
+    }
+    boot_note("Emerald Coast owner act package preflight passed");
     if(g_ec_combined){
-        uint8_t *collision_bytes=NULL;size_t collision_size=0;
         boot_checkpoint("Loading and indexing owner Emerald Coast collision");
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_collision.sa3dspak",
-            &collision_bytes,&collision_size))return 0;
-        int ok=sa3ds_ec_collision_open(&g_ec_collision,collision_bytes,collision_size);
-        sa3ds_free_file(collision_bytes);
-        if(!ok||!sa3ds_ec_collision_spawn(&g_ec_collision,SA3DS_EC_SPAWN_X,SA3DS_EC_SPAWN_Z,0.0f))return 0;
-        boot_note("Provisional spawn: imported support at x=0 z=-50; not retail spawn");
+                &g_ec_collision_bytes,&g_ec_collision_size))return 0;
+        const SA3DSECStart *start=g_ec_full_route?sa3ds_ec_route_start(&g_ec_route,g_ec_act_index):NULL;
+        int ok=start?sa3ds_ec_collision_open_region(&g_ec_collision,g_ec_collision_bytes,
+            g_ec_collision_size,g_ec_act_index,start->task_origin.x,start->task_origin.z):
+            sa3ds_ec_collision_open(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size);
+        if(!ok)return 0;
+        if(start){
+            ec_world_bounds(&g_ec_collision,&g_ec_visual);
+            sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);
+            boot_note("Source task start selected; full one-act geometry residency");
+        }else{
+            sa3ds_free_file(g_ec_collision_bytes);g_ec_collision_bytes=NULL;g_ec_collision_size=0;
+            if(!sa3ds_ec_collision_spawn(&g_ec_collision,SA3DS_EC_SPAWN_X,SA3DS_EC_SPAWN_Z,0.0f))return 0;
+            boot_note("Provisional spawn: imported support at x=0 z=-50; not retail spawn");
+        }
     }
     return 1;
 }
@@ -557,6 +625,55 @@ static void log_texture_stage(const char *phase, uint32_t texture_index,
     gfxScreenSwapBuffers(GFX_BOTTOM,false);
 }
 
+static int ec_change_act(uint32_t act){
+    uint64_t load_start=osGetTime();
+    const SA3DSECStart *start=sa3ds_ec_route_start(&g_ec_route,act);
+    if(!start||act>1||!g_ec_collision_bytes)return 0;
+    char path[128];snprintf(path,sizeof(path),
+        "sdmc:/3ds/SA3DS/assets/emerald_coast_act%lu.sa3dspak",(unsigned long)act);
+    uint8_t *bytes=NULL;size_t size=0;SA3DSECVisual visual;
+    SA3DSECCollision collision={0};SA3DSECGpu gpu={0};
+    if(!sa3ds_read_file(path,&bytes,&size))return 0;
+    if(sa3ds_ec_visual_open(&visual,bytes,size)!=SA3DS_EC_VISUAL_OK||
+       !sa3ds_ec_collision_open_region(&collision,g_ec_collision_bytes,g_ec_collision_size,
+            act,start->task_origin.x,start->task_origin.z))goto fail;
+    ec_world_bounds(&collision,&visual);
+    C3D_FrameSync(); /* Retire submissions before replacing GPU-owned resources. */
+    if(!sa3ds_ec_gpu_init_full(&gpu,&visual,log_texture_stage,NULL))goto fail;
+    uint32_t overlap_linear=linearSpaceFree();
+    sa3ds_ec_gpu_destroy(&g_ec_gpu);sa3ds_ec_collision_destroy(&g_ec_collision);
+    sa3ds_free_file(g_ec_bytes);
+    g_ec_bytes=bytes;g_ec_size=size;g_ec_visual=visual;g_ec_gpu=gpu;
+    g_ec_gpu.visual=&g_ec_visual;
+    g_ec_collision=collision;g_ec_collision.world.context=&g_ec_collision;
+    g_ec_act_index=act;g_ec_failed_region_valid=0;
+    memset(&g_ec_perf,0,sizeof(g_ec_perf));
+    reset_selected_zone();emerald_coast_help();
+    char note[160];snprintf(note,sizeof(note),
+        "act=%lu source-start=%.3f,%.3f,%.3f tris=%lu linear=%lu overlapLinear=%lu loadMs=%llu",
+        (unsigned long)act,start->task_origin.x,start->task_origin.y,start->task_origin.z,
+        (unsigned long)g_ec_gpu.triangle_count,(unsigned long)linearSpaceFree(),
+        (unsigned long)overlap_linear,(unsigned long long)(osGetTime()-load_start));boot_log("ACT",note);
+    return 1;
+fail:
+    sa3ds_ec_gpu_destroy(&gpu);sa3ds_ec_collision_destroy(&collision);sa3ds_free_file(bytes);return 0;
+}
+
+static void ec_refresh_collision_region(void){
+    if(!g_ec_full_route||!sa3ds_ec_residency_needs_recenter(&g_ec_collision,g_player.pos))return;
+    float x=floorf(g_player.pos.x/256.0f+0.5f)*256.0f;
+    float z=floorf(g_player.pos.z/256.0f+0.5f)*256.0f;
+    if(g_ec_failed_region_valid&&x==g_ec_failed_region_x&&z==g_ec_failed_region_z)return;
+    if(sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player)){
+        g_ec_failed_region_valid=0;
+        char line[128];snprintf(line,sizeof(line),"act=%lu center=%.0f,%.0f triangles=%lu",
+            (unsigned long)g_ec_act_index,x,z,(unsigned long)g_ec_collision.triangle_count);boot_log("REGION",line);
+    }else{
+        g_ec_failed_region_valid=1;g_ec_failed_region_x=x;g_ec_failed_region_z=z;
+        boot_log("REGION","No valid replacement support region; retaining previous geometry without invented support");
+    }
+}
+
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
@@ -578,8 +695,10 @@ static int init_scene(void) {
     C3D_AlphaTest(true,GPU_GREATER,15);
     C3D_CullFace(GPU_CULL_NONE);
     if (g_emerald_coast) {
-        boot_checkpoint("CPU-swizzling Emerald Coast opening subset");
-        if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
+        boot_checkpoint(g_ec_full_route?"CPU-swizzling complete Emerald Coast act":"CPU-swizzling Emerald Coast opening subset");
+        if(g_ec_full_route){
+            if(!sa3ds_ec_gpu_init_full(&g_ec_gpu,&g_ec_visual,log_texture_stage,NULL))return 0;
+        }else if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
         boot_note("Emerald Coast opening subset resident");
         if (g_ec_combined && !sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
@@ -614,6 +733,13 @@ static int sample_pose(void) {
                 FVec3_New(0,1,0),false);
         }else Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
+        if(g_ec_gpu.full_act){
+            float eye[3]={g_player.pos.x-sinf(g_camera.yaw)*40.0f,
+                g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f};
+            float target[3]={g_player.pos.x,g_player.pos.y+3.0f,g_player.pos.z};
+            sa3ds_ec_gpu_set_view(&g_ec_gpu,eye,target,C3D_AngleFromDegrees(55.0f),
+                C3D_AspectRatioTop,0.1f,5000.0f);
+        }
         g_ec_view=stage_mv;
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
@@ -705,6 +831,7 @@ static void cleanup(void) {
     g_world=NULL; g_transition_local=NULL; g_local=NULL;
     sa3ds_free_file(g_sa3t_bytes); sa3ds_free_file(g_sa3c_bytes);
     sa3ds_free_file(g_ec_bytes); g_ec_bytes=NULL; g_ec_size=0;
+    sa3ds_free_file(g_ec_collision_bytes);g_ec_collision_bytes=NULL;g_ec_collision_size=0;
     g_sa3t_bytes=g_sa3c_bytes=NULL;
     if (g_dvlb) { shaderProgramFree(&g_program); DVLB_Free(g_dvlb); g_dvlb=NULL; }
 }
@@ -840,6 +967,11 @@ int main(void) {
             in.spindash_shortcut_pressed=in.spindash_shortcut_held=in.spindash_shortcut_released=false;
             in.lightspeed_shortcut_pressed=in.lightspeed_shortcut_held=in.lightspeed_shortcut_released=false;
         }
+        if(g_ec_full_route&&g_ec_cycle_probe&&g_ec_act_index==0&&g_rendered_frames>=360){
+            g_ec_cycle_probe=0;
+            boot_log("VALIDATION","Explicit act0->act1 geometry loader probe; not natural stage progression");
+            if(!ec_change_act(1)){g_ec_transition_failed=1;fail_screen("Act-cycle validation failed");break;}
+        }
         /* Render cadence is NOT simulation cadence. Keep a fixed 60 Hz
            simulation and deliver button edges once, even if a render frame
            produces zero or several physics steps. */
@@ -850,6 +982,7 @@ int main(void) {
         g_last_frame_ms=now_ms;
         unsigned steps=(g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
+            if(g_ec_full_route)g_ec_perf.ticks++;
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
             SA3DSWCAReplayStep wca={0};
             if(g_ec_replay) {
@@ -874,6 +1007,13 @@ int main(void) {
             SA1SteamFlatDebug physics_trace={0};
             if (!g_ec_replay && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
             if (!g_ec_replay && !modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
+            if(g_ec_full_route){
+                uint32_t next_act;
+                if(sa3ds_ec_route_next(&g_ec_route,g_ec_act_index,sa3ds_ec_task_origin(&g_player),&next_act)){
+                    if(!ec_change_act(next_act)){g_ec_transition_failed=1;fail_screen("Source act handoff failed: check external owner packages");break;}
+                }
+                ec_refresh_collision_region();
+            }
             SA1Vec3 previous=g_player.pos;
             uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
@@ -882,6 +1022,7 @@ int main(void) {
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
             if(g_emerald_coast && !(previous_tick && g_player.sim_frame==1))
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
+            if(g_ec_full_route && previous_tick && g_player.sim_frame==1)reset_selected_zone();
             SA1PlayerState physics_done=g_player;
             g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
             g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
@@ -922,6 +1063,7 @@ int main(void) {
             }
         }
 
+        if(g_ec_transition_failed)break;
         uint64_t t0=osGetTime();
         int probe_log=g_rendered_frames<3u || g_rendered_frames==60u || g_rendered_frames==180u;
         char frame_line[160];
@@ -946,6 +1088,26 @@ int main(void) {
             g_boottrace_first_frame=0;
         }
         g_last_submit_ms=osGetTime()-t0;
+        if(g_ec_full_route&&g_ec_perf.frames<300){
+            if(!g_ec_perf.frames){g_ec_perf.start_ms=t0;g_ec_perf.min_linear=UINT32_MAX;}
+            g_ec_perf.frames++;g_ec_perf.submit_ms+=g_last_submit_ms;
+            g_ec_perf.triangles+=g_ec_gpu.submitted_triangles;
+            g_ec_perf.draws+=g_ec_gpu.submitted_draws;
+            if(g_last_submit_ms>g_ec_perf.max_submit_ms)g_ec_perf.max_submit_ms=(uint32_t)g_last_submit_ms;
+            uint32_t free_linear=linearSpaceFree();
+            if(free_linear<g_ec_perf.min_linear)g_ec_perf.min_linear=free_linear;
+            float usage=C3D_GetCmdBufUsage();if(usage>g_ec_perf.max_cmd)g_ec_perf.max_cmd=usage;
+            if(g_ec_perf.frames==300){
+                char metrics[320];snprintf(metrics,sizeof(metrics),
+                    "EC act=%lu frames=%lu ticks=%lu elapsedMs=%llu submitMs=%llu maxSubmitMs=%lu minLinearBytes=%lu maxCmd=%.6f meanTerrainTriangles=%llu meanTerrainDraws=%llu",
+                    (unsigned long)g_ec_act_index,(unsigned long)g_ec_perf.frames,
+                    (unsigned long)g_ec_perf.ticks,(unsigned long long)(osGetTime()-g_ec_perf.start_ms),
+                    (unsigned long long)g_ec_perf.submit_ms,(unsigned long)g_ec_perf.max_submit_ms,
+                    (unsigned long)g_ec_perf.min_linear,g_ec_perf.max_cmd,
+                    (unsigned long long)(g_ec_perf.triangles/g_ec_perf.frames),
+                    (unsigned long long)(g_ec_perf.draws/g_ec_perf.frames));boot_log("PERF",metrics);
+            }
+        }
         if(g_wca_perf_active){
             g_wca_perf_frames++;g_wca_perf_submit_ms+=g_last_submit_ms;
             if(g_last_submit_ms>g_wca_perf_max_submit_ms)
@@ -975,5 +1137,5 @@ int main(void) {
 
     cleanup();
     C3D_Fini(); romfsExit(); gfxExit();
-    return 0;
+    return g_ec_transition_failed?1:0;
 }

@@ -435,6 +435,7 @@ def main(argv=None):
     ap.add_argument("system_source", type=Path, help="owner system directory or ZIP")
     ap.add_argument("output_dir", type=Path)
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--act", type=int, choices=(0,1,2), action="append", help="convert only this act; repeat to select several (default: all)")
     ap.add_argument("--with-set", action="store_true", help="embed decoded SET placement bank for each act (0.0.9.1C)")
     ap.add_argument("--with-cam", action="store_true", help="embed lossless CAM setup records for each act (0.0.9.1D)")
     args = ap.parse_args(argv)
@@ -442,21 +443,18 @@ def main(argv=None):
         dec = PC2004StageDecoder(args.exe)
         args.output_dir.mkdir(parents=True, exist_ok=True)
         reports = []
+        selected_acts=tuple(dict.fromkeys(args.act if args.act is not None else (0,1,2)))
         set_by_act = None
         if args.with_set:
-            found_sets = list_set_sources(args.system_source, {
-                "SET0100E.BIN", "SET0100S.BIN", "SET0101M.BIN", "SET0101S.BIN",
-                "SET0102B.BIN", "SET0102S.BIN",
-            })
-            set_by_act = {a: [s for s in found_sets if s.act == a] for a in (0, 1, 2)}
+            set_names={0:{"SET0100E.BIN","SET0100S.BIN"},1:{"SET0101M.BIN","SET0101S.BIN"},2:{"SET0102B.BIN","SET0102S.BIN"}}
+            found_sets = list_set_sources(args.system_source,set().union(*(set_names[a] for a in selected_acts)))
+            set_by_act = {a: [s for s in found_sets if s.act == a] for a in selected_acts}
         cam_by_act = None
         if args.with_cam:
-            found_cams = list_cam_sources(args.system_source, {
-                "CAM0100S.BIN", "CAM0100E.BIN", "CAM0101S.BIN",
-                "CAM0102S.BIN", "CAM0102B.BIN",
-            })
-            cam_by_act = {a: [s for s in found_cams if s.name[5:7] == f"{a:02d}"] for a in (0,1,2)}
-        for act in (0, 1, 2):
+            cam_names={0:{"CAM0100S.BIN","CAM0100E.BIN"},1:{"CAM0101S.BIN"},2:{"CAM0102S.BIN","CAM0102B.BIN"}}
+            found_cams = list_cam_sources(args.system_source,set().union(*(cam_names[a] for a in selected_acts)))
+            cam_by_act = {a: [s for s in found_cams if s.name[5:7] == f"{a:02d}"] for a in selected_acts}
+        for act in selected_acts:
             table = dec.landtable(EMERALD_COAST_LEVEL_ID, act)
             if not table.texture_archive:
                 raise DecodeError(f"act {act}: texture archive unresolved")

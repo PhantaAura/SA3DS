@@ -1,6 +1,7 @@
 /* Runs the ACTUAL native stage GPU batching/draw code at a mocked SDK boundary.
  * Synthetic source-neutral data only; this is not a rasterization oracle. */
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,11 +93,47 @@ int main(int argc,char **argv){
     gpu.texture_loaded[0]=1;
     assert(!sa3ds_ec_gpu_draw(&gpu,2));
     sa3ds_ec_gpu_destroy(&gpu);assert(allocations==0&&deletes==1);
+    /* Run the actual full-act draw path. Two transformed bounds must remain
+     * independently visible despite sharing one material/texture. */
+    assert(sa3ds_ec_gpu_init_full(&gpu,&v,NULL,NULL));
+    assert(gpu.full_act&&gpu.span_count==2);
+    for(uint32_t i=0;i<gpu.span_count;i++){
+        const SA3DSECSpan*s=&gpu.spans[i];
+        for(uint32_t j=s->first_vertex;j<s->first_vertex+s->vertex_count;j++){
+            float distance=0;
+            for(int c=0;c<3;c++){
+                float d=gpu.vertices[j].position[c]-s->center[c];distance+=d*d;
+            }
+            assert(distance<=s->radius*s->radius);
+        }
+    }
+    float eye[3]={0,0,-4},target[3]={0,0,0};
+    draw_count=0;sa3ds_ec_gpu_set_view(&gpu,eye,target,0.9599311f,400.0f/240.0f,.1f,5000);
+    expected_mask=GPU_WRITE_ALL;assert(sa3ds_ec_gpu_draw(&gpu,0));assert(draw_count==1);
+    expected_mask=GPU_WRITE_COLOR;assert(sa3ds_ec_gpu_draw(&gpu,1));assert(draw_count==1);
+    assert(gpu.submitted_triangles==1&&gpu.submitted_draws==1);
+    eye[0]=target[0]=10;draw_count=0;
+    sa3ds_ec_gpu_set_view(&gpu,eye,target,0.9599311f,400.0f/240.0f,.1f,5000);
+    expected_mask=GPU_WRITE_ALL;assert(sa3ds_ec_gpu_draw(&gpu,0));assert(draw_count==0);
+    expected_mask=GPU_WRITE_COLOR;assert(sa3ds_ec_gpu_draw(&gpu,1));assert(draw_count==1);
+    eye[0]=target[0]=0;eye[2]=10;target[2]=20;draw_count=0;
+    sa3ds_ec_gpu_set_view(&gpu,eye,target,0.9599311f,400.0f/240.0f,.1f,5000);
+    assert(sa3ds_ec_gpu_draw(&gpu,0)&&sa3ds_ec_gpu_draw(&gpu,1));assert(draw_count==0);
+    /* A sphere crossing the near plane remains visible. */
+    eye[2]=.05f;target[2]=10;
+    sa3ds_ec_gpu_set_view(&gpu,eye,target,0.9599311f,400.0f/240.0f,.1f,5000);
+    expected_mask=GPU_WRITE_ALL;assert(sa3ds_ec_gpu_draw(&gpu,0));assert(draw_count==1);
+    /* Invalid view is fail-open, never a blank screen. */
+    draw_count=0;sa3ds_ec_gpu_set_view(&gpu,eye,eye,0.9599311f,400.0f/240.0f,.1f,5000);
+    assert(!gpu.view_valid);
+    assert(sa3ds_ec_gpu_draw(&gpu,0));expected_mask=GPU_WRITE_COLOR;
+    assert(sa3ds_ec_gpu_draw(&gpu,1));assert(draw_count==2);
+    sa3ds_ec_gpu_destroy(&gpu);assert(allocations==0&&deletes==2);
     /* Unsupported blend factors must not submit guessed water treatment. */
     put32(material+16,0x9038a400u);
     assert(!sa3ds_ec_gpu_init(&gpu,&v,500,NULL,NULL));
-    assert(allocations==0&&uploads==1&&gpu.vertices==NULL);
+    assert(allocations==0&&uploads==2&&gpu.vertices==NULL);
     free(geometry);free(data);
-    puts("Emerald Coast actual GPU code / mocked SDK: PASS (shared-material class buckets, two phases, depth/blend restore, failure cleanup)");
+    puts("Emerald Coast actual GPU code / mocked SDK: PASS (shared-material classes, full-act bounds/frustum, camera/near-plane/fail-open, two-phase depth/blend restore, cleanup)");
     return 0;
 }

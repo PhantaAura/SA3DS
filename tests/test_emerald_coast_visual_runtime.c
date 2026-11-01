@@ -17,6 +17,9 @@ static unsigned char *read_all(const char *path,size_t *size) {
 int main(int argc,char **argv) {
     assert(argc==2||argc==3);int synthetic=argc==3;size_t size;unsigned char *data=read_all(argv[1],&size);assert(data);
     SA3DSECVisual v;
+    if(argc==3&&!strcmp(argv[2],"reject")){
+        assert(sa3ds_ec_visual_open(&v,data,size)!=SA3DS_EC_VISUAL_OK);free(data);return 0;
+    }
     assert(sa3ds_ec_visual_open(&v,data,size)==SA3DS_EC_VISUAL_OK);
     assert(v.model_count==(synthetic?1u:183u));assert(v.mesh_count==(synthetic?1u:578u));assert(v.instance_count==(synthetic?1u:480u));
     assert(v.vertex_count==(synthetic?3u:22237u));assert(v.index_count==(synthetic?3u:58794u));assert(v.material_count==(synthetic?1u:237u));
