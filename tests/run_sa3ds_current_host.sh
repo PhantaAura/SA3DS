@@ -69,3 +69,6 @@ python3 tests/test_pc2004_ring_importer.py
 printf '\n== Ring-group runtime ==\n'
 bash tests/run_ring_groups.sh
 python3 tests/test_pc2004_ring_groups_importer.py
+
+printf '\n== Movement object definitions and spring command decoding ==\n'
+bash tests/run_movement_objects.sh

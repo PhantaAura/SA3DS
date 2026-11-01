@@ -81,3 +81,21 @@ child-unload parent teardown are separate from direct-ring residency. Combined
 actor capacity remains2046 across both acts. Original source collision list7
 capacity128 is retained for this ring subsystem; cross-category queue ordering
 remains a later object integration requirement.
+
+
+### Optional MOVE_OBJECTS v1 (definitions only)
+
+Owner-generated Emerald Coast movement-object package. Header32bytes
+`<8sHHIIIII>`: magic `SA3DMOVE`, version1, flags0, row count0..2046,
+row offset32, spec offset32+count*40, spec count3, total size.
+Rows40bytes `<II32s>`: act0/1, original SET slot0..1022, original32-byte SET row.
+Rows sorted strictly by(act,slot); low12class must be1(spring),2(SpringB),
+3(dash panel). High bits and parameters retained unchanged; positions/parameters
+must be finite. No pointers or live object state.
+
+Three16-byte specs `<HBBffI>` in class order1/2/3: class, source object list,
+flags, load squared, unload squared, reserved0. Lists2/2/3, flags2/2/3,
+load360000 and unload360100. Total size=spec offset+48, no trailing bytes.
+One unique chunk per package, flags0. C reader borrows the package bytes,
+allocates nothing and does not spawn or launch objects. Normal runtime does
+not yet consume this optional package. Owner outputs remain outside Git.

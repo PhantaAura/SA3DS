@@ -1,3 +1,21 @@
+# WCA active checkpoint — spring/panel definitions and command decoding
+
+Parent `c4f46ab`. Added exact-profile owner importer and bounded C reader for
+75 normal-route movement-object placements (26 springs,49 dash panels). Spring
+command decoder preserves +5 strength, source signed16 truncated control timer,
+command3/action9 versus command4/action10 and request16. This is preparation;
+no spring/panel spawning, collision, launch or rendering is integrated yet.
+
+Complete owner-free host suite PASS; exact-owner75-row/26-command check PASS;
+code-only native build PASS. Unreferenced new reader is linker-discarded, leaving
+the same305316-byte/c83c5578 native artifact; no new Azahar result is claimed.
+Next: recover spring collision/hit ordering and integrate launch through the
+existing physical frame/controller. Publication and latest native rerun pending.
+
+Overall WCA goal remains incomplete. See unified ledger for all CP0–CP9 gates.
+
+---
+
 # WCA active checkpoint — source line/circle ring groups
 
 Parent718d60f. Added92source ring groups, producing206act0/287act1ring actors
