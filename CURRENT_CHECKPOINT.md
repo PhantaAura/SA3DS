@@ -1,3 +1,27 @@
+# WCA active checkpoint — movement pose coverage and spring launch preparation
+
+Parent `03c918a`. Expanded exact-owner pose regression to all27source ACTION
+slots used by first30dense movement states. PASS:223nodes x7samples/action,
+379323 scalar comparisons, maxerror4.99206543e-9, original local topology/poses.
+This validates sampled local poses, not complete rendered rig/blend/retail parity.
+No rig/weight/physics constants were changed without a reproduced discrepancy.
+
+Grounded spring launch preparation now implements source endpoint placement,
+class1 XZ nudge boundaries, class2 .8Y placement, source matrix/task angles and
+command/timer outputs. Full host suite, focused tests, sanitizer and native build PASS; no physics is applied
+and off-ground scratch behavior is explicitly unsupported. Next: source-timed
+collision/launch/controller integration and verify rendered movement/SpinDash.
+
+Source nuance: source Z/X/Y calls postmultiply Rz*Rx*Ry. Spring localY vector
+is unaffected by finalY rotation, so endpoint and SpringB velocity displacements
+match mathematically. The distinct raw player taskY must still be preserved for
+the remaining physical frame/forward/side motion. Earlier broad warning below
+must not be read as a different launch vector for this pureY case.
+
+Overall updated goal remains active and incomplete: no1:1retail or hardware claim.
+
+---
+
 # WCA active checkpoint — published groups and exact native rerun
 
 Published through `680dc63` to PhantaAura/SA3DS main; Desktop checkout synchronized.

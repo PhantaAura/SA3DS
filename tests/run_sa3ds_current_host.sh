@@ -72,3 +72,6 @@ python3 tests/test_pc2004_ring_groups_importer.py
 
 printf '\n== Movement object definitions and spring command decoding ==\n'
 bash tests/run_movement_objects.sh
+
+printf '\n== Source spring launch preparation ==\n'
+bash tests/run_spring_launch.sh
