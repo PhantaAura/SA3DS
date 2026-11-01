@@ -21,7 +21,9 @@ static uint32_t r32(const uint8_t*p){return (uint32_t)p[0]|((uint32_t)p[1]<<8)|(
 static float rf(const uint8_t*p){uint32_t u=r32(p);float f;memcpy(&f,&u,4);return f;}
 static int span(uint32_t o,uint32_t n,uint32_t s,size_t size){return o<=size&&n<=(size-o)/s;}
 static float clamp(float x,float a,float b){return fmaxf(a,fminf(b,x));}
-static int cell(float x){return (int)clamp(floorf((x-GRID_MIN)/CELL_SIZE),0,15);}
+static int cell(float x,float center){return (int)clamp(floorf(((x-center)-GRID_MIN)/CELL_SIZE),0,15);}
+static int cell_x(const SA3DSECCollision*s,float x){return cell(x,s->center_x);}
+static int cell_z(const SA3DSECCollision*s,float z){return cell(z,s->center_z);}
 static int finite3(SA1Vec3 p){return isfinite(p.x)&&isfinite(p.y)&&isfinite(p.z);}
 static SA1SurfaceFrame actor_frame(const SA1PlayerState*p){
     SA1Vec3 up=p->ground_normal;
@@ -70,7 +72,7 @@ static void mark_contact_edges(SA3DSECCollision*s){
         SA1Vec3 v[3]={t->a,t->b,t->c};
         for(unsigned e=0;e<3;e++){
             int smooth_wall_neighbor=0,support_neighbor=0;SA1Vec3 a=v[e],b=v[(e+1)%3];
-            unsigned c=(unsigned)cell((a.z+b.z)*.5f)*16u+(unsigned)cell((a.x+b.x)*.5f);
+            unsigned c=(unsigned)cell_z(s,(a.z+b.z)*.5f)*16u+(unsigned)cell_x(s,(a.x+b.x)*.5f);
             for(uint32_t q=s->cells[c];q<s->cells[c+1];q++){
                 uint32_t j=s->references[q];SA3DSECTriangle*n=&s->triangles[j];if(i==j)continue;
                 SA1Vec3 nv[3]={n->a,n->b,n->c};int found_a=0,found_b=0;
@@ -90,8 +92,18 @@ void sa3ds_ec_collision_destroy(SA3DSECCollision*s){
     free(s->triangles);free(s->references);free(s->visited);memset(s,0,sizeof(*s));
 }
 int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
-    if(!s||!data)return 0;
-    memset(s,0,sizeof(*s));SA3DSPak pak;SA3DSPakChunk chunk;
+    return sa3ds_ec_collision_open_region(s,data,size,0,0.0f,0.0f);
+}
+int sa3ds_ec_collision_open_region(SA3DSECCollision*s,const void*data,size_t size,
+    uint32_t act_index,float center_x,float center_z){
+    if(!s)return 0;
+    memset(s,0,sizeof(*s));
+    float min_x=center_x+GRID_MIN,max_x=center_x+GRID_MAX;
+    float min_z=center_z+GRID_MIN,max_z=center_z+GRID_MAX;
+    if(!data||!isfinite(center_x)||!isfinite(center_z)||
+       !isfinite(min_x)||!isfinite(max_x)||!isfinite(min_z)||!isfinite(max_z)||
+       !(min_x<max_x)||!(min_z<max_z))return 0;
+    SA3DSPak pak;SA3DSPakChunk chunk;
     if(sa3dspak_open(&pak,data,size)!=SA3DSPAK_OK||
        sa3dspak_find(&pak,"COLLISION",&chunk)!=SA3DSPAK_OK||chunk.size<64)return 0;
     const uint8_t*b=chunk.data;
@@ -107,7 +119,7 @@ int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
     for(uint32_t i=0;i<na;i++){
         const uint8_t*a=b+ao+(size_t)i*32;
         if(r32(a+4)>ni||r32(a+8)>ni-r32(a+4))return 0;
-        if(r32(a)==0){if(count)return 0;first=r32(a+4);count=r32(a+8);}
+        if(r32(a)==act_index){if(count)return 0;first=r32(a+4);count=r32(a+8);}
     }
     if(!count)return 0;
     for(uint32_t i=0;i<nv;i++)if(!finite3(point(b+vo+(size_t)i*12)))return 0;
@@ -121,12 +133,14 @@ int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
         if(r32(r)>=nm||!finite3(point(r+16))||!isfinite(rf(r+28))||rf(r+28)<0||
            !finite3(point(r+32))||!finite3(point(r+44))||!finite3(point(r+56)))return 0;
     }
+    s->act_index=act_index;s->center_x=center_x;s->center_z=center_z;
+    s->min_x=min_x;s->max_x=max_x;s->min_z=min_z;s->max_z=max_z;
     s->triangles=calloc(MAX_TRIANGLES,sizeof(*s->triangles));
     if(!s->triangles)goto fail;
     for(uint32_t i=first;i<first+count;i++){
         const uint8_t*r=b+io+(size_t)i*80;
         if(!(r32(r+4)&LAND_SOLID))continue;
-        if(hypotf(rf(r+16),rf(r+24))-rf(r+28)>500.0f)continue;
+        if(hypotf(rf(r+16)-center_x,rf(r+24)-center_z)-rf(r+28)>500.0f)continue;
         const uint8_t*m=b+mo+(size_t)r32(r)*32;SA3CMatrix matrix;
         SA1Vec3 p=point(r+32),a=point(r+44),sc=point(r+56);
         sa3c_matrix_build_object(&matrix,(SA3CVec3){p.x,p.y,p.z},
@@ -145,7 +159,7 @@ int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
             t.normal=sa1_vec3_normalize(cross);
             t.min_x=fminf(t.a.x,fminf(t.b.x,t.c.x));t.max_x=fmaxf(t.a.x,fmaxf(t.b.x,t.c.x));
             t.min_z=fminf(t.a.z,fminf(t.b.z,t.c.z));t.max_z=fmaxf(t.a.z,fmaxf(t.b.z,t.c.z));
-            if(t.max_x<GRID_MIN||t.min_x>GRID_MAX||t.max_z<GRID_MIN||t.min_z>GRID_MAX)continue;
+            if(t.max_x<s->min_x||t.min_x>s->max_x||t.max_z<s->min_z||t.min_z>s->max_z)continue;
             t.source_instance=i;t.source_triangle=j/3;t.flags=r32(r+4);
             if(s->triangle_count==MAX_TRIANGLES)goto fail;
             s->triangles[s->triangle_count++]=t;
@@ -156,7 +170,7 @@ int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
     if(compact)s->triangles=compact;
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
-        for(int z=cell(t->min_z);z<=cell(t->max_z);z++)for(int x=cell(t->min_x);x<=cell(t->max_x);x++)s->cells[z*16+x+1]++;
+        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)s->cells[z*16+x+1]++;
     }
     for(unsigned i=1;i<=256;i++)s->cells[i]+=s->cells[i-1];
     s->reference_count=s->cells[256];if(s->reference_count>MAX_REFERENCES)goto fail;
@@ -166,21 +180,21 @@ int sa3ds_ec_collision_open(SA3DSECCollision*s,const void*data,size_t size){
     uint32_t cursor[256];memcpy(cursor,s->cells,sizeof(cursor));
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
-        for(int z=cell(t->min_z);z<=cell(t->max_z);z++)for(int x=cell(t->min_x);x<=cell(t->max_x);x++)s->references[cursor[z*16+x]++]=i;
+        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)s->references[cursor[z*16+x]++]=i;
     }
     mark_contact_edges(s);
     s->world=(SA1PhysicsWorld){.query_surface=sa3ds_ec_collision_surface,
         .query_contact=sa3ds_ec_collision_contact,.context=s,
-        .reset_min_x=GRID_MIN,.reset_max_x=GRID_MAX,.reset_min_y=-80.0f,
-        .reset_min_z=GRID_MIN,.reset_max_z=GRID_MAX};
+        .reset_min_x=s->min_x,.reset_max_x=s->max_x,.reset_min_y=-80.0f,
+        .reset_min_z=s->min_z,.reset_max_z=s->max_z};
     return 1;
 fail:sa3ds_ec_collision_destroy(s);return 0;
 }
 
 SA1Surface sa3ds_ec_collision_surface(void*ctx,float x,float z){
     SA3DSECCollision*s=ctx;SA1Surface result={0};float best=1e30f;
-    if(!s||!isfinite(x)||!isfinite(z)||x<GRID_MIN||x>GRID_MAX||z<GRID_MIN||z>GRID_MAX)return result;
-    s->queries++;unsigned c=cell(z)*16+cell(x);
+    if(!s||!isfinite(x)||!isfinite(z)||x<s->min_x||x>s->max_x||z<s->min_z||z>s->max_z)return result;
+    s->queries++;unsigned c=cell_z(s,z)*16+cell_x(s,x);
     for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
         SA3DSECTriangle*t=&s->triangles[s->references[j]];s->triangle_tests++;
         if(t->normal.y<=0.45f||x<t->min_x||x>t->max_x||z<t->min_z||z>t->max_z)continue;
@@ -195,10 +209,10 @@ SA1Surface sa3ds_ec_collision_surface(void*ctx,float x,float z){
 }
 SA1Contact sa3ds_ec_collision_contact(void*ctx,SA1Vec3 p,SA1Vec3 probe,float range){
     SA3DSECCollision*s=ctx;SA1Contact result={.surface_id=-1};float best=1e30f;
-    if(!s||!finite3(p)||!finite3(probe)||!isfinite(range)||range<0||p.x<GRID_MIN||p.x>GRID_MAX||p.z<GRID_MIN||p.z>GRID_MAX)return result;
+    if(!s||!finite3(p)||!finite3(probe)||!isfinite(range)||range<0||p.x<s->min_x||p.x>s->max_x||p.z<s->min_z||p.z>s->max_z)return result;
     s->queries++;probe=sa1_vec3_normalize(probe);
     if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*sizeof(*s->visited));s->query_serial=1;}
-    int x0=cell(p.x-range),x1=cell(p.x+range),z0=cell(p.z-range),z1=cell(p.z+range);
+    int x0=cell_x(s,p.x-range),x1=cell_x(s,p.x+range),z0=cell_z(s,p.z-range),z1=cell_z(s,p.z+range);
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
       unsigned c=(unsigned)z*16u+(unsigned)x;
       for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
@@ -250,8 +264,8 @@ static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1Player
     float best=2.0f;int32_t hit_id=-1;SA1Vec3 motion=sa1_vec3_sub(p->pos,previous);
     /* Contact point is at most SUPPORT away from the center's swept bounds. */
     float r=SA3DS_EC_CONTROLLER_SUPPORT;
-    int x0=cell(fminf(previous.x,p->pos.x)-r),x1=cell(fmaxf(previous.x,p->pos.x)+r);
-    int z0=cell(fminf(previous.z,p->pos.z)-r),z1=cell(fmaxf(previous.z,p->pos.z)+r);
+    int x0=cell_x(s,fminf(previous.x,p->pos.x)-r),x1=cell_x(s,fmaxf(previous.x,p->pos.x)+r);
+    int z0=cell_z(s,fminf(previous.z,p->pos.z)-r),z1=cell_z(s,fmaxf(previous.z,p->pos.z)+r);
     s->queries++;
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
         unsigned c=z*16+x;
@@ -347,8 +361,8 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
     previous=sa1_vec3_add(previous,shift);
     SA1Vec3 center=sa1_vec3_add(p->pos,shift);
     if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*4);s->query_serial=1;}
-    int x0=cell(fminf(previous.x,center.x)-radius),x1=cell(fmaxf(previous.x,center.x)+radius);
-    int z0=cell(fminf(previous.z,center.z)-radius),z1=cell(fmaxf(previous.z,center.z)+radius);
+    int x0=cell_x(s,fminf(previous.x,center.x)-radius),x1=cell_x(s,fmaxf(previous.x,center.x)+radius);
+    int z0=cell_z(s,fminf(previous.z,center.z)-radius),z1=cell_z(s,fmaxf(previous.z,center.z)+radius);
     s->queries++;
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
         unsigned c=z*16+x;

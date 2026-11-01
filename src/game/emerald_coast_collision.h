@@ -32,9 +32,18 @@ typedef struct {
     uint32_t *references,*visited;
     uint32_t reference_count,query_serial,queries,triangle_tests,wall_hits;
     float reference_y;
+    /* Grid cells are local to this bounded region; triangle/player positions
+     * remain in the owner's original world units and coordinates. */
+    uint32_t act_index;
+    float center_x,center_z;
+    float min_x,max_x,min_z,max_z;
 } SA3DSECCollision;
 
+/* Default opening region: act0, center(0,0), instance radius500 and grid
+ * +/-512. Region selection does not spawn/reset or move the player. */
 int sa3ds_ec_collision_open(SA3DSECCollision *out,const void *package,size_t size);
+int sa3ds_ec_collision_open_region(SA3DSECCollision *out,
+    const void *package,size_t size,uint32_t act_index,float center_x,float center_z);
 void sa3ds_ec_collision_destroy(SA3DSECCollision *stage);
 SA1Surface sa3ds_ec_collision_surface(void *context,float x,float z);
 SA1Contact sa3ds_ec_collision_contact(void *context,SA1Vec3 position,

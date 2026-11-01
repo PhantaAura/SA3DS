@@ -53,3 +53,6 @@ sh tests/run_wca_replay.sh
 
 printf "\n== PC2004 deterministic half-turn tie ==\n"
 sh tests/run_pc2004_half_turn.sh
+
+printf "\n== Emerald Coast bounded collision regions ==\n"
+sh tests/run_emerald_coast_regions.sh
