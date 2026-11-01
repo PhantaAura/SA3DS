@@ -1,3 +1,4 @@
+#include "pc2004_motion.h"
 #include "steam_air.h"
 
 #include <math.h>
@@ -41,7 +42,7 @@ static float bams_to_rad(unsigned bams) {
 }
 
 static float approach_angle_bams(float angle, float target, unsigned step_bams) {
-    float diff = wrap_angle(target - angle);
+    float diff = sa1_pc2004_turn_delta(target - angle);
     float step = bams_to_rad(step_bams);
     if (diff > step) diff = step;
     if (diff < -step) diff = -step;
@@ -183,7 +184,7 @@ static float signed_angle_on_plane(SA1Vec3 from, SA1Vec3 to, SA1Vec3 up) {
     to = sa1_vec3_normalize(to);
     float cosine = clampf(sa1_vec3_dot(from, to), -1.0f, 1.0f);
     float sine = sa1_vec3_dot(sa1_vec3_cross(from, to), up);
-    return atan2f(sine, cosine);
+    return sa1_pc2004_turn_delta(atan2f(sine, cosine));
 }
 
 static float yaw_from_forward(SA1Vec3 forward, float fallback) {

@@ -152,3 +152,12 @@ float sa1_pc2004_integrate_axis_no_cross(float speed, float add_velocity,
     if (clamped_out) *clamped_out = clamped;
     return next;
 }
+
+float sa1_pc2004_turn_delta(float delta) {
+    const float pi=3.14159265358979323846f, tau=6.28318530717958647692f;
+    while(delta>pi)delta-=tau;
+    while(delta<-pi)delta+=tau;
+    if(isfinite(delta) && (unsigned)(fabsf(delta)/tau*65536.0f+0.5f)==0x8000u)
+        return pi;
+    return delta;
+}

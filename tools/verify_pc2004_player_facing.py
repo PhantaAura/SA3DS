@@ -6,6 +6,9 @@ from pathlib import Path
 from verify_pc2004_collision_work import PROFILE_SHA256, parse_pe, va_to_off
 
 SIGNATURES = {
+    "AdjustAngle task low16 masking": (0x438358, "25ffff000081e2ffff0000"),
+    "AdjustAngle signed16 delta": (0x438363, "8bc82bca560fbff1"),
+    "AdjustAngle negative task turn": (0x43837E, "84ed79082bd7"),
     # Both paths apply task Z/X rotation before Y, using the same Ninja helpers.
     "movement Z rotation": (0x43ECCD, "e8de623400"),
     "movement X rotation": (0x43ECDE, "e8fd613400"),

@@ -1,4 +1,5 @@
 #include "player_view.h"
+#include "wca_replay.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -68,6 +69,12 @@ static int g_emerald_coast;
 static int g_ec_combined;
 static int g_ec_replay;
 static unsigned g_ec_replay_tick;
+static int g_wca_replay=0;
+static int g_wca_perf_active=0,g_wca_perf_finished=0;
+static uint64_t g_wca_perf_start_ms=0,g_wca_perf_submit_ms=0;
+static unsigned g_wca_perf_frames=0,g_wca_perf_max_submit_ms=0;
+static uint32_t g_wca_perf_min_linear=UINT32_MAX;
+static float g_wca_perf_max_cmd_usage=0;
 static int g_ec_replay_pause;
 static unsigned g_rendered_frames;
 static SA3DSECCollision g_ec_collision;
@@ -756,7 +763,9 @@ int main(void) {
     g_ec_combined=g_emerald_coast && stage_only==NULL;
     FILE *replay=fopen("sdmc:/3ds/SA3DS/emerald_coast_replay.flag","rb");
     g_ec_replay=g_ec_combined && replay!=NULL;
-    g_ec_replay_pause=replay && fgetc(replay)=='P';
+    int replay_mode=replay?fgetc(replay):EOF;
+    g_ec_replay_pause=replay_mode=='P';
+    g_wca_replay=g_ec_replay && replay_mode=='M';
     if(replay)fclose(replay);
     if(stage_only)fclose(stage_only);
     if (g_emerald_coast) {
@@ -842,17 +851,29 @@ int main(void) {
         unsigned steps=(g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
+            SA3DSWCAReplayStep wca={0};
             if(g_ec_replay) {
-                if(g_ec_replay_tick==0){reset_selected_zone();trace_toggle();}
-                tick_input=sa3ds_ec_replay_input(g_ec_replay_tick);
-                /* Fixed camera for equivalent scripted directional inputs. */
-                g_camera.yaw=0;
+                if(g_wca_replay) {
+                    wca=sa3ds_wca_replay_step(g_ec_replay_tick);
+                    if(wca.reset)reset_selected_zone();
+                    if(g_ec_replay_tick==0){
+                        trace_toggle();g_wca_perf_active=1;
+                        g_wca_perf_start_ms=osGetTime();
+                    }
+                    tick_input=wca.screen_input;
+                    g_camera.yaw=wca.camera_yaw;
+                } else {
+                    if(g_ec_replay_tick==0){reset_selected_zone();trace_toggle();}
+                    tick_input=sa3ds_ec_replay_input(g_ec_replay_tick);
+                    /* Fixed camera for equivalent scripted directional inputs. */
+                    g_camera.yaw=0;
+                }
             }
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
-            if (!modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
-            if (!modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
+            if (!g_ec_replay && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
+            if (!g_ec_replay && !modifier && (held&KEY_R)) sa3ds_parity_camera_manual_yaw(&g_camera,0.035f);
             SA1Vec3 previous=g_player.pos;
             uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
@@ -872,13 +893,16 @@ int main(void) {
             }
             if (g_trace_file) {
                 const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
+                char replay_name[64];
+                if(g_wca_replay)snprintf(replay_name,sizeof(replay_name),
+                    "WCA_%03u_%s",wca.case_id,wca.name);
                 if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
-                        g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN"),&g_player,&tick_input,
+                        g_wca_replay?replay_name:(g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN")),&g_player,&tick_input,
                         g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
                 else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
-                (!modifier && (held&(KEY_L|KEY_R))) ? 1 : 0);
+                (g_ec_replay || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
             if(g_ec_replay) {
                 if(g_ec_replay_tick%30==0 || tick_input.jump_pressed) {
                     char line[180];snprintf(line,sizeof(line),
@@ -887,8 +911,12 @@ int main(void) {
                         g_player.pos.x,g_player.pos.y,g_player.pos.z,g_player.vel.x,g_player.vel.y,g_player.vel.z,
                         g_player.grounded,(unsigned long)g_ec_collision.wall_hits);boot_log("REPLAY",line);
                 }
-                if(++g_ec_replay_tick==600){trace_stop();g_ec_replay=0;boot_log("REPLAY","finished; live HID controls resumed");}
-                if(g_ec_replay_pause && g_ec_replay_tick==270){
+                if(++g_ec_replay_tick==(g_wca_replay?SA3DS_WCA_REPLAY_TICKS:600u)){
+                    if(g_wca_replay)g_wca_perf_finished=1;
+                    trace_stop();g_ec_replay=0;g_wca_replay=0;
+                    boot_log("REPLAY","finished; live HID controls resumed");
+                }
+                if(!g_wca_replay && g_ec_replay_pause && g_ec_replay_tick==270){
                     g_paused=1;boot_log("REPLAY","paused airborne for inspection; SELECT+A resumes");
                 }
             }
@@ -918,6 +946,24 @@ int main(void) {
             g_boottrace_first_frame=0;
         }
         g_last_submit_ms=osGetTime()-t0;
+        if(g_wca_perf_active){
+            g_wca_perf_frames++;g_wca_perf_submit_ms+=g_last_submit_ms;
+            if(g_last_submit_ms>g_wca_perf_max_submit_ms)
+                g_wca_perf_max_submit_ms=(unsigned)g_last_submit_ms;
+            uint32_t free_linear=linearSpaceFree();
+            if(free_linear<g_wca_perf_min_linear)g_wca_perf_min_linear=free_linear;
+            float cmd_usage=C3D_GetCmdBufUsage();
+            if(cmd_usage>g_wca_perf_max_cmd_usage)g_wca_perf_max_cmd_usage=cmd_usage;
+            if(g_wca_perf_finished){
+                char metrics[256];uint64_t elapsed=osGetTime()-g_wca_perf_start_ms;
+                snprintf(metrics,sizeof(metrics),
+                    "WCA ticks=%u renderFrames=%u runtimeElapsedMs=%llu submitTotalMs=%llu submitMaxMs=%u minLinearBytes=%lu maxCmdUsage=%.6f",
+                    SA3DS_WCA_REPLAY_TICKS,g_wca_perf_frames,(unsigned long long)elapsed,
+                    (unsigned long long)g_wca_perf_submit_ms,g_wca_perf_max_submit_ms,
+                    (unsigned long)g_wca_perf_min_linear,g_wca_perf_max_cmd_usage);
+                boot_log("PERF",metrics);g_wca_perf_active=0;
+            }
+        }
         if(g_emerald_coast&&probe_log){snprintf(frame_line,sizeof(frame_line),
             "frame=%u tick=%llu pos=%.3f,%.3f,%.3f grounded=%d wall=%lu linear=%lu",
             g_rendered_frames,(unsigned long long)g_player.sim_frame,g_player.pos.x,g_player.pos.y,g_player.pos.z,

@@ -65,4 +65,10 @@ SA1PC2004LocalVector sa1_pc2004_pgetinertia_add_velocity(
 float sa1_pc2004_integrate_axis_no_cross(float speed, float add_velocity,
                                          int *clamped_out);
 
+/* AdjustAngle 0x438350 sign-extends the 16-bit TASK-angle delta. A half-turn
+ * is always -0x8000 there. Port yaw has the opposite sign, so both floating
+ * representations of that quantized tie must turn toward positive port yaw.
+ * Other deltas retain the existing unquantized surface approximation. */
+float sa1_pc2004_turn_delta(float core_delta_radians);
+
 #endif

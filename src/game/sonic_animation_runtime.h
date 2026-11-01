@@ -59,6 +59,11 @@ typedef struct {
     float speed_scalar;
     uint8_t speed_scalar_valid;
     uint8_t transition_active;
+    /* PlayAnimation keeps +0x126 at the original blend index even when a
+     * changed +0x124 request completes state2. Rendering immediately uses
+     * the request; the following tick still arbitrates against this index. */
+    uint8_t deferred_index_valid;
+    uint16_t deferred_index_runtime_id;
     uint16_t transition_from_action_slot;
     float transition_from_frame;
     float transition_progress;

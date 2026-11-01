@@ -2,7 +2,7 @@
   "0g_native_visual_guard_reintegration": "HOST + DEVKITARM + AZAHAR VERIFIED; exact updated 3DSX reached first frame with owner SD assets; physical Old 3DS display PENDING",
   "3ds_gpu_render_visual_fidelity": "AZAHAR 2126.0 OLD-3DS/VULKAN PASS with owner assets; physical hardware and retail visual parity PENDING",
   "animation_tick_determinism": "HOST VERIFIED (128 replay loops, 10 repeated samples per tick); presentation only",
-  "checkpoint": "0.0.10.0 WCA CP1 IN PROGRESS \u2014 2026-10-31 native camera/input/model-facing correction from 48615c1",
+  "checkpoint": "WCA CP1/CP2 native matrix and playback correction; CP3 region/route loading IN PROGRESS",
   "pc2004_moving_landing_selector": "SOURCE-BACKED + HOST + NATIVE TRACE: active filtered input OR signed forward!=0 uses ground9-13; input-only zero-speed fixtures PASS; native moving landing frame286 request9/impactY-1.64194489; no physics divergence",
   "pc2004_stationary_landing_idle": "SOURCE-EQUATION + HOST + OWNER TERRAIN: retained pre-contact worldY >-5 selects2(ball8)/1(upright12), <=-5 classifies19 then ordinary main idle overwrites0 same tick;4 actual beach cases; signed1800-counter and4/5/6/0 chain with reverse property6; native WhiteZone request5/ACTION121 then0 and soft landing2/ACTION123 observed; tilt/events/exceptional contact PARTIAL",
   "pc2004_inverted_up_normal_force": "EXACT EXECUTABLE + SOURCE-EQUATION VERIFIED:4436F7 stack+C/outputAddVelocity+4 and direct normal integration, not forward; strict Speed.x>run_speed/Up<0; old helper fails new regression, corrected98 component cases+120 synthetic integration ticks PASS; ordinary upright slope unchanged; inverted retail contact NOT VERIFIED",
@@ -14,7 +14,7 @@
   "pc2004_slope_roll_status": "SOURCE-EQUATION + OWNER TERRAIN: grounded Charge/Roll passes original0x100; inertia drag0.0002 when Up<=double0.98; four imported slopes at forward5 retain about0.039 speed/tick; charge/flat unchanged; retail trajectory PENDING",
   "pc2004_flat_charge_braking": "SOURCE-EQUATION + INTEGRATED HOST VERIFIED: reuse PGetBreak/AddVelocity after rotation; speed5 ->4.788 versus old4.86; signed/zero/lateral cases and independent80-tick fixture; surface path already used this kernel; dynamic collision force parity OPEN",
   "pc2004_uncurl_request_arbitration": "EXACT EXECUTABLE + METADATA + HOST + SOURCE-POSE + NATIVE + AZAHAR VERIFIED: Roll exit29/ACTION22 ->1/ACTION122 ->2/ACTION123; changed requests interrupt property4 outside state2 blend; final owner native trace29->1 in15ticks then moving9 next tick, jump interrupts29; full idle/landing selectors PARTIAL",
-  "azahar_performance_this_run": "BOUNDED HUD SAMPLES ONLY: EC15ms/frame,29382KiB linear free; WhiteZone5-16ms,30346KiB; low-power mode logged; no sustained FPS or hardware certification",
+  "azahar_performance_this_run": "Runtime-clock measurement9792ticks/8787renderframes/164844ms,~53.3renderFPS; submitTotal133313ms,max416ms; minLinear30087680bytes,maxCmdUsage0.114258; hardware NOT VERIFIED",
   "pass11b_pose_oracle_this_run": "OWNER SOURCE VERIFIED: ACTIONs1/22/120/121/122/123;84294 scalar comparisons;max error4.99206543e-9; no retail timing proof",
   "pc2004_jump_selection_order": "SOURCE-BACKED + HOST + OWNER TERRAIN + NATIVE + AZAHAR VERIFIED: actions1/2 jump before charge entry; action5 jump before roll exit; action4 ignores jump including release tick; eight flat and 36 imported-support launch cases; no initiation-tick hold boost; full slope-air/retail trajectory parity OPEN",
   "citro3d_per_draw_vertex_arena": "SOURCE-BACKED PARTIAL; host allocation and native source contract passed; hardware draw pending",
@@ -59,5 +59,7 @@
   "zone_reset_pose_refresh": "SOURCE CONTRACT PASS; Old 3DS hardware pending",
   "wca_tracking": "docs/WCA_0_0_10_0.md",
   "wca_native_facing": "SOURCE-EQUATION VERIFIED + HOST VERIFIED + NATIVE BUILD VERIFIED + AZAHAR VERIFIED (bounded): exact-EXE movement -taskY/display 0x8000-taskY establishes model -X forward; native screen X bridge and White Zone RH projection corrected;144 direction/camera cases +64x20-tick owner-terrain cases; full native matrix and physical hardware OPEN",
-  "wca_native_replay": "AZAHAR VERIFIED bounded600 ticks; native trace SHA256783e82018245e366c0e0cab7273a4c6095c39f8208bfb31a20bbfbb4bb477fd6; AIR241-285/GND286; IDs9/10/11/12/14; not retail trajectory or full stage completion"
+  "wca_native_replay": "AZAHAR VERIFIED bounded9792ticks/152cases; discrete states and animation frames match unfused host oracle; max coordinate9.15e-5; source half-turn tie corrected; NOT RETAIL VERIFIED",
+  "wca_animation_playback": "SOURCE-EQUATION VERIFIED + HOST VERIFIED + NATIVE BUILD VERIFIED + AZAHAR VERIFIED bounded: state2 uses current requested row, retains source index; properties3/9/10 stored frames wrap by motion count; full retail transitions OPEN",
+  "wca_half_turn": "EXACT EXECUTABLE + HOST + AZAHAR VERIFIED: signed16 task-angle tie0x8000 -> negative task turn/positive port yaw;256neighboring plane/camera fixtures; non-tie inertia retained"
 }

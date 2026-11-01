@@ -252,6 +252,109 @@ int main(void) {
         assert(case_s.binding.runtime_id==18&&!case_s.transition_active);
     }
 
+    /* A pending state-2 request controls the CURRENT transition speed and
+     * completion property (0x44A916..0x44A943), while drawing still uses the
+     * original blend index. Land19 has transition1 and therefore ends an
+     * in-flight Walk9 blend immediately, without another frame of Walk9. */
+    {
+        SA3DSSonicAnimationSync pending_sync={0};
+        SA3DSSonicAnimationRuntime pending_rt={0};
+        SA1PlayerState pending=base_player();
+        SA3DSSonicAnimationObservation pending_o=observe(&pending_sync,&pending);
+        (void)select_no_mutation(&pending_rt,&pending,&pending_o);
+        pending.sim_frame=1;pending.vel.z=0.2f;
+        pending_o=observe(&pending_sync,&pending);
+        SA3DSSonicAnimationSelection pending_s=
+            select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==9&&pending_s.transition_weight==0.25f);
+        pending.sim_frame=2;pending.grounded=false;
+        pending.action_state=SA1_ACTION_AIRBORNE;pending.ball_form=false;
+        pending_o=observe(&pending_sync,&pending);
+        pending_s=select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==9&&pending_s.transition_weight==0.5f);
+        pending.sim_frame=3;pending.grounded=true;
+        pending.action_state=SA1_ACTION_GROUNDED;pending.vel.z=0;
+        pending_o=observe(&pending_sync,&pending);
+        pending_s=select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.requested_runtime_id==19);
+        assert(pending_s.binding.runtime_id==19&&!pending_s.transition_active);
+        assert(pending_s.sample_frame==0);
+        /* Original +0x126 still retains blend index9. Main requests idle0 on
+         * the following tick; new blending must sample Walk9, not Land19. */
+        pending.sim_frame=4;
+        pending_o=observe(&pending_sync,&pending);
+        pending_s=select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==0&&pending_s.transition_active);
+        assert(pending_s.transition_from_action_slot==3);
+        assert(pending_s.transition_from_frame==0);
+        assert(pending_s.transition_weight==0.0625f);
+    }
+    /* Changing to Run2's transition0.5 must use0.5 while the original
+     * Walk9 blend remains visible. If the selector returns to retained index9
+     * immediately after completion, retail retains completed property9. */
+    {
+        SA3DSSonicAnimationSync pending_sync={0};
+        SA3DSSonicAnimationRuntime pending_rt={0};
+        SA1PlayerState pending=base_player();
+        SA3DSSonicAnimationObservation pending_o=observe(&pending_sync,&pending);
+        (void)select_no_mutation(&pending_rt,&pending,&pending_o);
+        pending.sim_frame=1;pending.vel.z=0.2f;
+        pending_o=observe(&pending_sync,&pending);
+        (void)select_no_mutation(&pending_rt,&pending,&pending_o);
+        pending.sim_frame=2;pending.vel.z=6.0f;
+        pending_o=observe(&pending_sync,&pending);
+        SA3DSSonicAnimationSelection pending_s=
+            select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==9&&pending_s.requested_runtime_id==13);
+        assert(pending_s.transition_active&&pending_s.transition_weight==0.75f);
+        pending.sim_frame=3;
+        pending_o=observe(&pending_sync,&pending);
+        pending_s=select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==13&&!pending_s.transition_active);
+        SA3DSSonicAnimationRuntime before=pending_rt;
+        (void)select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(!memcmp(&before,&pending_rt,sizeof before));
+        pending.sim_frame=4;pending.vel.z=0.2f;
+        pending.animation_accel_residual=0.01f;
+        pending_o=observe(&pending_sync,&pending);
+        pending_s=select_no_mutation(&pending_rt,&pending,&pending_o);
+        assert(pending_s.binding.runtime_id==9&&!pending_s.transition_active);
+        assert(pending_s.binding.property==9);
+        assert(fabsf(pending_s.sample_frame-0.68f)<1e-6f);
+    }
+    puts("PC2004 state2 current-request speed/property and retained source index: PASS");
+
+    /* Retail states3/9/10 normalize the STORED frame every tick, not only
+     * the render sample. Otherwise traces disagree at the first wrap and a
+     * long session eventually loses fractional frame precision. */
+    for(unsigned kind=0;kind<5;kind++) {
+        SA3DSSonicAnimationSync loop_sync={0};
+        SA3DSSonicAnimationRuntime loop_rt={0};
+        SA1PlayerState loop=base_player();
+        if(kind==1){loop.grounded=false;loop.action_state=SA1_ACTION_AIRBORNE;loop.ball_form=true;}
+        if(kind>=2){loop.action_state=SA1_ACTION_ROLL;loop.ball_form=true;
+            loop.vel.z=kind==2?-2:(kind==3?55:-55);}
+        float expected_frame=0;
+        for(unsigned tick=0;tick<1000;tick++) {
+            loop.sim_frame=tick;
+            SA3DSSonicAnimationObservation loop_o=observe(&loop_sync,&loop);
+            SA3DSSonicAnimationSelection loop_s=select_no_mutation(&loop_rt,&loop,&loop_o);
+            assert(loop_s.binding.runtime_id==(kind==0?0:(kind==1?14:15)));
+            float frames=kind==0?32.0f:7.0f;
+            if(tick){
+                expected_frame+=kind==0?0.5f:(kind==1?1.0f:
+                    (kind==2?-1.4f:(kind==3?38.5f:-38.5f)));
+                while(expected_frame>=frames)expected_frame-=frames;
+                while(expected_frame<0)expected_frame+=frames;
+            }
+            /* A tiny negative phase plus frame_count may round to the upper
+             * endpoint in f32; the source negative-wrap branch also permits it. */
+            assert(loop_s.sample_frame>=0&&loop_s.sample_frame<=frames);
+            assert(fabsf(loop_s.sample_frame-expected_frame)<0.00001f);
+        }
+    }
+    puts("PC2004 stored animation phase wrap: PASS (fixed, scalar, signed/multi-wrap speed loops x1000 ticks)");
+
     SA1PlayerState p = base_player();
     SA3DSSonicAnimationSync sync = {0};
     SA3DSSonicAnimationRuntime rt = {0};
@@ -279,7 +382,9 @@ int main(void) {
     assert(s.binding.runtime_id == 9 && s.transition_weight == 0.75f);
     p.sim_frame = 4;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
-    assert(s.binding.runtime_id == 9 && !s.transition_active);
+    /* Completion uses the pending Jump14 request immediately; +0x126
+     * retains Walk9 until the following request/index arbitration. */
+    assert(s.binding.runtime_id == 14 && !s.transition_active);
     p.sim_frame = 5;
     o = observe(&sync, &p); s = select_no_mutation(&rt, &p, &o);
     assert(s.binding.runtime_id == 14 && !s.transition_active);

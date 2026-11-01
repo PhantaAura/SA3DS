@@ -1,3 +1,25 @@
+# WCA continuation — native matrix and animation playback verified locally
+
+Parent6375f2b; see [the unified WCA ledger](docs/WCA_0_0_10_0.md) for exact
+scope, files, source witnesses, native identity and open CP0–CP9 gates.
+
+Native152-case/9792-tick direction+transition replay exposed and fixed an
+original signed16 half-turn tie discrepancy. PC2004 current-request state2 blend
+arbitration and stored loop-phase wrapping are also corrected with failing-before
+regressions and exact-owner instruction verification. Full host/source-pose/
+owner collision gates PASS. Native283324-byte candidate SHA256
+`e87b411503c1420a986db4d76dc52e8064b8a98a36384ae98532f976c55d5ac8`
+PASSed Azahar Old3DS/Vulkan. All discrete states and animation frames match the
+unfused host oracle; maximum coordinate error9.15e-5. Runtime-clock render rate
+about53.3FPS, worst submission416ms, minimum linear29382KiB; hardware NOT RUN.
+
+Next active implementation: complete Sonic's source-backed act0->1 geometry
+residency and stage loading. CP3 collision-region API has focused host coverage;
+route package/reader and full-act loading work remain in progress. Full gameplay,
+whale, audio/goal, override and hardware gates remain incomplete.
+
+---
+
 # SA3DS 0.0.10.0 — World Comes Alive, CP1 in progress
 
 2026-10-31; starting commit `48615c1` (clean checkout, GitHub main confirmed).

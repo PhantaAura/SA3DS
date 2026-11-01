@@ -42,7 +42,7 @@ static SA1Vec3 local_to_world(float yaw, SA1LocalSpeed speed) {
 }
 
 static int radians_to_signed_bams(float radians) {
-    float scaled = wrap_angle(radians) / SA1_TAU * BAMS_FULL;
+    float scaled = sa1_pc2004_turn_delta(radians) / SA1_TAU * BAMS_FULL;
     return (int)lroundf(scaled);
 }
 

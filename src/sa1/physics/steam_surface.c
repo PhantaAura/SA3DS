@@ -126,7 +126,7 @@ static float signed_angle_on_plane(SA1Vec3 from, SA1Vec3 to, SA1Vec3 up) {
     to = sa1_vec3_normalize(to);
     float c = clampf(sa1_vec3_dot(from, to), -1.0f, 1.0f);
     float s = sa1_vec3_dot(sa1_vec3_cross(from, to), up);
-    return atan2f(s, c);
+    return sa1_pc2004_turn_delta(atan2f(s, c));
 }
 
 static void rotate_frame_toward(SA1SurfaceFrame *frame,

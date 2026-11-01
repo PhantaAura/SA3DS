@@ -1,3 +1,4 @@
+#include "pc2004_motion.h"
 #include "steam_flat.h"
 #include "steam_air.h"
 #include "steam_ball.h"
@@ -44,7 +45,7 @@ static float bams_to_rad(unsigned bams) {
 }
 
 static float approach_angle_bams(float angle, float target, unsigned step_bams) {
-    float diff = wrap_angle(target - angle);
+    float diff = sa1_pc2004_turn_delta(target - angle);
     float step = bams_to_rad(step_bams);
     if (diff > step) diff = step;
     if (diff < -step) diff = -step;

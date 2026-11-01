@@ -288,16 +288,41 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
         uint64_t elapsed = player->sim_frame - runtime->last_sim_frame;
         for (uint64_t tick = 0; tick < elapsed; ++tick) {
             if (runtime->transition_active) {
-                runtime->transition_progress +=
-                    runtime->active_binding.transition_speed;
+                SA3DSSonicAnimationBinding request;
+                if (!sa3ds_sonic_animation_binding(requested_id, &request))
+                    (void)sa3ds_sonic_animation_binding(0, &request);
+                /* 0x44A80C captures the CURRENT request in BX. State2 then
+                 * loads that row at 0x44A916, adds its transition speed and
+                 * selects its playback property at 0x44A93B. The original
+                 * blend index only controls the in-flight pose drawing. */
+                runtime->transition_progress += request.transition_speed;
                 if (runtime->transition_progress >= 1.0f) {
+                    SA3DSSonicAnimationBinding index = runtime->active_binding;
                     runtime->transition_active = 0;
                     runtime->transition_progress = 0.0f;
+                    if (request.runtime_id != index.runtime_id) {
+                        select_binding(runtime, requested_id, player->sim_frame);
+                        runtime->deferred_index_valid = 1;
+                        runtime->deferred_index_runtime_id = index.runtime_id;
+                    }
+                    /* 0x43F230 initializes reverse playback from the retained
+                     * index motion's frames-1; forward loops start at the
+                     * saved start frame (zero for current supported paths). */
                     runtime->accumulated_sample_frame =
-                        runtime->active_binding.property == 6 || runtime->active_binding.property == 7
-                        ? (float)(runtime->active_binding.source_frame_count - 1) : 0.0f;
+                        request.property == 6 || request.property == 7
+                        ? (float)(index.source_frame_count - 1) : 0.0f;
                 }
                 continue;
+            }
+
+            if (runtime->deferred_index_valid) {
+                int8_t playback_property = runtime->active_binding.property;
+                (void)sa3ds_sonic_animation_binding(
+                    runtime->deferred_index_runtime_id, &runtime->active_binding);
+                /* If the selector returned to the retained index, the source
+                 * leaves the property selected on state2 completion intact. */
+                runtime->active_binding.property = playback_property;
+                runtime->deferred_index_valid = 0;
             }
 
             /* PlayAnimation resets to state 1 on a changed request unless
@@ -348,6 +373,21 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
             int backed = 0;
             runtime->accumulated_sample_frame +=
                 current_frame_step(runtime, player, &backed);
+            if ((runtime->active_binding.property == 3 ||
+                 runtime->active_binding.property == 9 ||
+                 runtime->active_binding.property == 10) &&
+                runtime->active_binding.source_frame_count &&
+                isfinite(runtime->accumulated_sample_frame)) {
+                /* PlayAnimation stores the normalized phase for both signed
+                 * and forward loops (states3/9/10). Keeping only the sampler
+                 * modulo would leak unbounded frames into traces/transitions
+                 * and eventually lose fractional increments in long runs. */
+                float frames = (float)runtime->active_binding.source_frame_count;
+                runtime->accumulated_sample_frame =
+                    fmodf(runtime->accumulated_sample_frame, frames);
+                if (runtime->accumulated_sample_frame < 0.0f)
+                    runtime->accumulated_sample_frame += frames;
+            }
         }
     }
 

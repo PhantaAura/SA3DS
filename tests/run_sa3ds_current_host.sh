@@ -47,3 +47,9 @@ sh tests/run_pass10a.sh
 
 printf "\n== Native view/input/facing regression ==\n"
 sh tests/run_player_view.sh
+
+printf "\n== WCA bounded native replay protocol ==\n"
+sh tests/run_wca_replay.sh
+
+printf "\n== PC2004 deterministic half-turn tie ==\n"
+sh tests/run_pc2004_half_turn.sh
