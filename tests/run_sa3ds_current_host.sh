@@ -65,3 +65,7 @@ python3 tests/test_emerald_coast_full_integration.py
 printf '\n== Direct ring runtime and importer ==\n'
 bash tests/run_ring_runtime.sh
 python3 tests/test_pc2004_ring_importer.py
+
+printf '\n== Ring-group runtime ==\n'
+bash tests/run_ring_groups.sh
+python3 tests/test_pc2004_ring_groups_importer.py

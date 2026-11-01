@@ -52,3 +52,32 @@ The importer verifies the executable, source registry, normal Sonic suffix and
 collision/display instructions. Cliplevel comes from owner`sonicDX.ini`, with
 executable fallback1; high placement bits retain source clipping semantics.
 No PC pointers or addresses occur in runtime payloads.
+
+
+### Optional ring-group definitions
+
+`build_pc2004_ring_groups.py OWNER_EXE SYSTEM DIRECT_PLACEMENTS EXTERNAL_OUTPUT`
+adds `RING_GROUPS` to an existing placement package. It preserves the direct
+`RINGS` payload and reuses the existing compact visual package. Source class21,
+line/circle code, group journal, normal Sonic variant, bounds and the owner-only
+Ninja quarter-wave lookup table are verified before conversion. Output remains
+outside Git; the lookup table is Sega-derived data, not compiled into source.
+
+`RING_GROUPS` header32bytes `<8sHHIIIII>`: magic`SA3DRGRP`, version1, flags0,
+groupCount, rowOffset32, specOffset, trigOffset, totalSize. Each40-byte row has
+act, source SET row index and preserved32-byte SET record. The32-byte spec
+`<fffIIIII>` stores parent load/unload squared ranges, child unload squared range,
+maximum child index7, lookup count1025 and three reserved zeros. The final4100bytes
+are the owner's1025float32 quarter-wave samples. Source writer validates the
+exact table digest; native reader validates finite, monotonic0..1 samples and
+endpoints. Counts, types, row identity/order, cross-kind duplicates, modes,
+parameters and all region arithmetic are bounded before actor allocation.
+
+The runtime derives line/circle children using the original fractional count,
+truncated BAMS angles and lookup interpolation. It applies Z–X–Y matrix order,
+then adds parent translation once. Child rotations/parameters are zero. Original
+parent activation, reverse child update order, byte collection journal and
+child-unload parent teardown are separate from direct-ring residency. Combined
+actor capacity remains2046 across both acts. Original source collision list7
+capacity128 is retained for this ring subsystem; cross-category queue ordering
+remains a later object integration requirement.

@@ -14,16 +14,19 @@ static void *read_file(const char*path,size_t*n){
  void*p=malloc((size_t)len);assert(p&&fread(p,1,(size_t)len,f)==(size_t)len);fclose(f);*n=(size_t)len;return p;
 }
 int main(int argc,char**argv){
- if(argc!=4){fprintf(stderr,"usage: %s COLLISION ROUTE RING_PLACEMENTS\n",argv[0]);return 2;}
+ if(argc<4||argc>6){fprintf(stderr,"usage: %s COLLISION ROUTE RING_PLACEMENTS [ACT [GROUPS_ONLY]]\n",argv[0]);return 2;}
  size_t cn,rn,pn;void*cb=read_file(argv[1],&cn),*rb=read_file(argv[2],&rn),*pb=read_file(argv[3],&pn);
  SA3DSECRoute route;SA3DSRings rings;
  assert(sa3ds_ec_route_open(&route,rb,rn)&&sa3ds_rings_open(&rings,pb,pn));
- const SA3DSECStart*start=sa3ds_ec_route_start(&route,0);assert(start);
- SA3DSECCollision collision;assert(sa3ds_ec_collision_open_region(&collision,cb,cn,0,start->task_origin.x,start->task_origin.z));
+ unsigned act=argc>4?(unsigned)strtoul(argv[4],NULL,10):0;
+ int groups_only=argc>5?atoi(argv[5]):0;assert(act<2&&(groups_only==0||groups_only==1));
+ sa3ds_rings_reset_act(&rings,act);
+ const SA3DSECStart*start=sa3ds_ec_route_start(&route,act);assert(start);
+ SA3DSECCollision collision;assert(sa3ds_ec_collision_open_region(&collision,cb,cn,act,start->task_origin.x,start->task_origin.z));
  SA1PlayerState player;sa3ds_ec_residency_start(&collision,start,&player);
  unsigned tick=0;
- for(;tick<1200&&rings.collected_events<3;tick++){
-  SA1Input input=sa3ds_view_input(sa3ds_ring_replay_input(&rings,&player,0,tick));
+ for(;tick<1200&&(groups_only?rings.group_collected_events:rings.collected_events)<3;tick++){
+  SA1Input input=sa3ds_view_input(sa3ds_ring_replay_input_mode(&rings,&player,0,tick,groups_only));
   if(sa3ds_ec_residency_needs_recenter(&collision,player.pos))assert(sa3ds_ec_residency_recenter(&collision,cb,cn,player.pos.x,player.pos.z,&player));
   SA1Vec3 previous=player.pos;uint64_t frame=player.sim_frame;
   collision.reference_y=player.pos.y;SA1SteamFlatDebug debug={0};
@@ -36,7 +39,7 @@ int main(int argc,char**argv){
   assert(!memcmp(&before,&player,sizeof(player)));
   if(collected||tick%120==0)printf("tick=%u pos=%.3f,%.3f,%.3f collected=%u rings=%d\n",tick,player.pos.x,player.pos.y,player.pos.z,collected,rings.rings);
  }
- int pass=rings.collected_events>=3&&rings.rings>=3;
- printf("Owner opening ring input replay: %s ticks=%u events=%u (port interaction; NOT RETAIL TRACE)\n",pass?"PASS":"FAIL",tick,rings.collected_events);
+ int pass=(groups_only?rings.group_collected_events:rings.collected_events)>=3&&rings.rings>=3;
+ printf("Owner ring input replay: %s act=%u ticks=%u events=%u groupEvents=%u (port interaction; NOT RETAIL TRACE)\n",pass?"PASS":"FAIL",act,tick,rings.collected_events,rings.group_collected_events);
  sa3ds_ec_collision_destroy(&collision);sa3ds_rings_destroy(&rings);free(cb);free(rb);free(pb);return pass?0:1;
 }

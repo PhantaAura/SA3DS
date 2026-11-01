@@ -1,3 +1,25 @@
+# WCA active checkpoint — source line/circle ring groups
+
+Parent718d60f. Added92source ring groups, producing206act0/287act1ring actors
+including direct rings. Original lookup data remains external. Group activation,
+reverse child order, pickup phase/journal and teardown are source-backed and host
+tested. An exact earlier group candidate PASSed isolated Azahar act1 input-only
+collection in170ticks. Latest305316-byte/c83c5578 candidate passes the complete
+host suite and native build; final native rerun is pending approval-service quota.
+See [the unified ledger](docs/WCA_0_0_10_0.md) for exact artifacts and limits.
+
+Main checkpoint718d60f is published to PhantaAura/SA3DS/main with user approval.
+This continuation is local until publication can be reviewed. The owned earlier
+Azahar test PID27248 remains running because its stop action was not executed.
+Do not stop the original shared emulator. Temporary group validation flags live
+only in the independent/private test SD; shared SD still has the direct-only pair.
+
+Next: finalize the group checkpoint, then source-backed SpringB/springs/dash
+panels. Full route, whale, cameras/audio, full HUD/death/checkpoints/goal, override,
+and actual Old3DS verification are still required. The overall goal is incomplete.
+
+---
+
 # WCA active checkpoint — direct ring interactions
 
 Parentcf89778. Direct-ring runtime/importer now supports the original source

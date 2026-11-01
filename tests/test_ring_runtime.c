@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 static void *read_file(const char *path,size_t *n){
  FILE*f=fopen(path,"rb");assert(f);fseek(f,0,SEEK_END);long len=ftell(f);assert(len>0);rewind(f);
  void*p=malloc((size_t)len);assert(p&&fread(p,1,(size_t)len,f)==(size_t)len);fclose(f);*n=(size_t)len;return p;
@@ -13,6 +14,13 @@ static unsigned tick(SA3DSRings*r,float x,int debug,int eligible,unsigned clip){
 }
 int main(int argc,char**argv){
  assert(argc>=2);size_t n;void*p=read_file(argv[1],&n);SA3DSRings r;
+ if(argc==3&&!strcmp(argv[2],"capacity")){
+  assert(sa3ds_rings_open(&r,p,n)&&r.count==130);
+  for(int i=0;i<4;i++)assert(!tick(&r,0,0,1,1));
+  unsigned pending=0;for(unsigned i=0;i<r.count;i++)pending+=r.states[i].pending_hit;
+  assert(pending==128&&tick(&r,0,0,1,1)==128&&r.rings==128&&r.extra_lives==1);
+  sa3ds_rings_destroy(&r);free(p);puts("Ring collision list capacity128: PASS");return 0;
+ }
  if(argc==3){assert(!sa3ds_rings_open(&r,p,n));assert(!r.states);free(p);return 0;}
  assert(sa3ds_rings_open(&r,p,n)&&r.count==4&&r.clip_level==1);
  assert(!tick(&r,0,0,1,1)&&r.states[0].action==4);

@@ -6,4 +6,6 @@
  * collision result, animation, ring counter or stage event injection. */
 SA1Input sa3ds_ring_replay_input(const SA3DSRings *rings,const SA1PlayerState *player,
     float camera_yaw,unsigned tick);
+SA1Input sa3ds_ring_replay_input_mode(const SA3DSRings *rings,const SA1PlayerState *player,
+    float camera_yaw,unsigned tick,int groups_only);
 #endif
