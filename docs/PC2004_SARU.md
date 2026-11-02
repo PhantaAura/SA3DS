@@ -158,3 +158,58 @@ Original4ACF80 dispatch mapping, to reuse in the next implementation:
 4AB3F0 is a logic-side visual/terrain helper, not target detection.4ABB90 is
 behavior arbitration, not blend-clock advancement. Blend advancement lives in
 4AB3F0/4AB5E0;4AB2B0 is the read-only display. Keep these identities distinct.
+
+## WCA34 ordinary actor state handlers
+
+saru_actor.[ch] implements the ordinary4ACF80 dispatch after the caller's4258F0
+special-mode and46C010 lifetime decisions. Constructor preserves original orbit,
+mode, packed tag, initial frame and one RNG15 call. Active updates retain source
+state order for idle0, gestures1/2, turns3/5, orbit4/6, facing7, throw9 and taunt10.
+8/11/out-of-range use the common tail.12 emits the original death/destruction
+request instead of running the normal tail. It does not execute death effects.
+
+Important behavior:
+
+- Idle consumes RNG before its logic draw and proximity arbitration. The625 and
+  40000 squared-distance checks are strict. The middle-distance transition to7
+  returns false, allowing the handler's remaining source code to continue.
+- Current frames increment at source-specific rates, with source retained versus
+  stored comparison boundaries. Blend completion can allow the handler to advance
+  the newly selected clip on the same tick. Facing7 draws after its decisions;
+  other handlers have their original earlier draw placement.
+-3/5 cap facing by400 BAMS toward4000/C000, then select the original orbit clip.
+  4/6 increment/decrement orbital phase by trunc(65536*sourceInverseTau/(radius+3)),
+  retain raw task angles, update source-LUT orbit position and bob phases670/9A8.
+-4AB3F0 has its initial visibility gate;4AB5E0 does not. Negative-scale status2000
+  queries49EE30 before draw suppression.4CDF60 is the damped squash spring:
+  retained velocity update, scaleY clamp.3..1.7, scaleX=2-scaleY. Draw scales are
+  captured before this update; later display reads the updated state.
+- Throw9 restores the saved task position, requests a projectile at original
+  current frame>9.5 before adding.3, then returns to idle at clip end with source
+  wait/blend/sound. The request retains joint14 pose context; it does not create
+  a projectile. Mode2 skips the normal throw choice.
+- Common damage calls retain the conditional-plus-unconditional order. Idle has
+  an additional early conditional check. Death selected in the normal tail runs
+  the death handler next tick. Short counter wraps16 bits; old long age>600
+  clears status400. Status100 controls CCL enqueue; display is separately requested.
+
+Services explicitly require original trig/atan/RNG, floor query and shared4CE030
+damage behavior. The module emits dust, sound, projectile and death requests for
+later original-system integration; no fake collision, substitute bomb or silent
+native damage stub is supplied. Sound requests distinguish424880 actor/120 from
+424FC0 positional calls. Source frame counts are supplied from the owner package.
+SET activation, constructor versus active phase, task/list ordering, previous CCL,
+special mode4AB7C0, effect execution, rendering and native homing remain caller work.
+
+Focused source-neutral tests cover RNG consumption, strict distances, middle
+arbitration behavior, constructor, turn/orbit states, blend completion/order,
+visibility/suppression differences, mode2, projectile threshold/order, taunt
+random boundary, damage/death ordering and counter/status timing. Owner verifier
+checks actual13-entry jump-table/call mapping and source constants, then28 first
+orbit ticks for all14 SET rows with source quarter-LUT: maxerror0.0. That fixture
+retains Y through an injected floor callback and proves no actual floor collision.
+It does not execute the retail AI, shared damage or projectile runtime.
+
+Required host gate and staged native build passed. Pose/import data unchanged;
+no repeated Sonic oracle. Unreferenced actor code leaves the381608B/ae538ee9
+native artifact identical; no repeated emulator run or new FPS/memory claim.

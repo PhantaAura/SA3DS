@@ -1,3 +1,26 @@
+# WCA active checkpoint — original E SARU ordinary state handlers
+
+WCA34 adds portable saru_actor.[ch] for ordinary4ACF80 dispatch. Idle/gesture/
+turn/orbit/face/throw/taunt decisions preserve original RNG order, strict range
+and frame comparisons, per-state draw/blend phase, source squash spring,
+prior-position restoration, projectile/death requests and common counters/CCL
+queue conditions. Frame counts come from owner data, not a compiled clip table.
+
+Focused actor gate and required cumulative host/native build PASS. Owner verifier
+checks13-entry dispatch and28 first-orbit steps across all14 real placements,
+max_error0.0 using source LUT/constants. Floor callback retains Y in that fixture;
+it is NOT a floor-query, shared damage, projectile, retail or native actor proof.
+Native artifact remains381608B/ae538ee9, byte-identical because no native actor
+callers yet. No repeat emulator or unchanged Sonic pose/import gate was run.
+
+Next: source shared enemy damage/CCL and actual projectile construction, original
+floor query/range/special-mode services, then native list3 lifecycle/render/homing.
+Useful existing private references: sonic.exe.c115485..116272;132193..132640,
+/private/tmp/sa3ds-wca31-saru-full.asm.4CDF60 is squash, not terrain handling.
+Full WCA/physics1to1 remain false. Continue after checkpoint publication.
+
+---
+
 # WCA active checkpoint — original E SARU two-motion pose evaluation
 
 WCA33 adds saru_pose.[ch] for the exact38-node/six-ACTION profile. Unlike Sonic's

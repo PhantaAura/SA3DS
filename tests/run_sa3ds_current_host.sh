@@ -120,3 +120,6 @@ bash tests/run_saru.sh
 
 printf '\n== Original E SARU two-motion poses ==\n'
 bash tests/run_saru_pose.sh
+
+printf '\n== Original E SARU ordinary actor decisions ==\n'
+bash tests/run_saru_actor.sh

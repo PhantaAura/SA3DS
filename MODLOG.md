@@ -172,3 +172,10 @@ Added original independent clip wrap/weighted vector/raw-angle blend sampler.
 Sonic transition path unchanged. Focused and raw-owner seven-pose checks pass,
 required host/pose/native gates pass; artifact remains ae538ee9. Source helper
 identity and13-state dispatch map recorded for next real enemy AI integration.
+
+## 2026-11-02 WCA34 E SARU ordinary actor decisions
+
+Implemented original ordinary handler/control order, source squash, RNG and
+throw/death requests. Focused/source-owner checks and required host/native gates
+pass. No native/shared damage/projectile execution claim. Original private C
+contains handlers115485..116272;4CDF60 is squash, not terrain. See Saru doc.
