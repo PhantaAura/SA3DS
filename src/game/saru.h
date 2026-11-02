@@ -24,4 +24,21 @@ int sa3ds_saru_definitions_open(SA3DSSaruDefinitions *out,const void *data,size_
  * performed by this initializer. Failure clears out. */
 int sa3ds_saru_initialize(const SA3DSMovementPlacement *placement,uint16_t random15,
     double sine_x,double cosine_x,SA3DSSaruInitial *out);
+/* Original ACTION identities in owner saru.sa3c, not inferred behavior names. */
+enum { SA3DS_SARU_ACTION_COUNT=6 };
+typedef struct {
+    uint16_t current_action,pending_action,enemy_flags;
+    float current_frame,pending_frame,blend_weight,blend_rate;
+} SA3DSSaruAnimation;
+void sa3ds_saru_animation_init(SA3DSSaruAnimation *state);
+/* Source state writers set flag200, pending ACTION/frame/rate. They do not
+ * clear an existing blend weight when a request interrupts another blend. */
+int sa3ds_saru_animation_request(SA3DSSaruAnimation *state,uint16_t action,
+    float frame,float blend_rate);
+/* Call exactly when source4AB3F0/4AB5E0 reaches its draw branch. Capture the
+ * pre-advance draw pose, then advance blend/completion.4AB2B0's later display
+ * callback must only read state. eligible includes the relevant helper's
+ * visibility/global suppression gates; do not advance per rendered frame. */
+int sa3ds_saru_animation_logic_draw(SA3DSSaruAnimation *state,int eligible,
+    SA3DSSaruAnimation *draw_pose);
 #endif

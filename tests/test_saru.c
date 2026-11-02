@@ -22,6 +22,26 @@ int main(int argc,char **argv){
         free(b);free(lut);return 0;
     }
     assert(argc==1);
+    SA3DSSaruAnimation anim,draw={0};sa3ds_saru_animation_init(&anim);
+    assert(anim.current_frame==3&&anim.current_action==0&&anim.enemy_flags==0x483);
+    assert(sa3ds_saru_animation_request(&anim,4,2,.5f));
+    assert(!sa3ds_saru_animation_logic_draw(&anim,0,&draw)&&anim.blend_weight==0);
+    assert(sa3ds_saru_animation_logic_draw(&anim,1,&draw));
+    assert(draw.blend_weight==0&&draw.current_action==0&&anim.blend_weight==.5f);
+    assert(sa3ds_saru_animation_logic_draw(&anim,1,&draw));
+    assert(draw.blend_weight==.5f&&anim.blend_weight==1&&(anim.enemy_flags&0x200));
+    /* A mid-blend request preserves weight; draw uses the new pending clip. */
+    assert(sa3ds_saru_animation_request(&anim,5,1,.1f)&&anim.blend_weight==1);
+    assert(sa3ds_saru_animation_logic_draw(&anim,1,&draw));
+    assert(draw.blend_weight==1&&draw.pending_action==5&&draw.current_action==0);
+    assert(!(anim.enemy_flags&0x200)&&anim.enemy_flags==0x483&&anim.blend_weight==0);
+    assert(anim.current_action==5&&anim.current_frame==1);
+    /* Retained source sum can exceed1 even when its f32 store rounds to1. */
+    anim.blend_weight=1;anim.enemy_flags|=0x200;anim.blend_rate=0x1p-25f;
+    assert(sa3ds_saru_animation_logic_draw(&anim,1,&draw)&&!(anim.enemy_flags&0x200));
+    assert(!sa3ds_saru_animation_request(&anim,6,0,.1f));
+    assert(!sa3ds_saru_animation_request(&anim,0,NAN,.1f));
+    assert(!sa3ds_saru_animation_logic_draw(&anim,1,&anim));
     SA3DSMovementPlacement p={.type=29,.position={10,20,30},.angles={0,0x4000,-1},.parameters={-2,0,2}};
     SA3DSSaruInitial s;assert(sa3ds_saru_initialize(&p,0,0,1,&s));
     assert(s.task_position.x==12&&s.task_position.y==20&&s.task_position.z==30);
@@ -38,6 +58,6 @@ int main(int argc,char **argv){
     p.parameters[1]=1000;assert(sa3ds_saru_initialize(&p,0,1,0,&s)&&s.mode==2);
     assert(!sa3ds_saru_initialize(&p,32768,1,0,&s)&&s.task_status==0);
     p.type=30;assert(!sa3ds_saru_initialize(&p,0,1,0,&s));
-    puts("E SARU initialization: PASS orbit/packed-angle tags/modes/radius/RNG/source flags; AI/native spawning not connected");
+    puts("E SARU: PASS init orbit/packed tags/modes/radius/RNG/source flags and logic-draw blend timing/strict completion/interruption; AI/native spawning not connected");
     return 0;
 }

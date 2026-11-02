@@ -1,3 +1,20 @@
+# WCA active checkpoint — E SARU logic-side animation blend timing
+
+WCA32 adds original pending/current ACTION/frame/weight state and logic-draw
+blend advancement.4AB3F0/4AB5E0 draw with the old weight, then advance and finish
+only when retained sum>1; equality keeps blending. Interrupted requests preserve
+weight. Later display4AB2B0 is read-only. Caller must preserve each helper's
+visibility/suppression gates and source order; native AI callers remain pending.
+
+Focused timing regressions, exact-owner helper digests/definition round-trip,
+required cumulative host gate and native build PASS. Native381608B/ae538ee9 is
+byte-identical to WCA31; no repeated pose import or emulator run. Full source
+AI, actual two-motion pose blending, projectile/damage/death and native homing
+registry remain next. All original payloads stay external. Full WCA/physics1to1
+remain false. Checkpoint publication is not milestone completion.
+
+---
+
 # WCA active checkpoint — original E SARU animated asset conversion
 
 WCA31 converts the original38-node/15-model rig, all six ACTIONs referenced by

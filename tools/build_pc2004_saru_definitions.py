@@ -8,6 +8,8 @@ from tools.verify_pc2004_ec_route import verified_reader,PROFILE_SHA256
 from tools.importers.pc2004_set import read_set_source
 from tools.build_pc2004_emerald_coast_visual import read_source
 RANGES={
+ (0x4ab3f0,0x1e9):'11cc076c71ca7dc116271cf70562536b69e8f0ebbec10407b1cf081a48792778',
+ (0x4ab5e0,0x1d0):'e79eb5b64c83e5919b90b8fadbb29347a9d75ac870da4563b6886569a216344e',
  (0x4acf80,0x18c):'347856f742fa766125b305576dd8c347ed44e0e1f08b350728ad268c08ffda80',
  (0x4ad140,0x176):'daff40d5f8c0fadc8ee6c366f5bb501671840ac0b158b7dabe492714ffe003a0',
  (0x4ab240,0x63):'0b53fbc95427e58ecaddf5b66d24fa9ea1035257d3b83881140d7536b34cec06',

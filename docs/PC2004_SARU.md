@@ -100,3 +100,30 @@ change yields381608B native artifact SHA256
  ae538ee995c835a23e3ba7a0dfac1236aa37177056ed6e36b8bb95c01684ca91.
 No emulator run was repeated for this bounded format extension. Enemy AI,
 projectiles, damage/death and native homing-target registration remain pending.
+
+## WCA32 logic-side blend timing
+
+4AB3F0 and4AB5E0 invoke406EC0 with current ACTION/frame, pending ACTION/frame
+and old blend weight. Only afterward do they add blend rate, store the new
+float weight and compare the retained sum to1. Strictly greater completes:
+clear enemy flag200, zero weight, copy pending frame/ACTION to current.
+Exactly1 continues blending for that call. The retained-sum distinction matters:
+1+2^-25 rounds to float1 but the source comparison still completes.
+
+Source AI writers set flag200, pending frame/rate/ACTION without clearing weight.
+A request during a blend therefore retains weight. Constructor current frame3,
+current/pending ACTION slot0, flags483 and zeroed remaining animation state are
+preserved. The later4AB2B0 display only reads the resulting state. Moving this
+advance to a normal render callback would change timing under skipped frames.
+4AB3F0 has an initial visibility test and later global suppression;4AB5E0 has
+its own differing gates. The portable helper accepts explicit draw eligibility;
+callers must reproduce those conditions and call order, not assume one call per
+rendered frame. Noneligible calls draw/advance nothing.
+
+Focused host checks cover old-weight snapshot, strict equality/completion,
+retained-sum boundary, interruption and noneligible calls. Original helper body
+digests are verified by the owner definitions builder. Required cumulative host
+and staged native build passed. This unreferenced helper leaves WCA31 native
+artifact ae538ee9 identical. No new emulator/retail/hardware check is claimed.
+Actual arbitrary-frame two-motion pose evaluation, AI state updates and native
+actor connection remain pending; this state helper does not implement them.

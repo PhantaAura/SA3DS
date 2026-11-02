@@ -158,3 +158,10 @@ External original rig/six clips/Basic meshes/12 textures converted. Raw geometry
 and sampled source-key world oracle passed; required host/pose/native gates pass.
 Native preflight supports expanded triangle/N-poly source tags; no exact artifact
 emulator/AI/native enemy claim. See docs/PC2004_SARU.md for hashes and remaining work.
+
+## 2026-11-02 WCA32 E SARU logic-draw blend clock
+
+Preserved pre-advance draw snapshot, strict retained-sum completion, interrupted
+weight retention and caller-owned visibility/suppression eligibility. Host and
+owner helper witnesses pass; native build remains ae538ee9. No native AI claim.
+Unified WCA ledger now includes WCA30/31/32 and current CP5/CP9 bounded status.

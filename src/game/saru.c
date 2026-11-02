@@ -52,3 +52,34 @@ int sa3ds_saru_initialize(const SA3DSMovementPlacement*p,uint16_t random15,doubl
     if(!finite3(next.task_position))return 0;
     *out=next;return 1;
 }
+
+static int animation_valid(const SA3DSSaruAnimation*s){
+    return s&&s->current_action<SA3DS_SARU_ACTION_COUNT&&s->pending_action<SA3DS_SARU_ACTION_COUNT&&
+        isfinite(s->current_frame)&&s->current_frame>=0&&isfinite(s->pending_frame)&&s->pending_frame>=0&&
+        isfinite(s->blend_weight)&&s->blend_weight>=0&&isfinite(s->blend_rate)&&s->blend_rate>=0;
+}
+void sa3ds_saru_animation_init(SA3DSSaruAnimation*s){
+    if(s)*s=(SA3DSSaruAnimation){.enemy_flags=0x483,.current_frame=3};
+}
+int sa3ds_saru_animation_request(SA3DSSaruAnimation*s,uint16_t action,float frame,float rate){
+    if(!animation_valid(s)||action>=SA3DS_SARU_ACTION_COUNT||!isfinite(frame)||frame<0||
+       !isfinite(rate)||rate<0)return 0;
+    s->pending_action=action;s->pending_frame=frame;s->blend_rate=rate;s->enemy_flags|=0x200;
+    return 1;
+}
+int sa3ds_saru_animation_logic_draw(SA3DSSaruAnimation*s,int eligible,SA3DSSaruAnimation*draw){
+    if(!draw||draw==s||!animation_valid(s))return 0;
+    if(!eligible)return 0;
+    *draw=*s; /*406EC0 receives the old weight before the logic helper advances it. */
+    if(s->enemy_flags&0x200){
+        /*4AB546..588 /4AB732..774 store float weight but compare the retained
+         * sum. Equality1 keeps blending. Do not compare rounded stored weight. */
+        double next=(double)s->blend_weight+s->blend_rate;
+        s->blend_weight=(float)next;
+        if(next>1.){
+            s->enemy_flags&=(uint16_t)~0x200u;s->blend_weight=0;
+            s->current_frame=s->pending_frame;s->current_action=s->pending_action;
+        }
+    }
+    return 1;
+}
