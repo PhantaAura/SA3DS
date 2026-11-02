@@ -23,7 +23,7 @@ for name,(count,sha) in expected.items():
  assert p.texture_count==count and p.sha256()==sha
  assert {e.data_format for e in p.entries}=={9}
  assert {e.pixel_format for e in p.entries}<={0,1,2}
- # Decode first/last base mip to ensure twiddle/pixel path covers archive.
+ # Decode first/last base mip to ensure linear/pixel path covers archive.
  for i in {0,p.texture_count-1}:
   rgba=p.decode_base_rgba(i);e=p.entries[i];assert len(rgba)==e.width*e.height*4
 # Strong base-first witness. BEACH01 is base-only for this texture while

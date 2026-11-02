@@ -10,8 +10,10 @@
 static C3D_BufInfo buffer;
 static C3D_TexEnv environment;
 static int allocations,uploads,deletes,draw_count,depth_mask,blend[6];
+static int depth_enabled,expected_depth_enabled=1;
 static const void *draw_vertices[2];
-static int expected_mask;
+static int expected_mask,fail_upload;
+static C3D_Tex *last_bound;
 
 void *linearAlloc(size_t size){void *p=malloc(size);if(p)allocations++;return p;}
 void linearFree(void *p){if(p){allocations--;free(p);}}
@@ -23,7 +25,7 @@ int BufInfo_Add(C3D_BufInfo *p,const void *data,ptrdiff_t stride,int count,uint6
     assert(stride==(ptrdiff_t)sizeof(SA3DSGpuVertex)&&count==2&&permutation==0x10);
     p->data=data;return 0;
 }
-void C3D_TexBind(int unit,C3D_Tex *t){assert(unit==0&&t->data);}
+void C3D_TexBind(int unit,C3D_Tex *t){assert(unit==0&&t->data);last_bound=t;}
 C3D_TexEnv *C3D_GetTexEnv(int unit){assert(unit==0);return &environment;}
 void C3D_TexEnvInit(C3D_TexEnv *p){p->color=0;}
 void C3D_TexEnvSrc(C3D_TexEnv *p,int mode,int a,int b,int c){
@@ -31,7 +33,7 @@ void C3D_TexEnvSrc(C3D_TexEnv *p,int mode,int a,int b,int c){
 }
 void C3D_TexEnvFunc(C3D_TexEnv *p,int mode,int function){assert(p==&environment&&mode==C3D_Both&&function==GPU_MODULATE);}
 void C3D_TexEnvColor(C3D_TexEnv *p,uint32_t color){p->color=color;}
-void C3D_DepthTest(bool enabled,int function,int mask){assert(enabled&&function==GPU_GREATER);depth_mask=mask;}
+void C3D_DepthTest(bool enabled,int function,int mask){assert(function==GPU_GREATER);depth_enabled=enabled;depth_mask=mask;}
 void C3D_AlphaBlend(int a,int b,int c,int d,int e,int f){
     blend[0]=a;blend[1]=b;blend[2]=c;blend[3]=d;blend[4]=e;blend[5]=f;
 }
@@ -42,7 +44,7 @@ static void check_blend(void){
 }
 void C3D_DrawArrays(int primitive,int first,int count){
     assert(primitive==GPU_TRIANGLES&&first==0&&count==3);
-    assert(depth_mask==expected_mask);check_blend();
+    assert(depth_mask==expected_mask&&depth_enabled==expected_depth_enabled);check_blend();
     assert(draw_count<2);draw_vertices[draw_count++]=buffer.data;
 }
 int sa3ds_upload_rgba8_cpu(C3D_Tex *t,uint16_t width,uint16_t height,
@@ -50,6 +52,7 @@ int sa3ds_upload_rgba8_cpu(C3D_Tex *t,uint16_t width,uint16_t height,
     SA3DSSonicTextureTrace trace,void *userdata){
     (void)trace;(void)userdata;
     assert(width==8&&height==8&&rgba&&index==0&&total==1);
+    if(fail_upload)return 0;
     t->data=malloc(1);assert(t->data);uploads++;return 1;
 }
 static void put32(unsigned char *p,uint32_t u){
@@ -133,7 +136,34 @@ int main(int argc,char **argv){
     put32(material+16,0x9038a400u);
     assert(!sa3ds_ec_gpu_init(&gpu,&v,500,NULL,NULL));
     assert(allocations==0&&uploads==2&&gpu.vertices==NULL);
-    free(geometry);free(data);
+    /* Optional override uses the same CPU upload but never mutates originals.
+     * Staged upload failure is atomic; clear/destroy return to zero residency. */
+    put32(material+16,0x9438a400u);
+    assert(sa3ds_ec_gpu_init(&gpu,&v,500,NULL,NULL));
+    assert(!gpu.override_enabled&&!gpu.override_texture.data&&!gpu.override_texture_bytes&&!gpu.override_submitted_draws);
+    SA3DSTextureOverride replacement={.act=0,.texture_id=0,.texture=v.textures};
+    void *original_texture=gpu.textures[0].data;
+    assert(sa3ds_ec_gpu_set_texture_override(&gpu,&replacement,NULL,NULL));
+    assert(gpu.override_enabled&&gpu.override_texture_bytes==256);
+    assert(gpu.textures[0].data==original_texture&&gpu.override_texture.data!=original_texture);
+    draw_count=0;expected_mask=GPU_WRITE_ALL;assert(sa3ds_ec_gpu_draw(&gpu,0));
+    assert(last_bound==&gpu.override_texture&&gpu.override_submitted_draws==1);
+    void *enabled_texture=gpu.override_texture.data;fail_upload=1;
+    assert(!sa3ds_ec_gpu_set_texture_override(&gpu,&replacement,NULL,NULL));
+    assert(gpu.override_enabled&&gpu.override_texture.data==enabled_texture);
+    fail_upload=0;sa3ds_ec_gpu_clear_texture_override(&gpu);
+    assert(!gpu.override_enabled&&!gpu.override_texture.data&&!gpu.override_texture_bytes&&!gpu.override_submitted_draws);
+    draw_count=0;assert(sa3ds_ec_gpu_draw(&gpu,0));assert(last_bound==&gpu.textures[0]&&!gpu.override_submitted_draws);
+    assert(sa3ds_ec_gpu_set_texture_override(&gpu,&replacement,NULL,NULL));
+    sa3ds_ec_gpu_destroy(&gpu);assert(allocations==0&&deletes==5);
+    /* A sky drawn with its separate projection must never occlude terrain.
+     * Exercise the real draw function's depth-off pass and state restoration. */
+    assert(sa3ds_ec_gpu_init_full(&gpu,&v,NULL,NULL));
+    gpu.background_pass=1;draw_count=0;expected_mask=GPU_WRITE_COLOR;expected_depth_enabled=0;
+    assert(sa3ds_ec_gpu_draw(&gpu,0));
+    assert(draw_count==1&&depth_enabled&&depth_mask==GPU_WRITE_ALL);
+    sa3ds_ec_gpu_destroy(&gpu);expected_depth_enabled=1;
+    assert(allocations==0);free(geometry);free(data);
     puts("Emerald Coast actual GPU code / mocked SDK: PASS (shared-material classes, full-act bounds/frustum, camera/near-plane/fail-open, two-phase depth/blend restore, cleanup)");
     return 0;
 }

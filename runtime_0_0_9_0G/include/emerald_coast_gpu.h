@@ -5,6 +5,7 @@
 #include <citro3d.h>
 #include <stdint.h>
 #include "emerald_coast_visual.h"
+#include "texture_override.h"
 #include "sonic_gpu.h"
 
 typedef struct {
@@ -32,6 +33,12 @@ typedef struct {
     /* World-space camera basis; no visibility decision changes simulation. */
     float eye[3],forward[3],right[3],up[3],tan_x,tan_y,near_clip,far_clip;
     int view_valid;
+    /* Camera-anchored background is drawn before scene depth. */
+    int background_pass;
+    /* Optional single replacement; originals remain resident and immutable. */
+    C3D_Tex override_texture;
+    uint32_t override_texture_id,override_texture_bytes,override_submitted_draws;
+    int override_enabled;
 } SA3DSECGpu;
 
 int sa3ds_ec_gpu_init(SA3DSECGpu *gpu,const SA3DSECVisual *visual,float subset_radius,
@@ -48,6 +55,12 @@ int sa3ds_ec_gpu_sphere_visible(const SA3DSECGpu *gpu,const float center[3],floa
 /* Pass 0 before Sonic, pass 1 after Sonic, with the stage modelview bound.
  * Bounded water treatment, not the complete original sorted draw queue. */
 int sa3ds_ec_gpu_draw(SA3DSECGpu *gpu,int deferred_water);
+/* Caller must finish the prior GPU frame before set/clear/destroy. Upload is
+ * atomic: failure retains the previous override; explicit clear restores the
+ * original. Source bytes may be freed once this returns. */
+int sa3ds_ec_gpu_set_texture_override(SA3DSECGpu *gpu,
+    const SA3DSTextureOverride *replacement,SA3DSSonicTextureTrace trace,void *userdata);
+void sa3ds_ec_gpu_clear_texture_override(SA3DSECGpu *gpu);
 void sa3ds_ec_gpu_destroy(SA3DSECGpu *gpu);
 
 #endif

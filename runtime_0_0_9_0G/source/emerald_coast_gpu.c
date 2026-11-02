@@ -16,8 +16,36 @@ static void transform(const SA3CMatrix*m,const float p[3],float out[3]){
     out[2]=p[0]*m->m[2]+p[1]*m->m[6]+p[2]*m->m[10]+m->m[14];
 }
 
+void sa3ds_ec_gpu_clear_texture_override(SA3DSECGpu*g){
+    if(!g)return;
+    if(g->override_texture.data)C3D_TexDelete(&g->override_texture);
+    memset(&g->override_texture,0,sizeof(g->override_texture));
+    g->override_enabled=0;g->override_texture_id=0;g->override_texture_bytes=0;g->override_submitted_draws=0;
+}
+int sa3ds_ec_gpu_set_texture_override(SA3DSECGpu*g,
+    const SA3DSTextureOverride*replacement,SA3DSSonicTextureTrace trace,void*userdata){
+    if(!g||!g->visual||!replacement||replacement->texture_id>=g->texture_count||
+       replacement->texture.texture_count!=1)return 0;
+    SA3TTexture td,original;const uint8_t*rgba,*base;
+    if(sa3t_texture(&replacement->texture,0,&td,&rgba)!=SA3T_OK||
+       sa3t_texture(&g->visual->textures,replacement->texture_id,&original,&base)!=SA3T_OK||
+       td.width!=original.width||td.height!=original.height||td.width<8||td.height<8||
+       td.width>256||td.height>256||(td.width&(td.width-1u))||(td.height&(td.height-1u)))return 0;
+    C3D_Tex staged;memset(&staged,0,sizeof(staged));
+    if(!sa3ds_upload_rgba8_cpu(&staged,td.width,td.height,rgba,
+        replacement->texture_id,g->texture_count,trace,userdata)){
+        if(staged.data)C3D_TexDelete(&staged);
+        return 0;
+    }
+    sa3ds_ec_gpu_clear_texture_override(g);
+    g->override_texture=staged;g->override_texture_id=replacement->texture_id;
+    g->override_texture_bytes=td.data_size;g->override_enabled=1;
+    return 1;
+}
+
 void sa3ds_ec_gpu_destroy(SA3DSECGpu*g){
     if(!g)return;
+    sa3ds_ec_gpu_clear_texture_override(g);
     if(g->textures){
         for(uint32_t i=0;i<g->texture_count;i++)
             if(g->texture_loaded&&g->texture_loaded[i]&&g->textures[i].data)
@@ -128,7 +156,7 @@ int sa3ds_ec_gpu_init_full(SA3DSECGpu*g,const SA3DSECVisual*v,
 void sa3ds_ec_gpu_set_view(SA3DSECGpu*g,const float eye[3],const float target[3],
     float fovy,float aspect,float near_clip,float far_clip){
     if(!g)return;
-    g->view_valid=0;g->submitted_triangles=0;g->submitted_draws=0;
+    g->view_valid=0;g->submitted_triangles=0;g->submitted_draws=0;g->override_submitted_draws=0;
     if(!eye||!target||!isfinite(fovy)||fovy<=0||fovy>=3.14f||
        !isfinite(aspect)||aspect<=0||!isfinite(near_clip)||near_clip<0||
        !isfinite(far_clip)||far_clip<=near_clip)return;
@@ -162,11 +190,12 @@ int sa3ds_ec_gpu_sphere_visible(const SA3DSECGpu*g,const float center[3],float r
         fabsf(x)<=depth*g->tan_x+r*sqrtf(1+g->tan_x*g->tan_x) &&
         fabsf(y)<=depth*g->tan_y+r*sqrtf(1+g->tan_y*g->tan_y);
 }
-static void submit_range(SA3DSECGpu*g,uint32_t first,uint32_t count){
+static void submit_range(SA3DSECGpu*g,uint32_t first,uint32_t count,int use_override){
     C3D_BufInfo*buf=C3D_GetBufInfo();BufInfo_Init(buf);
     BufInfo_Add(buf,g->vertices+first,sizeof(*g->vertices),2,0x10);
     C3D_DrawArrays(GPU_TRIANGLES,0,count);
     g->submitted_triangles+=count/3;g->submitted_draws++;
+    if(use_override)g->override_submitted_draws++;
 }
 
 int sa3ds_ec_gpu_draw(SA3DSECGpu*g,int deferred_water){
@@ -174,7 +203,8 @@ int sa3ds_ec_gpu_draw(SA3DSECGpu*g,int deferred_water){
     int ok=1;
     /* PC2004 COL bit 1 -> queue parameter 0 -> ZWRITEENABLE=0. Keep depth
      * testing so foreground terrain/Sonic correctly mask the water. */
-    C3D_DepthTest(true,GPU_GREATER,deferred_water?GPU_WRITE_COLOR:GPU_WRITE_ALL);
+    C3D_DepthTest(!g->background_pass,GPU_GREATER,
+        (deferred_water||g->background_pass)?GPU_WRITE_COLOR:GPU_WRITE_ALL);
     C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,
         GPU_ONE_MINUS_SRC_ALPHA,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA);
     for(uint32_t i=0;i<g->draw_count;i++){
@@ -182,11 +212,12 @@ int sa3ds_ec_gpu_draw(SA3DSECGpu*g,int deferred_water){
         if(d->deferred_water!=(uint8_t)deferred_water)continue;
         if(!sa3ds_ec_material(g->visual,d->material_index,&m)||
            m.texture_id>=g->texture_count||!g->texture_loaded[m.texture_id]){ok=0;break;}
-        C3D_TexBind(0,&g->textures[m.texture_id]);C3D_TexEnv*env=C3D_GetTexEnv(0);
+        int use_override=g->override_enabled&&m.texture_id==g->override_texture_id;
+        C3D_TexBind(0,use_override?&g->override_texture:&g->textures[m.texture_id]);C3D_TexEnv*env=C3D_GetTexEnv(0);
         C3D_TexEnvInit(env);C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);
         C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
         C3D_TexEnvColor(env,sa3ds_visual_material_rgba(m.diffuse));
-        if(!g->full_act||!g->view_valid)submit_range(g,d->first_vertex,d->vertex_count);
+        if(!g->full_act||!g->view_valid)submit_range(g,d->first_vertex,d->vertex_count,use_override);
         else {
             uint32_t first=0,count=0;
             for(uint32_t j=d->first_span;j<d->first_span+d->span_count;j++){
@@ -194,9 +225,9 @@ int sa3ds_ec_gpu_draw(SA3DSECGpu*g,int deferred_water){
                 if(sa3ds_ec_gpu_sphere_visible(g,s->center,s->radius)){
                     if(!count)first=s->first_vertex;
                     count+=s->vertex_count;
-                } else if(count){submit_range(g,first,count);count=0;}
+                } else if(count){submit_range(g,first,count,use_override);count=0;}
             }
-            if(count)submit_range(g,first,count);
+            if(count)submit_range(g,first,count,use_override);
         }
     }
     /* Do not leak deferred-water state into the character/next frame. */

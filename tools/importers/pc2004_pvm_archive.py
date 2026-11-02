@@ -3,7 +3,7 @@
 
 The parser intentionally supports only the encodings proven by the currently
 available SA1 archives: 38-byte PVMH directory rows, PVRT data format 9
-(twiddled mipmaps), and 16-bpp pixel formats ARGB1555/RGB565/ARGB4444.
+(linear rectangles, including the audited base-first mip payloads), and 16-bpp pixel formats ARGB1555/RGB565/ARGB4444.
 Unknown encodings fail loudly instead of being guessed.
 """
 from __future__ import annotations
@@ -162,16 +162,16 @@ class PVMArchive:
         e = self.entries[index]
         payload_start = e.pvrt_offset + 16
         full_bytes = e.width * e.height * 2
-        # PC2004 format-9 is base-first.  Do not take the tail of a mip chain.
+        # Exact PC2004 0x900 dispatch -> 0x78C570 performs a contiguous copy.
+        # Format9 is linear row-major, and PC2004's audited mip chain is
+        # base-first. Dreamcast twiddled formats1/2 are a separate decoder.
         full = self.data[payload_start:payload_start + full_bytes]
         if len(full) != full_bytes:
             raise PVMArchiveError("truncated largest mip")
         out = bytearray(e.width * e.height * 4)
         for y in range(e.height):
             for x in range(e.width):
-                src = _morton2(x, y)
-                if src * 2 + 2 > len(full):
-                    raise PVMArchiveError("twiddle address outside largest mip")
+                src = y * e.width + x
                 value = struct.unpack_from("<H", full, src * 2)[0]
                 rgba = _pixel_rgba(value, e.pixel_format)
                 dst = (y * e.width + x) * 4
@@ -181,6 +181,8 @@ class PVMArchive:
     def metadata(self) -> dict:
         return {
             "label": self.label,
+            "decoded_base_layout": "linear row-major",
+            "decoder_revision": "pc2004-pvm9-linear-v1",
             "size": len(self.data),
             "sha256": self.sha256(),
             "flags": f"0x{self.flags:04x}",

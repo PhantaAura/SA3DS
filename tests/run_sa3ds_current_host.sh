@@ -90,3 +90,9 @@ bash tests/run_ec_edge_precision.sh
 
 printf "\n== Player frame dispatch and flat ball steering ==\n"
 bash tests/run_player_frame_dispatch.sh
+
+printf "\n== Native texture override package and Dreamcast decoder ==\n"
+bash tests/run_texture_override.sh
+
+printf "\n== PC2004 ordinary ground clamp ==\n"
+bash tests/run_pc2004_ground_accel.sh

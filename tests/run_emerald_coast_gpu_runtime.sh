@@ -10,7 +10,7 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Wno-tautological-constant-out-of-range-co
   -Isrc/game -Isrc/sa3dspak -Isrc/sa3c \
   tests/test_emerald_coast_gpu_runtime.c \
   runtime_0_0_9_0G/source/emerald_coast_gpu.c \
-  src/game/emerald_coast_visual.c src/sa3dspak/sa3dspak.c \
+  src/game/emerald_coast_visual.c src/game/texture_override.c src/sa3dspak/sa3dspak.c \
   src/sa3c/sa3t_texture.c src/sa3c/sa3c_pose.c src/sa3c/sa3c_gpu_preflight.c \
   -lm -o "$test_dir/test"
 "$test_dir/test" "$test_dir/fixture.sa3dspak"

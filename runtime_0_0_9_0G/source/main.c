@@ -22,6 +22,7 @@
 #include "sa3t_texture.h"
 #include "sa3c_gpu_preflight.h"
 #include "emerald_coast_visual.h"
+#include "emerald_coast_background.h"
 #include "emerald_coast_collision.h"
 #include "emerald_coast_replay.h"
 #include "../../src/sa1/physics/movement.h"
@@ -82,7 +83,14 @@ static struct {
 static int g_ec_failed_region_valid=0;
 static float g_ec_failed_region_x=0,g_ec_failed_region_z=0;
 static SA3DSECVisual g_ec_visual;
+static uint8_t *g_background_bytes;
+static size_t g_background_size;
+static SA3DSECBackground g_background;
+static SA3DSECGpu g_background_gpu;
+static int g_background_ready;
+
 static SA3DSECGpu g_ec_gpu;
+static int g_ec_override_requested=-1;
 static uint8_t *g_ring_visual_bytes,*g_ring_placement_bytes;
 static size_t g_ring_visual_size,g_ring_placement_size;
 static SA3DSECVisual g_ring_visual;
@@ -638,6 +646,59 @@ static void log_texture_stage(const char *phase, uint32_t texture_index,
     gfxScreenSwapBuffers(GFX_BOTTOM,false);
 }
 
+/* Optional single-texture replacement. All GPU mutation occurs outside an
+ * active frame, after pending submissions retire. Missing/invalid means original. */
+static void ec_apply_texture_override(void){
+    if(g_ec_override_requested<0){
+        FILE *enabled=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.enabled","rb");
+        g_ec_override_requested=enabled&&fgetc(enabled)=='1';
+        if(enabled)fclose(enabled);
+    }
+    if(!g_ec_override_requested){
+        if(g_ec_gpu.override_enabled){C3D_FrameSync();sa3ds_ec_gpu_clear_texture_override(&g_ec_gpu);}
+        boot_log("MOD","Original Emerald Coast textures selected");return;
+    }
+    C3D_FrameSync();
+    sa3ds_ec_gpu_clear_texture_override(&g_ec_gpu);
+    FILE *file=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.sa3mod","rb");
+    if(!file){boot_log("MOD","Replacement missing; original textures retained");return;}
+    long length=0;
+    if(fseek(file,0,SEEK_END)||((length=ftell(file))<=0)||
+       (unsigned long)length>SA3DS_TEXTURE_OVERRIDE_MAX_BYTES||fseek(file,0,SEEK_SET)){
+        fclose(file);boot_log("MOD","Replacement file size invalid; original textures retained");return;
+    }
+    uint8_t *bytes=malloc((size_t)length);
+    if(!bytes){fclose(file);boot_log("MOD","Replacement allocation failed; original textures retained");return;}
+    int complete=fread(bytes,1,(size_t)length,file)==(size_t)length;
+    fclose(file);
+    SA3DSTextureOverride replacement;
+    SA3DSTextureOverrideResult result=complete?sa3ds_texture_override_open(
+        &replacement,bytes,(size_t)length,g_ec_act_index,&g_ec_visual.textures):SA3DS_TEXTURE_OVERRIDE_HEADER;
+    if(result==SA3DS_TEXTURE_OVERRIDE_OK&&sa3ds_ec_gpu_set_texture_override(
+            &g_ec_gpu,&replacement,log_texture_stage,NULL)){
+        char note[128];snprintf(note,sizeof(note),"External texture active: act=%lu texture=%lu bytes=%lu",
+            (unsigned long)g_ec_act_index,(unsigned long)replacement.texture_id,
+            (unsigned long)g_ec_gpu.override_texture_bytes);boot_log("MOD",note);
+    }else{
+        char note[144];snprintf(note,sizeof(note),"Replacement rejected (%s); original textures retained",
+            result==SA3DS_TEXTURE_OVERRIDE_OK?"upload-failed":sa3ds_texture_override_result_name(result));boot_log("MOD",note);
+    }
+    free(bytes);
+}
+
+static void ec_toggle_texture_override(void){
+    g_ec_override_requested=!g_ec_override_requested;
+    mkdir("sdmc:/3ds/SA3DS/mods",0777);
+    const char *path="sdmc:/3ds/SA3DS/mods/emerald_coast.enabled";
+    if(g_ec_override_requested){FILE *file=fopen(path,"wb");if(file){fputc('1',file);fclose(file);}}
+    else remove(path);
+    ec_apply_texture_override();
+    /* Optional asset reload pauses this UI operation rather than creating a
+     * catch-up burst of gameplay ticks while SD/GPU resources were replaced. */
+    sa3ds_wz_tick_reset(&g_tick_clock);
+    g_last_frame_ms=osGetTime();
+}
+
 static int ec_change_act(uint32_t act){
     uint64_t load_start=osGetTime();
     const SA3DSECStart *start=sa3ds_ec_route_start(&g_ec_route,act);
@@ -660,6 +721,7 @@ static int ec_change_act(uint32_t act){
     g_ec_gpu.visual=&g_ec_visual;
     g_ec_collision=collision;g_ec_collision.world.context=&g_ec_collision;
     g_ec_act_index=act;g_ec_failed_region_valid=0;
+    ec_apply_texture_override();
     memset(&g_ec_perf,0,sizeof(g_ec_perf));
     reset_selected_zone();emerald_coast_help();
     char note[160];snprintf(note,sizeof(note),
@@ -736,6 +798,41 @@ static int draw_rings(void){
     return 1;
 }
 
+static void load_background(void) {
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_background.sa3dspak",
+            &g_background_bytes,&g_background_size))goto fail;
+    if(!sa3ds_ec_background_open(&g_background,g_background_bytes,g_background_size)||
+       !sa3ds_ec_gpu_init_full(&g_background_gpu,&g_background.visual,
+                              log_texture_stage,NULL))goto fail;
+    g_background_gpu.background_pass=1;
+    g_background_ready=1;
+    boot_log("BACKGROUND","Original camera-XZ sky/horizon loaded; source act/clip scales");
+    return;
+fail:
+    sa3ds_ec_gpu_destroy(&g_background_gpu);
+    sa3ds_free_file(g_background_bytes);g_background_bytes=NULL;
+    boot_log("BACKGROUND","Owner background unavailable; environment remains incomplete");
+}
+
+static int draw_background(const C3D_Mtx *view,const float eye[3]) {
+    if(!g_background_ready)return 1;
+    SA3DSECBackgroundConfig config;SA3CMatrix actor;
+    C3D_Mtx projection,model,mv;
+    if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,1,&config)||
+       !sa3ds_ec_background_transform(&g_background,g_ec_act_index,1,eye,&actor))return 0;
+    Mtx_PerspTilt(&projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
+                  config.background_near,config.background_far,false);
+    for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
+        actor.m[row],actor.m[4+row],actor.m[8+row],actor.m[12+row]);
+    Mtx_Multiply(&mv,view,&model);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&projection);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+    int ok=sa3ds_ec_gpu_draw(&g_background_gpu,0)&&
+           sa3ds_ec_gpu_draw(&g_background_gpu,1);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
+    return ok;
+}
+
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
@@ -762,9 +859,11 @@ static int init_scene(void) {
             if(!sa3ds_ec_gpu_init_full(&g_ec_gpu,&g_ec_visual,log_texture_stage,NULL))return 0;
         }else if (!sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f,log_texture_stage,NULL)) return 0;
         boot_note(g_ec_full_route?"Emerald Coast complete act terrain resident":"Emerald Coast opening subset resident");
+        ec_apply_texture_override();
         if (g_ec_combined && !sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
         load_rings();
+        load_background();
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
@@ -803,6 +902,11 @@ static int sample_pose(void) {
             sa3ds_ec_gpu_set_view(&g_ec_gpu,eye,target,C3D_AngleFromDegrees(55.0f),
                 C3D_AspectRatioTop,0.1f,5000.0f);
         }
+        float background_eye[3]={g_ec_combined?g_player.pos.x-sinf(g_camera.yaw)*40.0f:0.0f,
+            g_ec_combined?g_player.pos.y+18.0f:95.0f,
+            g_ec_combined?g_player.pos.z-cosf(g_camera.yaw)*40.0f:-260.0f};
+        C3D_CullFace(GPU_CULL_NONE);
+        if(!draw_background(&stage_mv,background_eye))return 0;
         g_ec_view=stage_mv;
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
@@ -892,6 +996,8 @@ static void cleanup(void) {
     sa3ds_ec_gpu_destroy(&g_ring_gpu);sa3ds_rings_destroy(&g_rings);g_rings_ready=0;
     sa3ds_free_file(g_ring_visual_bytes);sa3ds_free_file(g_ring_placement_bytes);
     g_ring_visual_bytes=g_ring_placement_bytes=NULL;
+    sa3ds_ec_gpu_destroy(&g_background_gpu);
+    sa3ds_free_file(g_background_bytes);g_background_bytes=NULL;g_background_ready=0;
     sa3ds_ec_gpu_destroy(&g_ec_gpu);
     sa3ds_ec_collision_destroy(&g_ec_collision);
     sa3ds_lab_gpu_destroy(&g_lab_gpu);
@@ -1020,6 +1126,7 @@ int main(void) {
         if (!g_emerald_coast && modifier && (down&KEY_L)) cycle_zone(-1);
         if (!g_emerald_coast && modifier && (down&KEY_R)) cycle_zone(1);
         if (modifier && (down&KEY_Y)) reset_selected_zone();
+        if (g_emerald_coast && modifier && (down&KEY_DUP)) ec_toggle_texture_override();
         if (modifier && (down&KEY_A)) {
             g_paused=!g_paused;
             sa3ds_wz_tick_reset(&g_tick_clock);
@@ -1175,7 +1282,7 @@ int main(void) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
-        if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count));boot_log("FRAME",frame_line);}
+        if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu modDraws=%lu modBytes=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count),(unsigned long)g_ec_gpu.override_submitted_draws,(unsigned long)g_ec_gpu.override_texture_bytes);boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;

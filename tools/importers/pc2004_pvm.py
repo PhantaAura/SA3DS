@@ -97,7 +97,7 @@ class SonicPVM:
                     f"texture {index}: directory/PVRT mismatch: "
                     f"dir={(pixel_format,data_format,width,height)} pvrt={(pf,df,pvrt_w,pvrt_h)}"
                 )
-            # Exact Sonic archive uses twiddled mipmaps (data format 9).
+            # Exact Sonic archive uses PC2004 linear format9 payloads.
             if data_format != 9:
                 raise PVMError(f"texture {index}: unsupported data format {data_format}")
             expected_texel_bytes = ((4 * width * height - 1) // 3) * 2
@@ -173,7 +173,9 @@ class SonicPVM:
         out = bytearray(entry.width * entry.height * 4)
         for y in range(entry.height):
             for x in range(entry.width):
-                source_index = self._morton2(x, y)
+                # Exact original format0x900 dispatches to a contiguous
+                # width*height*bytes copy at0x78C570, not a Morton decoder.
+                source_index = y * entry.width + x
                 value = struct.unpack_from("<H", full, source_index * 2)[0]
                 rgba = self._pixel_rgba(value, entry.pixel_format)
                 dst = (y * entry.width + x) * 4
@@ -182,7 +184,9 @@ class SonicPVM:
 
     def report(self) -> dict:
         return {
-            "schema": "sa3ds-pc2004-sonic-pvm-report-v1",
+            "schema": "sa3ds-pc2004-sonic-pvm-report-v2",
+            "decoded_base_layout": "linear row-major",
+            "decoder_revision": "pc2004-pvm9-linear-v1",
             "source": {
                 "size": len(self.data),
                 "sha256": self.sha256(),
