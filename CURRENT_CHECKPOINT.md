@@ -1,3 +1,30 @@
+# WCA active checkpoint — public task-frame handoff and flat ball steering
+
+Parent `dd59faa`. Corrected public dispatcher losing inclined launch frame on
+second airborne tick (reproduced velocity split.0141716441units/tick). Explicit
+general-frame provenance persists through flight; flat grounded movement/reset
+clears it. Commit steering before post-motion support so ledge misses cannot
+restore old yaw/axes. The flat ball path still used direct SA1-style turning;
+now source443C50 GENERAL writeback precedes break/inertia, including Roll drag.
+
+Focused public-dispatch tests PASS: multi-tick30degree jump/hold/air steering,
+steered ledge departure, flat/reset invalidation, flat/general charge+Roll
+agreement. Full cumulative owner-free and19scenario physics suites PASS. Native
+combined candidate is being prepared with CP9 optional texture-override work;
+no new native comparison or overall1:1 claim yet. Owner pose/import oracle will
+also run for the conversion pipeline. CPU uploader, original model/weights and
+60Hz gameplay unchanged. User explicitly requires continued work after commits;
+checkpoint publication is progress within the active goal, not a task ending.
+
+CP9 parallel implementation: one bounded SD .sa3mod texture replacement tied to
+baseline archive/act/index, CRC and same dimensions; original default, invalid
+fallback, runtime Select+DpadUp toggle with safe GPU retirement. Real local
+DreamcastConversion BEACH01 archive source found; conversion/verification in
+progress. Spring actor/controller runtime and exact CCL hit predicate research
+also underway. Full natural course/objects/events/HUD/audio/renderer still open.
+
+---
+
 # WCA active checkpoint — grounded steering and pre-turn force frame
 
 Parent `d1abe82`. Owner updated CP8 to renderer fidelity and CP9 to SD asset

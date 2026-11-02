@@ -8,8 +8,6 @@
 #define SA1_PI 3.14159265358979323846f
 #define SA1_TAU (2.0f * SA1_PI)
 #define BAMS_FULL 65536.0f
-#define SPINDASH_TURN_LIMIT 0x1000
-#define ROLL_TURN_LIMIT     0x0800
 
 typedef struct {
     float forward;
@@ -56,9 +54,9 @@ static int clamp_signed_bams(int value, int limit) {
     return value;
 }
 
-static void direct_ball_turn(SA1PlayerState *player, SA1LocalSpeed *local,
+static void general_ball_turn(SA1PlayerState *player, SA1LocalSpeed *local,
                              const SA1Input *input, float camera_yaw,
-                             int turn_limit_bams, unsigned *step_out) {
+                             unsigned *step_out) {
     SA1SADXFilteredAnalog analog =
         sa1_sadx_filter_logical_analog(input->move_x, input->move_z);
     if (!analog.active) {
@@ -68,12 +66,20 @@ static void direct_ball_turn(SA1PlayerState *player, SA1LocalSpeed *local,
 
     float target = wrap_angle(camera_yaw + analog.angle_radians);
     int delta = radians_to_signed_bams(target - player->yaw);
-    int step = clamp_signed_bams(delta, turn_limit_bams);
+    unsigned magnitude = (unsigned)abs(delta);
+    unsigned limit = magnitude > 0x2000u ? 0x800u :
+                     magnitude > 0x1000u ? magnitude >> 2 : magnitude >> 3;
+    SA1Vec3 old_world = local_to_world(player->yaw, *local);
+    SA1LocalSpeed old_local = *local;
+    int step = clamp_signed_bams(delta, (int)limit);
     player->yaw = wrap_angle(player->yaw + bams_to_radians(step));
 
-    /* Ball movement rotates the player-local frame directly. This keeps local
-     * forward/side speed while changing its world-space direction, matching
-     * the structure used by the public SA1-style roll implementation. */
+    SA1LocalSpeed transformed = world_to_local(player->yaw, old_world);
+    SA1PC2004LocalVector blended = sa1_pc2004_ground_turn_velocity(
+        (SA1PC2004LocalVector){old_local.forward,old_local.vertical,old_local.side},
+        (SA1PC2004LocalVector){transformed.forward,transformed.vertical,transformed.side},
+        SA1_PC2004_TURN_GENERAL, 1, 1.0f, 1.0f);
+    *local=(SA1LocalSpeed){blended.forward,blended.normal,blended.side};
     player->vel = local_to_world(player->yaw, *local);
     if (step_out) *step_out = (unsigned)abs(step);
 }
@@ -88,8 +94,7 @@ static void charge_ground_motion(SA1PlayerState *player,
      * already used by surface_ball_motion, with upright local gravity and
      * zero dynamic collision force. Do not substitute a constant friction
      * subtraction for PGetBreak's run_break/normal-force arbitration. */
-    direct_ball_turn(player, &local, input, camera_yaw,
-                     SPINDASH_TURN_LIMIT, turn_step_out);
+    general_ball_turn(player, &local, input, camera_yaw, turn_step_out);
     SA1PC2004LocalVector speed = {local.forward, 0.0f, local.side};
     SA1PC2004LocalVector force = {0.0f, -p->weight, 0.0f};
     SA1PC2004MotionContext context = {1, 0, 0, 1.0f, 1.0f};
@@ -107,14 +112,18 @@ static void roll_ground_motion(SA1PlayerState *player,
     const SA1SteamPlayerParameters *p = &SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SA1LocalSpeed local = world_to_local(player->yaw, player->vel);
 
-    /* Flat specialization of roll movement. On a flat surface the slope
-     * gravity terms vanish; RollDecel/air_resist remains the forward decay. */
-    local.forward += local.forward * p->air_resist;
-    local.side += local.side * p->air_resist_z;
-    local.vertical = 0.0f;
-    direct_ball_turn(player, &local, input, camera_yaw,
-                     ROLL_TURN_LIMIT, turn_step_out);
-    player->vel = local_to_world(player->yaw, local);
+    /* PGetRotation precedes PGetInertia for action5, including the drag
+     * preparation. This is the default M1/no-pending-impulse flat context. */
+    general_ball_turn(player, &local, input, camera_yaw, turn_step_out);
+    SA1PC2004LocalVector speed={local.forward,0.0f,local.side};
+    SA1PC2004LocalVector force={0.0f,-p->weight,0.0f};
+    SA1PC2004MotionContext context={1,1,0,1.0f,1.0f};
+    SA1PC2004LocalVector add=sa1_pc2004_pgetinertia_add_velocity(
+        speed,force,&context,p,NULL);
+    local.forward=sa1_pc2004_integrate_axis_no_cross(local.forward,add.forward,NULL);
+    local.side=sa1_pc2004_integrate_axis_no_cross(local.side,add.side,NULL);
+    local.vertical=0.0f;
+    player->vel=local_to_world(player->yaw,local);
 }
 
 int sa1_steam_sonic_ball_ground_step(SA1PlayerState *player,

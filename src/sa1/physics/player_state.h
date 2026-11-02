@@ -38,6 +38,9 @@ typedef struct {
      * visible support normal; forward/right are tangent to that support. */
     SA1Vec3 surface_forward;
     SA1Vec3 surface_right;
+    /* The general task frame remains authoritative through airborne ticks.
+     * Cleared by reset or an explicitly selected flat grounded tick. */
+    bool surface_frame_active;
     float support_distance;
     uint32_t surface_flags;
 

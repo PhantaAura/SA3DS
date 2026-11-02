@@ -507,6 +507,7 @@ void sa1_physics_step_steam_sonic_surface(
     player->animation_input_valid = true;
     player->animation_landing_valid = false;
     player->animation_forward_speed_valid = false;
+    player->surface_frame_active = true;
 
     SA1SurfaceFrame frame = player_frame(player);
     if (!frame.valid) {
@@ -573,8 +574,10 @@ void sa1_physics_step_steam_sonic_surface(
             (void)sa1_steam_sonic_apply_jump_hold_surface(
                 player, &frame, input->jump_held);
         sa1_steam_sonic_air_step_surface(player, input, camera_yaw, &frame, NULL);
-        sync_player_frame(player, &frame, NULL);
     }
+    /* Commit steering even if the following support query misses a ledge.
+     * The next airborne tick must retain this orientation, not the old frame. */
+    sync_player_frame(player, &frame, NULL);
 
     player->pos = sa1_vec3_add(player->pos, player->vel);
 

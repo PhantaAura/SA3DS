@@ -87,3 +87,6 @@ bash tests/run_pc2004_ground_steering.sh
 
 printf "\n== EC capsule boundary precision ==\n"
 bash tests/run_ec_edge_precision.sh
+
+printf "\n== Player frame dispatch and flat ball steering ==\n"
+bash tests/run_player_frame_dispatch.sh

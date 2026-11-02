@@ -381,6 +381,15 @@ void sa1_physics_step_steam_sonic_flat(
     player->animation_accel_residual = 0.0f;
     player->animation_accel_residual_valid = false;
 
+    /* A slope launch/departure does not become world-upright on its second
+     * airborne tick. Continue the retained task-frame path until grounded. */
+    if (!player->grounded && player->surface_frame_active) {
+        if (debug_out) memset(debug_out, 0, sizeof(*debug_out));
+        sa1_physics_step_steam_sonic_surface(player, input, camera_yaw,
+                                              world, compat_constants, NULL);
+        return;
+    }
+
     /* 0.0.8.7 preserves the verified flat/upright specialization exactly and
      * routes non-flat/arbitrary support through the new general contact frame. */
     if (player->grounded) {
@@ -397,6 +406,8 @@ void sa1_physics_step_steam_sonic_flat(
                                                   world, compat_constants, NULL);
             return;
         }
+
+        player->surface_frame_active = false;
 
         /* PC2004 Sonic_Act1 tests jump before charge entry/roll termination
          * and before the resulting action's movement dispatch. Action 4
