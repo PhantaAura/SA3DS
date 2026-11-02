@@ -4,8 +4,8 @@ This records static reconstruction against owner executable SHA256
 `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
 The private executable/decompilation and generated owner packages stay outside
 Git. The equations/constants below are gameplay reconstruction, not imported art
-or copied decompiled routine bodies. No retail trace or native spring gameplay
-result is claimed by this document.
+or copied decompiled routine bodies. No independent retail launch trace or
+complete native spring parity is established.
 
 ## New portable module
 
@@ -40,7 +40,7 @@ results consumed by the active task come from the preceding CCL pass, not a new
 same-tick geometric query. Preserve that phase and list ordering in integration.
 
 - Action0 initializes the CCL record, enters action1 and returns without draw or
-  collision enqueue. The initially zero work-byte cooldown stays zero.
+  collision enqueue. SpringA starts cooldown0; SpringB stores10 explicitly.
 - Action1 draws. When the source pause gate is inactive, increment cooldown;
   only values above10 inspect a prior hit or enqueue CCL. With a matching
   player0/1 hit, remember that player and enter action2 without enqueue.
@@ -174,3 +174,29 @@ No native spring integration, visual assets, independent retail collision trace,
 x87 bit-exactness, dynamic-object impulse interaction, exceptional gravity axes,
 complete player action system, full-course progression or hardware verification
 is established by these tests. Keep WCA and PHYSICS_1TO1 incomplete.
+
+
+## Native integration checkpoint (WCA24)
+
+The native controller now loads owner-generated movement placements and six
+original spring visual components from external SD packages. The original
+object transforms and compression animation feed the existing CPU texture
+upload path. Object list2 runs after Sonic movement/animation; launches write
+position/velocity immediately and queue command3/4 for the next player phase.
+The player bridge preserves the first movement's source ground flags and signed
+control timer. Upright animation requests16/17 now reach the animation runtime;
+NextAnim18 persists instead of reissuing17 every fall tick.
+
+The first native placement fixture observed a grounded launch, but also reached
+unsupported off-ground getter scratch. Its former PASS was invalid: it counted
+rise/fall without rejecting that gap. The revised fixture rejects any unsupported
+context. Such an object remains visible but is quarantined until unload, so it
+cannot teleport Sonic later when unrelated ground contact returns. This is an
+explicit temporary fallback, not original game behavior. Airborne spring
+contacts remain a reconstruction gap. The original441990 does not write its
+output when status&3 is zero; the caller reads that scratch regardless.
+
+Original lighting/environment mapping, full CCL interaction and independent
+retail launch comparison remain incomplete. No full-course or hardware success
+is claimed. The owner asset files are generated outside the checkout by
+`tools/build_pc2004_spring_visual.py`.

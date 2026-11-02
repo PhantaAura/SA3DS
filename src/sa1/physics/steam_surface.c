@@ -533,6 +533,20 @@ void sa1_physics_step_steam_sonic_surface(
     dbg->pc2004_collision_work_reconstructed = 1;
     dbg->pc2004_retail_polygon_solver_pending = 1;
 
+    int source_spring=player->pc2004_action_state_valid &&
+        (player->pc2004_action_state==9 || player->pc2004_action_state==10);
+    if(source_spring) {
+        float normal_speed=sa1_vec3_dot(player->vel,frame.up);
+        if(player->pc2004_action_state==10 &&
+           normal_speed>=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.nocon_speed)
+            sa1_steam_sonic_noinput_step_surface(player,input,&frame);
+        else sa1_steam_sonic_air_step_surface(player,input,camera_yaw,&frame,NULL);
+        /* The incoming low ground bits participate in the launch movement;
+         * rising motion then reaches airborne contact resolution. */
+        player->grounded=false;
+        player->animation_accel_residual=0;
+        player->animation_accel_residual_valid=true;
+    } else {
     if (player->grounded) {
         /* Retail Sonic action handlers run PGetRotation/acceleration/speed
          * before PSetPosition -> PResetPosition.  Keep the prior frame's
@@ -585,6 +599,7 @@ void sa1_physics_step_steam_sonic_surface(
             (void)sa1_steam_sonic_apply_jump_hold_surface(
                 player, &frame, input->jump_held);
         sa1_steam_sonic_air_step_surface(player, input, camera_yaw, &frame, NULL);
+    }
     }
     /* Commit steering even if the following support query misses a ledge.
      * The next airborne tick must retain this orientation, not the old frame. */

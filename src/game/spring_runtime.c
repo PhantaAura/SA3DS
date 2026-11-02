@@ -1,3 +1,4 @@
+#include "../sa1/physics/pc2004_ground_accel.h"
 #include "spring_runtime.h"
 #include <math.h>
 #include <string.h>
@@ -29,13 +30,29 @@ int sa3ds_spring_actor_tick(SA3DSSpringActor *a,const SA3DSMovementPlacement *p,
         /* Allocation initializes work bytes; action0 initializes CCL and
          * returns without enqueue or display. No guessed load distance here. */
         next.action=1;next.cooldown=(p->type&4095)==2?10:0;
+        next.visual_phase=180;next.visual_speed=0;next.visual_amplitude=.5f;
     }else if(next.action==1){
         result.draw=1;
+        if(in->sine){
+            uint16_t angle=(uint16_t)(int32_t)((double)next.visual_phase*
+                65536.0*0.002777777777777778);
+            next.compression=(float)-fabs(in->sine(in->sine_context,angle)*next.visual_amplitude);
+        }
         if(!in->paused){
+            if(in->sine){
+                next.visual_phase+=next.visual_speed;
+                if(next.visual_phase>=290.f && next.visual_phase<290.f+next.visual_speed)
+                    next.visual_speed=(p->type&4095)==2?15.f:18.f;
+                uint16_t angle=(uint16_t)(int32_t)(((double)next.visual_phase-180.f)*.1f*
+                    65536.0*0.002777777777777778);
+                next.visual_amplitude=(float)(in->sine(in->sine_context,(uint16_t)(angle+0x4000))*.6f);
+                if(next.visual_amplitude<0){next.visual_phase=180;next.visual_speed=0;}
+            }
             next.cooldown++;
             if(next.cooldown>10){
                 if(in->collision_player>=0){
                     next.action=2;next.player_index=(uint8_t)in->collision_player;
+                    next.compression=.1f;next.visual_speed=20;next.visual_phase=270;
                 }else result.enqueue_collision=1;
             }
             if(next.cooldown>50)next.cooldown=50;
@@ -113,37 +130,10 @@ int sa3ds_spring_action_select(uint8_t action,uint16_t animation,float world_y,
     }
     return 1;
 }
-static float noinput_friction(float speed,float acceleration,float normal,
-    float axis_friction,float multiplier,float limit_friction){
-    if(speed==0){
-        float limit=limit_friction*multiplier*normal;
-        return acceleration<limit&&-limit<acceleration?0:acceleration;
-    }
-    float friction=normal<0?axis_friction*multiplier*normal:0;
-    if(acceleration>0)friction=-friction;
-    else if(acceleration==0)friction=0;
-    acceleration+=friction;
-    if((speed>0&&speed < -acceleration)||(speed<0&&-acceleration<speed))return -speed;
-    return acceleration;
-}
 int sa3ds_spring_uncontrolled_add_velocity(SA1PC2004LocalVector speed,
-    SA1PC2004LocalVector force,const SA1PC2004MotionContext *ctx,
-    const SA1SteamPlayerParameters *p,SA1PC2004LocalVector *out){
-    if(!out)return 0;
-    *out=(SA1PC2004LocalVector){0};
-    if(!ctx||!p||ctx->status_0x4000||!isfinite(ctx->acceleration_multiplier)||
-       !isfinite(speed.forward)||!isfinite(speed.normal)||!isfinite(speed.side)||
-       !isfinite(force.forward)||!isfinite(force.normal)||!isfinite(force.side))return 0;
-    SA1PC2004LocalVector add={force.forward+p->air_resist*speed.forward,
-        force.normal+p->air_resist_y*speed.normal,
-        force.side+p->air_resist_z*speed.side};
-    if(ctx->grounded_status){
-        add.forward=noinput_friction(speed.forward,add.forward,add.normal,
-            p->grd_frict,ctx->acceleration_multiplier,p->lim_frict);
-        add.side=noinput_friction(speed.side,add.side,add.normal,
-            p->grd_frict_z,ctx->acceleration_multiplier,p->lim_frict);
-    }
-    *out=add;return 1;
+    SA1PC2004LocalVector force,const SA1PC2004MotionContext *context,
+    const SA1SteamPlayerParameters *parameters,SA1PC2004LocalVector *out){
+    return sa1_pc2004_noinput_add_velocity(speed,force,context,parameters,out);
 }
 int sa3ds_spring_control_blocked(int16_t timer){return timer!=0;}
 int16_t sa3ds_spring_control_timer_tail(int16_t timer){return timer>0?(int16_t)(timer-1):0;}

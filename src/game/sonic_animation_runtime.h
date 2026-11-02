@@ -48,6 +48,8 @@ typedef struct {
     SA1ActionState previous_action_state;
     /* Persistent retail request; NextAnim writes both request and index. */
     uint16_t requested_runtime_id;
+    uint16_t previous_airborne_request;
+    uint8_t previous_airborne_request_valid;
     uint16_t idle_counter; /* retail signed-short counter, explicit wrap */
     uint8_t idle_selector_active;
     uint16_t landing_classified_request; /* Act1 phase before main idle selector */

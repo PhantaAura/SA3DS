@@ -579,6 +579,32 @@ int main(void) {
     assert(s.binding.runtime_id==14&&s.requested_runtime_id==14);
     puts("PC2004 Roll-departure request15 versus jump request14: PASS");
 
+    /* Spring rise16 -> fall17 -> property4 NextAnim18. Persistent player
+     * provenance must not restart17; a subsequent launch interrupts18. */
+    memset(&sync,0,sizeof(sync));memset(&rt,0,sizeof(rt));
+    p=base_player();p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;
+    p.animation_airborne_request_valid=true;p.animation_airborne_request=16;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.requested_runtime_id==16);
+    p.sim_frame++;p.animation_airborne_request=17;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.requested_runtime_id==17);
+    unsigned fall_ticks=0;
+    while(s.requested_runtime_id!=18 && fall_ticks++<300){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    }
+    assert(s.requested_runtime_id==18);
+    for(unsigned i=0;i<4;i++){
+        p.sim_frame++;o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+        assert(s.requested_runtime_id==18);
+        SA3DSSonicAnimationSelection again=select_no_mutation(&rt,&p,&o);
+        assert(memcmp(&again,&s,sizeof(s))==0);
+    }
+    p.sim_frame++;p.animation_airborne_request=16;
+    o=observe(&sync,&p);s=select_no_mutation(&rt,&p,&o);
+    assert(s.requested_runtime_id==16);
+    puts("PC2004 spring rise16/fall17/NextAnim18 persistence: PASS");
+
     /* Supported ordinary static landings retain pre-projection WORLD Y.
      * Ball retail action8 and upright action12 have different soft requests. */
     for(unsigned ball=0;ball<2;ball++)for(unsigned hard=0;hard<3;hard++){

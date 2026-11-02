@@ -28,7 +28,11 @@ static int finite3(SA1Vec3 p){return isfinite(p.x)&&isfinite(p.y)&&isfinite(p.z)
 static SA1SurfaceFrame actor_frame(const SA1PlayerState*p){
     SA1Vec3 up=p->ground_normal;
     if(!finite3(up)||sa1_vec3_length(up)<0.5f)up=(SA1Vec3){0,1,0};
-    return sa1_surface_frame_make(up,(SA1Vec3){sinf(p->yaw),0,cosf(p->yaw)});
+    SA1Vec3 forward=p->surface_frame_active?p->surface_forward:
+        (SA1Vec3){sinf(p->yaw),0,cosf(p->yaw)};
+    if(!finite3(forward)||sa1_vec3_length(forward)<.5f)
+        forward=(SA1Vec3){sinf(p->yaw),0,cosf(p->yaw)};
+    return sa1_surface_frame_make(up,forward);
 }
 SA1Vec3 sa3ds_ec_task_origin(const SA1PlayerState*p){
     SA1SurfaceFrame f=actor_frame(p);

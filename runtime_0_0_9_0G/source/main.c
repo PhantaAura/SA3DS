@@ -3,6 +3,9 @@
 #include "emerald_coast_route.h"
 #include "emerald_coast_residency.h"
 #include "ring_runtime.h"
+#include "ring_groups.h"
+#include "spring_player.h"
+#include "spring_visual.h"
 #include "ring_replay.h"
 #include <3ds.h>
 #include <citro3d.h>
@@ -96,6 +99,21 @@ static size_t g_ring_visual_size,g_ring_placement_size;
 static SA3DSECVisual g_ring_visual;
 static SA3DSECGpu g_ring_gpu;
 static SA3DSRings g_rings;
+typedef struct {SA3DSSpringActor actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,unsupported;int32_t next,previous;} SA3DSNativeSpring;
+static SA3DSMovementObjects g_movement;
+static uint8_t *g_movement_bytes,*g_spring_visual_bytes;
+static size_t g_movement_size,g_spring_visual_size;
+static SA3DSNativeSpring *g_spring_states;
+static SA3DSSpringVisual g_spring_visual;
+static SA3DSECGpu g_spring_gpu[6];
+static SA3DSSpringPendingCommand g_spring_pending;
+static int g_springs_ready;
+static int32_t g_spring_head=-1;
+static int g_spring_probe;
+static unsigned previous_spring_animation=0xffffu;
+static unsigned g_spring_probe_ticks,g_spring_probe_launches,g_spring_probe_rise,g_spring_probe_fall,g_spring_probe_unsupported;
+static void reset_springs(void);
+
 static int g_rings_ready=0;
 static int g_ring_probe=0,g_ring_probe_groups=0;
 static unsigned g_ring_probe_tick=0;
@@ -287,6 +305,7 @@ static void reset_selected_zone(void) {
         else sa1_player_reset(&g_player,&g_ec_collision.world);
         g_ec_collision.reference_y=g_player.pos.y;
         if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
+        reset_springs();
     } else (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
     memset(&g_anim_sync,0,sizeof(g_anim_sync));
     memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
@@ -833,6 +852,166 @@ static int draw_background(const C3D_Mtx *view,const float eye[3]) {
     return ok;
 }
 
+static double spring_source_sin(void *context,uint16_t angle){
+    return sa3ds_ring_group_sin((const SA3DSRings*)context,angle);
+}
+static void reset_springs(void){
+    g_spring_head=-1;
+    if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
+    memset(&g_spring_pending,0,sizeof(g_spring_pending));
+}
+static void load_springs(void){
+    if(!g_ec_combined||!g_rings_ready||!g_rings.quarter_lut)goto fail;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_movement_objects.sa3dspak",&g_movement_bytes,&g_movement_size)||
+       !sa3ds_movement_objects_open(&g_movement,g_movement_bytes,g_movement_size)||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/spring_visual.sa3dspak",&g_spring_visual_bytes,&g_spring_visual_size)||
+       !sa3ds_spring_visual_open(&g_spring_visual,g_spring_visual_bytes,g_spring_visual_size))goto fail;
+    g_spring_states=calloc(g_movement.count,sizeof(*g_spring_states));
+    if(!g_spring_states)goto fail;
+    for(unsigned i=0;i<6;i++)
+        if(!sa3ds_ec_gpu_init_full(&g_spring_gpu[i],&g_spring_visual.components[i],log_texture_stage,NULL))goto fail;
+    g_springs_ready=1;reset_springs();
+    boot_log("SPRINGS","Original spring models and SET placements loaded; panels remain pending");return;
+fail:
+    for(unsigned i=0;i<6;i++)sa3ds_ec_gpu_destroy(&g_spring_gpu[i]);
+    free(g_spring_states);g_spring_states=NULL;
+    sa3ds_free_file(g_movement_bytes);g_movement_bytes=NULL;
+    sa3ds_free_file(g_spring_visual_bytes);g_spring_visual_bytes=NULL;
+    memset(&g_movement,0,sizeof(g_movement));
+    boot_log("SPRINGS","Spring owner resources unavailable; gameplay objects remain incomplete");
+}
+static void tick_springs(void){
+    if(!g_springs_ready)return;
+    unsigned queued=0;
+    SA1Vec3 ccl_task=sa3ds_ec_task_origin(&g_player);
+    SA1Vec3 ccl_up=sa1_vec3_normalize(g_player.ground_normal);
+    SA3DSSpringPrimaryCollider collider={.task_origin=ccl_task,
+        .center=sa1_vec3_add(ccl_task,sa1_vec3_scale(ccl_up,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.center_height)),
+        .radius=4,.half_height=4,.foot_radius=.65f,.gravity_axis=3};
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        unsigned kind=p.type&4095u;if(kind!=1&&kind!=2)continue;
+        SA3DSNativeSpring *state=&g_spring_states[i];state->draw=0;
+        SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
+        SA1Vec3 delta=sa1_vec3_sub(task,p.position);
+        float distance=sa1_vec3_dot(delta,delta);
+        if(p.act!=g_ec_act_index||(state->loaded&&distance>360100.f)){
+            if(state->loaded){
+                if(state->previous>=0)g_spring_states[state->previous].next=state->next;
+                else g_spring_head=state->next;
+                if(state->next>=0)g_spring_states[state->next].previous=state->previous;
+            }
+            memset(state,0,sizeof(*state));continue;
+        }
+        if(!state->loaded){
+            unsigned high=(p.type>>12)&7u;
+            int allowed=!high||(high==1?g_rings.clip_level<1:g_rings.clip_level<2);
+            if(!allowed||distance>360000.f)continue;
+            state->loaded=1;state->previous=-1;state->next=g_spring_head;
+            if(g_spring_head>=0)g_spring_states[g_spring_head].previous=(int32_t)i;
+            g_spring_head=(int32_t)i;
+            for(unsigned axis=0;axis<3;axis++){
+                uint16_t angle=(uint16_t)p.angles[axis];
+                state->trig.sine[axis]=(float)spring_source_sin(&g_rings,angle);
+                state->trig.cosine[axis]=(float)spring_source_sin(&g_rings,(uint16_t)(angle+0x4000));
+            }
+        }
+    }
+    /*40B030 inserts new tasks at the head of their priority list. Preserve
+     * relative Spring task insertion order across load/unload, not row sort. */
+    for(int32_t i=g_spring_head;i>=0;i=g_spring_states[i].next){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,(uint32_t)i,&p);
+        unsigned kind=p.type&4095u;SA3DSNativeSpring *state=&g_spring_states[i];
+        /* Unresolved getter scratch is not a deferred launch request. Keep
+         * the object visible, but quarantine it until its normal unload. */
+        if(state->unsupported){state->draw=1;continue;}
+        SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
+        SA1Vec3 forward=g_player.surface_frame_active?g_player.surface_forward:
+            (SA1Vec3){sinf(g_player.yaw),0,cosf(g_player.yaw)};
+        SA3DSSpringTickInput input={.collision_player=state->pending_hit?0:-1,
+            .player_grounded=g_player.grounded,
+            .player_local_forward=sa1_vec3_dot(g_player.vel,forward),
+            .player_task_origin=task,.sine=spring_source_sin,.sine_context=&g_rings};
+        SA3DSSpringTickResult result;
+        if(!sa3ds_spring_actor_tick(&state->actor,&p,&state->trig,&input,&result)){
+            boot_log("SPRINGS","Unsupported launch context: quarantined until unload; no delayed launch");state->unsupported=1;
+            if(g_spring_probe)g_spring_probe_unsupported++;
+            state->pending_hit=0;state->draw=1;continue;
+        }
+        state->draw=result.draw;state->pending_hit=0;
+        if(result.launched){
+            if(sa3ds_spring_player_apply(&g_player,&p,&state->trig,&result.launch,
+                    SA3DS_EC_CONTROLLER_SUPPORT,&g_spring_pending)){
+                if(g_spring_probe)g_spring_probe_launches++;
+                char note[180];snprintf(note,sizeof(note),"tick=%llu row=%lu kind=%u command=%u task=%.3f,%.3f,%.3f velocity=%.3f,%.3f,%.3f",
+                    (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,kind,result.launch.command.command,
+                    result.launch.position.x,result.launch.position.y,result.launch.position.z,
+                    g_player.vel.x,g_player.vel.y,g_player.vel.z);boot_log("SPRING_LAUNCH",note);
+            }
+        }
+        if(result.enqueue_collision&&queued<256){
+            state->pending_hit=sa3ds_spring_primary_overlap(&p,&collider)==1;queued++;
+        }
+    }
+}
+static int draw_springs(void){
+    if(!g_springs_ready)return 1;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSNativeSpring *state=&g_spring_states[i];if(!state->draw)continue;
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        unsigned kind=p.type&4095u;if(p.act!=g_ec_act_index||(kind!=1&&kind!=2))continue;
+        SA3DSMovementPlacement orientation=p;orientation.type=2;
+        SA1SurfaceFrame physical;
+        if(!sa3ds_springb_physical_frame(&orientation,&state->trig,&physical))return 0;
+        /* Physical frame uses SETY-4000. Original object display's SETY basis
+         * is consequently (physical.right, physical.up, physical.forward). */
+        for(unsigned part=0;part<3;part++){
+            unsigned component=(kind-1)*3+part;float *offset=g_spring_visual.offsets[component];
+            float y=offset[1]+(part==2?state->actor.compression*g_spring_visual.cap_displacement[component]:0);
+            SA1Vec3 origin=sa1_vec3_add(p.position,sa1_vec3_add(sa1_vec3_scale(physical.right,offset[0]),
+                sa1_vec3_add(sa1_vec3_scale(physical.up,y),sa1_vec3_scale(physical.forward,offset[2]))));
+            float stretch=part==1?1.f+state->actor.compression:1.f;if(stretch<=0)stretch=1;
+            C3D_Mtx model,mv;
+            model.r[0]=FVec4_New(physical.right.x,physical.up.x*stretch,physical.forward.x,origin.x);
+            model.r[1]=FVec4_New(physical.right.y,physical.up.y*stretch,physical.forward.y,origin.y);
+            model.r[2]=FVec4_New(physical.right.z,physical.up.z*stretch,physical.forward.z,origin.z);
+            model.r[3]=FVec4_New(0,0,0,1);
+            Mtx_Multiply(&mv,&g_ec_view,&model);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_spring_gpu[component],0)||!sa3ds_ec_gpu_draw(&g_spring_gpu[component],1))return 0;
+        }
+    }
+    return 1;
+}
+
+/* Explicit owner-data development fixture. This never runs in normal play. */
+static void begin_spring_probe(void){
+    FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_spring_probe.flag","rb");
+    if(!file)return;
+    unsigned row=0;int parsed=fscanf(file,"%u",&row)==1;fclose(file);
+    if(!parsed||!g_springs_ready||!g_ec_full_route){boot_log("SPRING_PROBE","FAIL: full owner route/resources required");g_paused=1;return;}
+    SA3DSMovementPlacement target={0};int found=0;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        if(p.act==g_ec_act_index&&p.source_row==row&&(p.type&4095u)<=2){target=p;found=1;break;}
+    }
+    if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
+        target.position.x,target.position.z,&g_player))goto fail;
+    g_ec_collision.reference_y=target.position.y+8;
+    SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,target.position.x,target.position.z);
+    if(!floor.valid||floor.normal.y<.8f||fabsf(floor.ground_y-target.position.y)>20)goto fail;
+    g_player.pos=(SA1Vec3){target.position.x,floor.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,target.position.z};
+    g_player.vel=(SA1Vec3){0};g_player.grounded=true;g_player.surface_id=floor.surface_id;
+    g_player.ground_normal=floor.normal;g_player.surface_frame_active=false;
+    g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
+    reset_springs();g_spring_probe=1;g_spring_probe_ticks=0;
+    g_spring_probe_launches=g_spring_probe_rise=g_spring_probe_fall=g_spring_probe_unsupported=0;
+    g_camera.yaw=0;
+    boot_log("SPRING_PROBE","BEGIN: explicit original-placement launch fixture; course progress is not being tested");return;
+fail:
+    boot_log("SPRING_PROBE","FAIL: original placement lacks supported nearby terrain");g_paused=1;
+}
+
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
@@ -864,6 +1043,7 @@ static int init_scene(void) {
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
         load_rings();
         load_background();
+        load_springs();
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
@@ -911,7 +1091,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings())return 0;
+        if (!draw_rings()||!draw_springs())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -993,6 +1173,10 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     trace_stop();
+    for(unsigned i=0;i<6;i++)sa3ds_ec_gpu_destroy(&g_spring_gpu[i]);
+    free(g_spring_states);g_spring_states=NULL;g_springs_ready=0;
+    sa3ds_free_file(g_movement_bytes);g_movement_bytes=NULL;
+    sa3ds_free_file(g_spring_visual_bytes);g_spring_visual_bytes=NULL;
     sa3ds_ec_gpu_destroy(&g_ring_gpu);sa3ds_rings_destroy(&g_rings);g_rings_ready=0;
     sa3ds_free_file(g_ring_visual_bytes);sa3ds_free_file(g_ring_placement_bytes);
     g_ring_visual_bytes=g_ring_placement_bytes=NULL;
@@ -1107,6 +1291,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
+    if(g_emerald_coast&&g_ec_combined)begin_spring_probe();
     if(g_pose_lab) {
         mkdir("sdmc:/3ds/SA3DS",0777);
         FILE *f=fopen("sdmc:/3ds/SA3DS/pass10_pose_metrics.csv","wb");
@@ -1182,6 +1367,7 @@ int main(void) {
                 g_camera.yaw=0;
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
+            if(g_spring_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
@@ -1194,20 +1380,67 @@ int main(void) {
                 }
                 ec_refresh_collision_region();
             }
+            if(!sa3ds_spring_player_begin(&g_player,&g_spring_pending,&tick_input)){
+                boot_log("SPRINGS","Player command rejected");break;
+            }
             SA1Vec3 previous=g_player.pos;
             uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
                 g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+            sa3ds_spring_player_tail(&g_player);
             if(g_emerald_coast && !(previous_tick && g_player.sim_frame==1))
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
             if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
             }
+            if(g_spring_probe&&g_player.pc2004_action_state_valid){
+                if(g_player.pc2004_action_state==9||g_player.pc2004_action_state==10)g_spring_probe_rise++;
+                if(g_player.pc2004_action_state==12)g_spring_probe_fall++;
+            }
+            SA1PlayerState physics_done=g_player;
+            g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
+            g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
+            if(g_spring_probe &&
+                (g_selection.requested_runtime_id==16 || g_selection.requested_runtime_id==17 ||
+                 g_selection.requested_runtime_id==18) &&
+                (!g_anim_runtime.initialized || previous_spring_animation!=g_selection.requested_runtime_id)){
+                char note[100];snprintf(note,sizeof(note),"tick=%llu action=%u request=%u",
+                    (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,
+                    g_selection.requested_runtime_id);boot_log("SPRING_ANIMATION",note);
+            }
+            previous_spring_animation=g_selection.requested_runtime_id;
+            if (memcmp(&physics_done,&g_player,sizeof(g_player))!=0) {
+                fail_screen("animation mutated physics state");
+                trace_stop();
+                cleanup(); C3D_Fini(); romfsExit(); gfxExit();
+                return 1;
+            }
+            if (g_trace_file) {
+                const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
+                char replay_name[64];
+                if(g_wca_replay)snprintf(replay_name,sizeof(replay_name),
+                    "WCA_%03u_%s",wca.case_id,wca.name);
+                if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
+                        g_wca_replay?replay_name:(g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN")),&g_player,&tick_input,
+                        g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
+                else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
+            }
+            /* List2 spring objects write commands after Sonic's current
+             * movement/animation phase; consume them next player tick. */
+            tick_springs();
+            if(g_spring_probe&&++g_spring_probe_ticks>=180){
+                char note[160];snprintf(note,sizeof(note),"%s: ticks=%u launches=%u riseTicks=%u fallTicks=%u unsupported=%u; controlled fixture only",
+                    g_spring_probe_launches&&g_spring_probe_rise&&g_spring_probe_fall&&!g_spring_probe_unsupported?"PASS":"FAIL",
+                    g_spring_probe_ticks,g_spring_probe_launches,g_spring_probe_rise,g_spring_probe_fall,g_spring_probe_unsupported);
+                boot_log("SPRING_PROBE",note);g_spring_probe=0;g_paused=1;
+            }
             if(g_rings_ready){
-                SA3CMatrix actor;sa3ds_ec_model_transform(&g_player,&actor);
+                /* Player CCL was queued in Sonic's phase, before list2
+                 * spring commands can change its task transform. */
+                SA3CMatrix actor;sa3ds_ec_model_transform(&physics_done,&actor);
                 SA1Vec3 center={actor.m[12],actor.m[13],actor.m[14]};
                 unsigned collected=sa3ds_rings_tick_presented(&g_rings,sa3ds_ec_task_origin(&g_player),center,
                     SA1_STEAM_SONIC_PARAMETER_EVIDENCE.rad,0,1,g_rings.clip_level,step+1==steps);
@@ -1225,25 +1458,6 @@ int main(void) {
                         events>=3?"PASS":"FAIL",g_ring_probe_tick,(unsigned long)events);
                     boot_log("RING_PROBE",note);g_ring_probe=0;g_paused=1;
                 }
-            }
-            SA1PlayerState physics_done=g_player;
-            g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
-            g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
-            if (memcmp(&physics_done,&g_player,sizeof(g_player))!=0) {
-                fail_screen("animation mutated physics state");
-                trace_stop();
-                cleanup(); C3D_Fini(); romfsExit(); gfxExit();
-                return 1;
-            }
-            if (g_trace_file) {
-                const SA3DSParityZone *trace_zone=sa3ds_parity_lab_zone_by_id(g_selected_zone);
-                char replay_name[64];
-                if(g_wca_replay)snprintf(replay_name,sizeof(replay_name),
-                    "WCA_%03u_%s",wca.case_id,wca.name);
-                if (sa3ds_parity_trace_write_frame(g_trace_file,g_selected_zone,
-                        g_wca_replay?replay_name:(g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN")),&g_player,&tick_input,
-                        g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
-                else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
                 (g_ec_replay || g_ring_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);

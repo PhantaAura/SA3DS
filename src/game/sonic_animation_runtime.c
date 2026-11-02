@@ -96,6 +96,10 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
         return 13;
     }
     case SA3DS_SONIC_ANIM_AIRBORNE_UPRIGHT:
+        if (player->animation_airborne_request_valid &&
+            (player->animation_airborne_request == 16 ||
+             player->animation_airborne_request == 17))
+            return player->animation_airborne_request;
         return 18;
     case SA3DS_SONIC_ANIM_AIRBORNE_BALL:
         if (player->animation_airborne_request_valid &&
@@ -204,6 +208,19 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                                                   : player->grounded;
     uint16_t requested_id = choose_runtime_id(player, observation,
                                                previous_grounded);
+    /* The player bridge records the selector's last explicit write. Once
+     * PlayAnimation advances 17 to NextAnim18, the unchanged provenance must
+     * not reissue17 on every fall tick. A new16/17 write interrupts normally. */
+    int spring_request = observation->intent == SA3DS_SONIC_ANIM_AIRBORNE_UPRIGHT &&
+        player->animation_airborne_request_valid &&
+        (requested_id == 16 || requested_id == 17);
+    if (spring_request && runtime->previous_airborne_request_valid &&
+        runtime->previous_airborne_request == requested_id &&
+        runtime->requested_runtime_id == 18 && requested_id == 17)
+        requested_id = 18;
+    runtime->previous_airborne_request_valid = spring_request;
+    if (spring_request)
+        runtime->previous_airborne_request = player->animation_airborne_request;
     runtime->landing_classification_valid = 0;
     if (runtime->initialized && player->grounded &&
         player->action_state == SA1_ACTION_GROUNDED && previous_grounded) {

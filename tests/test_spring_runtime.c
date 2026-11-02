@@ -7,6 +7,13 @@ static SA3DSMovementPlacement placement(unsigned kind){
     SA3DSMovementPlacement p={0};p.type=(uint16_t)kind;p.parameters[1]=3;p.parameters[0]=12;
     return p;
 }
+static double source_neutral_sine(void *context,uint16_t angle){
+    (void)context;
+    if(angle==0||angle==0x8000)return 0;
+    if(angle==0x4000)return 1;
+    if(angle==0xc000)return -1;
+    return sin((double)angle*6.28318530717958647692/65536.0);
+}
 int main(void){
     SA3DSSpringTrig trig={{0,0,0},{1,1,1}};
     for(unsigned kind=1;kind<=2;kind++){
@@ -45,6 +52,21 @@ int main(void){
         in.skip_update=0;a.action=2;saved=a;in.player_grounded=0;
         assert(!sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
         assert(!memcmp(&a,&saved,sizeof(a))&&!out.launched);
+    }
+    for(unsigned kind=1;kind<=2;kind++){
+        SA3DSMovementPlacement p=placement(kind);
+        SA3DSSpringActor a={.action=1,.visual_phase=270,.visual_speed=20,.visual_amplitude=.5f};
+        SA3DSSpringTickInput in={.collision_player=-1,.sine=source_neutral_sine};
+        SA3DSSpringTickResult out;
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
+        assert(a.compression==-.5f&&a.visual_phase==290&&a.visual_speed==(kind==2?15:18));
+        assert(a.visual_amplitude>.58f&&a.visual_amplitude<.6f);
+        in.paused=1;float phase=a.visual_phase,amplitude=a.visual_amplitude;
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
+        assert(a.visual_phase==phase&&a.visual_amplitude==amplitude&&a.compression<-.5f);
+        a.cooldown=11;in.paused=0;in.collision_player=0;
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
+        assert(a.action==2&&a.compression==.1f&&a.visual_phase==270&&a.visual_speed==20);
     }
     /* Physical basis must preserve all SET axes and port side handedness. */
     static const int16_t angles[]={0,0x4000,(int16_t)0x8000,(int16_t)0xc000};

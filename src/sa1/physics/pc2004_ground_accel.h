@@ -36,4 +36,9 @@ int sa1_pc2004_pgetspeed_local(SA1PC2004LocalVector speed,
     SA1PC2004LocalVector add_velocity,int analog_active,float up,
     uint32_t auxiliary_flags,const SA1SteamPlayerParameters *parameters,
     SA1PC2004LocalVector *out);
+/*4432E0, zero pending collision impulse; force is already task-local.
+ * Used by source spring action10 while normal speed>=nocon_speed. */
+int sa1_pc2004_noinput_add_velocity(SA1PC2004LocalVector speed,
+    SA1PC2004LocalVector force,const SA1PC2004MotionContext *context,
+    const SA1SteamPlayerParameters *parameters,SA1PC2004LocalVector *out);
 #endif

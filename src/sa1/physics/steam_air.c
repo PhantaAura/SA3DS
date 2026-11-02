@@ -11,8 +11,6 @@
 #define BAMS_22_5 0x1000u
 #define BAMS_45   0x2000u
 #define BAMS_135  0x6000u
-#define PC2004_AIR_TURN_TRANSFORMED_BLEND 0.8999999761581421f
-#define PC2004_AIR_TURN_OLD_LOCAL_BLEND 0.10000000149011612f
 #define SADX_JUMP_HOLD_MULTIPLIER 0.800000011920929f
 
 typedef struct {
@@ -100,12 +98,11 @@ static SA1LocalSpeed apply_general_turn(SA1PlayerState *player,
     SA1LocalSpeed transformed = world_to_local(player->yaw, old_world);
     /* 0x443CCE..0x443D23, status & 3 == 0. Both coefficients are
      * independent f32 constants, not the grounded helper's 0.99 branch. */
-    transformed.forward = transformed.forward * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                          old_local.forward * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
-    transformed.vertical = transformed.vertical * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                           old_local.vertical * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
-    transformed.side = transformed.side * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                       old_local.side * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+    SA1PC2004LocalVector blended=sa1_pc2004_ground_turn_velocity(
+        (SA1PC2004LocalVector){old_local.forward,old_local.vertical,old_local.side},
+        (SA1PC2004LocalVector){transformed.forward,transformed.vertical,transformed.side},
+        SA1_PC2004_TURN_GENERAL,player->grounded,1.0f,1.0f);
+    transformed=(SA1LocalSpeed){blended.forward,blended.normal,blended.side};
     return transformed;
 }
 
@@ -256,12 +253,11 @@ static void air_step_frame(SA1PlayerState *player,
             frame->forward = sa1_vec3_normalize(
                 sa1_vec3_cross(frame->right, frame->up));
             SA1LocalSpeed transformed = world_to_frame(frame, old_world);
-            local.forward = transformed.forward * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                            old_local.forward * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
-            local.vertical = transformed.vertical * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                             old_local.vertical * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
-            local.side = transformed.side * PC2004_AIR_TURN_TRANSFORMED_BLEND +
-                         old_local.side * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
+            SA1PC2004LocalVector blended=sa1_pc2004_ground_turn_velocity(
+                (SA1PC2004LocalVector){old_local.forward,old_local.vertical,old_local.side},
+                (SA1PC2004LocalVector){transformed.forward,transformed.vertical,transformed.side},
+                SA1_PC2004_TURN_GENERAL,player->grounded,frame->up.y,1.0f);
+            local=(SA1LocalSpeed){blended.forward,blended.normal,blended.side};
         }
         accel.forward += force;
     }
@@ -406,4 +402,22 @@ void sa1_steam_sonic_air_step(SA1PlayerState *player,
         debug_out->blocked_wide_angle_accel = wide_angle_block;
         debug_out->doubled_air_accel = doubled_accel;
     }
+}
+
+void sa1_steam_sonic_noinput_step_surface(SA1PlayerState *player,
+                                         const SA1Input *input,
+                                         const SA1SurfaceFrame *frame) {
+    const SA1SteamPlayerParameters *p=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    SA1LocalSpeed speed=world_to_frame(frame,player->vel);
+    SA1PC2004LocalVector local={speed.forward,speed.vertical,speed.side};
+    SA1PC2004LocalVector force={-p->weight*frame->forward.y,
+        -p->weight*frame->up.y,-p->weight*frame->right.y},add,next;
+    SA1PC2004MotionContext context={player->grounded,player->ball_form,0,frame->up.y,1.0f};
+    sa1_pc2004_noinput_add_velocity(local,force,&context,p,&add);
+    SA1SADXFilteredAnalog analog=sa1_sadx_filter_logical_analog(input->move_x,input->move_z);
+    sa1_pc2004_pgetspeed_local(local,add,analog.active,frame->up.y,0,p,&next);
+    speed=(SA1LocalSpeed){clampf(next.forward,-p->lim_h_spd,p->lim_h_spd),
+        clampf(next.normal,-p->lim_v_spd,p->lim_v_spd),
+        clampf(next.side,-p->lim_h_spd,p->lim_h_spd)};
+    player->vel=frame_to_world(frame,speed);
 }

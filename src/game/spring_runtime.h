@@ -7,13 +7,19 @@
 #include "../sa1/physics/surface_frame.h"
 /* Source object task state. Placement lifetime/loading and the global CCL
  * queue remain caller-owned; one tick here is one actual spring object tick. */
-typedef struct { uint8_t action, cooldown, player_index; } SA3DSSpringActor;
+typedef struct {
+    uint8_t action,cooldown,player_index;
+    float visual_phase,visual_speed,visual_amplitude,compression;
+} SA3DSSpringActor;
+typedef double (*SA3DSSpringSin)(void *context,uint16_t angle);
 typedef struct {
     int collision_player; /* already-arbitrated previous CCL result: -1,0,1 */
     int paused, skip_update;
     int player_grounded;
     float player_local_forward;
     SA1Vec3 player_task_origin; /* source foot/task position, not port support center */
+    SA3DSSpringSin sine; /* optional presentation; exact owner Ninja table in native */
+    void *sine_context;
 } SA3DSSpringTickInput;
 typedef struct {
     uint8_t enqueue_collision, draw, launched, player_index;

@@ -63,4 +63,8 @@ void sa1_steam_sonic_air_step_surface(SA1PlayerState *player,
                                       SA1SurfaceFrame *frame,
                                       SA1SteamAirDebug *debug_out);
 
+/* Source4432E0 +443F50, default force/no-pending-impulse context.
+ * Retains the incoming ground-status bits for a spring's first movement tick. */
+void sa1_steam_sonic_noinput_step_surface(SA1PlayerState *player,
+    const SA1Input *input,const SA1SurfaceFrame *frame);
 #endif

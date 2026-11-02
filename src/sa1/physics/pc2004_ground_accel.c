@@ -128,3 +128,36 @@ int sa1_pc2004_ground_accel_clamp(const SA1PC2004GroundAccelInput *in,
     }
     return 1;
 }
+
+static float noinput_friction(float speed,float acceleration,float normal,
+    float axis_friction,float multiplier,float limit_friction){
+    if(speed==0){
+        float limit=limit_friction*multiplier*normal;
+        return acceleration<limit&&-limit<acceleration?0:acceleration;
+    }
+    float friction=normal<0?axis_friction*multiplier*normal:0;
+    if(acceleration>0)friction=-friction;
+    else if(acceleration==0)friction=0;
+    acceleration+=friction;
+    if((speed>0&&speed < -acceleration)||(speed<0&&-acceleration<speed))return -speed;
+    return acceleration;
+}
+int sa1_pc2004_noinput_add_velocity(SA1PC2004LocalVector speed,
+    SA1PC2004LocalVector force,const SA1PC2004MotionContext *ctx,
+    const SA1SteamPlayerParameters *p,SA1PC2004LocalVector *out){
+    if(!out)return 0;
+    *out=(SA1PC2004LocalVector){0};
+    if(!ctx||!p||ctx->status_0x4000||!isfinite(ctx->acceleration_multiplier)||
+       !isfinite(speed.forward)||!isfinite(speed.normal)||!isfinite(speed.side)||
+       !isfinite(force.forward)||!isfinite(force.normal)||!isfinite(force.side))return 0;
+    SA1PC2004LocalVector add={force.forward+p->air_resist*speed.forward,
+        force.normal+p->air_resist_y*speed.normal,
+        force.side+p->air_resist_z*speed.side};
+    if(ctx->grounded_status){
+        add.forward=noinput_friction(speed.forward,add.forward,add.normal,
+            p->grd_frict,ctx->acceleration_multiplier,p->lim_frict);
+        add.side=noinput_friction(speed.side,add.side,add.normal,
+            p->grd_frict_z,ctx->acceleration_multiplier,p->lim_frict);
+    }
+    *out=add;return 1;
+}

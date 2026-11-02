@@ -72,6 +72,11 @@ def verify(path):
     assert struct.unpack('<I',read(0x90e3d4+4*4,4))[0]==0x100000
     secondary_attributes=struct.unpack('<I',read(0x91cc20+4,4))[0]
     assert secondary_attributes&0x100000  # list4 excludes this attack record
+    assert struct.unpack('<d',read(0x7dccd0,8))[0]==65536.
+    assert struct.unpack('<d',read(0x7df1a0,8))[0]==1./360.
+    assert struct.unpack('<f',read(0x88c650,4))[0]==290.
+    assert struct.unpack('<f',read(0x7dd568,4))[0]==struct.unpack('<f',struct.pack('<f',.1))[0]
+    assert struct.unpack('<f',read(0x7dcc74,4))[0]==4.
     assert struct.unpack('<f',read(0x7dd584,4))[0]==struct.unpack('<f',struct.pack('<f',.6))[0]
     assert struct.unpack('<f',read(0x7dd550,4))[0]==struct.unpack('<f',struct.pack('<f',.4))[0]
 if __name__=='__main__':
