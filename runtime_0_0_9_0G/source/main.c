@@ -5,6 +5,8 @@
 #include "ring_runtime.h"
 #include "ring_groups.h"
 #include "spring_player.h"
+#include "dash_panel.h"
+#include "panel_visual.h"
 #include "spring_visual.h"
 #include "ring_replay.h"
 #include <3ds.h>
@@ -107,6 +109,19 @@ static SA3DSNativeSpring *g_spring_states;
 static SA3DSSpringVisual g_spring_visual;
 static SA3DSECGpu g_spring_gpu[6];
 static SA3DSSpringPendingCommand g_spring_pending;
+typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame;int32_t next,previous;} SA3DSNativePanel;
+static SA3DSNativePanel *g_panel_states;
+static SA3DSPanelVisual g_panel_visual;
+static SA3DSECGpu g_panel_gpu[3];
+static uint8_t *g_panel_visual_bytes;
+static size_t g_panel_visual_size;
+static int g_panels_ready;
+static int g_panel_probe;
+static unsigned g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_mask,g_panel_probe_draws,g_panel_probe_sim_mask;
+static uint32_t g_panel_probe_row;
+static int32_t g_panel_head=-1;
+static unsigned g_movement_ccl_queued;
+static void reset_panels(void);
 static int g_springs_ready;
 static int32_t g_spring_head=-1;
 static int g_spring_probe;
@@ -856,7 +871,7 @@ static double spring_source_sin(void *context,uint16_t angle){
     return sa3ds_ring_group_sin((const SA3DSRings*)context,angle);
 }
 static void reset_springs(void){
-    g_spring_head=-1;
+    g_spring_head=-1;reset_panels();
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
     memset(&g_spring_pending,0,sizeof(g_spring_pending));
 }
@@ -871,7 +886,7 @@ static void load_springs(void){
     for(unsigned i=0;i<6;i++)
         if(!sa3ds_ec_gpu_init_full(&g_spring_gpu[i],&g_spring_visual.components[i],log_texture_stage,NULL))goto fail;
     g_springs_ready=1;reset_springs();
-    boot_log("SPRINGS","Original spring models and SET placements loaded; panels remain pending");return;
+    boot_log("SPRINGS","Original spring models and SET placements loaded");return;
 fail:
     for(unsigned i=0;i<6;i++)sa3ds_ec_gpu_destroy(&g_spring_gpu[i]);
     free(g_spring_states);g_spring_states=NULL;
@@ -882,7 +897,7 @@ fail:
 }
 static void tick_springs(void){
     if(!g_springs_ready)return;
-    unsigned queued=0;
+    g_movement_ccl_queued=0;
     SA1Vec3 ccl_task=sa3ds_ec_task_origin(&g_player);
     SA1Vec3 ccl_up=sa1_vec3_normalize(g_player.ground_normal);
     SA3DSSpringPrimaryCollider collider={.task_origin=ccl_task,
@@ -949,10 +964,116 @@ static void tick_springs(void){
                     g_player.vel.x,g_player.vel.y,g_player.vel.z);boot_log("SPRING_LAUNCH",note);
             }
         }
-        if(result.enqueue_collision&&queued<256){
-            state->pending_hit=sa3ds_spring_primary_overlap(&p,&collider)==1;queued++;
+        if(result.enqueue_collision&&g_movement_ccl_queued<256){
+            state->pending_hit=sa3ds_spring_primary_overlap(&p,&collider)==1;g_movement_ccl_queued++;
         }
     }
+}
+static void reset_panels(void){
+    g_panel_head=-1;
+    if(g_panel_states)memset(g_panel_states,0,g_movement.count*sizeof(*g_panel_states));
+}
+static void load_panels(void){
+    if(!g_springs_ready)goto fail;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/panel_visual.sa3dspak",&g_panel_visual_bytes,&g_panel_visual_size)||
+       !sa3ds_panel_visual_open(&g_panel_visual,g_panel_visual_bytes,g_panel_visual_size))goto fail;
+    g_panel_states=calloc(g_movement.count,sizeof(*g_panel_states));if(!g_panel_states)goto fail;
+    for(unsigned i=0;i<3;i++)
+        if(!sa3ds_ec_gpu_init_full(&g_panel_gpu[i],&g_panel_visual.components[i],log_texture_stage,NULL))goto fail;
+    g_panels_ready=1;reset_panels();boot_log("PANELS","Original animated panel components and SET placements loaded");return;
+fail:
+    for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
+    free(g_panel_states);g_panel_states=NULL;
+    sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
+    boot_log("PANELS","Owner panel resources unavailable; gameplay objects remain incomplete");
+}
+static void tick_panels(const SA1PlayerState *queued_player){
+    if(!g_panels_ready)return;
+    SA3CMatrix queued_transform;sa3ds_ec_model_transform(queued_player,&queued_transform);
+    SA1Vec3 center={queued_transform.m[12],queued_transform.m[13],queued_transform.m[14]};
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        if((p.type&4095u)!=3)continue;
+        SA3DSNativePanel *state=&g_panel_states[i];state->draw=0;
+        SA1Vec3 delta=sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),p.position);
+        float distance=sa1_vec3_dot(delta,delta);
+        if(p.act!=g_ec_act_index||(state->loaded&&distance>360100.f)){
+            if(state->loaded){
+                if(state->previous>=0)g_panel_states[state->previous].next=state->next;
+                else g_panel_head=state->next;
+                if(state->next>=0)g_panel_states[state->next].previous=state->previous;
+            }
+            memset(state,0,sizeof(*state));continue;
+        }
+        if(!state->loaded){
+            unsigned high=(p.type>>12)&7u;
+            int allowed=!high||(high==1?g_rings.clip_level<1:g_rings.clip_level<2);
+            if(!allowed||distance>360000.f)continue;
+            state->loaded=1;state->previous=-1;state->next=g_panel_head;
+            if(g_panel_head>=0)g_panel_states[g_panel_head].previous=(int32_t)i;
+            g_panel_head=(int32_t)i;
+            for(unsigned axis=0;axis<3;axis++){
+                uint16_t angle=(uint16_t)p.angles[axis];
+                state->trig.sine[axis]=(float)spring_source_sin(&g_rings,angle);
+                state->trig.cosine[axis]=(float)spring_source_sin(&g_rings,(uint16_t)(angle+0x4000));
+            }
+        }
+    }
+    for(int32_t i=g_panel_head;i>=0;i=g_panel_states[i].next){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,(uint32_t)i,&p);
+        SA3DSNativePanel *state=&g_panel_states[i];
+        SA3DSDashPanelInput input={.first_hit_player=state->pending_hit?0:-1,
+            .player_ground_status_bit0=g_player.grounded};SA3DSDashPanelResult result;
+        if(!sa3ds_dash_panel_tick(&state->actor,&p,&input,&result)){state->pending_hit=0;continue;}
+        state->pending_hit=0;
+        float location[3]={p.position.x,p.position.y,p.position.z};
+        state->draw=result.draw&&sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,location,30.f);
+        if(state->draw){
+            state->frame=state->phase;state->phase=(state->phase+1)&7u;
+            if(g_panel_probe&&p.source_row==g_panel_probe_row)g_panel_probe_sim_mask|=1u<<state->frame;
+        }
+        if(result.boost&&sa3ds_dash_panel_apply(&g_player,&p,&state->trig,&result.parameters,SA3DS_EC_CONTROLLER_SUPPORT)){
+            char note[160];snprintf(note,sizeof(note),"tick=%llu row=%lu speed=%.3f lockout=%ld control=%d velocity=%.3f,%.3f,%.3f",
+                (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,result.parameters.speed,
+                (long)result.parameters.lockout,g_player.pc2004_control_timer,g_player.vel.x,g_player.vel.y,g_player.vel.z);
+            boot_log("PANEL_BOOST",note);
+            if(g_panel_probe&&p.source_row==g_panel_probe_row)g_panel_probe_boosts++;
+        }
+        if(result.enqueue_collision&&g_movement_ccl_queued<256){
+            state->pending_hit=sa3ds_dash_panel_primary_overlap(&p,&state->trig,center,4.f)==1;
+            g_movement_ccl_queued++;
+        }
+    }
+}
+static int draw_panels(void){
+    if(!g_panels_ready)return 1;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSNativePanel *state=&g_panel_states[i];if(!state->draw)continue;
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        if(p.act!=g_ec_act_index||(p.type&4095u)!=3)continue;
+        SA3DSMovementPlacement orientation=p;orientation.type=2;SA1SurfaceFrame physical;
+        SA3CMatrix pose[3];if(!sa3ds_springb_physical_frame(&orientation,&state->trig,&physical)||
+            !sa3ds_panel_visual_pose(&g_panel_visual,state->frame,pose))return 0;
+        C3D_Mtx actor;
+        /* Display7A4360 uses SETY+8000: negate the original SET X/Z columns. */
+        actor.r[0]=FVec4_New(-physical.right.x,physical.up.x,-physical.forward.x,p.position.x);
+        actor.r[1]=FVec4_New(-physical.right.y,physical.up.y,-physical.forward.y,p.position.y);
+        actor.r[2]=FVec4_New(-physical.right.z,physical.up.z,-physical.forward.z,p.position.z);
+        actor.r[3]=FVec4_New(0,0,0,1);
+        for(unsigned part=0;part<3;part++){
+            if(g_panel_visual.nodes[part*16+4]&SA3C_EVAL_HIDE)continue;
+            C3D_Mtx local,model,mv;
+            for(unsigned row=0;row<4;row++)local.r[row]=FVec4_New(
+                pose[part].m[row],pose[part].m[4+row],pose[part].m[8+row],pose[part].m[12+row]);
+            Mtx_Multiply(&model,&actor,&local);Mtx_Multiply(&mv,&g_ec_view,&model);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_panel_gpu[part],0)||!sa3ds_ec_gpu_draw(&g_panel_gpu[part],1))return 0;
+            if(g_panel_probe&&p.source_row==g_panel_probe_row){
+                g_panel_probe_draws++;g_panel_probe_mask|=1u<<state->frame;
+            }
+        }
+    }
+    return 1;
 }
 static int draw_springs(void){
     if(!g_springs_ready)return 1;
@@ -1011,6 +1132,32 @@ static void begin_spring_probe(void){
 fail:
     boot_log("SPRING_PROBE","FAIL: original placement lacks supported nearby terrain");g_paused=1;
 }
+static void begin_panel_probe(void){
+    FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_panel_probe.flag","rb");
+    if(!file)return;
+    unsigned row=0;int parsed=fscanf(file,"%u",&row)==1;fclose(file);
+    if(!parsed||!g_panels_ready||!g_ec_full_route){boot_log("PANEL_PROBE","FAIL: full owner route/resources required");g_paused=1;return;}
+    SA3DSMovementPlacement target={0};int found=0;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
+        if(p.act==g_ec_act_index&&p.source_row==row&&(p.type&4095u)==3){target=p;found=1;break;}
+    }
+    if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
+        target.position.x,target.position.z,&g_player))goto fail;
+    g_ec_collision.reference_y=target.position.y+8;
+    SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,target.position.x,target.position.z);
+    if(!floor.valid||floor.normal.y<.8f||fabsf(floor.ground_y-target.position.y)>20)goto fail;
+    g_player.pos=(SA1Vec3){target.position.x,floor.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,target.position.z};
+    g_player.vel=(SA1Vec3){0};g_player.grounded=true;g_player.surface_id=floor.surface_id;
+    g_player.ground_normal=floor.normal;g_player.surface_frame_active=false;
+    g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
+    reset_springs();g_panel_probe=1;g_panel_probe_ticks=0;
+    g_panel_probe_row=target.source_row;g_panel_probe_boosts=g_panel_probe_mask=g_panel_probe_draws=g_panel_probe_sim_mask=0;
+    g_camera.yaw=0;
+    boot_log("PANEL_PROBE","BEGIN: explicit original-placement panel fixture; course progress is not being tested");return;
+fail:
+    boot_log("PANEL_PROBE","FAIL: original placement lacks supported nearby terrain");g_paused=1;
+}
 
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
@@ -1044,6 +1191,7 @@ static int init_scene(void) {
         load_rings();
         load_background();
         load_springs();
+        load_panels();
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
@@ -1091,7 +1239,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -1173,6 +1321,9 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     trace_stop();
+    for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
+    free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
+    sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
     for(unsigned i=0;i<6;i++)sa3ds_ec_gpu_destroy(&g_spring_gpu[i]);
     free(g_spring_states);g_spring_states=NULL;g_springs_ready=0;
     sa3ds_free_file(g_movement_bytes);g_movement_bytes=NULL;
@@ -1291,7 +1442,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined)begin_spring_probe();
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();}
     if(g_pose_lab) {
         mkdir("sdmc:/3ds/SA3DS",0777);
         FILE *f=fopen("sdmc:/3ds/SA3DS/pass10_pose_metrics.csv","wb");
@@ -1367,7 +1518,7 @@ int main(void) {
                 g_camera.yaw=0;
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
-            if(g_spring_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_spring_probe||g_panel_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
@@ -1395,6 +1546,7 @@ int main(void) {
             if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
+                if(g_panel_probe){boot_log("PANEL_PROBE","FAIL: physical death/reset during fixture");g_panel_probe=0;g_paused=1;}
             }
             if(g_spring_probe&&g_player.pc2004_action_state_valid){
                 if(g_player.pc2004_action_state==9||g_player.pc2004_action_state==10)g_spring_probe_rise++;
@@ -1431,6 +1583,13 @@ int main(void) {
             /* List2 spring objects write commands after Sonic's current
              * movement/animation phase; consume them next player tick. */
             tick_springs();
+            tick_panels(&physics_done);
+            if(g_panel_probe&&++g_panel_probe_ticks>=32){
+                char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x; explicit placement fixture only",
+                    g_panel_probe_boosts&&g_panel_probe_draws&&g_panel_probe_sim_mask==255?"PASS":"FAIL",
+                    g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_draws,g_panel_probe_sim_mask,g_panel_probe_mask);
+                boot_log("PANEL_PROBE",note);g_panel_probe=0;g_paused=1;
+            }
             if(g_spring_probe&&++g_spring_probe_ticks>=180){
                 char note[160];snprintf(note,sizeof(note),"%s: ticks=%u launches=%u riseTicks=%u fallTicks=%u unsupported=%u; controlled fixture only",
                     g_spring_probe_launches&&g_spring_probe_rise&&g_spring_probe_fall&&!g_spring_probe_unsupported?"PASS":"FAIL",

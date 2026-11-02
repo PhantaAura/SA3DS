@@ -1,3 +1,23 @@
+# WCA active checkpoint — native original animated dash panels
+
+WCA26 connects external original panel components/eight-frame ACTION to native
+activation, prior CCL hit consumption, direct speed/frame and signed control
+timer. Original row9 native fixture PASS32ticks: boost tick3 speed10/timer69,
+24component submissions, simulated phasesff/rendered phasesc7. All24 imported
+node poses match independent raw-owner matrices (maxerror2.70e-7).
+Required host/owner pose-import gates and native build PASS. Code-only379344B
+SHA256c99a67a8c0daef4d6f0f3e6e5584af92800fe997bb31a1baf1fca9903480f5b8.
+Owner assets remain in external SD assets/, never Git. Fixture flags removed.
+
+This does not complete CP5 or WCA: shared list3 scheduling/secondary collision,
+spring off-ground scratch, homing/air dash/enemies/monitors/checkpoints, loop
+collision/camera, whale/events, HUD/audio/death/goal and renderer fidelity are
+still open. Next work can combine controller and gameplay reconstruction;
+PHYSICS_1TO1 remains false. Continue after publishing checkpoints. Batch tests
+and rerun only required gates or focused checks justified by changed behavior.
+
+---
+
 # WCA active checkpoint — original dash-panel task and direct boost foundation
 
 WCA25 adds source-backed dash-panel task state, per-player lockout, grounded
