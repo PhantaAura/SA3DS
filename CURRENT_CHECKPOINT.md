@@ -1602,3 +1602,30 @@ The 12 scheduled opportunities are finished; no automatic next run.
 ## 2026-10-15 MacFix2 (source syntax hotfix; NOT a new release gate)
 Parent: `0.0.9.1E-WIP9-MacFix1_CodeOnly.zip`, SHA-256 `4e0dbe43f180048f79e90f24f585dfa12e63fdc5b1c8541fabfa1edf422f55ab`.
 Observed real Mac devkitARM compiler failure at `runtime_0_0_9_0G/source/main.c:176-180` due to interleaved HUD `printf` strings. Restored two independently terminated HUD calls at rows 27/28 and added native-source lexical regression gate. All other runtime logic is inherited unchanged. Owner must rerun actual native compiler; hardware render still pending.
+
+
+## November 2 continuation — published through13a9001
+
+Committed/pushed ordinary ground clamp/pacing correction a0d634b and original
+background/corrected PC texture/optional SD replacement integration13a9001,
+along with launch-frame handoff ab08004. Desktop checkout fast-forwarded.
+Code-only tested build in local dist: SA3DS_WCA_GroundBackgroundMods_20261102.3dsx
+315864B SHA256 b06f7ec7053651437da4dbe21bd0c6d67512883fe92d61f89c5688f3c9f7eeb4.
+Corrected owner caches installed outside Git in shared Azahar SD with private
+backups. Isolated checks used same binary original/off, actual DC replacement/on,
+and missing-file fallback; all reached opening tick270. No whole-course/hardware
+or retail1:1 claim. Detailed bounded checks: docs/WCA_0_0_10_0.md,
+docs/PC2004_PVM_LAYOUT.md, docs/ASSET_OVERRIDES.md.
+
+User requests minimal necessary testing: batch required regressions/builds and
+focused source/runtime checks; avoid repeating unchanged pose oracles and broad
+matrices at each small change. CP1 now explicitly includes homing attack/air dash.
+Music must use local owner source files; remote Windows music is replaced.
+
+Next: integrate recovered spring object tick/collision/action9/10 modules,
+authentic spring visuals, panels and shared object phases. New spring files in
+the temp working clone remain uncommitted and were individually checked by the
+source worker; this does not make springs playable yet. Full original controller,
+retail contacts/camera, enemies, whale, audio/HUD/death/finish remain incomplete.
+CP9 basic native SD texture replacement demonstration is verified; no global WCA
+completion. Continue work, do not stop at this checkpoint.
