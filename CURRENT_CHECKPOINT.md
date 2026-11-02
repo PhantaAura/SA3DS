@@ -1,3 +1,25 @@
+# WCA active checkpoint — correct air-turn status and grounded/air distinction
+
+WCA27 restores source443C50's independent f32.1/.9 airborne GENERAL blend.
+WCA23 incorrectly passed ground status as the grounded helper's analog input,
+selecting.05/.95. Both flat/full-frame air now use an explicit status-aware
+wrapper; retained-ground first spring movement stays on the grounded branch.
+Existing air regression fails old code and passes the fix. Full-frame contexts
+and source PGetSpeed small-side snap are covered. The existing air test is now
+part of the cumulative gate, closing its prior coverage omission.
+
+Required cumulative host gate, exact-owner steering witnesses, and native build
+PASS. Code-only379584B SHA256
+b0a7476568fadee32600ce39151e34c36d956e6568416191666340f039a32bd7.
+No new native movement replay or owner pose change; no retail/hardware claim.
+Next: connect original action8->14 air dash/homing. Source43BF40 returns1 without
+a target; action12 does not enter it. See docs/PC2004_AIR_ATTACK.md for source
+entry/timer/target rules. The targetless movement uses44C270+443F50, requiring
+the corrected status-aware turning in its general-frame acceleration path.
+Full WCA/PHYSICS_1TO1 remain false; continue after checkpoint publication.
+
+---
+
 # WCA active checkpoint — native original animated dash panels
 
 WCA26 connects external original panel components/eight-frame ACTION to native

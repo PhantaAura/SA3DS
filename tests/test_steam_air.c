@@ -166,6 +166,24 @@ int main(void) {
     assert(nearf(p.vel.x, sinf(turn)*f + cosf(turn)*side, 0.000002f));
     assert(nearf(p.vel.z, cosf(turn)*f - sinf(turn)*side, 0.000002f));
 
+    /* Full-frame path must use that same airborne status branch; retained
+     * launch ground bits select the distinct grounded analog branch. */
+    for(unsigned retained_ground=0;retained_ground<2;retained_ground++){
+        sa1_player_reset(&p,sa3ds_movement_lab_world());p.grounded=retained_ground!=0;
+        p.vel=(SA1Vec3){0,.5f,4};
+        SA1SurfaceFrame frame=sa1_surface_frame_make((SA1Vec3){0,1,0},(SA1Vec3){0,0,1});
+        sa1_steam_sonic_air_step_surface(&p,&right,0,&frame,&d);
+        float old_weight=retained_ground?.99f:.1f;
+        float new_weight=retained_ground?(float)(1.-(double).99f):.9f;
+        f=new_weight*(4*cosf(turn))+old_weight*4;
+        side=new_weight*(-4*sinf(turn));f+=sp->air_resist_air*4;
+        /*443F50 also snaps unchanged sub-jog side speed to0. Retained
+         * ground's .01 transformed weight falls inside that source band. */
+        if(retained_ground)side=0;
+        assert(nearf(p.vel.x,sinf(turn)*f+cosf(turn)*side,.000002f));
+        assert(nearf(p.vel.z,cosf(turn)*f-sinf(turn)*side,.000002f));
+    }
+
     /* High-speed >135-degree opposing input uses air_break. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     p.grounded = false;

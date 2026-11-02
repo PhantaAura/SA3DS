@@ -96,3 +96,11 @@ instruction witnesses also retain the dispatch calls. This is static authority,
 not a captured retail trajectory. Original PC2004 Emerald Coast was reached
 through Moonlight and ordinary walking/running inspected, but no frame-aligned
 retail trace or objective cycle equality was captured.
+
+
+WCA27 correction: ground status must not be passed as the grounded helper's
+analog argument. Airborne GENERAL443C50 uses independent.1/.9 constants before
+any grounded Up/friction query. The new status-aware wrapper fixes both air
+callers; retained-ground launch movement still uses the grounded branch.
+See docs/PC2004_AIR_ATTACK.md. The previously existing air regression is now
+included in the cumulative current-host gate.

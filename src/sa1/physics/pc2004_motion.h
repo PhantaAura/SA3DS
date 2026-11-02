@@ -73,6 +73,14 @@ SA1PC2004LocalVector sa1_pc2004_ground_turn_velocity(
     SA1PC2004GroundTurnKind kind, int analog_active, float up_y,
     float friction_multiplier);
 
+/* Full status-aware wrapper. 443C50 tests ground status&3 BEFORE querying
+ * analog: airborne GENERAL uses independent f32 .1/.9, ignoring Up/M.
+ * SLOW has no such status branch; QUICK returns the transformed vector. */
+SA1PC2004LocalVector sa1_pc2004_turn_velocity(
+    SA1PC2004LocalVector old_local,SA1PC2004LocalVector transformed,
+    SA1PC2004GroundTurnKind kind,int grounded,int analog_active,float up_y,
+    float friction_multiplier);
+
 /* 0x443E60 truncates sqrt(float((speed-dash_speed)/16))*256. Contract:
  * ordinary Sonic local speeds within the original horizontal speed limit. */
 unsigned sa1_pc2004_slow_turn_step(float speed, float dash_speed);

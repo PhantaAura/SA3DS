@@ -187,6 +187,24 @@ SA1PC2004LocalVector sa1_pc2004_ground_turn_velocity(
     return (SA1PC2004LocalVector){(float)(of + tf), (float)(on + tn), (float)(os + ts)};
 }
 
+SA1PC2004LocalVector sa1_pc2004_turn_velocity(
+    SA1PC2004LocalVector old_local,SA1PC2004LocalVector transformed,
+    SA1PC2004GroundTurnKind kind,int grounded,int analog_active,float up_y,
+    float friction_multiplier) {
+    if(grounded||kind!=SA1_PC2004_TURN_GENERAL)
+        return sa1_pc2004_ground_turn_velocity(old_local,transformed,kind,
+            analog_active,up_y,friction_multiplier);
+    /*443CCE..443D23: independent literal coefficients, not 1-old_weight.
+     * The source skips the grounded analog/Up/friction selection entirely. */
+    volatile double of=(double)old_local.forward*(double).1f;
+    volatile double on=(double)old_local.normal*(double).1f;
+    volatile double os=(double)old_local.side*(double).1f;
+    volatile double tf=(double)transformed.forward*(double).9f;
+    volatile double tn=(double)transformed.normal*(double).9f;
+    volatile double ts=(double)transformed.side*(double).9f;
+    return (SA1PC2004LocalVector){(float)(of+tf),(float)(on+tn),(float)(os+ts)};
+}
+
 unsigned sa1_pc2004_slow_turn_step(float speed, float dash_speed) {
     if (speed <= dash_speed) return 0x100u;
     float argument = (speed - dash_speed) * 0.0625f;

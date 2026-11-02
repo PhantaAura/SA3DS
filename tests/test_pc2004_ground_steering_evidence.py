@@ -16,6 +16,9 @@ FUNCTIONS = {
 }
 
 SIGNATURES = {
+    'air status branch before analog query': (0x443CCE, '8a460483c408a803754c'),
+    'air transformed coefficient f32 0.9': (0x7DFFF0, '6666663f'),
+    'air old-local coefficient f32 0.1': (0x7DD568, 'cdcccc3d'),
     'general Up comparison is float32': (0x443D5F, 'd81d50d57d00'),
     'slow Up comparison is float32': (0x443EE8, 'd81d50d57d00'),
     'general retained one-minus-weight': (0x443DB0, 'd90510cb7d005dd8e1'),

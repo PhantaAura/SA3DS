@@ -98,10 +98,10 @@ static SA1LocalSpeed apply_general_turn(SA1PlayerState *player,
     SA1LocalSpeed transformed = world_to_local(player->yaw, old_world);
     /* 0x443CCE..0x443D23, status & 3 == 0. Both coefficients are
      * independent f32 constants, not the grounded helper's 0.99 branch. */
-    SA1PC2004LocalVector blended=sa1_pc2004_ground_turn_velocity(
+    SA1PC2004LocalVector blended=sa1_pc2004_turn_velocity(
         (SA1PC2004LocalVector){old_local.forward,old_local.vertical,old_local.side},
         (SA1PC2004LocalVector){transformed.forward,transformed.vertical,transformed.side},
-        SA1_PC2004_TURN_GENERAL,player->grounded,1.0f,1.0f);
+        SA1_PC2004_TURN_GENERAL,player->grounded,1,1.0f,1.0f);
     transformed=(SA1LocalSpeed){blended.forward,blended.normal,blended.side};
     return transformed;
 }
@@ -253,10 +253,10 @@ static void air_step_frame(SA1PlayerState *player,
             frame->forward = sa1_vec3_normalize(
                 sa1_vec3_cross(frame->right, frame->up));
             SA1LocalSpeed transformed = world_to_frame(frame, old_world);
-            SA1PC2004LocalVector blended=sa1_pc2004_ground_turn_velocity(
+            SA1PC2004LocalVector blended=sa1_pc2004_turn_velocity(
                 (SA1PC2004LocalVector){old_local.forward,old_local.vertical,old_local.side},
                 (SA1PC2004LocalVector){transformed.forward,transformed.vertical,transformed.side},
-                SA1_PC2004_TURN_GENERAL,player->grounded,frame->up.y,1.0f);
+                SA1_PC2004_TURN_GENERAL,player->grounded,1,frame->up.y,1.0f);
             local=(SA1LocalSpeed){blended.forward,blended.normal,blended.side};
         }
         accel.forward += force;

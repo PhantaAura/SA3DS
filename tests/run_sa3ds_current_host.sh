@@ -105,3 +105,6 @@ bash tests/run_spring_player.sh
 
 printf "\n== Source dash panel task and direct boost ==\n"
 bash tests/run_dash_panel.sh
+
+printf "\n== PC2004 airborne steering and jump movement ==\n"
+bash tests/run_pc2004_air_movement.sh
