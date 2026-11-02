@@ -1,3 +1,26 @@
+# WCA active checkpoint — source homing candidate and pursuit foundation
+
+WCA29 adds portable418BE0/418D00 collection and492300 pursuit/decay decisions:
+source task-distance/order/cap, ring-ID11 separation, current first centers,
+facing/partner/limited-yaw/upward rules and injected source math/RNG. Exact
+source inverse tau differs from1/(2*pi). Native target ownership and correct
+494B80 initialization-then-movement double invocation remain to be connected.
+See docs/PC2004_HOMING.md; do not attach targets after targetless timer1 entry.
+
+Focused and exact-owner checks, required host gate and native build PASS.
+Unreferenced module leaves the381608B/c772cbb8 artifact byte-identical, so no
+repeat emulator/pose oracle was run. The existing native air dash remains the
+empty-target path; native pursuit/retail parity are NOT claimed.
+
+Next: original enemy/monitor targets with real behavior, model/CCL lifecycle and
+prior-pass candidate registry. Source SET registry identifies E SARU29/4AD140
+(9+5), E SAITO30/7A1380(2+0), E AMEMB31/7AA960(0+2), item boxes13/82 and
+save points19. Private inventory is at /private/tmp/sa3ds-wca29-ec-registry.json.
+All original game payloads remain outside Git. Full WCA/PHYSICS_1TO1 are false;
+continue after checkpoint publication and keep checks focused/batched.
+
+---
+
 # WCA active checkpoint — native ordinary second-jump air dash
 
 WCA28 connects action8 second jump to14, retained normal/side/request, original

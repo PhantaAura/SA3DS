@@ -111,3 +111,6 @@ bash tests/run_pc2004_air_movement.sh
 
 printf "\n== PC2004 targetless airborne attack dispatch ==\n"
 bash tests/run_pc2004_air_attack.sh
+
+printf "\n== PC2004 homing candidate collection and pursuit ==\n"
+bash tests/run_pc2004_homing.sh

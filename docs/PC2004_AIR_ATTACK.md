@@ -12,9 +12,11 @@ stay outside Git.
 Sonic action8's selector496F50 first handles commands/exceptional contexts,
 landing and action-button cancel492F50; then jump-press helper43BF40 may enter
 action14 and call494B80. Helper43BF40 blocks status4000 and requires the pressed
-jump mask. It returns1 plus whether target helper4B83F0 found a positive result.
+jump mask. It returns1 plus whether the first-CCL context helper4B83F0 returned positive.
 **No target still returns1**, so it does not prevent an ordinary air dash. An
 earlier reading that treated target absence as attack ineligibility was wrong.
+4B83F0 examines a first-hit task with ID8; it does not search the homing
+candidate table. Homing candidates are collected separately at418BE0.
 Action12 fall does not contain this attack-entry check; it cannot be enabled
 there simply because the broad port state says airborne.
 
