@@ -117,3 +117,6 @@ bash tests/run_pc2004_homing.sh
 
 printf "\n== Original E SARU initialization ==\n"
 bash tests/run_saru.sh
+
+printf '\n== Original E SARU two-motion poses ==\n'
+bash tests/run_saru_pose.sh

@@ -1,3 +1,25 @@
+# WCA active checkpoint — original E SARU two-motion pose evaluation
+
+WCA33 adds saru_pose.[ch] for the exact38-node/six-ACTION profile. Unlike Sonic's
+43F2A0 transition, source406EC0 independently wraps two motion frames, samples
+raw int32 angles, then blends raw angles without shortest-arc normalization.
+Position interpolation uses source weighted products and nonpositive-time
+fallback denominator1. Existing Sonic sampler/transition behavior is preserved.
+
+Focused wrap/raw-angle regressions and independent raw-owner seven-pose oracle
+PASS2394 local components, maxerror4.92431651e-9. Required cumulative host,
+owner pose/import and staged native build gates PASS. Native381608B/ae538ee9
+remains identical because enemy helpers have no native callers; no repeated
+emulator run. There is still no native enemy AI/render/gameplay claim.
+
+Next: original13-state E SARU AI, shared enemy collision/range/terrain/RNG,
+projectiles/damage/death and correct native list3/CCL lifecycle, then homing
+initialization plus same-tick pursuit. Existing private LLVM research is in
+/private/tmp/sa3ds-wca31-saru-full.asm and /private/tmp/sa3ds-wca33-ninja-blend-*.
+No need to repeat that disassembly. Full WCA/physics1to1 remain false.
+
+---
+
 # WCA active checkpoint — E SARU logic-side animation blend timing
 
 WCA32 adds original pending/current ACTION/frame/weight state and logic-draw

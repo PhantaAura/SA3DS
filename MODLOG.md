@@ -165,3 +165,10 @@ Preserved pre-advance draw snapshot, strict retained-sum completion, interrupted
 weight retention and caller-owned visibility/suppression eligibility. Host and
 owner helper witnesses pass; native build remains ae538ee9. No native AI claim.
 Unified WCA ledger now includes WCA30/31/32 and current CP5/CP9 bounded status.
+
+## 2026-11-02 WCA33 E SARU two-motion pose evaluation
+
+Added original independent clip wrap/weighted vector/raw-angle blend sampler.
+Sonic transition path unchanged. Focused and raw-owner seven-pose checks pass,
+required host/pose/native gates pass; artifact remains ae538ee9. Source helper
+identity and13-state dispatch map recorded for next real enemy AI integration.

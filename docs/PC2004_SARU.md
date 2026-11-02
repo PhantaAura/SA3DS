@@ -127,3 +127,34 @@ and staged native build passed. This unreferenced helper leaves WCA31 native
 artifact ae538ee9 identical. No new emulator/retail/hardware check is claimed.
 Actual arbitrary-frame two-motion pose evaluation, AI state updates and native
 actor connection remain pending; this state helper does not implement them.
+
+## WCA33 actual two-motion poses
+
+saru_pose.[ch] now evaluates the exact six-ACTION/38-node profile. Source406EC0
+routes to406C40: each motion frame wraps independently by its own frame count.
+406090 samples position as weighted products using404B20 key selection, next-key
+wrap and denominator1 on nonpositive key-time differences.406140 samples raw
+integer angles with truncation.406680 then blends those integer angles again
+with truncation, without signed16 shortest-arc normalization. Position/scale use
+weighted products. This differs from Sonic43F2A0's captured transition system;
+that existing system is unchanged. Unblended Saru uses the ordinary ACTION path.
+No SKIP or mixed rotation-order nodes occur in the current owner rig; the new
+helper rejects those profiles. It owns no animation clock, actors or allocation.
+
+Focused owner-free checks cover long raw-angle crossing, independent clip wrap,
+wrap-to-first-key interpolation, ordinary-action fallback and invalid weights.
+Independent raw-owner verifier checks seven blended poses/2394 local components,
+including pending/current frames past their clip ends: maxerror4.92431651e-9.
+Exact original sampler/combine/entry/world helper digests are owner-side gates.
+This is source-equation evidence, not execution of original x87 retained80 math.
+Required host, owner pose/import and native build gates passed; same native
+artifact ae538ee9. No redundant emulator run. These helpers still need the real
+AI/shared collision/projectile/damage/death/native actor lifecycle.
+
+Original4ACF80 dispatch mapping, to reuse in the next implementation:
+0->4ABCB0,1->4ABEF0,2->4ABFD0,3->4AC090,4->4AC470,5->4AC170,
+6->4AC620,7->4AC250,8->common tail,9->4ACEC0,10->4AC7E0,
+11->common tail,12->4ABA20 plus original death/effect/destruction calls.
+4AB3F0 is a logic-side visual/terrain helper, not target detection.4ABB90 is
+behavior arbitration, not blend-clock advancement. Blend advancement lives in
+4AB3F0/4AB5E0;4AB2B0 is the read-only display. Keep these identities distinct.
