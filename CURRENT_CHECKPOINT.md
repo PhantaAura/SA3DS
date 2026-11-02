@@ -1,3 +1,26 @@
+# WCA active checkpoint — native spring launch and original animation phases
+
+Published implementation `5f0a6e4`. Original external six-part spring models and
+SET placements are integrated with list2 collision delay, immediate launch
+writes, deferred player commands, retained first ground bits and signed control
+timer. Native row253 fixture confirmed action10/request16 at tick5, request17
+at56 and NextAnim18 at95. Required host gate and code-only native build PASS;
+exact-owner pose/import evidence retained from the same change batch.
+
+The fixture correctly FAILS complete spring acceptance: one off-ground contact
+hits unresolved source getter scratch. That object is quarantined until unload,
+preventing a stale delayed launch. This is a temporary partial fallback, not
+retail behavior. See docs/PC2004_SPRING_RUNTIME.md and WCA24 in
+ docs/WCA_0_0_10_0.md for exact evidence, artifact hash and remaining limits.
+
+Next: resolve airborne spring getter context and continue source-backed panels,
+homing/air dash, full course/event/gameplay and renderer work. WCA and global
+PHYSICS_1TO1 remain false. Tests are limited to required batch gates and focused
+checks for changed behavior; do not rerun unchanged oracles or broad matrices.
+Music must use the owner's local installation, not the modified Windows music.
+
+---
+
 # WCA active checkpoint — public task-frame handoff and flat ball steering
 
 Parent `dd59faa`. Corrected public dispatcher losing inclined launch frame on
