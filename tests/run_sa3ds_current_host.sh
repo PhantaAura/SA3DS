@@ -96,3 +96,6 @@ bash tests/run_texture_override.sh
 
 printf "\n== PC2004 ordinary ground clamp ==\n"
 bash tests/run_pc2004_ground_accel.sh
+
+printf "\n== Source spring actor and player command phases ==\n"
+bash tests/run_spring_runtime.sh
