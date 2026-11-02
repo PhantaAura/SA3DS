@@ -1,3 +1,23 @@
+# WCA active checkpoint — original E SARU animated asset conversion
+
+WCA31 converts the original38-node/15-model rig, all six ACTIONs referenced by
+the reviewed enemy routines,12 E_SARU textures and source materials into external
+SA3C/SA3T packages. Shared serialization keeps Sonic's strict import profile;
+enemy conversion additionally handles triangles/N-poly and absent UV streams.
+GPU preflight accepts those source tags after triangle-list expansion and retains
+bounds/finite/index checks. No native enemy actor or AI was added in this pass.
+
+Raw-owner geometry/material oracle PASS50 meshes/732 corners. C animated-world
+oracle PASS30 sampled poses/18240 components, maxerror5.48858826e-6. All required
+host, owner pose/import and staged native build gates PASS. Native artifact381608B
+SHA256ae538ee995c835a23e3ba7a0dfac1236aa37177056ed6e36b8bb95c01684ca91;
+not run in emulator in this checkpoint. Prior WCA28 evidence belongs to c772cbb8.
+
+Next: original enemy state/animation blend timing, collision/damage/projectiles,
+then native actor and homing target lifecycle. Full WCA/physics1to1 remain false.
+
+---
+
 # WCA active checkpoint — original E SARU definitions and initialization
 
 WCA30 preserves all14 original act0/1 E SARU SET rows and the source CCL sphere

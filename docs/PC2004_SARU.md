@@ -59,3 +59,44 @@ This does not execute retail code or prove native AI behavior.
 
 Required host gate, exact-owner pose/import gate and staged native build passed.
 Native binary unchanged:381608B/c772cbb8; no repeated emulator run was necessary.
+
+## WCA31 original animated asset conversion
+
+`tools/build_pc2004_saru_assets.py OWNER_EXE OWNER_SYSTEM EXTERNAL_OUTPUT_DIR`
+writes saru.sa3c, saru.sa3t and a source manifest outside this code tree.
+Six stable package ACTION slots reference the reviewed source routines:
+0=96A89C,1=9669EC,2=967964,3=968ADC,4=969924,5=96B444.
+Frame counts16/16/16/16/13/7. These slots are source identities, not guessed
+behavior labels. Shared serialization preserves complete hierarchy/node flags,
+raw source UVs, materials, normals and sampled-key channels. It keeps Sonic's
+strict primitive profile; the explicit enemy option handles triangle meshes and
+N-poly streams. Missing UV streams produce zero coordinates (material flags
+retain texture-enable semantics). Native triangle-list preflight accepts the
+corresponding source metadata tags while checking finite vertices/index bounds.
+
+The source model contains15 Basic models,50 meshes,439 converted vertices,
+244 triangles,13 distinct materials and12 textures. No vertex-color streams were
+present. Original N-poly records follow the count/reversal strip representation
+in the public [SA Tools polygon implementation](https://github.com/X-Hax/sa_tools/blob/master/Libraries/SAModel/Poly.cs).
+This interpretation has not been matched to the retail rasterizer.
+
+External SA3C42448B SHA256
+90c9a7b419af786cd1264dd48163128704aa1c43e302795190d1665ab00adfd3;
+external SA3T57184B SHA256
+752b2037f7020e0997c9c66a67aace3a9669e6444bbc1b3ec2dadbdcb1d273fb.
+RGBA pixels56832B;131 partially transparent texels. No owner payload is committed.
+
+`tools/verify_pc2004_saru_assets.py OWNER_EXE SARU_SA3C C_WORLD_DUMPER`
+independently checks732 expanded source corners with normals/raw UVs and all
+50 material assignments. Thirty sampled C animated-world poses across the six
+clips compare against raw integer-key/source-LUT equations:18240 components,
+maxerror5.48858826e-6. This reuses the established raw-key oracle, without using
+the converter to derive expected poses. GPU format/geometry/texture preflight
+also passes. These checks establish source-data consistency, not AI timing,
+blend timing, native enemy rendering, retail raster parity or hardware success.
+
+Required host, owner pose/import and native build gates passed. The preflight
+change yields381608B native artifact SHA256
+ ae538ee995c835a23e3ba7a0dfac1236aa37177056ed6e36b8bb95c01684ca91.
+No emulator run was repeated for this bounded format extension. Enemy AI,
+projectiles, damage/death and native homing-target registration remain pending.

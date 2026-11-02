@@ -46,9 +46,13 @@ int main(void) {
     init(&f); wr16(f.bytes+256+4, 3);
     assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_INDEX_RANGE);
     assert(r.failing_index_index == 2 && r.failing_vertex_index == 3);
-    init(&f); wr16(f.bytes+64+12, 0);
+    init(&f); wr16(f.bytes+64+12, 0x1234u);
     assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_PRIMITIVE);
     init(&f); wr16(f.bytes+64+12, 0x4000u);
+    assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_OK);
+    init(&f); wr16(f.bytes+64+12, 0);
+    assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_OK);
+    init(&f); wr16(f.bytes+64+12, 0x8000u);
     assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_OK);
     init(&f); wr32(f.bytes+64+8, 2);
     assert(sa3ds_geometry_preflight(&f.c, &r) == SA3DS_GEOMETRY_TRIANGLE_LIST);

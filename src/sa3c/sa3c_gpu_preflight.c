@@ -114,7 +114,9 @@ SA3DSGeometryResult sa3ds_geometry_preflight(
         report->failing_mesh_index = mi;
         if (first > index->count || count > index->count - first)
             return SA3DS_GEOMETRY_MESH_RANGE;
-        if (primitive != 0xC000u && primitive != 0x4000u)
+        /* All supported Basic encodings are already expanded to GPU triangles. */
+        if (primitive != 0xC000u && primitive != 0x4000u &&
+            primitive != 0x0000u && primitive != 0x8000u)
             return SA3DS_GEOMETRY_PRIMITIVE;
         if (count % 3u)
             return SA3DS_GEOMETRY_TRIANGLE_LIST;

@@ -90,6 +90,11 @@ def read_ang_keys(dec:SonicDecoder,va:int,count:int):
 def build_package(chrmodels:Path,pvm_path:Path):
     dec=SonicDecoder(chrmodels)
     pvm=SonicPVM(pvm_path)
+    return build_decoded_package(dec,pvm)
+
+
+def build_decoded_package(dec,pvm,*,allow_enemy_primitives=False):
+    """Shared pointer-free serialization; Sonic keeps its strict primitive profile."""
     actions=dec.actions()
 
     # Global node/model sets are deterministic by source VA.  Source pointers
@@ -144,10 +149,10 @@ def build_package(chrmodels:Path,pvm_path:Path):
             local_mat=type_material&0x3fff
             global_mat=model_material_map[mv][local_mat]
             mesh_first_index=len(indices)
-            if primitive==0xc000:
+            if primitive==0xc000 or (allow_enemy_primitives and primitive==0x8000):
                 strips=strip_stream(dec,ptrs[0],poly_count)
                 corner_count=sum(len(s[1]) for s in strips)
-                uvs=source_uvs(dec,ptrs[4],corner_count)
+                uvs=source_uvs(dec,ptrs[4],corner_count) if ptrs[4] or not allow_enemy_primitives else [(0,0)]*corner_count
                 uv_cursor=0
                 for reverse,strip in strips:
                     corner_vertices=[]
@@ -165,7 +170,7 @@ def build_package(chrmodels:Path,pvm_path:Path):
                     indices.extend(triangulate_strip(corner_vertices,reverse))
             elif primitive==0x4000:
                 quads=quad_stream(dec,ptrs[0],poly_count)
-                uvs=source_uvs(dec,ptrs[4],poly_count*4)
+                uvs=source_uvs(dec,ptrs[4],poly_count*4) if ptrs[4] or not allow_enemy_primitives else [(0,0)]*(poly_count*4)
                 uv_cursor=0
                 for quad in quads:
                     q=[]
@@ -178,6 +183,15 @@ def build_package(chrmodels:Path,pvm_path:Path):
                             vertices.append((*pos,*nrm,float(uv[0]),float(uv[1])))
                         q.append(vmap[key])
                     indices.extend(triangulate_quad(q))
+            elif allow_enemy_primitives and primitive==0:
+                corners=struct.unpack('<'+'H'*(poly_count*3),dec.pe.read_bytes(ptrs[0],poly_count*6))
+                uvs=source_uvs(dec,ptrs[4],len(corners)) if ptrs[4] or not allow_enemy_primitives else [(0,0)]*len(corners)
+                for src_idx,uv in zip(corners,uvs):
+                    key=(src_idx,uv[0],uv[1])
+                    if key not in vmap:
+                        vmap[key]=len(vertices)
+                        vertices.append((*points[src_idx],*normals[src_idx],float(uv[0]),float(uv[1])))
+                    indices.append(vmap[key])
             else:
                 raise ValueError(f'unsupported primitive {primitive:#x}')
             meshes.append((model_index[mv],global_mat,mesh_first_index,len(indices)-mesh_first_index,primitive,type_material,poly_count))

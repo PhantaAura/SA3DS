@@ -151,3 +151,10 @@ External14-row original SET/CCL package and portable source constructor/orbit ad
 Caught and corrected runtime unload490000 versus registry360000 before publication.
 Host, owner import/pose and native build gates passed; owner orbit maxerror0.0.
 No native enemy/AI claim; native artifact remains c772cbb8. See docs/PC2004_SARU.md.
+
+## 2026-11-02 WCA31 original E SARU assets
+
+External original rig/six clips/Basic meshes/12 textures converted. Raw geometry
+and sampled source-key world oracle passed; required host/pose/native gates pass.
+Native preflight supports expanded triangle/N-poly source tags; no exact artifact
+emulator/AI/native enemy claim. See docs/PC2004_SARU.md for hashes and remaining work.
