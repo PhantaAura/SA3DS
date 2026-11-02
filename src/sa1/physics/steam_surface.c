@@ -413,14 +413,10 @@ static void surface_ball_motion(SA1PlayerState *player,
         }
     }
 
-    int clamped = 0;
-    s.forward = sa1_pc2004_integrate_axis_no_cross(s.forward, add.forward, &clamped);
-    s.side = sa1_pc2004_integrate_axis_no_cross(s.side, add.side, &clamped);
-
-    /* PSetPosition/PResetPosition own support-normal resolution. Keep the lab's
-     * current supported normal speed at zero and let the post-motion contact
-     * refresh snap to the support rather than inventing the retail body probe. */
-    s.normal = 0.0f;
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_pgetspeed_local(speed_local,add,analog.active,
+        frame->up.y,0,p,&integrated);
+    s.forward=integrated.forward;s.normal=integrated.normal;s.side=integrated.side;
     s.forward = clampf(s.forward, -p->lim_h_spd, p->lim_h_spd);
     s.side = clampf(s.side, -p->lim_h_spd, p->lim_h_spd);
     player->vel = surface_to_world(frame, s);
@@ -584,7 +580,8 @@ void sa1_physics_step_steam_sonic_surface(
          * task rotation. Retain the launch/support frame for local Speed.y,
          * anisotropic drag, and general-turn steering instead of collapsing
          * inclined launches into the flat world-Y specialization. */
-        if (!just_jumped)
+        if (!just_jumped && (!player->pc2004_action_state_valid ||
+                             player->pc2004_action_state == 8))
             (void)sa1_steam_sonic_apply_jump_hold_surface(
                 player, &frame, input->jump_held);
         sa1_steam_sonic_air_step_surface(player, input, camera_yaw, &frame, NULL);

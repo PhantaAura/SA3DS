@@ -71,3 +71,28 @@ not emulate all x87 extended precision. Finite inputs are required. The helpers
 do not reconstruct world contact, moving-object scheduling, exceptional action
 delegates or all pre-clamp force/input/turn selection. No native, retail-frame,
 visual-pacing or hardware parity follows from these source checks.
+
+
+## Shared integration in air and ball actions
+
+PGetSpeed is not exclusive to ordinary ground movement. Exact source movement
+entries for action8/12 reach44B9C0 at49B33E and443F50 at49B349; charge action4
+reaches443F50 at49AE42. The native flat/general air and charge/Roll paths now use
+the same recovered local integration rather than generic axis no-cross helpers.
+Normal acceleration is integrated before the existing support adapter resolves
+and resets grounded local normal speed. A sub-jog positive forward speed with
+inactive analog and upright Up snaps in air too. Small side speeds that change
+may cross zero; threshold crossings follow the original asymmetric side rules.
+Auxiliary movement flags remain0 in these bounded ordinary contexts.
+
+The action8 selector's held-jump call43BF90 is at4977CC and adds local
+jmp_addit*.8 before movement. Action12 has no such selector branch, despite
+sharing the same movement dispatch49B324. The public flat/general paths now
+exclude source fall12 and spring9/10 from held-jump boosting. Legacy states
+without exact action provenance preserve their existing helper behavior.
+
+REA Ghidra12.1.4 independently decompiled exact-owner443F50 and496F50; source
+instruction witnesses also retain the dispatch calls. This is static authority,
+not a captured retail trajectory. Original PC2004 Emerald Coast was reached
+through Moonlight and ordinary walking/running inspected, but no frame-aligned
+retail trace or objective cycle equality was captured.

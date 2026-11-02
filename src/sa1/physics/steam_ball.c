@@ -1,3 +1,4 @@
+#include "pc2004_ground_accel.h"
 #include "steam_ball.h"
 #include "pc2004_motion.h"
 
@@ -100,9 +101,11 @@ static void charge_ground_motion(SA1PlayerState *player,
     SA1PC2004MotionContext context = {1, 0, 0, 1.0f, 1.0f};
     SA1PC2004LocalVector add = sa1_pc2004_pgetbreak_add_velocity(
         speed, force, &context, p, NULL);
-    local.forward = sa1_pc2004_integrate_axis_no_cross(local.forward, add.forward, NULL);
-    local.side = sa1_pc2004_integrate_axis_no_cross(local.side, add.side, NULL);
-    local.vertical = 0.0f;
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_pgetspeed_local(speed,add,
+        sa1_sadx_filter_logical_analog(input->move_x,input->move_z).active,
+        1.0f,0,p,&integrated);
+    local=(SA1LocalSpeed){integrated.forward,integrated.normal,integrated.side};
     player->vel = local_to_world(player->yaw, local);
 }
 
@@ -120,9 +123,11 @@ static void roll_ground_motion(SA1PlayerState *player,
     SA1PC2004MotionContext context={1,1,0,1.0f,1.0f};
     SA1PC2004LocalVector add=sa1_pc2004_pgetinertia_add_velocity(
         speed,force,&context,p,NULL);
-    local.forward=sa1_pc2004_integrate_axis_no_cross(local.forward,add.forward,NULL);
-    local.side=sa1_pc2004_integrate_axis_no_cross(local.side,add.side,NULL);
-    local.vertical=0.0f;
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_pgetspeed_local(speed,add,
+        sa1_sadx_filter_logical_analog(input->move_x,input->move_z).active,
+        1.0f,0,p,&integrated);
+    local=(SA1LocalSpeed){integrated.forward,integrated.normal,integrated.side};
     player->vel=local_to_world(player->yaw,local);
 }
 

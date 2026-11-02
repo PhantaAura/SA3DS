@@ -61,6 +61,22 @@ int main(void) {
     assert(!p.surface_frame_active);
     sa1_player_reset(&p,&w);assert(!p.surface_frame_active);
 
+    /* Sonic_Act1 action12 never calls the action8 held-jump selector. A
+     * held button while falling must not become a new .8*jmp_addit boost. */
+    for(unsigned general=0;general<2;general++) {
+        normal=(SA1Vec3){0,1,0};
+        SA1PlayerState held=setup(&w),released;
+        held.pos.y=20;held.vel.y=-0.5f;held.grounded=false;
+        held.action_state=SA1_ACTION_AIRBORNE;
+        held.pc2004_action_state=12;held.pc2004_action_state_valid=true;
+        held.surface_frame_active=general!=0;released=held;
+        SA1Input hold={.jump_held=true},none={0};
+        sa1_physics_step_steam_sonic_flat(&held,&hold,0,&w,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+        sa1_physics_step_steam_sonic_flat(&released,&none,0,&w,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
+        same(held.vel,released.vel);same(held.pos,released.pos);
+        assert(held.jump_ticks==0);
+    }
+
     /* Flat and general entry points must both use action4/5->PGetRotation,
      * then break/inertia. The old flat public path still used direct turning. */
     for(unsigned charge=0;charge<2;charge++) {

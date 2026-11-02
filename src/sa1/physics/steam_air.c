@@ -1,4 +1,5 @@
 #include "pc2004_motion.h"
+#include "pc2004_ground_accel.h"
 #include "steam_air.h"
 
 #include <math.h>
@@ -106,14 +107,6 @@ static SA1LocalSpeed apply_general_turn(SA1PlayerState *player,
     transformed.side = transformed.side * PC2004_AIR_TURN_TRANSFORMED_BLEND +
                        old_local.side * PC2004_AIR_TURN_OLD_LOCAL_BLEND;
     return transformed;
-}
-
-static float integrate_axis_no_cross(float old_speed, float accel) {
-    float next = old_speed + accel;
-    if ((old_speed > 0.0f && next < 0.0f) ||
-        (old_speed < 0.0f && next > 0.0f))
-        next = 0.0f;
-    return next;
 }
 
 void sa1_steam_sonic_begin_jump(SA1PlayerState *player) {
@@ -273,9 +266,12 @@ static void air_step_frame(SA1PlayerState *player,
         accel.forward += force;
     }
 
-    local.forward = integrate_axis_no_cross(local.forward, accel.forward);
-    local.vertical += accel.vertical;
-    local.side = integrate_axis_no_cross(local.side, accel.side);
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_pgetspeed_local(
+        (SA1PC2004LocalVector){local.forward,local.vertical,local.side},
+        (SA1PC2004LocalVector){accel.forward,accel.vertical,accel.side},
+        analog.active, frame->up.y, 0, p, &integrated);
+    local=(SA1LocalSpeed){integrated.forward,integrated.normal,integrated.side};
     local.forward = clampf(local.forward, -p->lim_h_spd, p->lim_h_spd);
     local.side = clampf(local.side, -p->lim_h_spd, p->lim_h_spd);
     local.vertical = clampf(local.vertical, -p->lim_v_spd, p->lim_v_spd);
@@ -378,9 +374,12 @@ void sa1_steam_sonic_air_step(SA1PlayerState *player,
         accel.forward += force;
     }
 
-    local.forward = integrate_axis_no_cross(local.forward, accel.forward);
-    local.vertical += accel.vertical;
-    local.side = integrate_axis_no_cross(local.side, accel.side);
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_pgetspeed_local(
+        (SA1PC2004LocalVector){local.forward,local.vertical,local.side},
+        (SA1PC2004LocalVector){accel.forward,accel.vertical,accel.side},
+        analog.active, 1.0f, 0, p, &integrated);
+    local=(SA1LocalSpeed){integrated.forward,integrated.normal,integrated.side};
 
     local.forward = clampf(local.forward, -p->lim_h_spd, p->lim_h_spd);
     local.side = clampf(local.side, -p->lim_h_spd, p->lim_h_spd);

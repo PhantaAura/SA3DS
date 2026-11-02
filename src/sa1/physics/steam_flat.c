@@ -369,7 +369,8 @@ void sa1_physics_step_steam_sonic_flat(
         /* In Sonic's state logic the held-jump helper is an airborne-state
          * operation. A freshly initiated jump therefore starts boosting on
          * the following simulation tick, then PGetAccelerationAir runs. */
-        if (!just_jumped)
+        if (!just_jumped && (!player->pc2004_action_state_valid ||
+                             player->pc2004_action_state == 8))
             (void)sa1_steam_sonic_apply_jump_hold(player, input->jump_held);
         sa1_steam_sonic_air_step(player, input, camera_yaw, NULL);
         /* PGetAccelerationAir does not populate the ground-friction scratch. */

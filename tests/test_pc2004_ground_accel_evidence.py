@@ -27,6 +27,13 @@ def verify(path):
     for label,(address,hex_bytes) in SIGNATURES.items():
         expected = bytes.fromhex(hex_bytes)
         assert read(address,len(expected)) == expected, label
+    for address,target in [(0x49b33e,0x44b9c0),(0x49b349,0x443f50),
+                           (0x49ae42,0x443f50),(0x4977cc,0x43bf90)]:
+        ins=read(address,5)
+        assert ins[0]==0xe8 and address+5+int.from_bytes(ins[1:],"little",signed=True)==target,hex(address)
+    # Action selector is indexed by action-1; movement dispatch uses action.
+    assert struct.unpack('<2I',read(0x49bfbc+8*4,8))==(0x49b324,0x49af71)
+    assert struct.unpack('<I',read(0x49bfbc+12*4,4))[0]==0x49b324
     for address,value in [(0x7e0138,.71),(0x7e014c,.051),(0x7e0148,-.051),
                           (0x7dcb34,10),(0x7e0124,.87),(0x7dd578,.7),
                           (0x7dce5c,.8),(0x7dcc98,.5)]:

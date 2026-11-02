@@ -28,7 +28,7 @@ assert 'g->resident_texture_count++' in gpu
 assert 'return sa3ds_ec_instance_is_visible(x) &&' in gpu
 assert gpu.count('bucket=mesh.material_index+water*v->material_count')==2
 assert 'd->deferred_water!=(uint8_t)deferred_water' in gpu
-assert 'deferred_water?GPU_WRITE_COLOR:GPU_WRITE_ALL' in gpu
+assert '(deferred_water||g->background_pass)?GPU_WRITE_COLOR:GPU_WRITE_ALL' in gpu
 assert 'C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);' in gpu
 assert 'sa3dspak' in mk
 assert 'sa3ds_upload_rgba8_cpu' in sonic

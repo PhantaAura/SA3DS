@@ -105,6 +105,20 @@ int main(void) {
                  0.000001f));
     assert(nearf(p.vel.y, sp->jmp_y_spd + d.accel_vertical, 0.000001f));
 
+    /* Shared PGetSpeed runs after air acceleration too. With inactive analog
+       and upright Up, a nonzero sub-jog forward speed snaps, even in flight.
+       Side drag crossing below H also snaps instead of decaying forever. */
+    sa1_player_reset(&p,sa3ds_movement_lab_world());
+    p.grounded=false;p.vel=(SA1Vec3){0.5f,1.0f,0.3f};
+    sa1_steam_sonic_air_step(&p,&none,0,&d);
+    assert(p.vel.z==0.0f&&p.vel.x==0.0f);
+    assert(nearf(p.vel.y,0.91f,0.000002f));
+    sa1_player_reset(&p,sa3ds_movement_lab_world());
+    p.grounded=false;p.vel=(SA1Vec3){0.1f,1.0f,0.3f};
+    SA1Input low_forward={.move_z=0.5f};
+    sa1_steam_sonic_air_step(&p,&low_forward,0,&d);
+    assert(p.vel.z>0.29f&&nearf(p.vel.x,0.06f,0.000002f));
+
     /* Forward air input uses air_accel while rising. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
     p.grounded = false;
