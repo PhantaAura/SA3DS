@@ -144,3 +144,10 @@ eight flat + 36 imported-terrain regressions and exact signatures added.
 Saved-export/direct-disassembly evidence reused; no new live Ghidra success
 claimed. Native Emerald Coast trace confirms charge-release jump immunity and
 subsequent roll jump. See current checkpoint for exact validation and limits.
+
+## 2026-11-02 WCA30 E SARU definitions/init
+
+External14-row original SET/CCL package and portable source constructor/orbit added.
+Caught and corrected runtime unload490000 versus registry360000 before publication.
+Host, owner import/pose and native build gates passed; owner orbit maxerror0.0.
+No native enemy/AI claim; native artifact remains c772cbb8. See docs/PC2004_SARU.md.

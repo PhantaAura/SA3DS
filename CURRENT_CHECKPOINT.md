@@ -1,3 +1,24 @@
+# WCA active checkpoint — original E SARU definitions and initialization
+
+WCA30 preserves all14 original act0/1 E SARU SET rows and the source CCL sphere
+in an external owner-generated package. Portable initialization preserves orbit
+placement, packed angleZ bytes, scale-sign status, mode thresholds, RNG-derived
+index, initial animation frame and source enemy flags. Runtime unload range is
+490000 squared, distinct from registry load360000; camera relevance is required.
+See docs/PC2004_SARU.md. No placeholder native enemies were added.
+
+Required cumulative host gate, owner pose/import gate and native build completed
+successfully. Exact-owner14-row/CCL round-trip and source-LUT orbit check PASS,
+max position error0.0. Native artifact remains381608B/c772cbb8, byte-identical to
+WCA28; no redundant emulator run. This is static/source-equation evidence, not
+retail AI or native enemy proof. Original payloads remain outside Git.
+
+Next: E SARU AI, original animated model, projectile/damage/death lifecycle and
+CCL target registry, then connect homing initialization and same-tick pursuit.
+Full WCA and global_physics_1to1 remain false. Continue after publication.
+
+---
+
 # WCA active checkpoint — source homing candidate and pursuit foundation
 
 WCA29 adds portable418BE0/418D00 collection and492300 pursuit/decay decisions:

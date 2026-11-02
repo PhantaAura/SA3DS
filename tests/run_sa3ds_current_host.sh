@@ -114,3 +114,6 @@ bash tests/run_pc2004_air_attack.sh
 
 printf "\n== PC2004 homing candidate collection and pursuit ==\n"
 bash tests/run_pc2004_homing.sh
+
+printf "\n== Original E SARU initialization ==\n"
+bash tests/run_saru.sh
