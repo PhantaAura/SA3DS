@@ -102,3 +102,6 @@ bash tests/run_spring_runtime.sh
 
 printf "\n== Source spring player launch integration ==\n"
 bash tests/run_spring_player.sh
+
+printf "\n== Source dash panel task and direct boost ==\n"
+bash tests/run_dash_panel.sh

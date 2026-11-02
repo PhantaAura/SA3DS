@@ -1,3 +1,20 @@
+# WCA active checkpoint — original dash-panel task and direct boost foundation
+
+WCA25 adds source-backed dash-panel task state, per-player lockout, grounded
+first-hit gate, ceil/int32-versus-low16 timer semantics, direct full-frame speed
+write and original primary capsule predicate. It preserves action/animation;
+panels are not spring commands. Native spawning/CCL ordering and the original
+three-node/eight-frame animated display are next. See
+`docs/PC2004_DASH_PANEL.md` for precise source evidence and remaining gaps.
+
+Focused source-module and exact-owner witness checks PASS. Required cumulative
+host gate and native build PASS. Unreferenced panel code is removed by the
+linker, leaving the WCA24 3DSX hash unchanged; no duplicate emulator run or
+unchanged pose oracle was run. Spring off-ground getter scratch remains open.
+Full WCA/PHYSICS_1TO1 remain incomplete. Continue after checkpoint publication.
+
+---
+
 # WCA active checkpoint — native spring launch and original animation phases
 
 Published implementation `5f0a6e4`. Original external six-part spring models and
