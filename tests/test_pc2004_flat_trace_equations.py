@@ -41,12 +41,14 @@ assert math.isclose(value(camera,"heading"),math.pi/4,abs_tol=2e-6)
 
 side=rows("side_threshold")
 assert math.isclose(value(side[0],"local_side_before"),1.0,abs_tol=1e-6)
-assert math.isclose(value(side[0],"accel_side"),-0.4,abs_tol=1e-6)
-assert math.isclose(value(side[0],"local_side_after"),0.6,abs_tol=1e-6)
+assert math.isclose(value(side[0],"accel_side"),-0.352,abs_tol=1e-6)
+assert math.isclose(value(side[0],"local_side_after"),0.648,abs_tol=1e-6)
 assert int(side[0]["side_stopped_at_jog_threshold"])==0
-assert math.isclose(value(side[1],"local_side_before"),0.6,abs_tol=1e-6)
-assert math.isclose(value(side[1],"accel_side"),-0.24,abs_tol=1e-6)
-assert math.isclose(value(side[1],"local_side_after"),0.0,abs_tol=1e-6)
-assert int(side[1]["side_stopped_at_jog_threshold"])==1
+assert math.isclose(value(side[1],"local_side_before"),0.648,abs_tol=1e-6)
+assert math.isclose(value(side[1],"accel_side"),-0.2112,abs_tol=1e-6)
+assert math.isclose(value(side[1],"local_side_after"),0.4368,abs_tol=1e-6)
+assert int(side[1]["side_stopped_at_jog_threshold"])==0
+assert value(side[2],"local_side_after")==0.0
+assert int(side[2]["side_stopped_at_jog_threshold"])==1
 
 print("SOURCE-EQUATION VERIFIED: neutral/partial/quick/camera-relative/local-Z deadband rows")

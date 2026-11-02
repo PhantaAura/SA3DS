@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 B="${TMPDIR:-/tmp}/sa3ds_0g_tests"
 rm -rf "$B"; mkdir -p "$B"
 trap 'rm -rf "$B"' EXIT INT TERM
-common="src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/physics_constants.c src/sa1/physics/movement.c src/sa1/physics/steam_input.c src/sa1/physics/steam_player_parameters.c src/sa1/physics/steam_air.c src/sa1/physics/steam_spindash_evidence.c src/sa1/physics/steam_ball.c src/sa1/physics/pc2004_motion.c src/sa1/physics/pc2004_collision_work.c src/sa1/physics/steam_surface_evidence.c src/sa1/physics/steam_surface.c src/sa1/physics/steam_flat.c"
+common="src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/physics_constants.c src/sa1/physics/movement.c src/sa1/physics/steam_input.c src/sa1/physics/steam_player_parameters.c src/sa1/physics/steam_air.c src/sa1/physics/steam_spindash_evidence.c src/sa1/physics/steam_ball.c src/sa1/physics/pc2004_motion.c src/sa1/physics/pc2004_ground_accel.c src/sa1/physics/pc2004_collision_work.c src/sa1/physics/steam_surface_evidence.c src/sa1/physics/steam_surface.c src/sa1/physics/steam_flat.c"
 
 echo '== White Zone 10-section geometry + selected reset =='
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \

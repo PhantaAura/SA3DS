@@ -65,19 +65,18 @@ int main(void) {
     SA1Input input={.move_x=1};
     const float theta=3.14159265358979323846f/16;
     float turned_forward=2*(.99f+.009999990463256836f*cosf(theta));
-    float turned_side=-2*.009999990463256836f*sinf(theta);
     SA1PlayerState p=player(&world,n);p.vel.z=2;
     sa1_physics_step_steam_sonic_surface(&p,&input,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
     assert(dbg.turn_step_bams==0x800);near(p.yaw,theta);
     near(dbg.forward_speed_after,turned_forward+params->slow_down);
-    near(dbg.side_speed_after,turned_side); /* Pre-turn side drag was exactly0. */
+    near(dbg.side_speed_after,0); /* Pre-turn side drag0; PGetSpeed snaps unchanged sub-jog side speed. */
 
     /* Quick turn preserves world velocity, re-expressing it in the new frame. */
     p=player(&world,n);p.vel.x=2;
     sa1_physics_step_steam_sonic_surface(&p,&input,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
     assert(dbg.turn_step_bams==0x2000);
     near(dbg.forward_speed_after,sqrtf(2));
-    near(dbg.side_speed_after,sqrtf(2)+2*params->air_resist_z);
+    near(dbg.side_speed_after,sqrtf(2)+2*params->air_resist_z + params->grd_frict_z * -params->weight);
 
     /* Roll and charge both call GENERAL PGetRotation, never QUICK. */
     for(int charge=0;charge<=1;charge++) {

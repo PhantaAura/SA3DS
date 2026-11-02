@@ -2,7 +2,7 @@
 set -eu
 build_dir="${TMPDIR:-/tmp}/sa3ds_host_tests"
 mkdir -p "$build_dir"
-common="src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/physics_constants.c src/sa1/physics/movement.c src/sa1/physics/steam_input.c src/sa1/physics/steam_player_parameters.c src/sa1/physics/steam_air.c src/sa1/physics/steam_spindash_evidence.c src/sa1/physics/steam_ball.c src/sa1/physics/pc2004_motion.c src/sa1/physics/pc2004_collision_work.c src/sa1/physics/steam_surface_evidence.c src/sa1/physics/steam_surface.c src/sa1/physics/steam_flat.c src/game/stage.c"
+common="src/sa1/physics/ground.c src/sa1/physics/surface_frame.c src/sa1/physics/physics_constants.c src/sa1/physics/movement.c src/sa1/physics/steam_input.c src/sa1/physics/steam_player_parameters.c src/sa1/physics/steam_air.c src/sa1/physics/steam_spindash_evidence.c src/sa1/physics/steam_ball.c src/sa1/physics/pc2004_motion.c src/sa1/physics/pc2004_ground_accel.c src/sa1/physics/pc2004_collision_work.c src/sa1/physics/steam_surface_evidence.c src/sa1/physics/steam_surface.c src/sa1/physics/steam_flat.c src/game/stage.c"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game $common tests/test_physics.c -lm -o "$build_dir/test_physics"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game $common tests/test_steam_flat.c -lm -o "$build_dir/test_steam_flat"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game $common tests/test_steam_air.c -lm -o "$build_dir/test_steam_air"

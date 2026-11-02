@@ -13,7 +13,7 @@ static void step(SA1PlayerState *p, SA1Input in, SA1SteamFlatDebug *dbg) {
 
 static float expected_slow_step(float speed) {
     if (speed < SA1_STEAM_SONIC_PARAMETER_EVIDENCE.dash_speed) return 256.0f;
-    return 256.0f - lroundf(sqrtf((speed - SA1_STEAM_SONIC_PARAMETER_EVIDENCE.dash_speed) / 16.0f) * 256.0f);
+    return 256.0f - (unsigned)(sqrtf((speed - SA1_STEAM_SONIC_PARAMETER_EVIDENCE.dash_speed) / 16.0f) * 256.0f);
 }
 
 int main(void) {
@@ -45,6 +45,12 @@ int main(void) {
     assert(fabsf(d.forward_speed_after - d.accel_forward) < 0.000001f);
     assert(d.angle_delta_bams == 0);
 
+    /* Source ordinary static context: the second tick clips F at
+       lim_frict*(-weight), and animation receives the unapplied remainder. */
+    step(&p, fwd, &d);
+    assert(fabsf(d.accel_forward - 0.0226f) < 0.000002f);
+    assert(fabsf(p.animation_accel_residual - (d.requested_force - 0.0226f)) < 0.000002f);
+
     /* Partial Circle Pad deflection remains partial after PC2004's cubic
        input curve; it must not become a full-strength acceleration request. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
@@ -66,12 +72,12 @@ int main(void) {
     assert(fabsf(d.requested_force) < 0.000001f);
     assert(d.angle_delta_bams == 0x4000u);
     assert(fabsf(d.forward_speed_after - 0.70710677f) < 0.000002f);
-    assert(fabsf(d.side_speed_after - 0.42426407f) < 0.000002f);
+    assert(fabsf(d.side_speed_after - 0.0f) < 0.000002f);
 
     /* Opposite input at speed enters slowdown/braking rather than immediate
        reverse acceleration. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());
-    for (int i = 0; i < 24; ++i) step(&p, fwd, 0);
+    for (int i = 0; i < 48; ++i) step(&p, fwd, 0);
     SA1Input back = {0}; back.move_z = -1.0f;
     step(&p, back, &d);
     assert(d.used_brake_branch == 1);
@@ -127,10 +133,9 @@ int main(void) {
     const float turned_forward = cosf(p.yaw);
     const float turned_side = -sinf(p.yaw);
     const float blended_forward = 0.99f + 0.01f * turned_forward;
-    const float blended_side = 0.01f * turned_side;
+    (void)turned_side;
     assert(fabsf(d.forward_speed_after - (blended_forward - 0.06f)) < 0.000002f);
-    assert(fabsf(d.side_speed_after -
-                 (blended_side + blended_side * -0.4f)) < 0.000002f);
+    assert(d.side_speed_after == 0.0f);
 
     /* PC2004 PGetSpeed 0x44403A..0x4440E1 stops damped local-Z inertia
        when it crosses below 0.87*jog_speed. The old port kept decaying it. */
@@ -138,14 +143,16 @@ int main(void) {
     p.vel.x = 1.0f;
     step(&p, none, &d);
     assert(fabsf(d.side_speed_before - 1.0f) < 0.000001f);
-    assert(fabsf(d.accel_side - (-0.4f)) < 0.000001f);
-    assert(fabsf(d.side_speed_after - 0.6f) < 0.000001f);
+    assert(fabsf(d.accel_side - (-0.352f)) < 0.000001f);
+    assert(fabsf(d.side_speed_after - 0.648f) < 0.000001f);
     assert(d.side_stopped_at_jog_threshold == 0);
     step(&p, none, &d);
-    assert(fabsf(d.side_speed_before - 0.6f) < 0.000001f);
-    assert(fabsf(d.accel_side - (-0.24f)) < 0.000001f);
-    assert(fabsf(d.side_speed_after) < 0.000001f);
-    assert(d.side_stopped_at_jog_threshold == 1);
+    assert(fabsf(d.side_speed_before - 0.648f) < 0.000001f);
+    assert(fabsf(d.accel_side - (-0.2112f)) < 0.000001f);
+    assert(fabsf(d.side_speed_after - 0.4368f) < 0.000001f);
+    assert(d.side_stopped_at_jog_threshold == 0);
+    step(&p, none, &d);
+    assert(d.side_speed_after == 0.0f && d.side_stopped_at_jog_threshold == 1);
 
     /* High-speed shallow steering selects Steam's shrinking slow-turn step. */
     sa1_player_reset(&p, sa3ds_movement_lab_world());

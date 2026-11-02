@@ -1,3 +1,4 @@
+#include "pc2004_ground_accel.h"
 #include "steam_surface.h"
 
 #include "steam_air.h"
@@ -270,6 +271,8 @@ static void surface_running(SA1PlayerState *player,
     g_forward *= forward_scale;
     g_side *= side_scale;
 
+    float normal_force = sa1_vec3_dot(gravity_world, frame->up) +
+                         s.normal * p->air_resist_y;
     float side_resistance = s.side * p->air_resist_z;
     float unstick_bias = sa1_sadx_surface_unstick_normal_bias(
         frame->up.y, s.forward, weight);
@@ -311,22 +314,33 @@ static void surface_running(SA1PlayerState *player,
         else if (s.forward < 0.0f) force = -p->slow_down;
     }
 
-    s.forward += resistance + force + g_forward;
-    s.side += side_resistance + g_side;
+    /* Ordinary static support, with no pending external force or special
+     * surface flags. The source clamp uses pre-turn force/post-turn speed. */
+    SA1PC2004GroundAccelInput clamp_input = {
+        .force_after_resistance = {resistance + g_forward, normal_force,
+                                  side_resistance + g_side},
+        .input_force = force,
+        .speed_after_turn = {s.forward, s.normal, s.side},
+        .up = frame->up.y, .friction_multiplier = 1.0f,
+        .analog_active = analog.active
+    };
+    SA1PC2004GroundAccelResult acceleration;
+    SA1PC2004LocalVector integrated;
+    sa1_pc2004_ground_accel_clamp(&clamp_input, p, &acceleration);
+    sa1_pc2004_pgetspeed_local(clamp_input.speed_after_turn,
+        acceleration.add_velocity, analog.active, frame->up.y, 0, p, &integrated);
+    s.forward = clampf(integrated.forward, -p->lim_h_spd, p->lim_h_spd);
+    s.side = clampf(integrated.side, -p->lim_h_spd, p->lim_h_spd);
+    s.normal = clampf(integrated.normal, -p->lim_v_spd, p->lim_v_spd);
+    player->animation_accel_residual = acceleration.animation_residual;
+    player->animation_accel_residual_valid = true;
+    player->vel = surface_to_world(frame, s);
 
     if (dbg) {
         dbg->surface_force_forward_scale = forward_scale;
         dbg->surface_force_side_scale = side_scale;
         dbg->normal_unstick_bias = unstick_bias;
     }
-
-    /* The recovered routine also has local-normal unstick branches.  We expose
-     * the bias in debug/traces, but do not directly push the player away from
-     * support until retail collision ordering/probe layout is reconstructed. */
-    s.forward = clampf(s.forward, -p->lim_h_spd, p->lim_h_spd);
-    s.side = clampf(s.side, -p->lim_h_spd, p->lim_h_spd);
-    s.normal = 0.0f;
-    player->vel = surface_to_world(frame, s);
 
     if (dbg) {
         dbg->forward_speed_after = s.forward;
