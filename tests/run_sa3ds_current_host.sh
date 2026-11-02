@@ -108,3 +108,6 @@ bash tests/run_dash_panel.sh
 
 printf "\n== PC2004 airborne steering and jump movement ==\n"
 bash tests/run_pc2004_air_movement.sh
+
+printf "\n== PC2004 targetless airborne attack dispatch ==\n"
+bash tests/run_pc2004_air_attack.sh

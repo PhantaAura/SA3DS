@@ -2,9 +2,10 @@
 
 Private reference: owner's executable SHA256
 `6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791f24cd74`.
-This records source behavior for implementation. Target acquisition, attack
-states and native air dash/homing are not yet connected; it is not an acceptance
-claim. The private executable and decompiled text stay outside Git.
+The ordinary targetless attack selector and public movement path are now
+connected. Target acquisition/pursuit are still pending. This is not complete
+controller or retail acceptance. The private executable and decompiled text
+stay outside Git.
 
 ## Entry and selector
 
@@ -72,3 +73,51 @@ cover both contexts. That existing air test was missing from the cumulative
 current-host gate and is now included, without running the entire legacy
 physics matrix. Exact-owner steering witnesses include the status branch and
 both independent constants. No bit-exact x87 or matched retail trace is claimed.
+
+
+## WCA28 ordinary targetless controller path
+
+`pc2004_air_attack.[ch]` implements the empty-target selector/clock with explicit
+signed16 wrapping. Player-work special flag8000 is separate from task status;
+setting task8000 alone does not select speed10. The normal native bridge uses
+speed5, no partner/candidate targets and no first-other CCL category. Pure
+selector checks cover category/age priority, but native target CCL is not wired.
+Commands still run before movement through the existing player command bridge.
+
+The public flat dispatcher promotes attack entry/action14 to the retained
+surface-frame path. It constructs flat axes from current yaw before promotion,
+avoiding reset's stale axes. Grounded/charge/ordinary fall do not enter air dash
+from a second jump. The full-frame path decays forward before shared44C270 /
+443F50 acceleration/integration and uses the status-aware turn helper. Action8
+cancel and14 timeout clear ball state and request18;14 entry preserves request
+14 or15 and local normal/side speed. Held-jump boost is suppressed on the entry,
+attack and timeout ticks. The original default-friction/zero-external-force
+specialization and existing contact solver remain in use, with their documented
+limits. Full low-Up force preamble, exceptional status/surface modes, exact
+landing/braking, target pursuit/partner lookup, source sound2FA and attack
+visual effects are not established by this integration.
+
+Focused public checks confirm an inactive-frame yaw90 launch goes along the
+correct world axis. Local entry5 is immediately decayed4.5; ordinary no-input
+forward slowdown/drag gives4.5+4.5*(-.008)-.06=4.404 on that first tick, while
+normal2 becomes1.9 with no held-jump addition. Five attack movement ticks end
+with timer6; the following selector changes to fall12/request18 before movement.
+The native default-off probe supplies jump/release/second-jump at the original
+course start and also supplies angled input while attacking. It is an explicit
+input sequence, not a retail execution trace or a full-course success test.
+
+
+WCA28 validation: exact-owner instruction/dispatch witnesses PASS; focused
+selector/public-controller checks PASS; required cumulative host gate PASS;
+space-safe native build PASS. Code-only3DSX381608bytes, SHA256
+`c772cbb8634e1cc9bc0dcf4f76c3198ee9df2ed06f7ab89b80bf7265200669e3`.
+The exact build in Azahar2126.0 Old3DS/Vulkan passed the24tick input-only
+original-start sequence: jump8/request14 tick1; attack14/timer2/age0/request14
+/ball1/jumpTicks1 tick4; fall12/timer0/age5/request18/ball0/jumpTicks1 tick9.
+Five attack movement ticks were observed. Angled input was supplied during
+three attack ticks. The fall pose was visually inspected after the fixture.
+Native source timing/selection is established for this bounded empty-target
+sequence, not a matched original-PC trajectory, pursuit, landing or hardware.
+Debug input flags were removed after saving private evidence; normal gameplay
+uses the ordinary physical button adapter. No owner asset/import/pose data
+changed, so the unchanged owner pose oracle was not rerun.

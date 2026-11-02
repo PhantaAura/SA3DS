@@ -31,6 +31,7 @@ typedef struct {
     bool pc2004_action_state_valid;
     uint32_t jump_ticks;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
+    int16_t pc2004_air_attack_timer,pc2004_air_attack_age;
     bool ball_form;
     float spindash_charge;
     uint32_t spindash_ticks;

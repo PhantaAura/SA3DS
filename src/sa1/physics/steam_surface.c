@@ -1,4 +1,5 @@
 #include "pc2004_ground_accel.h"
+#include "pc2004_air_attack.h"
 #include "steam_surface.h"
 
 #include "steam_air.h"
@@ -121,7 +122,7 @@ static void rotate_frame_toward(SA1SurfaceFrame *frame,
                                 SurfaceSpeed *speed,
                                 SA1Vec3 desired,
                                 unsigned step_bams,
-                                SA1PC2004GroundTurnKind kind) {
+                                SA1PC2004GroundTurnKind kind,int grounded) {
     float delta = signed_angle_on_plane(frame->forward, desired, frame->up);
     float max_step = bams_to_rad(step_bams);
     float step = clampf(delta, -max_step, max_step);
@@ -134,10 +135,10 @@ static void rotate_frame_toward(SA1SurfaceFrame *frame,
     frame->forward = sa1_vec3_normalize(sa1_vec3_cross(frame->right, frame->up));
 
     SurfaceSpeed transformed = world_to_surface(frame, old_world);
-    SA1PC2004LocalVector blended = sa1_pc2004_ground_turn_velocity(
+    SA1PC2004LocalVector blended = sa1_pc2004_turn_velocity(
         (SA1PC2004LocalVector){old_local.forward, old_local.normal, old_local.side},
         (SA1PC2004LocalVector){transformed.forward, transformed.normal, transformed.side},
-        kind, 1, frame->up.y,
+        kind, grounded, 1, frame->up.y,
         1.0f /* Existing ordinary default-friction specialization; contact mapping pending. */);
     *speed = (SurfaceSpeed){blended.forward, blended.side, blended.normal};
 }
@@ -307,7 +308,7 @@ static void surface_running(SA1PlayerState *player,
                 step = general_turn_step(delta_bams);
             }
         }
-        rotate_frame_toward(frame, &s, desired, step, kind);
+        rotate_frame_toward(frame, &s, desired, step, kind,player->grounded);
         if (dbg) dbg->turn_step_bams = step;
     } else {
         if (s.forward > 0.0f) force = p->slow_down;
@@ -367,7 +368,7 @@ static void surface_ball_motion(SA1PlayerState *player,
         SA1Vec3 desired = desired_surface_direction(frame, camera_yaw, &analog);
         float delta = signed_angle_on_plane(frame->forward, desired, frame->up);
         unsigned step = general_turn_step(radians_to_bams_abs(delta));
-        rotate_frame_toward(frame, &s, desired, step, SA1_PC2004_TURN_GENERAL);
+        rotate_frame_toward(frame, &s, desired, step, SA1_PC2004_TURN_GENERAL,player->grounded);
         if (dbg) dbg->turn_step_bams = step;
     }
 
@@ -533,6 +534,39 @@ void sa1_physics_step_steam_sonic_surface(
     dbg->pc2004_collision_work_reconstructed = 1;
     dbg->pc2004_retail_polygon_solver_pending = 1;
 
+    int skip_attack_hold=0;
+    if(!player->grounded&&player->pc2004_action_state_valid&&
+       (player->pc2004_action_state==8||player->pc2004_action_state==14)){
+        /* The current native object set supplies no homing target list or
+         * player partner target. Do not advertise this as target pursuit. */
+        SA1PC2004AirAttack current={player->pc2004_action_state,
+            player->ball_form?0x500u:0u,
+            player->animation_airborne_request_valid?player->animation_airborne_request:14,
+            player->pc2004_air_attack_timer,player->pc2004_air_attack_age};
+        SA1PC2004AirAttackSelection selection=sa1_pc2004_air_attack_select_no_target(
+            current,input->jump_pressed,input->action_pressed,-1,0);
+        player->pc2004_action_state=selection.next.action;
+        player->pc2004_air_attack_timer=selection.next.timer;
+        player->pc2004_air_attack_age=selection.next.age;
+        player->ball_form=(selection.next.status&0x100u)!=0;
+        player->animation_airborne_request=selection.next.animation;
+        player->animation_airborne_request_valid=true;skip_attack_hold=selection.skip_jump_hold;
+        if(selection.write_forward){
+            SurfaceSpeed speed=world_to_surface(&frame,player->vel);speed.forward=selection.forward;
+            player->vel=surface_to_world(&frame,speed);
+        }
+    }
+    int source_air_attack=player->pc2004_action_state_valid&&player->pc2004_action_state==14;
+    if(source_air_attack){
+        SurfaceSpeed speed=world_to_surface(&frame,player->vel);
+        SA1PC2004LocalVector local={speed.forward,speed.normal,speed.side};
+        SA1PC2004AirAttack clock={.action=14,.timer=player->pc2004_air_attack_timer};
+        if(sa1_pc2004_air_attack_decay(&clock,&local)){
+            player->pc2004_air_attack_timer=clock.timer;
+            player->vel=surface_to_world(&frame,(SurfaceSpeed){local.forward,local.side,local.normal});
+            surface_running(player,input,camera_yaw,&frame,dbg);
+        }
+    }else{
     int source_spring=player->pc2004_action_state_valid &&
         (player->pc2004_action_state==9 || player->pc2004_action_state==10);
     if(source_spring) {
@@ -594,11 +628,12 @@ void sa1_physics_step_steam_sonic_surface(
          * task rotation. Retain the launch/support frame for local Speed.y,
          * anisotropic drag, and general-turn steering instead of collapsing
          * inclined launches into the flat world-Y specialization. */
-        if (!just_jumped && (!player->pc2004_action_state_valid ||
+        if (!just_jumped && !skip_attack_hold && (!player->pc2004_action_state_valid ||
                              player->pc2004_action_state == 8))
             (void)sa1_steam_sonic_apply_jump_hold_surface(
                 player, &frame, input->jump_held);
         sa1_steam_sonic_air_step_surface(player, input, camera_yaw, &frame, NULL);
+    }
     }
     }
     /* Commit steering even if the following support query misses a ledge.

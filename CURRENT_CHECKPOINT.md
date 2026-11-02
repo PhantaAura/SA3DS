@@ -1,3 +1,23 @@
+# WCA active checkpoint — native ordinary second-jump air dash
+
+WCA28 connects action8 second jump to14, retained normal/side/request, original
+forward initialization/decay and44C270+443F50 movement, cancel/timeout fall12.
+Current-yaw flat handoff and explicit ground-status turn context are preserved.
+Required host gate, focused selector/controller checks, exact-owner witnesses,
+native build PASS. Exact381608B/c772cbb8 build in Azahar original-start input
+sequence PASS24ticks: jump8 tick1; attack14/timer2/request14 tick4; five attack
+movement ticks; fall12/request18 tick9. No extra held-jump boost during attack.
+
+This is ordinary targetless air dash, not homing pursuit or complete CP1.
+Native target list/partner/first-hit CCL, effects/sound, exceptional force modes,
+source landing/braking and matched retail trajectory remain open. Existing
+spring off-ground scratch/contact/camera/enemies/events/HUD/audio/full-course
+and renderer gaps remain. See docs/PC2004_AIR_ATTACK.md for exact source rules.
+Owner pose/assets unchanged; default-off input flags removed after evidence.
+Full WCA/PHYSICS_1TO1 remain false. Continue after checkpoint publication.
+
+---
+
 # WCA active checkpoint — correct air-turn status and grounded/air distinction
 
 WCA27 restores source443C50's independent f32.1/.9 airborne GENERAL blend.

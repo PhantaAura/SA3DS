@@ -124,6 +124,9 @@ static unsigned g_movement_ccl_queued;
 static void reset_panels(void);
 static int g_springs_ready;
 static int32_t g_spring_head=-1;
+static int g_air_attack_probe;
+static unsigned g_air_attack_probe_ticks,g_air_attack_probe_attack_ticks,g_air_attack_probe_entry,g_air_attack_probe_exit;
+static uint8_t g_air_attack_probe_previous_action;
 static int g_spring_probe;
 static unsigned previous_spring_animation=0xffffu;
 static unsigned g_spring_probe_ticks,g_spring_probe_launches,g_spring_probe_rise,g_spring_probe_fall,g_spring_probe_unsupported;
@@ -1443,6 +1446,11 @@ int main(void) {
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
     if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();}
+    if(g_emerald_coast&&g_ec_combined){
+        FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
+        if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
+            boot_log("AIR_ATTACK_PROBE","BEGIN: input-only jump/release/second-jump at original start; targetless path only");}
+    }
     if(g_pose_lab) {
         mkdir("sdmc:/3ds/SA3DS",0777);
         FILE *f=fopen("sdmc:/3ds/SA3DS/pass10_pose_metrics.csv","wb");
@@ -1519,6 +1527,13 @@ int main(void) {
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
             if(g_spring_probe||g_panel_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_air_attack_probe){
+                tick_input=(SA1Input){0};
+                tick_input.jump_pressed=g_air_attack_probe_ticks==0||g_air_attack_probe_ticks==3;
+                tick_input.jump_held=g_air_attack_probe_ticks!=2;
+                tick_input.jump_released=g_air_attack_probe_ticks==2;
+                if(g_air_attack_probe_ticks>=4&&g_air_attack_probe_ticks<=6)tick_input.move_x=.5f;
+            }
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
@@ -1547,6 +1562,7 @@ int main(void) {
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
                 if(g_panel_probe){boot_log("PANEL_PROBE","FAIL: physical death/reset during fixture");g_panel_probe=0;g_paused=1;}
+                if(g_air_attack_probe){boot_log("AIR_ATTACK_PROBE","FAIL: physical death/reset during fixture");g_air_attack_probe=0;g_paused=1;}
             }
             if(g_spring_probe&&g_player.pc2004_action_state_valid){
                 if(g_player.pc2004_action_state==9||g_player.pc2004_action_state==10)g_spring_probe_rise++;
@@ -1564,6 +1580,27 @@ int main(void) {
                     g_selection.requested_runtime_id);boot_log("SPRING_ANIMATION",note);
             }
             previous_spring_animation=g_selection.requested_runtime_id;
+            if(g_air_attack_probe){
+                unsigned action=g_player.pc2004_action_state;
+                if(action==14)g_air_attack_probe_attack_ticks++;
+                if(action!=g_air_attack_probe_previous_action){
+                    char note[170];snprintf(note,sizeof(note),"tick=%llu action=%u timer=%d age=%d request=%u ball=%u jumpTicks=%lu",
+                        (unsigned long long)g_player.sim_frame,action,g_player.pc2004_air_attack_timer,
+                        g_player.pc2004_air_attack_age,g_selection.requested_runtime_id,g_player.ball_form,
+                        (unsigned long)g_player.jump_ticks);boot_log("AIR_ATTACK_STATE",note);
+                    if(action==14&&g_player.sim_frame==4&&g_player.pc2004_air_attack_timer==2&&
+                       g_selection.requested_runtime_id==14&&g_player.ball_form&&g_player.jump_ticks==1)g_air_attack_probe_entry=1;
+                    if(action==12&&g_player.sim_frame==9&&g_player.pc2004_air_attack_timer==0&&
+                       g_selection.requested_runtime_id==18&&!g_player.ball_form&&g_player.jump_ticks==1)g_air_attack_probe_exit=1;
+                }
+                g_air_attack_probe_previous_action=action;
+                if(++g_air_attack_probe_ticks>=24){
+                    char note[170];snprintf(note,sizeof(note),"%s: ticks=%u attackTicks=%u entry=%u exit=%u; input-only targetless fixture",
+                        g_air_attack_probe_entry&&g_air_attack_probe_exit&&g_air_attack_probe_attack_ticks==5?"PASS":"FAIL",
+                        g_air_attack_probe_ticks,g_air_attack_probe_attack_ticks,g_air_attack_probe_entry,g_air_attack_probe_exit);
+                    boot_log("AIR_ATTACK_PROBE",note);g_air_attack_probe=0;g_paused=1;
+                }
+            }
             if (memcmp(&physics_done,&g_player,sizeof(g_player))!=0) {
                 fail_screen("animation mutated physics state");
                 trace_stop();

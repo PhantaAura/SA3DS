@@ -295,9 +295,19 @@ void sa1_physics_step_steam_sonic_flat(
     player->animation_accel_residual = 0.0f;
     player->animation_accel_residual_valid = false;
 
+    int attack_dispatch=!player->grounded&&player->pc2004_action_state_valid&&
+        (player->pc2004_action_state==14||(player->pc2004_action_state==8&&
+        (input->jump_pressed||input->action_pressed)));
+    if(attack_dispatch&&!player->surface_frame_active){
+        /* Flat steering owns yaw; reset's old cached axes are not a frame. */
+        SA1SurfaceFrame attack_frame=sa1_surface_frame_make(player->ground_normal,
+            (SA1Vec3){sinf(player->yaw),0,cosf(player->yaw)});
+        player->surface_forward=attack_frame.forward;player->surface_right=attack_frame.right;
+    }
+
     /* A slope launch/departure does not become world-upright on its second
      * airborne tick. Continue the retained task-frame path until grounded. */
-    if ((!player->grounded && player->surface_frame_active) ||
+    if (attack_dispatch || (!player->grounded && player->surface_frame_active) ||
         (player->pc2004_action_state_valid &&
          (player->pc2004_action_state == 9 || player->pc2004_action_state == 10))) {
         if (debug_out) memset(debug_out, 0, sizeof(*debug_out));
