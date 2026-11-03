@@ -21,3 +21,24 @@ int sa1_pc2004_task_turn(SA1SurfaceFrame*f,uint16_t old,uint16_t next,const SA1P
     if(!next_frame.valid)return 0;
     *f=next_frame;return 1;
 }
+
+static uint16_t toward_zero(uint16_t u){
+    int d=(int16_t)(uint16_t)(0-u);
+    return d>0x800?(uint16_t)(u+0x800):d< -0x800?(uint16_t)(u-0x800):0;
+}
+static double frame_sine(const SA1PC2004HomingMath*m,uint16_t a){return m&&m->sine?m->sine(m->context,a):sin(a*(TAU/65536.));}
+int sa1_pc2004_task_relax_up(SA1SurfaceFrame*f,const SA1PC2004HomingMath*m){
+    uint16_t y;if(!sa1_pc2004_task_yaw(f,&y))return 0;
+    double nz=fmax(-1.,fmin(1.,f->up.z));
+    uint16_t x=(uint16_t)(int32_t)lround(asin(nz)*(65536./TAU));
+    uint16_t z=hypot(f->up.x,f->up.y)<1e-6?0:(uint16_t)(int32_t)lround(atan2(-(double)f->up.x,f->up.y)*(65536./TAU));
+    x=toward_zero(x);z=toward_zero(z);
+    double sx=frame_sine(m,x),cx=frame_sine(m,(uint16_t)(x+0x4000));
+    double sy=frame_sine(m,y),cy=frame_sine(m,(uint16_t)(y+0x4000));
+    double sz=frame_sine(m,z),cz=frame_sine(m,(uint16_t)(z+0x4000));
+    SA1SurfaceFrame n={.forward={(float)(cz*cy+sz*sx*sy),(float)(sz*cy-cz*sx*sy),(float)(cx*sy)},
+        .up={(float)(-sz*cx),(float)(cz*cx),(float)sx},
+        .right={(float)(cz*sy-sz*sx*cy),(float)(sz*sy+cz*sx*cy),(float)(-cx*cy)},.valid=1};
+    if(!finite3(n.up)||!finite3(n.forward)||!finite3(n.right))return 0;
+    *f=n;return 1;
+}

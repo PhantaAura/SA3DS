@@ -501,6 +501,26 @@ static int handle_surface_ball_state(SA1PlayerState *player,
     return 0;
 }
 
+static int hurt_velocity(SA1PlayerState*p,const SA1Input*input,const SA1PhysicsWorld*w,SA1SurfaceFrame*f){
+    const SA1SteamPlayerParameters*parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    SurfaceSpeed speed=world_to_surface(f,p->vel);
+    double magnitude=(double)speed.forward*speed.forward+(double)speed.side*speed.side+(double)speed.normal*speed.normal;
+    if(p->grounded&&((p->pc2004_player_flags4&0x8000)||magnitude<=(double)parameters->dash_speed*parameters->dash_speed)){
+        SA1Vec3 foot=sa1_vec3_sub(p->pos,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
+        if(!sa1_pc2004_task_relax_up(f,w->homing?&w->homing->math:NULL))return 0;
+        p->pos=sa1_vec3_add(foot,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
+        speed=world_to_surface(f,p->vel);
+    }
+    SA1PC2004LocalVector local={speed.forward,speed.normal,speed.side};
+    SA1Vec3 gravity={0,-parameters->weight,0};
+    SA1PC2004LocalVector force={sa1_vec3_dot(gravity,f->forward),sa1_vec3_dot(gravity,f->up),sa1_vec3_dot(gravity,f->right)};
+    SA1PC2004MotionContext context={p->grounded,0,(p->pc2004_status_flags&0x4000)!=0,f->up.y,1.f};
+    SA1PC2004LocalVector add=sa1_pc2004_pgetbreak_add_velocity(local,force,&context,parameters,NULL),next;
+    sa1_pc2004_pgetspeed_local(local,add,sa1_sadx_filter_logical_analog(input->move_x,input->move_z).active,f->up.y,0,parameters,&next);
+    p->vel=surface_to_world(f,(SurfaceSpeed){next.forward,next.side,next.normal});
+    p->animation_accel_residual_valid=false;return 1;
+}
+
 /*492300 is a complete source velocity update at EACH invocation, including
  * initialization. TRACK bypasses gravity/acceleration; other outcomes call
  * the existing44C270+443F50 reconstruction once. Position is integrated later.*/
@@ -575,6 +595,7 @@ void sa1_physics_step_steam_sonic_surface(
     dbg->pc2004_collision_work_reconstructed = 1;
     dbg->pc2004_retail_polygon_solver_pending = 1;
 
+    int hurt_action=player->pc2004_action_state_valid&&player->pc2004_action_state==16;
     int skip_attack_hold=0;
     if(!player->grounded&&player->pc2004_action_state_valid&&
        (player->pc2004_action_state==8||player->pc2004_action_state==14)){
@@ -599,7 +620,9 @@ void sa1_physics_step_steam_sonic_surface(
         if(selection.entered&&h&&!homing_initialize(player,input,camera_yaw,&frame,dbg,h))return;
     }
     int source_air_attack=player->pc2004_action_state_valid&&player->pc2004_action_state==14;
-    if(source_air_attack&&world->homing){
+    if(hurt_action){
+        if(!hurt_velocity(player,input,world,&frame)){player->pc2004_homing_failed=true;return;}
+    }else if(source_air_attack&&world->homing){
         if(!homing_velocity(player,input,camera_yaw,&frame,dbg,world->homing))return;
     }else if(source_air_attack){
         SurfaceSpeed speed=world_to_surface(&frame,player->vel);
@@ -731,9 +754,10 @@ void sa1_physics_step_steam_sonic_surface(
                 player->action_state = SA1_ACTION_GROUNDED;
                 player->ball_form = false;
             }
-            player->pc2004_action_state =
-                (player->animation_input_active || s.forward != 0.0f) ? 2 : 1;
-            player->pc2004_action_state_valid = true;
+            if(!hurt_action){
+                player->pc2004_action_state = (player->animation_input_active || s.forward != 0.0f) ? 2 : 1;
+                player->pc2004_action_state_valid = true;
+            }
             player->animation_airborne_request_valid = false;
             sync_player_frame(player, &frame, &landing);
             sa1_pc2004_collision_work_mirror_static_contact(&collision_work, &landing, 0);
@@ -742,7 +766,8 @@ void sa1_physics_step_steam_sonic_surface(
 
     dbg->pc2004_collision_find_count = collision_work.find_count;
 
-    if (!player->grounded)
+    if(hurt_action)player->action_state=SA1_ACTION_HURT;
+    else if (!player->grounded)
         player->action_state = SA1_ACTION_AIRBORNE;
     else if (player->action_state != SA1_ACTION_SPINDASH_CHARGE &&
              player->action_state != SA1_ACTION_ROLL)

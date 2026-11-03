@@ -10,7 +10,8 @@ typedef enum {
     SA1_ACTION_GROUNDED = 0,
     SA1_ACTION_AIRBORNE = 1,
     SA1_ACTION_SPINDASH_CHARGE = 2,
-    SA1_ACTION_ROLL = 3
+    SA1_ACTION_ROLL = 3,
+    SA1_ACTION_HURT = 4
 } SA1ActionState;
 
 typedef struct {
@@ -39,6 +40,14 @@ typedef struct {
     uint8_t pc2004_homing_calls,pc2004_homing_tracks;
     bool pc2004_homing_failed;
     uint32_t pc2004_homing_target;
+    uint16_t pc2004_hurt_timer,pc2004_status_flags;
+    uint16_t pc2004_player_flags4,pc2004_player_flags6;
+    uint32_t pc2004_player_flags5c;
+    /*Explicit original action-script animation writes, separate from pose
+     * sampling. Main supplies previous PlayAnimation request to hurt logic.*/
+    uint32_t animation_script_serial;
+    uint16_t animation_script_request;
+    bool animation_script_valid;
     uint32_t jump_ticks;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
     int16_t pc2004_air_attack_timer,pc2004_air_attack_age;

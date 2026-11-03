@@ -45,3 +45,6 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
   tests/animated_world_dump.c -lm -o "$tmp/animated_world_dump"
 python3 tools/audit_pc2004_animated_world.py \
   "$CHRMODELS_PATH" "$SONIC_EXE_PATH" "$tmp/sonic.sa3c" "$tmp/animated_world_dump"
+
+# Exact executable damage selector/recoil/blink/ring-loss witnesses.
+python3 tools/verify_pc2004_player_damage.py "$SONIC_EXE_PATH"

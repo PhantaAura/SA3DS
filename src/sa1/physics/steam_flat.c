@@ -309,7 +309,8 @@ void sa1_physics_step_steam_sonic_flat(
 
     /* A slope launch/departure does not become world-upright on its second
      * airborne tick. Continue the retained task-frame path until grounded. */
-    if (attack_dispatch || (!player->grounded && player->surface_frame_active) ||
+    if ((player->pc2004_action_state_valid&&player->pc2004_action_state==16) ||
+        attack_dispatch || (!player->grounded && player->surface_frame_active) ||
         (player->pc2004_action_state_valid &&
          (player->pc2004_action_state == 9 || player->pc2004_action_state == 10))) {
         if (debug_out) memset(debug_out, 0, sizeof(*debug_out));

@@ -129,3 +129,6 @@ bash tests/run_enemy_damage.sh
 
 printf '\n== Source CCL contacts and Sonic attack strengths ==\n'
 bash tests/run_ccl_contact.sh
+
+# Source player damage, ordinary hurt physics and animation recovery.
+bash tests/run_player_damage.sh

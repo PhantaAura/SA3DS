@@ -24,6 +24,8 @@ static const SA3DSSonicAnimationBinding kBindings[] = {
     {18, 10, 73,  3, 18, 0.25f,   1.0f, 72, 32, "Fall"},
     {19, 11, 73,  4,  0, 1.0f,    1.0f, 72, 16, "Land"},
     {20,  7, 73,  4,  0, 0.25f,   1.0f, 72, 33, "Brake"},
+    {23,116, 73,  5, 23, 1.0f,    1.0f, 72, 22, "Hurt"},
+    {24,117, 73,  4,  0, 1.0f,    1.0f, 72, 38, "Hurt landing"},
     {29, 22, 73,  4,  1, 0.0625f, 1.0f, 72, 16, "Uncurl"},
     {30, 20, 73,  4,  0, 1.0f,    0.9f, 72, 16, "Turn Around"},
     {31, 19, 73,  3, 31, 0.0625f, 1.0f, 72, 16, "Skidding"},
@@ -208,6 +210,11 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                                                   : player->grounded;
     uint16_t requested_id = choose_runtime_id(player, observation,
                                                previous_grounded);
+    if(player->pc2004_action_state_valid&&player->pc2004_action_state==16&&player->animation_script_valid){
+        requested_id=(!runtime->initialized||player->animation_script_serial!=runtime->previous_script_serial)?
+            player->animation_script_request:runtime->requested_runtime_id;
+    }
+    runtime->previous_script_serial=player->animation_script_serial;
     /* The player bridge records the selector's last explicit write. Once
      * PlayAnimation advances 17 to NextAnim18, the unchanged provenance must
      * not reissue17 on every fall tick. A new16/17 write interrupts normally. */
@@ -393,6 +400,9 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
             int backed = 0;
             runtime->accumulated_sample_frame +=
                 current_frame_step(runtime, player, &backed);
+            if(runtime->active_binding.property==5&&runtime->active_binding.source_frame_count&&
+               runtime->accumulated_sample_frame>=(float)(runtime->active_binding.source_frame_count-1))
+                runtime->accumulated_sample_frame=(float)(runtime->active_binding.source_frame_count-1);
             if ((runtime->active_binding.property == 3 ||
                  runtime->active_binding.property == 9 ||
                  runtime->active_binding.property == 10) &&

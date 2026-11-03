@@ -13,6 +13,7 @@
 #include "saru_pose.h"
 #include "ccl_contact.h"
 #include "game_score.h"
+#include "player_damage_player.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
 #include <citro3d.h>
@@ -145,6 +146,12 @@ static int g_homing_probe;
 static unsigned g_homing_probe_calls,g_homing_probe_tracks,g_homing_probe_double,g_homing_probe_target;
 static unsigned g_saru_contacts,g_saru_damage_events,g_saru_bounces,g_saru_deaths,g_saru_player_hurt_contacts;
 static int g_saru_task_error,g_saru_probe_combat;
+static int g_hurt_probe;
+static unsigned g_hurt_events,g_hurt_scatter_requests,g_hurt_frames,g_hurt_air,g_hurt_ground,g_hurt_blinks;
+/* Preserve source requests until the corresponding world executors exist.
+ * This is not a ring-scatter, sound, shader or death implementation. */
+static SA3DSPlayerDamageResult g_player_damage_requests;
+static int g_player_damage_blocked;
 static unsigned g_saru_frame_actors;
 static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
@@ -349,6 +356,7 @@ static void trace_toggle(void) {
 }
 
 static void reset_selected_zone(void) {
+    g_player_damage_blocked=0;memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
     sa3ds_wz_tick_reset(&g_tick_clock);
     g_last_frame_ms=osGetTime();
     if (g_emerald_coast && g_ec_combined) {
@@ -1240,7 +1248,7 @@ static void bind_native_homing(void){
         .math={.bearing=homing_bearing,.sine=saru_sine,.random15=saru_random},.first_hit_category=category};
     g_ec_collision.world.homing=&g_homing_services;
 }
-static uint16_t native_player_status(const SA1PlayerState*p){return (uint16_t)((p->ball_form?0x100:0)|(p->grounded?1:0));}
+static uint16_t native_player_status(const SA1PlayerState*p){return (uint16_t)((p->pc2004_status_flags&~0x103u)|(p->ball_form?0x100:0)|(p->grounded?1:0));}
 static int saru_damage(void*context,SA3DSSaruActor*actor){
     SA3DSNativeSaru*s=context;if(!s||actor!=&s->actor){g_saru_task_error=1;return 0;}
     int cached=s->ccl.cached_other_id==1&&s->ccl.cached_other_shape>=0&&s->ccl.cached_other_shape<2;
@@ -1279,7 +1287,7 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player){
     sa3ds_ccl_body_clear(&g_player_enemy_ccl,g_player_enemy_shapes,2);
     if(queued_player->pc2004_ccl_state_valid){
         uint8_t action=queued_player->pc2004_ccl_action;
-        g_player_enemy_shapes[0].damage=sa3ds_sonic_ccl_damage_byte(g_player_enemy_shapes[0].damage,action,queued_player->pc2004_ccl_ball?0x100:0,0,0);
+        g_player_enemy_shapes[0].damage=sa3ds_sonic_ccl_damage_byte(g_player_enemy_shapes[0].damage,action,queued_player->pc2004_ccl_ball?0x100:0,queued_player->pc2004_player_flags4,queued_player->pc2004_player_flags6);
         g_player_enemy_shapes[1].attributes=sa3ds_sonic_ccl_secondary_attributes(g_player_enemy_shapes[1].attributes,action);
     }
     for(int32_t n=g_saru_head;n>=0;n=g_saru_states[n].next){
@@ -1410,14 +1418,23 @@ static int draw_saru(void){
 static void begin_saru_probe(void){
     FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_saru_probe.flag","rb");if(!f)return;
     unsigned row=0;char mode=0;int parsed=fscanf(f,"%u %c",&row,&mode)>=1;fclose(f);
-    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';
+    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';g_hurt_probe=mode=='D';
     if(!parsed||!g_saru_ready||!g_ec_full_route)goto fail;
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
         SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_saru_definitions.placements,n,&p))goto fail;
         if(p.act==g_ec_act_index&&p.source_row==row){target=p;found=1;break;}
     }
-    float x=target.position.x,z=target.position.z-(g_saru_probe_combat?5.f:70.f);
+    SA1Vec3 actor_position=target.position;
+    if(g_hurt_probe){
+        /*Source initializer computes orbit offset (SET origin is not the
+         * actual contact point). It does not consume the shared RNG here.*/
+        SA3DSSaruInitial actor;
+        uint16_t phase=(uint16_t)target.angles[0];
+        if(!sa3ds_saru_initialize(&target,0,saru_sine(NULL,phase),saru_sine(NULL,(uint16_t)(phase+0x4000)),&actor))goto fail;
+        actor_position=actor.task_position;
+    }
+    float x=actor_position.x,z=actor_position.z-((g_saru_probe_combat||g_hurt_probe)?5.f:70.f);
     if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player))goto fail;
     g_ec_collision.reference_y=target.position.y+8;
     SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,x,z);if(!floor.valid||floor.normal.y<.8f)goto fail;
@@ -1425,6 +1442,13 @@ static void begin_saru_probe(void){
     g_player.grounded=true;g_player.ground_normal=floor.normal;g_player.surface_id=floor.surface_id;
     g_player.surface_frame_active=false;g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
     reset_springs();g_game_score=(SA3DSGameScore){0};g_camera.yaw=0;g_saru_probe=1;
+    g_hurt_events=g_hurt_scatter_requests=g_hurt_frames=g_hurt_air=g_hurt_ground=g_hurt_blinks=0;
+    if(g_hurt_probe){
+        g_rings.rings=7; /*explicit fixture inventory*/
+        /*Face the cliff: source backward recoil then travels over the plateau,
+         * rather than probing the known incomplete cliff wall adapter.*/
+        g_player.yaw=PI;g_player.surface_forward=(SA1Vec3){0,0,-1};g_player.surface_right=(SA1Vec3){-1,0,0};
+    }
     g_homing_probe_calls=g_homing_probe_tracks=g_homing_probe_double=g_homing_probe_target=0;
     g_saru_probe_ticks=g_saru_probe_draws=g_saru_probe_actions=g_saru_probe_max_actors=0;
     boot_log("SARU_PROBE","BEGIN: explicit original-placement ordinary AI/display/contact fixture; player hurt/projectiles/effects/course parity not tested");return;
@@ -1531,7 +1555,7 @@ static int sample_pose(void) {
                 g_selection.transition_weight,
                 g_local,g_transition_local,g_node_count,&root);
         } else {
-            int loop=g_selection.binding.property!=4;
+            int loop=g_selection.binding.property!=4 && g_selection.binding.property!=5;
             pr=sa3c_pose_sample_action(&g_character,
                 g_selection.binding.action_slot,g_selection.sample_frame,loop,
                 g_local,g_node_count,&root);
@@ -1583,7 +1607,12 @@ static int sample_pose(void) {
         case 1: C3D_CullFace(GPU_CULL_BACK_CCW); break;
         case 2: C3D_CullFace(GPU_CULL_FRONT_CCW); break;
     }
-    if(!sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats))return 0;
+    if(g_pose_lab||sa3ds_player_damage_visible(g_player.pc2004_hurt_timer)){
+        if(!sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats))return 0;
+    }else{
+        sa3ds_sonic_gpu_begin_frame(&g_sonic_gpu);memset(&g_stats,0,sizeof(g_stats));
+        if(g_hurt_probe&&!g_paused)g_hurt_blinks++;
+    }
     if(g_emerald_coast){
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
         C3D_CullFace(GPU_CULL_NONE);
@@ -1820,6 +1849,26 @@ int main(void) {
                 }
                 ec_refresh_collision_region();
             }
+            if(g_emerald_coast){
+                if(g_player_damage_blocked){g_paused=1;continue;}
+                SA3DSPlayerDamageWorld damage_world={.stage_id=1,.death_command_allowed=1,.random15=saru_random};
+                SA3DSPlayerDamageResult requests;
+                int ready=sa3ds_player_damage_prepare(&g_player,&tick_input,g_player_enemy_ccl.status,
+                    g_anim_runtime.initialized?g_anim_runtime.requested_runtime_id:0,&g_rings.rings,
+                    &damage_world,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE,&requests);
+                if(ready==0){fail_screen("Source player damage preparation failed");break;}
+                if(requests.accepted){
+                    g_spring_pending.valid=0;g_player_damage_requests=requests;
+                    g_hurt_events++;g_hurt_scatter_requests+=requests.scatter_count;
+                    char note[200];snprintf(note,sizeof(note),"tick=%llu action=%u timer=%u rings=%d scatterPending=%u soundsPending=%u deathPending=%u",
+                        (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,g_player.pc2004_hurt_timer,
+                        g_rings.rings,requests.scatter_count,requests.sound_count,requests.death_requested);boot_log("PLAYER_DAMAGE",note);
+                }
+                if(ready!=1){
+                    boot_log("PLAYER_DAMAGE","PENDING: source death/special-effect executor; gameplay paused");
+                    g_player_damage_blocked=1;g_paused=1;continue;
+                }
+            }
             if(!sa3ds_spring_player_begin(&g_player,&g_spring_pending,&tick_input)){
                 boot_log("SPRINGS","Player command rejected");break;
             }
@@ -1854,6 +1903,9 @@ int main(void) {
             if(g_spring_probe&&g_player.pc2004_action_state_valid){
                 if(g_player.pc2004_action_state==9||g_player.pc2004_action_state==10)g_spring_probe_rise++;
                 if(g_player.pc2004_action_state==12)g_spring_probe_fall++;
+            }
+            if(g_hurt_probe&&g_player.pc2004_action_state==16){
+                g_hurt_frames++;if(g_player.grounded)g_hurt_ground++;else g_hurt_air++;
             }
             SA1PlayerState physics_done=g_player;
             g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
@@ -1911,11 +1963,18 @@ int main(void) {
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!saru_ccl_pass(&physics_done)){fail_screen("Native player/NPC CCL failed");break;}
             sa3ds_game_score_tick(&g_game_score,1);
-            if(g_saru_probe&&++g_saru_probe_ticks>=180){
+            if(g_saru_probe&&++g_saru_probe_ticks>=(g_hurt_probe?100u:180u)){
+                if(g_hurt_probe){
+                    char note[240];snprintf(note,sizeof(note),"%s ticks=%u entries=%u hurt=%u air=%u ground=%u blinkFrames=%u rings=%d scatterPending=%u timer=%u action=%u; scatter/audio/death executors remain pending",
+                        g_hurt_events==1&&g_hurt_frames&&g_hurt_air&&g_hurt_ground&&g_hurt_blinks&&g_rings.rings==0&&g_hurt_scatter_requests==7?"PASS":"FAIL",
+                        g_saru_probe_ticks,g_hurt_events,g_hurt_frames,g_hurt_air,g_hurt_ground,g_hurt_blinks,g_rings.rings,g_hurt_scatter_requests,g_player.pc2004_hurt_timer,g_player.pc2004_action_state);
+                    boot_log("HURT_PROBE",note);g_saru_probe=0;g_paused=1;
+                }else{
                 char note[360];snprintf(note,sizeof(note),"%s ticks=%u draws=%u maxActors=%u actions=%08x contacts=%u awards=%u score=%lu bounces=%u deaths=%u hurtContacts=%u homingCalls=%u tracks=%u double=%u target=%u; bounded original-placement fixture only",
                     ((g_saru_probe_combat||g_homing_probe)?(g_saru_contacts&&g_saru_damage_events&&g_saru_bounces&&g_saru_deaths&&(!g_homing_probe||(g_homing_probe_double&&g_homing_probe_tracks&&g_homing_probe_target))):(g_saru_probe_draws&&g_saru_probe_actions))?"PASS":"FAIL",
                     g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_max_actors,g_saru_probe_actions,g_saru_contacts,g_saru_damage_events,(unsigned long)g_game_score.total,g_saru_bounces,g_saru_deaths,g_saru_player_hurt_contacts,g_homing_probe_calls,g_homing_probe_tracks,g_homing_probe_double,g_homing_probe_target);
                 boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
+                }
             }
             if(g_panel_probe&&++g_panel_probe_ticks>=32){
                 char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x; explicit placement fixture only",

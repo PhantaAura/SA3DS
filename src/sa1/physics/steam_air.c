@@ -122,6 +122,7 @@ void sa1_steam_sonic_begin_jump(SA1PlayerState *player) {
 }
 
 void sa1_steam_sonic_begin_ground_departure(SA1PlayerState *player) {
+    if(player->action_state==SA1_ACTION_HURT){player->grounded=false;return;}
     SA1ActionState previous = player->action_state;
     int ball = player->ball_form || previous == SA1_ACTION_ROLL ||
                previous == SA1_ACTION_SPINDASH_CHARGE;

@@ -1,3 +1,25 @@
+# WCA active checkpoint — native ordinary player hurt
+
+WCA40 connects prior CCL damage, timer/shield/ring-loss requests, source recoil,
+PGetBreak/PGetSpeed hurt movement, original ACTION116/117 clamp/recovery, and
+source timer-bit blinking. See docs/PC2004_PLAYER_DAMAGE.md. Scatter/audio/
+shader/rumble/death executors remain pending; source death requests quarantine
+this incomplete runtime until reset. Full course/physics/hardware remain open.
+
+Required host and exact-owner pose/import gates PASS; damage owner witnesses
+PASS; final native426800B/5c75fb18 itself passed Azahar2126 Old3DS/Vulkan row28
+D fixture:100ticks,oneentry,76hurt ticks/37air/39ground,33blinkframes,rings0,
+7scatter requests pending,action1/timer22/grounded. Initial b0218dad opposite
+facing fixture FAILED at a cliff wall. Final fixture facing follows supported
+terrain; the cliff collision gap remains recorded, not fixed by this check.
+Owner data stays outside Git; no retail or physical hardware parity claim.
+
+Next: real44FD10 scattered-ring tasks and original death/audio/effects, plus
+remaining controller/collision/frame parity and all full-course checkpoint
+gates. Do not repeat unchanged gates or existing failed Wine Frida/cold analyses.
+
+---
+
 # WCA active checkpoint — native ordinary homing
 
 WCA39 registers original Saru CCL targets, connects optional world services and
