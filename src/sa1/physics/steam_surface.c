@@ -505,7 +505,7 @@ static int hurt_velocity(SA1PlayerState*p,const SA1Input*input,const SA1PhysicsW
     const SA1SteamPlayerParameters*parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SurfaceSpeed speed=world_to_surface(f,p->vel);
     double magnitude=(double)speed.forward*speed.forward+(double)speed.side*speed.side+(double)speed.normal*speed.normal;
-    if(p->grounded&&((p->pc2004_player_flags4&0x8000)||magnitude<=(double)parameters->dash_speed*parameters->dash_speed)){
+    if((p->grounded||p->pc2004_action_state==86)&&((p->pc2004_player_flags4&0x8000)||magnitude<=(double)parameters->dash_speed*parameters->dash_speed)){
         SA1Vec3 foot=sa1_vec3_sub(p->pos,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
         if(!sa1_pc2004_task_relax_up(f,w->homing?&w->homing->math:NULL))return 0;
         p->pos=sa1_vec3_add(foot,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
@@ -595,7 +595,13 @@ void sa1_physics_step_steam_sonic_surface(
     dbg->pc2004_collision_work_reconstructed = 1;
     dbg->pc2004_retail_polygon_solver_pending = 1;
 
-    int hurt_action=player->pc2004_action_state_valid&&player->pc2004_action_state==16;
+    int dead_action=player->pc2004_action_state_valid&&player->pc2004_action_state==86;
+    int hurt_action=player->pc2004_action_state_valid&&(player->pc2004_action_state==16||dead_action);
+    /*49BDB4 requests87 from incoming ground flags before PSetPosition, even
+     * on the first death frame whose positive normal velocity departs ground.*/
+    if(dead_action&&player->grounded){
+        player->animation_script_serial++;player->animation_script_request=87;player->animation_script_valid=true;
+    }
     int skip_attack_hold=0;
     if(!player->grounded&&player->pc2004_action_state_valid&&
        (player->pc2004_action_state==8||player->pc2004_action_state==14)){
@@ -766,7 +772,7 @@ void sa1_physics_step_steam_sonic_surface(
 
     dbg->pc2004_collision_find_count = collision_work.find_count;
 
-    if(hurt_action)player->action_state=SA1_ACTION_HURT;
+    if(hurt_action)player->action_state=dead_action?SA1_ACTION_DEAD:SA1_ACTION_HURT;
     else if (!player->grounded)
         player->action_state = SA1_ACTION_AIRBORNE;
     else if (player->action_state != SA1_ACTION_SPINDASH_CHARGE &&

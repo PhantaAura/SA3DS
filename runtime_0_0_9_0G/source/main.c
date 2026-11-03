@@ -16,6 +16,8 @@
 #include "ccl_contact.h"
 #include "game_score.h"
 #include "player_damage_player.h"
+#include "player_death_player.h"
+#include "stage_restart.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
 #include <citro3d.h>
@@ -169,6 +171,15 @@ static unsigned g_hurt_events,g_hurt_scatter_requests,g_hurt_frames,g_hurt_air,g
  * This is not a ring-scatter, sound, shader or death implementation. */
 static SA3DSPlayerDamageResult g_player_damage_requests;
 static int g_player_damage_blocked;
+typedef struct SA3DSNativeDeath{struct SA3DSNativeDeath*next;SA3DSPlayerDeathTask task;} SA3DSNativeDeath;
+static SA3DSNativeDeath*g_death_head;
+static SA3DSStageRestart g_stage_restart;
+static SA3DSLabVertex*g_stage_fade_quad;
+static uint32_t g_source_frame;
+static unsigned g_death_created,g_death_alloc_failed,g_death_requests,g_death_trigger_counter;
+static int g_death_probe,g_death_probe_pause_fade;
+static unsigned g_death_probe_ticks,g_death_probe_poses,g_death_probe_clamps,g_death_probe_control;
+static void clear_native_death(void);
 static unsigned g_saru_frame_actors;
 static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
@@ -373,6 +384,8 @@ static void trace_toggle(void) {
 }
 
 static void reset_selected_zone(void) {
+    clear_native_death();g_stage_restart.state=15;g_stage_restart.request=0;
+    g_stage_restart.fade_alpha=g_stage_restart.fade_active=g_stage_restart.fade_delay=0;
     g_player_damage_blocked=0;memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
     sa3ds_wz_tick_reset(&g_tick_clock);
     g_last_frame_ms=osGetTime();
@@ -502,7 +515,7 @@ static void emerald_coast_status(void) {
     printf("\x1b[24;1HTick:%llu GPU frames:%u       ",(unsigned long long)g_player.sim_frame,g_rendered_frames);
     if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
     else printf("\x1b[25;1HPartial collision/follow camera ");
-    printf("\x1b[26;1HPHYSICS_1TO1:NO                ");
+    printf("\x1b[26;1HPHYSICS_1TO1:NO Lives:%3d Flow:%u ",g_stage_restart.lives,g_stage_restart.state);
 }
 
 static void pose_lab_help(void) {
@@ -1476,7 +1489,7 @@ static int tick_scatter(void){
         if(hypotf(s->actor.position.x-g_ec_collision.center_x,s->actor.position.z-g_ec_collision.center_z)>490.f){
             g_scatter_deferred++;link=&s->next;continue; /*unknown resident world, not source no-floor*/
         }
-        SA3DSRingScatterInput input={.global_frame=(uint32_t)g_player.sim_frame,
+        SA3DSRingScatterInput input={.global_frame=g_source_frame-1u,
             .hit=(s->ccl.outer_flags&1)!=0,.hit_is_primary_player=s->ccl.cached_other_id==1,
             .primary_dead=(g_player.pc2004_player_flags6&0x4000)!=0};
         SA3DSRingScatterResult out;
@@ -1523,10 +1536,89 @@ static int draw_scatter(void){
     return 1;
 }
 
+static void clear_native_death(void){
+    while(g_death_head){SA3DSNativeDeath*n=g_death_head;g_death_head=n->next;free(n);}
+}
+static int spawn_native_death(void){
+    SA3DSNativeDeath*n=calloc(1,sizeof(*n));
+    if(!n){g_death_alloc_failed++;return 1;} /*source LoadObject may fail*/
+    n->task.active=1;n->next=g_death_head;g_death_head=n;g_death_created++;return 1;
+}
+static int tick_native_death(void){
+    for(SA3DSNativeDeath**link=&g_death_head;*link;){
+        SA3DSNativeDeath*n=*link;SA3DSPlayerDeathTaskResult out;
+        if(!sa3ds_player_death_task_tick(&n->task,0,0,&out))return 0;
+        if(out.stage_request){
+            g_stage_restart.request=out.stage_request;g_death_trigger_counter=n->task.counter;g_death_requests++;
+            char note[160];snprintf(note,sizeof(note),"sourceFrame=%lu counter=%lu request=%u; audio cleanup requested",
+                (unsigned long)g_source_frame,(unsigned long)n->task.counter,out.stage_request);boot_log("DEATH_TASK",note);
+        }
+        if(out.destroy){*link=n->next;free(n);continue;}
+        link=&n->next;
+    }
+    return 1;
+}
+static int native_stage_reload(void){
+    if(!g_ec_full_route)return 0;
+    const SA3DSECStart*start=sa3ds_ec_route_start(&g_ec_route,g_ec_act_index);if(!start)return 0;
+    /*No native checkpoint has been activated yet. Reload its real source act
+     * start and resident geometry, not a debug teleport into the old window.*/
+    if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
+        start->task_origin.x,start->task_origin.z,&g_player))return 0;
+    sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);g_rings.rings=0;
+    if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
+    reset_springs();clear_native_death();g_player_damage_blocked=0;
+    memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
+    memset(&g_anim_sync,0,sizeof(g_anim_sync));memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
+    g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
+    g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
+    sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
+    sa3ds_wz_tick_reset(&g_tick_clock);g_last_frame_ms=osGetTime();
+    char note[170];snprintf(note,sizeof(note),"act=%lu lives=%d sourceFrame=%lu taskOrigin=%.3f,%.3f,%.3f; source start, checkpoint activation pending",
+        (unsigned long)g_ec_act_index,g_stage_restart.lives,(unsigned long)g_source_frame,
+        start->task_origin.x,start->task_origin.y,start->task_origin.z);boot_log("STAGE_RELOAD",note);
+    return 1;
+}
+static int native_stage_begin(SA3DSStageRestartResult*out){
+    uint8_t previous=g_stage_restart.state;
+    if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
+    if(out->clear_world){clear_native_death();reset_springs();}
+    if(out->clear_rings)g_rings.rings=0;
+    if(out->reload_stage&&!native_stage_reload())return 0;
+    if(out->game_over_pending){boot_log("STAGE_FLOW","PENDING: source game-over screen/menu executor");g_paused=1;}
+    if(previous!=g_stage_restart.state){
+        char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d alpha=%u",
+            (unsigned long)g_source_frame,previous,g_stage_restart.state,g_stage_restart.lives,g_stage_restart.fade_alpha);boot_log("STAGE_FLOW",note);
+    }
+    return 1;
+}
+static int init_stage_fade(void){
+    g_stage_fade_quad=linearAlloc(6*sizeof(*g_stage_fade_quad));if(!g_stage_fade_quad)return 0;
+    const SA3DSLabVertex quad[6]={{{-1,-1,0},{0,0}},{{1,-1,0},{0,0}},{{-1,1,0},{0,0}},
+        {{-1,1,0},{0,0}},{{1,-1,0},{0,0}},{{1,1,0},{0,0}}};
+    memcpy(g_stage_fade_quad,quad,sizeof(quad));GSPGPU_FlushDataCache(g_stage_fade_quad,sizeof(quad));return 1;
+}
+static int draw_stage_fade(void){
+    if(!g_emerald_coast||!g_ec_combined||g_pose_lab||!g_stage_restart.fade_alpha)return 1;
+    if(!g_stage_fade_quad)return 0;
+    C3D_Mtx identity;Mtx_Identity(&identity);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&identity);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&identity);
+    C3D_TexEnv*env=C3D_GetTexEnv(0);C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env,C3D_Both,GPU_CONSTANT,0,0);C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
+    C3D_TexEnvColor(env,(uint32_t)g_stage_restart.fade_alpha<<24); /*TEV constant: alpha high8, black RGB*/
+    C3D_DepthTest(false,GPU_ALWAYS,GPU_WRITE_COLOR);C3D_AlphaTest(false,GPU_ALWAYS,0);C3D_CullFace(GPU_CULL_NONE);
+    C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA);
+    C3D_BufInfo*buffer=C3D_GetBufInfo();BufInfo_Init(buffer);BufInfo_Add(buffer,g_stage_fade_quad,sizeof(*g_stage_fade_quad),2,0x10);
+    C3D_DrawArrays(GPU_TRIANGLES,0,6);
+    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);C3D_AlphaTest(true,GPU_GREATER,15);
+    return 1;
+}
+
 static void begin_saru_probe(void){
     FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_saru_probe.flag","rb");if(!f)return;
-    unsigned row=0;char mode=0;int parsed=fscanf(f,"%u %c",&row,&mode)>=1;fclose(f);
-    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';g_hurt_probe=mode=='D'||mode=='R';g_scatter_probe=mode=='R';
+    unsigned row=0;char mode=0,extra=0;int parsed=fscanf(f,"%u %c %c",&row,&mode,&extra)>=1;fclose(f);
+    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';g_hurt_probe=mode=='D'||mode=='R'||mode=='Z';g_scatter_probe=mode=='R';g_death_probe=mode=='Z';g_death_probe_pause_fade=g_death_probe&&extra=='F';
     if(!parsed||!g_saru_ready||!g_ec_full_route)goto fail;
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
@@ -1557,6 +1649,9 @@ static void begin_saru_probe(void){
          * rather than probing the known incomplete cliff wall adapter.*/
         g_player.yaw=PI;g_player.surface_forward=(SA1Vec3){0,0,-1};g_player.surface_right=(SA1Vec3){-1,0,0};
     }
+    if(g_death_probe){g_rings.rings=0;sa3ds_stage_restart_init(&g_stage_restart);clear_native_death();
+        g_death_created=g_death_alloc_failed=g_death_requests=g_death_trigger_counter=0;
+        g_death_probe_ticks=g_death_probe_poses=g_death_probe_clamps=g_death_probe_control=0;}
     g_homing_probe_calls=g_homing_probe_tracks=g_homing_probe_double=g_homing_probe_target=0;
     g_saru_probe_ticks=g_saru_probe_draws=g_saru_probe_actions=g_saru_probe_max_actors=0;
     boot_log("SARU_PROBE","BEGIN: explicit original-placement ordinary AI/display/contact fixture; player hurt/projectiles/effects/course parity not tested");return;
@@ -1564,6 +1659,8 @@ fail:boot_log("SARU_PROBE","FAIL: missing original resource/placement/support");
 }
 
 static int init_scene(void) {
+    sa3ds_stage_restart_init(&g_stage_restart);
+    if(!init_stage_fade())return 0;
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
     if (!g_dvlb) return 0;
@@ -1735,6 +1832,7 @@ static int sample_pose(void) {
 }
 
 static void cleanup(void) {
+    clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
     destroy_saru();
@@ -1918,6 +2016,23 @@ int main(void) {
         for (unsigned step=0;step<steps;step++) {
             if(g_ec_full_route)g_ec_perf.ticks++;
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
+            g_source_frame++;
+            if(g_death_probe)g_death_probe_ticks++;
+            SA3DSStageRestartResult stage_phase={.run_world=1,.controls_enabled=1};
+            if(g_emerald_coast&&g_ec_combined){
+                if(!native_stage_begin(&stage_phase)){fail_screen("Source stage death/reload flow failed");break;}
+                if(g_death_probe_pause_fade&&g_stage_restart.state==6&&g_stage_restart.fade_alpha==255){
+                    g_death_probe_pause_fade=0;g_paused=1;steps=step+1;
+                    boot_log("FADE_PROBE","Opaque source fade paused for raster inspection; SELECT+A resumes same fixture");
+                }
+                if(stage_phase.reload_stage)steps=step+1; /*blocking owner-region load is not catch-up time*/
+                if(!stage_phase.run_world){
+                    if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
+                    continue;
+                }
+                if(!tick_native_death()){fail_screen("Source death task failed");break;}
+            }
+            uint32_t previous_extra_lives=g_rings.extra_lives;
             SA3DSWCAReplayStep wca={0};
             if(g_ec_replay) {
                 if(g_wca_replay) {
@@ -1941,6 +2056,7 @@ int main(void) {
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
             if(g_spring_probe||g_panel_probe||g_saru_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_death_probe&&g_stage_restart.restart_count&&g_stage_restart.state==15){tick_input.move_z=.6f;}
             if(g_saru_probe&&g_saru_probe_combat){tick_input.jump_pressed=g_saru_probe_ticks==0;tick_input.jump_held=g_saru_probe_ticks<20;}
             if(g_saru_probe&&g_scatter_probe&&g_saru_probe_ticks>=80&&!g_scatter_awards){
                 float best=INFINITY;SA1Vec3 target={0};
@@ -1963,6 +2079,9 @@ int main(void) {
                 if(g_air_attack_probe_ticks>=4&&g_air_attack_probe_ticks<=6)tick_input.move_x=.5f;
             }
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
+            /*40EF50 disables processed analog/buttons through fade/reload;
+             * case4 reenables only AFTER its final world update.*/
+            if(g_emerald_coast&&g_ec_combined&&!stage_phase.controls_enabled)tick_input=(SA1Input){0};
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
             if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
@@ -1989,8 +2108,15 @@ int main(void) {
                         (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,g_player.pc2004_hurt_timer,
                         g_rings.rings,requests.scatter_count,requests.sound_count,requests.death_requested);boot_log("PLAYER_DAMAGE",note);
                 }
-                if(ready!=1){
-                    boot_log("PLAYER_DAMAGE","PENDING: source death/special-effect executor; gameplay paused");
+                if(ready==2){
+                    uint16_t sound;uint8_t channel;
+                    if(!sa3ds_player_death_player_command(&g_player,0,&sound,&channel)||!spawn_native_death()){
+                        fail_screen("Source death command rejected");break;
+                    }
+                    char note[110];snprintf(note,sizeof(note),"sourceFrame=%lu action86 animation86 soundPending=%u channel=%u",
+                        (unsigned long)g_source_frame,sound,channel);boot_log("DEATH_COMMAND",note);
+                }else if(ready!=1){
+                    boot_log("PLAYER_DAMAGE","PENDING: source special-effect executor; gameplay paused");
                     g_player_damage_blocked=1;g_paused=1;continue;
                 }
             }
@@ -2043,6 +2169,12 @@ int main(void) {
                     (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,
                     g_selection.requested_runtime_id);boot_log("SPRING_ANIMATION",note);
             }
+            if(g_death_probe){
+                if(g_selection.requested_runtime_id==86||g_selection.requested_runtime_id==87)g_death_probe_poses++;
+                if(g_selection.requested_runtime_id==87&&g_selection.sample_frame==69)g_death_probe_clamps++;
+                if(g_stage_restart.restart_count&&g_stage_restart.state==15&&g_player.action_state==SA1_ACTION_GROUNDED&&
+                    tick_input.move_z>.5f&&g_player.vel.z>.05f&&!(g_player.pc2004_player_flags6&0x4000))g_death_probe_control++;
+            }
             previous_spring_animation=g_selection.requested_runtime_id;
             if(g_air_attack_probe){
                 unsigned action=g_player.pc2004_action_state;
@@ -2089,7 +2221,7 @@ int main(void) {
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!saru_ccl_pass(&physics_done)){fail_screen("Native player/NPC CCL failed");break;}
             sa3ds_game_score_tick(&g_game_score,1);
-            if(g_saru_probe&&(++g_saru_probe_ticks>=(g_hurt_probe?(g_scatter_probe?180u:100u):180u)||(g_scatter_probe&&g_scatter_awards))){
+            if(g_saru_probe&&!g_death_probe&&(++g_saru_probe_ticks>=(g_hurt_probe?(g_scatter_probe?180u:100u):180u)||(g_scatter_probe&&g_scatter_awards))){
                 if(g_hurt_probe){
                     char note[240];snprintf(note,sizeof(note),"%s ticks=%u entries=%u hurt=%u air=%u ground=%u blinkFrames=%u rings=%d scatterRequests=%u timer=%u action=%u; particle art/audio/death executors remain pending",
                         g_hurt_events==1&&g_hurt_frames&&g_hurt_air&&g_hurt_ground&&g_hurt_blinks&&(g_scatter_probe?g_rings.rings==(int)g_scatter_awards:g_rings.rings==0)&&g_hurt_scatter_requests==7?"PASS":"FAIL",
@@ -2140,6 +2272,22 @@ int main(void) {
                     boot_log("RING_PROBE",note);g_ring_probe=0;g_paused=1;
                 }
             }
+            if(g_emerald_coast&&g_ec_combined){
+                if(g_rings.extra_lives>=previous_extra_lives)for(uint32_t n=previous_extra_lives;n<g_rings.extra_lives;n++)
+                    sa3ds_stage_restart_add_lives(&g_stage_restart,1);
+                uint8_t previous_stage=g_stage_restart.state;
+                if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
+                if(previous_stage!=g_stage_restart.state){char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d",
+                    (unsigned long)g_source_frame,previous_stage,g_stage_restart.state,g_stage_restart.lives);boot_log("STAGE_FLOW",note);}
+                if(g_death_probe&&(g_death_probe_control>=12||g_death_probe_ticks>=400)){
+                    char note[230];snprintf(note,sizeof(note),"%s ticks=%u deathTasks=%u trigger=%u requests=%u poses=%u clamps=%u reloads=%lu lives=%d control=%u action=%u rings=%d; original act start, checkpoint/gameover/audio pending",
+                        g_death_created==1&&g_death_requests==1&&g_death_trigger_counter==122&&g_death_probe_clamps&&
+                        g_stage_restart.restart_count==1&&g_stage_restart.lives==3&&g_death_probe_control>=12?"PASS":"FAIL",
+                        g_death_probe_ticks,g_death_created,g_death_trigger_counter,g_death_requests,g_death_probe_poses,g_death_probe_clamps,
+                        (unsigned long)g_stage_restart.restart_count,g_stage_restart.lives,g_death_probe_control,g_player.pc2004_action_state,g_rings.rings);
+                    boot_log("DEATH_PROBE",note);g_death_probe=0;g_saru_probe=0;g_paused=1;
+                }
+            }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
                 (g_ec_replay || g_ring_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
             if(g_ec_replay) {
@@ -2177,6 +2325,7 @@ int main(void) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
+        if(!draw_stage_fade()){fail_screen("Source stage fade draw failed");break;}
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu modDraws=%lu modBytes=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count),(unsigned long)g_ec_gpu.override_submitted_draws,(unsigned long)g_ec_gpu.override_texture_bytes);boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
         if(probe_log)boot_log("FRAME","end returned");

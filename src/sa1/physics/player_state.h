@@ -11,7 +11,8 @@ typedef enum {
     SA1_ACTION_AIRBORNE = 1,
     SA1_ACTION_SPINDASH_CHARGE = 2,
     SA1_ACTION_ROLL = 3,
-    SA1_ACTION_HURT = 4
+    SA1_ACTION_HURT = 4,
+    SA1_ACTION_DEAD = 5
 } SA1ActionState;
 
 typedef struct {

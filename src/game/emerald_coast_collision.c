@@ -460,7 +460,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             }
         }
         if(!floor.valid){
-            p->grounded=false;if(p->action_state!=SA1_ACTION_HURT)p->action_state=SA1_ACTION_AIRBORNE;p->jump_ticks=0;
+            p->grounded=false;if(p->action_state!=SA1_ACTION_HURT&&p->action_state!=SA1_ACTION_DEAD)p->action_state=SA1_ACTION_AIRBORNE;p->jump_ticks=0;
         }else{
             if(floor.signed_distance<SA3DS_EC_CONTROLLER_SUPPORT){
                 p->pos=sa1_vec3_add(p->pos,sa1_vec3_scale(floor.normal,

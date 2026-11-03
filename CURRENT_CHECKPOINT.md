@@ -1,3 +1,27 @@
+# WCA active checkpoint — native zero-ring death and act-start respawn
+
+WCA43 connects command50/action86, original116/118 death clips, source122-update
+list0 task, source46/6/49 fade/reload phases, disabled input and signed lives.
+See docs/PC2004_PLAYER_DEATH.md. Required host + owner pose/import gates PASS,
+including ACTION118. Focused final input checks and14-span owner verifier PASS.
+Final438752B/3c9ddacb itself passed Azahar2126 Old3DS/Vulkan: restart request at
+sourceFrame124,life4->3 at170,act0 source start reload176,normal15 at225,then
+12 actual forward-control updates by243. Opaque fade and returned scene visually
+inspected on the SAME artifact. Earlier acdd3653 opaque fade FAILED and was fixed.
+
+Checkpoint activation, game-over/audio/other death causes and full CP7 remain
+open. Source act start is used only because no native checkpoint is activated.
+CPU uploader/SD owner pair/boot diagnostics preserved; owner files unchanged.
+Full WCA, PHYSICS_1TO1 and physical hardware acceptance remain incomplete.
+
+Next priority: owner-reported movement-triggered Old3DS freezes. Profile the
+synchronous256-unit collision-region rebuild (full package CRC/validation and
+contact-edge search) and per-event SD writes before changing it. Also audit
+material TEV color packing after the fade high-byte-alpha finding. No hardware
+stall fix or renderer parity claimed yet. Avoid redundant unchanged matrices.
+
+---
+
 # WCA active checkpoint — native scattered rings and recovery pickup
 
 WCA42 connects source scatter tasks to native allocation/list order, external

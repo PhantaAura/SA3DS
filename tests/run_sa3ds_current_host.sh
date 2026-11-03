@@ -135,3 +135,6 @@ bash tests/run_player_damage.sh
 
 # Original scattered-ring task equations and lifecycle.
 bash tests/run_ring_scatter.sh
+
+# Source death command/task, passive pose/motion and ordinary restart faders.
+bash tests/run_player_death.sh

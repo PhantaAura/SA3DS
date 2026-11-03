@@ -17,14 +17,14 @@ python3 tools/build_pc2004_sonic_sa3c.py \
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
   src/sa3c/sa3c_character.c src/sa3c/sa3c_pose.c src/sa3c/sa3c_render.c \
   audits/pass11a/tools/pass11_pose_diag.c -lm -o "$tmp/pass11_pose_diag"
-# Cover every source ACTION used by the first30 dense movement states:
+# Cover every source ACTION used by the first30 movement states and death86/87:
 # idle/landing, jog/run, jump/SpinDash/Roll, spring/fall and uncurl.
 # Derive from the independently reconstructed executable remap, not guessed
 # action-slot names. Null movement entries would be a hard error here.
 python3 - "$tmp/pc2004_animdata.json" > "$tmp/movement_actions.txt" <<'PY_ACTIONS'
 import json, sys
 mapping=json.load(open(sys.argv[1]))['dense_to_source_action_slot']
-slots=sorted(set(mapping[:30]))
+slots=sorted(set(mapping[:30]+[mapping[86],mapping[87]]))
 if len(mapping)<30 or any(not isinstance(x,int) or x<0 for x in slots):
     raise SystemExit('invalid essential movement ACTION mapping')
 for slot in slots:print(slot)
@@ -51,3 +51,6 @@ python3 tools/verify_pc2004_player_damage.py "$SONIC_EXE_PATH"
 
 # Original scattered-ring dispatcher and source memory operands.
 python3 tools/verify_pc2004_ring_scatter.py "$SONIC_EXE_PATH"
+
+# Ordinary death task, source task order and action-stage restart/faders.
+python3 tools/verify_pc2004_player_death.py "$SONIC_EXE_PATH"

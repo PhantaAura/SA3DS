@@ -68,6 +68,8 @@ int main(void) {
         {30, 20,  0, 73,  4, 1.0f,    0.9f, 72,16},
         {31, 19, 31, 73,  3, 0.0625f, 1.0f, 72,16},
         {32, 21, 32,  1,  3, 0.5f,    1.0f,147, 7},
+        {86,116, 86, 73,  5, 1.0f,    1.0f, 72,22},
+        {87,118, 87, 73,  5, 0.25f,   1.0f, 72,70},
     };
     SA3DSSonicAnimationBinding b;
     assert(sa3ds_sonic_animation_binding_count() == sizeof(expected) / sizeof(expected[0]));
