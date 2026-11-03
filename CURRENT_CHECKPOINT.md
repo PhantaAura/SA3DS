@@ -1,3 +1,25 @@
+# WCA active checkpoint — checkpoint restart record source contract
+
+WCA46 implements portable original44ED50/70,44EE70/44EDB0 session payload:
+actual player task position, all rotations, raw clock bytes, stage/act validity.
+Required host gate and exact-owner9-span static witnesses PASS. See
+ docs/PC2004_CHECKPOINT_RESTART.md. Native checkpoint posts/collision/persistent
+SET flags/clock connection remain pending; source helper is NOT completed CP5/7.
+No native/pose/import change, so no redundant build/emulator/pose matrix rerun.
+Runnable baseline remains WCA45 material correction397057d,440076B/1d8b24d8,
+pushed/Desktop synced with preview. WCA44 collision-region validation saving
+is host-measured only; physical Old3DS movement-freeze improvement unverified.
+Full WCA, PHYSICS_1TO1 and physical hardware acceptance remain incomplete.
+
+Next: connect seven actual owner checkpoint placements, original CCI/dynamic
+post geometry/spin/persisted SET flags and source timer to death/reload. Source
+record must capture actual player state, not post SET location. Root/addresses
+and private bounded disassemblies are documented. REA list_documents stalled
+and was cancelled; use bounded xcrun llvm-objdump, not cold whole-game analysis.
+Avoid repeated failed CUA arrow holds and unchanged pose matrices.
+
+---
+
 # WCA active checkpoint — corrected native material channels
 
 WCA45 fixes shared Sonic/EC TEV material packing from incorrect RRGGBBAA to

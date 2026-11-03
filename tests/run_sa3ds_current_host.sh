@@ -138,3 +138,6 @@ bash tests/run_ring_scatter.sh
 
 # Source death command/task, passive pose/motion and ordinary restart faders.
 bash tests/run_player_death.sh
+
+printf "\n== Source checkpoint restart record ==\n"
+bash tests/run_restart_record.sh
