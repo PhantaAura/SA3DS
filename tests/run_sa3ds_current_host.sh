@@ -148,3 +148,6 @@ bash tests/run_checkpoint_assets.sh
 
 printf "\n== Original checkpoint player/box contact ==\n"
 bash tests/run_checkpoint_contact.sh
+
+printf "\n== Native checkpoint player and course clock bridge ==\n"
+bash tests/run_checkpoint_player.sh

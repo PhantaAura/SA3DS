@@ -5,6 +5,12 @@ import hashlib,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.verify_pc2004_ec_route import verified_reader
 RANGES={
+ (0x4383a0,16):'3d3c254d21549acf3d9c4c3d574725f870d33d6caf71068571a33ef8c2853946',
+ (0x441fd0,64):'d556cad7fb18ec2c4b6345c1905d48751181850239d5091acb24bfc0870c655a',
+ (0x413d40,144):'10d0986c6dfadfa5c2dacf1c1abbebbc0cf58e2dfe452cd619245bd0c77713e4',
+ (0x426070,320):'16d68c809b9dd57164929eb54512fc463b67a4025cc5723cf42ca63be55d6f3c',
+ (0x426030,32):'7e29f00dd6bb9296ad21f45dd2cb84f2320f39b356481ada8d9c533cedf3a84d',
+ (0x425ff0,64):'a511ca33c6378b105f49a83e5b32265b003d1b53b0fd239d7e51f51be4201fbd',
  (0x41bac0,288):'0b6470d0c472d067042c22451ffa6d32b23e835c84790e5a6ab232016fd00de4',
  (0x4419c0,128):'bbcad9b2d4ed354ea6da79026a4bff9c3c3887fd9169c0dc1bd2efea51f0ed5d',
  (0x41fd00,160):'388c59b0208893bda0a121082e154f02162ff45f4e099fa9ef72b244c418d3ea',
@@ -51,7 +57,7 @@ def verify(exe):
  assert struct.unpack('<f',r(0x7dcb34,4))[0]==10.
  assert struct.unpack('<d',r(0x7dccd0,8))[0]==65536.
  assert struct.unpack('<d',r(0x7df1a0,8))[0]==1./360.
- print('Restart record owner witnesses: PASS exact SHA,26 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and task/shape dispatchers; native activation/visuals remain separate')
+ print('Restart record owner witnesses: PASS exact SHA,32 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and task/shape dispatchers; native activation/visuals remain separate')
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('usage: verify_pc2004_restart_record.py OWNER_SONIC_EXE')
  verify(Path(sys.argv[1]))

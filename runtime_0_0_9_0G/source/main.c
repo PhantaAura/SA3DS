@@ -18,6 +18,10 @@
 #include "player_damage_player.h"
 #include "player_death_player.h"
 #include "stage_restart.h"
+#include "checkpoint_assets.h"
+#include "checkpoint_contact.h"
+#include "checkpoint_player.h"
+#include "course_clock.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
 #include <citro3d.h>
@@ -174,6 +178,30 @@ static int g_player_damage_blocked;
 typedef struct SA3DSNativeDeath{struct SA3DSNativeDeath*next;SA3DSPlayerDeathTask task;} SA3DSNativeDeath;
 static SA3DSNativeDeath*g_death_head;
 static SA3DSStageRestart g_stage_restart;
+static SA3DSCourseClock g_course_clock;
+static SA3DSRestartRecord g_restart_record;
+typedef struct {SA3DSCheckpointTask task;SA3DSCheckpointResult draw;SA3DSCCLBody ccl;SA3DSCCLShape shape;
+    uint8_t loaded,queued,set_flags;int32_t next,previous;} SA3DSNativeCheckpoint;
+static SA3DSNativeCheckpoint*g_checkpoint_states;
+static SA3DSCheckpointAssets g_checkpoint_assets;
+static SA3DSECGpu g_checkpoint_gpu[5];
+static uint8_t*g_checkpoint_bytes;static size_t g_checkpoint_size;
+static int g_checkpoints_ready;static int32_t g_checkpoint_head=-1;
+static uint32_t g_checkpoint_saved_row=UINT32_MAX;
+static unsigned g_checkpoint_activations,g_checkpoint_contacts,g_checkpoint_draws;
+static unsigned g_checkpoint_sounds,g_checkpoint_effects,g_checkpoint_time_draws,g_checkpoint_land_requests;
+static int g_checkpoint_probe,g_checkpoint_probe_injected;
+static uint32_t g_checkpoint_probe_row;
+static unsigned g_checkpoint_probe_ticks,g_checkpoint_probe_age,g_checkpoint_probe_control;
+static SA1Vec3 g_checkpoint_probe_direction,g_checkpoint_probe_death_position;
+static SA3DSRestartRecord g_checkpoint_probe_record;
+static float g_checkpoint_probe_reload_error=-1;
+static uint8_t g_checkpoint_probe_reload_clock[3];
+static void reset_checkpoints(int preserve);
+static void checkpoint_fresh(void);
+static void checkpoint_seed_record(void);
+static int checkpoint_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous);
+
 static SA3DSLabVertex*g_stage_fade_quad;
 static uint32_t g_source_frame;
 static unsigned g_death_created,g_death_alloc_failed,g_death_requests,g_death_trigger_counter;
@@ -403,6 +431,7 @@ static void reset_selected_zone(void) {
     g_observation=sa3ds_sonic_animation_observe(&g_anim_sync,&g_player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
     g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
     sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
+    if(g_emerald_coast&&g_ec_combined)checkpoint_fresh();
 }
 
 static void cycle_zone(int delta) {
@@ -515,7 +544,8 @@ static void emerald_coast_status(void) {
     printf("\x1b[24;1HTick:%llu GPU frames:%u       ",(unsigned long long)g_player.sim_frame,g_rendered_frames);
     if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
     else printf("\x1b[25;1HPartial collision/follow camera ");
-    printf("\x1b[26;1HPHYSICS_1TO1:NO Lives:%3d Flow:%u ",g_stage_restart.lives,g_stage_restart.state);
+    printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
+    printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
 }
 
 static void pose_lab_help(void) {
@@ -832,7 +862,8 @@ static int ec_change_act(uint32_t act){
     g_ec_act_index=act;g_ec_failed_region_valid=0;
     ec_apply_texture_override();
     memset(&g_ec_perf,0,sizeof(g_ec_perf));
-    reset_selected_zone();emerald_coast_help();
+    SA3DSCourseClock course_before=g_course_clock;
+    reset_selected_zone();g_course_clock=course_before;checkpoint_seed_record();emerald_coast_help();
     char note[160];snprintf(note,sizeof(note),
         "act=%lu source-start=%.3f,%.3f,%.3f tris=%lu linear=%lu overlapLinear=%lu loadMs=%llu",
         (unsigned long)act,start->task_origin.x,start->task_origin.y,start->task_origin.z,
@@ -1307,16 +1338,17 @@ static void unlink_saru(SA3DSNativeSaru*s){
 /* Original player-vs-NPC sphere producer. Prior hits remain intact through all
  * NPC tasks above;418B60 clear and new pair reports happen only afterwards.
  * Other CCL categories/players/forms and their task queue remain incomplete. */
-static int saru_ccl_pass(const SA1PlayerState*queued_player){
-    if(!g_saru_ready)return 1;
+static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_task){
+    if(!g_saru_ready&&!g_checkpoints_ready)return 1;
     sa1_pc2004_homing_reset(&g_homing_list);
     SA3CMatrix model;sa3ds_ec_model_transform(queued_player,&model);
     SA1Vec3 center={model.m[12],model.m[13],model.m[14]};
     g_player_enemy_ccl.status=native_player_status(queued_player);
     g_player_enemy_ccl.task_position=sa3ds_ec_task_origin(queued_player);
     g_player_enemy_ccl.broad_radius=sa1_vec3_length(queued_player->vel)+SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height;
-    g_player_enemy_ccl.rules=saru_rules(0);
-    for(unsigned i=0;i<2;i++)if(!sa3ds_ccl_shape_decode(&g_player_enemy_shapes[i],g_saru_definitions.player_colliders+i*48,center))return 0;
+    g_player_enemy_ccl.rules=g_saru_ready?saru_rules(0):g_checkpoint_assets.rules[0];
+    const uint8_t*player_colliders=g_saru_ready?g_saru_definitions.player_colliders:g_checkpoint_assets.player_colliders;
+    for(unsigned i=0;i<2;i++)if(!sa3ds_ccl_shape_decode(&g_player_enemy_shapes[i],player_colliders+i*48,center))return 0;
     sa3ds_ccl_body_clear(&g_player_enemy_ccl,g_player_enemy_shapes,2);
     if(queued_player->pc2004_ccl_state_valid){
         uint8_t action=queued_player->pc2004_ccl_action;
@@ -1343,7 +1375,7 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player){
             if(contact.pushed_first||contact.pushed_second)return 0;
         }
     }
-    if(!scatter_ccl_pass())return 0;
+    if(!scatter_ccl_pass()||!checkpoint_ccl_pass(queued_player,previous_task))return 0;
     if(g_player_enemy_ccl.status&4)g_saru_player_hurt_contacts++;
     return 1;
 }
@@ -1449,6 +1481,173 @@ static int draw_saru(void){
         if(g_saru_frame_actors>g_saru_probe_max_actors)g_saru_probe_max_actors=g_saru_frame_actors;}
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);return 1;
 }
+static float checkpoint_float(const uint8_t*p){uint32_t u=(uint32_t)p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);float f;memcpy(&f,&u,4);return f;}
+static double checkpoint_sine(void*context,uint16_t angle){
+    (void)context;SA3DSRings trig={.quarter_lut=g_checkpoint_assets.quarter_lut};return sa3ds_ring_group_sin(&trig,angle);
+}
+static void reset_checkpoints(int preserve){
+    g_checkpoint_head=-1;
+    for(uint32_t i=0;g_checkpoint_states&&i<g_checkpoint_assets.placements.count;i++){
+        uint8_t flags=preserve?g_checkpoint_states[i].set_flags:0;
+        memset(&g_checkpoint_states[i],0,sizeof(g_checkpoint_states[i]));g_checkpoint_states[i].set_flags=flags;
+        g_checkpoint_states[i].next=g_checkpoint_states[i].previous=-1;
+    }
+}
+static void checkpoint_seed_record(void){
+    if(g_ec_full_route)sa3ds_checkpoint_capture_player(&g_restart_record,&g_player,(int16_t)g_ec_act_index,g_course_clock.time);
+}
+static void checkpoint_fresh(void){
+    reset_checkpoints(0);sa3ds_course_clock_reset(&g_course_clock);sa3ds_restart_record_clear(&g_restart_record);
+    g_checkpoint_saved_row=UINT32_MAX;g_checkpoint_activations=0;checkpoint_seed_record();
+}
+static void destroy_checkpoints(void){
+    for(unsigned i=0;i<5;i++)sa3ds_ec_gpu_destroy(&g_checkpoint_gpu[i]);
+    free(g_checkpoint_states);g_checkpoint_states=NULL;
+    sa3ds_free_file(g_checkpoint_bytes);g_checkpoint_bytes=NULL;g_checkpoint_size=0;
+    memset(&g_checkpoint_assets,0,sizeof(g_checkpoint_assets));g_checkpoints_ready=0;g_checkpoint_head=-1;
+}
+static void load_checkpoints(void){
+    if(!g_ec_combined||!g_ec_full_route)return;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/checkpoint_assets.sa3dspak",&g_checkpoint_bytes,&g_checkpoint_size)||
+       !sa3ds_checkpoint_assets_open(&g_checkpoint_assets,g_checkpoint_bytes,g_checkpoint_size))goto fail;
+    g_checkpoint_states=calloc(g_checkpoint_assets.placements.count,sizeof(*g_checkpoint_states));if(!g_checkpoint_states)goto fail;
+    for(unsigned i=0;i<5;i++)if(!sa3ds_ec_gpu_init_full(&g_checkpoint_gpu[i],&g_checkpoint_assets.components[i],log_texture_stage,NULL))goto fail;
+    g_checkpoints_ready=1;reset_checkpoints(0);
+    boot_log("CHECKPOINT","Owner version2 posts/CCI/category4/SET loaded; dynamic child land/audio/effects remain pending");return;
+fail:destroy_checkpoints();boot_log("CHECKPOINT","Version2 owner package missing/invalid; run checkpoint converter, native posts unavailable");
+}
+static int checkpoint_in_range(SA1Vec3 p,SA1Vec3 q,float squared){
+    double x=(double)p.x-q.x,y=(double)p.y-q.y,z=(double)p.z-q.z;
+    return x*x+y*y+z*z<=squared;
+}
+static void checkpoint_unlink(SA3DSNativeCheckpoint*s){
+    if(s->previous>=0)g_checkpoint_states[s->previous].next=s->next;else g_checkpoint_head=s->next;
+    if(s->next>=0)g_checkpoint_states[s->next].previous=s->previous;
+    s->next=s->previous=-1;s->loaded=s->queued=0;s->draw.display=0;
+}
+static int tick_checkpoints(void){
+    if(!g_checkpoints_ready)return 1;
+    SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
+    SA1Vec3 camera={g_player.pos.x-sinf(g_camera.yaw)*40.f,g_player.pos.y+18.f,g_player.pos.z-cosf(g_camera.yaw)*40.f};
+    for(uint32_t i=0;i<g_checkpoint_assets.placements.count;i++){
+        SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,i,&p))return 0;
+        SA3DSNativeCheckpoint*s=&g_checkpoint_states[i];s->queued=0;s->draw.display=0;
+        int retain=(s->set_flags&8)||checkpoint_in_range(task,p.position,g_checkpoint_assets.unload_squared)||
+            checkpoint_in_range(camera,p.position,g_checkpoint_assets.unload_squared);
+        if(s->loaded&&(p.act!=g_ec_act_index||!retain))checkpoint_unlink(s);
+        if(s->loaded||p.act!=g_ec_act_index||!checkpoint_in_range(task,p.position,g_checkpoint_assets.load_squared))continue;
+        unsigned high=(p.type>>12)&7u;
+        if(high&&(high==1?g_rings.clip_level>=1:g_rings.clip_level>=2))continue;
+        memset(&s->task,0,sizeof(s->task));sa3ds_ccl_body_init(&s->ccl,0x20000u+i);s->ccl.rules=g_checkpoint_assets.rules[1];
+        SA3DSCheckpointResult bind={0};SA3CMatrix pose[3];if(!sa3ds_checkpoint_pose(&g_checkpoint_assets,&p,&bind,pose))return 0;
+        const uint8_t*c=g_checkpoint_assets.collider;SA1Vec3 center={0};float local[3]={checkpoint_float(c+8),checkpoint_float(c+12),checkpoint_float(c+16)};
+        center=(SA1Vec3){
+            (float)((double)local[2]*pose[0].m[8]+(double)local[1]*pose[0].m[4]+(double)local[0]*pose[0].m[0]+pose[0].m[12]),
+            (float)((double)local[2]*pose[0].m[9]+(double)local[1]*pose[0].m[5]+(double)local[0]*pose[0].m[1]+pose[0].m[13]),
+            (float)((double)local[2]*pose[0].m[10]+(double)local[1]*pose[0].m[6]+(double)local[0]*pose[0].m[2]+pose[0].m[14])};
+        if(!sa3ds_ccl_shape_decode(&s->shape,c,center)||s->shape.form!=3)return 0;
+        float ax=checkpoint_float(c+20),by=checkpoint_float(c+24),cz=checkpoint_float(c+28);
+        float offset=sqrtf(local[0]*local[0]+local[1]*local[1]+local[2]*local[2]);
+        double extent=sqrt((float)((double)ax*ax+(float)((double)by*by+(double)cz*cz)));
+        s->ccl.broad_radius=(float)((double)(float)((double)offset+extent)*1.01f);s->ccl.task_position=p.position;
+        s->loaded=1;s->previous=-1;s->next=g_checkpoint_head;if(g_checkpoint_head>=0)g_checkpoint_states[g_checkpoint_head].previous=(int32_t)i;g_checkpoint_head=(int32_t)i;
+    }
+    for(int32_t i=g_checkpoint_head;i>=0;i=g_checkpoint_states[i].next){
+        SA3DSNativeCheckpoint*s=&g_checkpoint_states[i];SA3DSMovementPlacement p;
+        if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,(uint32_t)i,&p))return 0;
+        int16_t spin=0;
+        if(s->task.action==1&&(s->ccl.outer_flags&1)&&s->ccl.cached_other_id==1&&
+            !sa3ds_checkpoint_player_spin(&g_player,(uint16_t)p.angles[1],&spin))return 0;
+        SA3DSCheckpointInput input={.persisted=(s->set_flags&4)!=0,.player_present=1,
+            .prior_collision=(s->ccl.outer_flags&1)!=0,.other_is_player0=s->ccl.cached_other_id==1,.activation_spin=spin};
+        if(!sa3ds_checkpoint_task_tick(&s->task,&input,&s->draw))return 0;
+        if(s->draw.initialize)s->set_flags|=0x10; /*46C100 preserves activated SET entries across reload*/
+        if(s->draw.persist_set)s->set_flags|=4;
+        s->queued=s->draw.enqueue_collision;
+        if(s->draw.capture_restart){
+            if(!sa3ds_checkpoint_capture_player(&g_restart_record,&g_player,(int16_t)g_ec_act_index,g_course_clock.time))return 0;
+            g_checkpoint_saved_row=p.source_row;g_checkpoint_activations++;
+            if(g_checkpoint_probe)g_checkpoint_probe_record=g_restart_record;
+            char note[200];snprintf(note,sizeof(note),"act=%lu row=%lu sourceFrame=%lu task=%.3f,%.3f,%.3f time=%u:%u:%u spin=%d",
+                (unsigned long)p.act,(unsigned long)p.source_row,(unsigned long)g_source_frame,
+                g_restart_record.task_position.x,g_restart_record.task_position.y,g_restart_record.task_position.z,
+                g_restart_record.minutes,g_restart_record.seconds,g_restart_record.frames,spin);boot_log("CHECKPOINT_SAVE",note);
+        }
+        g_checkpoint_sounds+=s->draw.play_sound;g_checkpoint_effects+=s->draw.emit_effect;g_checkpoint_time_draws+=s->draw.display_time;
+        if(s->draw.initialize||s->draw.sync_children)g_checkpoint_land_requests+=2; /*real dynamic land executor remains pending*/
+    }
+    return 1;
+}
+static int checkpoint_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
+    if(!g_checkpoints_ready)return 1;
+    const uint8_t*raw=g_checkpoint_assets.collider;
+    for(int32_t i=g_checkpoint_head;i>=0;i=g_checkpoint_states[i].next){
+        SA3DSNativeCheckpoint*s=&g_checkpoint_states[i];sa3ds_ccl_body_clear(&s->ccl,&s->shape,1);
+        if(!s->queued||!player->pc2004_ccl_state_valid)continue;
+        SA3DSCCLShape*primary=&g_player_enemy_shapes[0];
+        if((primary->attributes&0x10)||(s->shape.attributes&0x10)||
+            (g_player_enemy_ccl.rules.excluded_attributes&s->shape.attributes)||(s->ccl.rules.excluded_attributes&primary->attributes))continue;
+        double sum=(double)g_player_enemy_ccl.broad_radius+s->ccl.broad_radius;
+        SA1Vec3 d=sa1_vec3_sub(g_player_enemy_ccl.task_position,s->ccl.task_position);
+        float squared=(float)((double)d.x*d.x+(double)d.y*d.y+(double)d.z*d.z);
+        if(squared>=sum*sum)continue;
+        SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,(uint32_t)i,&p))return 0;
+        const uint8_t*pr=g_checkpoint_assets.player_colliders;
+        SA3DSCheckpointSweep sweep={.previous_task=previous,.current_task=sa3ds_ec_task_origin(player),.box_center=s->shape.center,
+            .player_radius=checkpoint_float(pr+20),.player_half_height=checkpoint_float(pr+24),.player_foot_radius=checkpoint_float(pr+28),
+            .box_x=checkpoint_float(raw+20),.box_y=checkpoint_float(raw+24),.box_z=checkpoint_float(raw+28),
+            .box_yaw=(uint16_t)(p.angles[1]+((uint16_t)raw[40]|((uint16_t)raw[41]<<8))),.sine=checkpoint_sine};
+        SA3DSCheckpointContact hit;if(!sa3ds_checkpoint_sweep(&sweep,&hit)||
+            !sa3ds_checkpoint_record_contact(&g_player_enemy_ccl,primary,&s->ccl,&s->shape,&hit))return 0;
+        if(hit.kind)g_checkpoint_contacts++;
+    }
+    return 1;
+}
+static int draw_checkpoints(void){
+    if(!g_checkpoints_ready)return 1;
+    for(int32_t i=g_checkpoint_head;i>=0;i=g_checkpoint_states[i].next){
+        SA3DSNativeCheckpoint*s=&g_checkpoint_states[i];if(!s->draw.display)continue;
+        SA3DSMovementPlacement p;SA3CMatrix pose[3];
+        if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,(uint32_t)i,&p)||
+            !sa3ds_checkpoint_pose(&g_checkpoint_assets,&p,&s->draw,pose))return 0;
+        for(unsigned part=0;part<3;part++){
+            unsigned component=part?(s->draw.active_material?part+2:part):0;
+            C3D_Mtx model,mv;for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(pose[part].m[row],pose[part].m[4+row],pose[part].m[8+row],pose[part].m[12+row]);
+            Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_checkpoint_gpu[component],0)||!sa3ds_ec_gpu_draw(&g_checkpoint_gpu[component],1))return 0;
+            g_checkpoint_draws++;
+        }
+    }
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);return 1;
+}
+
+static void begin_checkpoint_probe(void){
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_checkpoint_probe.flag","rb");if(!f)return;
+    unsigned row=0;int parsed=fscanf(f,"%u",&row)==1;fclose(f);
+    if(!parsed||!g_checkpoints_ready)goto fail;
+    SA3DSMovementPlacement target={0};int found=0;
+    for(unsigned i=0;i<g_checkpoint_assets.placements.count;i++){
+        SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,i,&p))goto fail;
+        if(p.act==g_ec_act_index&&p.source_row==row){target=p;found=1;break;}
+    }
+    if(!found)goto fail;
+    g_checkpoint_probe_direction=(SA1Vec3){(float)checkpoint_sine(NULL,(uint16_t)target.angles[1]),0,
+        (float)checkpoint_sine(NULL,(uint16_t)(target.angles[1]+16384))};
+    float x=target.position.x-g_checkpoint_probe_direction.x*32,z=target.position.z-g_checkpoint_probe_direction.z*32;
+    if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player))goto fail;
+    g_ec_collision.reference_y=target.position.y+8;SA1Surface ground=sa3ds_ec_collision_surface(&g_ec_collision,x,z);
+    if(!ground.valid||ground.normal.y<.8f||fabsf(ground.ground_y-target.position.y)>20)goto fail;
+    g_player.pos=(SA1Vec3){x,ground.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,z};g_player.vel=(SA1Vec3){0};
+    g_player.ground_normal=ground.normal;g_player.surface_id=ground.surface_id;g_player.grounded=true;g_player.surface_frame_active=false;
+    g_player.yaw=atan2f(g_checkpoint_probe_direction.x,g_checkpoint_probe_direction.z);
+    reset_springs();reset_checkpoints(0);g_checkpoint_contacts=g_checkpoint_draws=0;
+    g_checkpoint_activations=0;g_checkpoint_probe=1;g_checkpoint_probe_row=row;g_checkpoint_probe_ticks=g_checkpoint_probe_age=g_checkpoint_probe_control=0;
+    g_checkpoint_probe_injected=0;g_checkpoint_probe_reload_error=-1;g_camera.yaw=0;
+    sa3ds_wz_tick_reset(&g_tick_clock);g_last_frame_ms=osGetTime();
+    boot_log("CHECKPOINT_PROBE","BEGIN: original placement approach uses ordinary input; zero-ring damage report will be injected after real activation; no enemy-cause/course parity claim");return;
+fail:boot_log("CHECKPOINT_PROBE","FAIL: source placement/resources/nearby support unavailable");g_paused=1;
+}
+
 static void clear_scatter(void){
     while(g_scatter_head){SA3DSNativeScatter*s=g_scatter_head;g_scatter_head=s->next;free(s);}
     g_scatter_next_id=0x10000;g_scatter_error=0;
@@ -1563,11 +1762,22 @@ static int tick_native_death(void){
 static int native_stage_reload(void){
     if(!g_ec_full_route)return 0;
     const SA3DSECStart*start=sa3ds_ec_route_start(&g_ec_route,g_ec_act_index);if(!start)return 0;
-    /*No native checkpoint has been activated yet. Reload its real source act
-     * start and resident geometry, not a debug teleport into the old window.*/
+    SA3DSECStart restart=*start;
+    int saved=sa3ds_restart_record_check(&g_restart_record,1,(int16_t)g_ec_act_index)!=0;
+    if(saved)restart.task_origin=g_restart_record.task_position;
     if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
-        start->task_origin.x,start->task_origin.z,&g_player))return 0;
-    sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);g_rings.rings=0;
+        restart.task_origin.x,restart.task_origin.z,&g_player))return 0;
+    sa3ds_ec_residency_start(&g_ec_collision,start,&g_player);
+    if(saved){
+        if(g_checkpoint_saved_row!=UINT32_MAX&&!sa3ds_checkpoint_restore_player(&g_restart_record,&g_player,&g_ec_collision.world,
+            g_checkpoints_ready?checkpoint_sine:NULL,NULL))return 0;
+        g_course_clock.time[0]=g_restart_record.minutes;g_course_clock.time[1]=g_restart_record.seconds;g_course_clock.time[2]=g_restart_record.frames;
+    }
+    if(g_checkpoint_probe&&saved){
+        g_checkpoint_probe_reload_error=sa1_vec3_length(sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),g_checkpoint_probe_record.task_position));
+        memcpy(g_checkpoint_probe_reload_clock,g_course_clock.time,3);
+    }
+    g_rings.rings=0;reset_checkpoints(1);
     if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
     reset_springs();clear_native_death();g_player_damage_blocked=0;
     memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
@@ -1576,15 +1786,15 @@ static int native_stage_reload(void){
     g_selection=sa3ds_sonic_animation_select(&g_anim_runtime,&g_player,&g_observation);
     sa3ds_parity_camera_recenter(&g_camera,g_player.yaw);
     sa3ds_wz_tick_reset(&g_tick_clock);g_last_frame_ms=osGetTime();
-    char note[170];snprintf(note,sizeof(note),"act=%lu lives=%d sourceFrame=%lu taskOrigin=%.3f,%.3f,%.3f; source start, checkpoint activation pending",
+    char note[170];snprintf(note,sizeof(note),"act=%lu lives=%d sourceFrame=%lu taskOrigin=%.3f,%.3f,%.3f checkpointRow=%lu",
         (unsigned long)g_ec_act_index,g_stage_restart.lives,(unsigned long)g_source_frame,
-        start->task_origin.x,start->task_origin.y,start->task_origin.z);boot_log("STAGE_RELOAD",note);
+        restart.task_origin.x,restart.task_origin.y,restart.task_origin.z,(unsigned long)g_checkpoint_saved_row);boot_log("STAGE_RELOAD",note);
     return 1;
 }
 static int native_stage_begin(SA3DSStageRestartResult*out){
     uint8_t previous=g_stage_restart.state;
     if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
-    if(out->clear_world){clear_native_death();reset_springs();}
+    if(out->clear_world){clear_native_death();reset_springs();reset_checkpoints(1);}
     if(out->clear_rings)g_rings.rings=0;
     if(out->reload_stage&&!native_stage_reload())return 0;
     if(out->game_over_pending){boot_log("STAGE_FLOW","PENDING: source game-over screen/menu executor");g_paused=1;}
@@ -1696,6 +1906,7 @@ static int init_scene(void) {
         load_springs();
         load_panels();
         load_saru();
+        load_checkpoints();
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_scatter.sa3dspak",&g_scatter_bytes,&g_scatter_size)||
            !sa3ds_ring_scatter_assets_open(&g_scatter_assets,g_scatter_bytes,g_scatter_size)){
             sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;memset(&g_scatter_assets,0,sizeof(g_scatter_assets));
@@ -1748,7 +1959,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -1834,6 +2045,7 @@ static int sample_pose(void) {
 }
 
 static void cleanup(void) {
+    destroy_checkpoints();
     clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
@@ -1959,7 +2171,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -2080,6 +2292,13 @@ int main(void) {
                 tick_input.jump_released=g_air_attack_probe_ticks==2;
                 if(g_air_attack_probe_ticks>=4&&g_air_attack_probe_ticks<=6)tick_input.move_x=.5f;
             }
+            if(g_checkpoint_probe){
+                g_camera.yaw=0;tick_input=(SA1Input){0};
+                if(!g_checkpoint_probe_injected||(g_stage_restart.restart_count&&g_stage_restart.state==15)){
+                    float direction=g_checkpoint_activations&&!g_checkpoint_probe_injected?-1.f:1.f;
+                    tick_input.move_x=-g_checkpoint_probe_direction.x*.6f*direction;tick_input.move_z=g_checkpoint_probe_direction.z*.6f*direction;
+                }
+            }
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             /*40EF50 disables processed analog/buttons through fade/reload;
              * case4 reenables only AFTER its final world update.*/
@@ -2097,6 +2316,12 @@ int main(void) {
             }
             if(g_emerald_coast){
                 if(g_player_damage_blocked){g_paused=1;continue;}
+                if(g_checkpoint_probe&&!g_checkpoint_probe_injected&&g_checkpoint_probe_age>=48&&
+                    sa1_vec3_length(sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),g_checkpoint_probe_record.task_position))>=8.f){
+                    g_rings.rings=0;g_player_enemy_ccl.status|=4;g_checkpoint_probe_injected=1;
+                    g_checkpoint_probe_death_position=sa3ds_ec_task_origin(&g_player);
+                    boot_log("CHECKPOINT_PROBE","Injected zero-ring damage report AFTER actual checkpoint contact/save; ordinary death command/task/fades follow");
+                }
                 SA3DSPlayerDamageWorld damage_world={.stage_id=1,.death_command_allowed=1,.random15=saru_random};
                 SA3DSPlayerDamageResult requests;
                 int ready=sa3ds_player_damage_prepare(&g_player,&tick_input,g_player_enemy_ccl.status,
@@ -2129,6 +2354,7 @@ int main(void) {
             SA1Vec3 previous=g_player.pos;
             uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
+            SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
             sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
                 g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
@@ -2221,7 +2447,17 @@ int main(void) {
             tick_springs();
             tick_panels(&physics_done);
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
-            if(!saru_ccl_pass(&physics_done)){fail_screen("Native player/NPC CCL failed");break;}
+            if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
+            if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
+            g_course_clock.enabled=stage_phase.controls_enabled;sa3ds_course_clock_tick(&g_course_clock);
+            if(g_checkpoint_probe){
+                g_checkpoint_probe_ticks++;
+                if(g_checkpoint_activations&&!g_checkpoint_probe_injected)g_checkpoint_probe_age++;
+                if(g_stage_restart.restart_count&&g_stage_restart.state==15&&g_player.grounded&&
+                    !(g_player.pc2004_player_flags6&0x4000)&&
+                    hypotf(tick_input.move_x,tick_input.move_z)>.5f&&
+                    sa1_vec3_dot(g_player.vel,g_checkpoint_probe_direction)>.05f)g_checkpoint_probe_control++;
+            }
             sa3ds_game_score_tick(&g_game_score,1);
             if(g_saru_probe&&!g_death_probe&&(++g_saru_probe_ticks>=(g_hurt_probe?(g_scatter_probe?180u:100u):180u)||(g_scatter_probe&&g_scatter_awards))){
                 if(g_hurt_probe){
@@ -2281,6 +2517,24 @@ int main(void) {
                 if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
                 if(previous_stage!=g_stage_restart.state){char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d",
                     (unsigned long)g_source_frame,previous_stage,g_stage_restart.state,g_stage_restart.lives);boot_log("STAGE_FLOW",note);}
+                if(g_checkpoint_probe&&(g_checkpoint_probe_control>=12||g_checkpoint_probe_ticks>=900)){
+                    unsigned persisted=0;for(unsigned n=0;n<g_checkpoint_assets.placements.count;n++){
+                        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,n,&p);
+                        if(p.act==g_ec_act_index&&p.source_row==g_checkpoint_probe_row&&g_checkpoint_states[n].task.action==3&&
+                            (g_checkpoint_states[n].set_flags&0x14)==0x14)persisted=1;
+                    }
+                    int clock_ok=!memcmp(g_checkpoint_probe_reload_clock,&g_checkpoint_probe_record.minutes,1)&&
+                        g_checkpoint_probe_reload_clock[1]==g_checkpoint_probe_record.seconds&&g_checkpoint_probe_reload_clock[2]==g_checkpoint_probe_record.frames;
+                    float away=sa1_vec3_length(sa1_vec3_sub(g_checkpoint_probe_death_position,g_checkpoint_probe_record.task_position));
+                    int pass=g_checkpoint_activations==1&&g_checkpoint_saved_row==g_checkpoint_probe_row&&g_checkpoint_contacts&&
+                        g_checkpoint_draws&&g_checkpoint_probe_reload_error>=0&&g_checkpoint_probe_reload_error<.0001f&&
+                        clock_ok&&away>5&&persisted&&g_death_created==1&&g_death_requests==1&&g_death_trigger_counter==122&&g_stage_restart.lives==3&&g_stage_restart.restart_count==1&&g_checkpoint_probe_control>=12;
+                    char note[300];snprintf(note,sizeof(note),"%s ticks=%u row=%lu saves=%u contacts=%u draws=%u reloadError=%.7f clock=%d away=%.3f persisted=%u lives=%d restarts=%lu control=%u deathInjected=%d deathCounter=%u",
+                        pass?"PASS":"FAIL",g_checkpoint_probe_ticks,(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations,
+                        g_checkpoint_contacts,g_checkpoint_draws,g_checkpoint_probe_reload_error,clock_ok,away,persisted,
+                        g_stage_restart.lives,(unsigned long)g_stage_restart.restart_count,g_checkpoint_probe_control,g_checkpoint_probe_injected,g_death_trigger_counter);
+                    boot_log("CHECKPOINT_PROBE",note);g_checkpoint_probe=0;g_paused=1;
+                }
                 if(g_death_probe&&(g_death_probe_control>=12||g_death_probe_ticks>=400)){
                     char note[230];snprintf(note,sizeof(note),"%s ticks=%u deathTasks=%u trigger=%u requests=%u poses=%u clamps=%u reloads=%lu lives=%d control=%u action=%u rings=%d; original act start, checkpoint/gameover/audio pending",
                         g_death_created==1&&g_death_requests==1&&g_death_trigger_counter==122&&g_death_probe_clamps&&
@@ -2291,7 +2545,7 @@ int main(void) {
                 }
             }
             sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
-                (g_ec_replay || g_ring_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
+                (g_ec_replay || g_ring_probe || g_checkpoint_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
             if(g_ec_replay) {
                 if(g_ec_replay_tick%30==0 || tick_input.jump_pressed) {
                     char line[180];snprintf(line,sizeof(line),

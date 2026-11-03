@@ -1,3 +1,18 @@
+# WCA49 — native checkpoint activation, clock and death respawn
+
+Native row-90 activation/save/death/reload fixture PASS on exact 456300-byte
+artifact 4a2a9de476c38ebf6d0865f78f2fda56a5c0d99ec553eac1b616eb834deba953.
+Saved position error zero; saved clock exact; SET flags persisted; lives3,
+one restart and12 ticks resumed control. Damage report injected after measured
+8.079-unit departure; this is bounded emulator evidence, not natural traversal
+or physical hardware evidence. Required host/owner pose gates and native build PASS.
+See docs/PC2004_CHECKPOINT_NATIVE.md for scope and remaining gaps.
+
+Next: original checkpoint dynamic-land execution and player/contact history,
+then broader natural gameplay. Full CP1–CP9 and strict PC2004 1:1 remain open.
+
+---
+
 # WCA active checkpoint — original thin-box contact and category correction
 
 WCA48 adds419C90/4199D0 primary7/form3 checkpoint sweep/contact/cache/status,
