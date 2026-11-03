@@ -186,3 +186,11 @@ Original CCL hit-query cursor/category priority and4CE030 damage/explosion/
 score/local-bounce rules implemented; separate cached attacker preserved. Saru
 bridge tests call actual shared helper. Host, owner witnesses and native build
 pass; artifact unchanged ae538ee9. Native CCL production/combat still pending.
+
+## 2026-11-02 WCA36 CCL contacts and Sonic strengths
+
+Source sphere pipeline now generates real hit/cache/victim damage inputs for
+shared enemy decisions. Sonic49AA48 field priority, secondary enable and source
+contact response/clear implemented. Focused/owner witness/host/native gates pass;
+artifact unchanged ae538ee9. Next native actor/profile/CCL integration, not another
+unchanged proof pass. See docs/PC2004_CCL_CONTACT.md for source phase constraints.

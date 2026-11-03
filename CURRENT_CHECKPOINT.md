@@ -1,3 +1,26 @@
+# WCA active checkpoint — source CCL contacts and Sonic attack strengths
+
+WCA36 adds ccl_contact.[ch]:49AA48 primary attack/defense priority and secondary
+enable; source broad/category/disabled/sphere contact; ordered/directional16-hit
+reports and saturated last-contact cache; victim damage flags; source horizontal
+normal/push gates/displacement; original CCL clear semantics. Owner records and
+category tables are inputs, not embedded assets. Native callers remain pending.
+
+Focused source-neutral contact-to-shared-damage checks, exact-owner nine-helper
+identity/four original-record cases, required host gate/native build PASS.
+Actual Sonic/Saru push masks inhibit both displacements; ordinary touch hurts
+Sonic while ball/Spin Dash damages Saru. This is controlled source/host evidence,
+not original retail execution or native combat. Same381608B/ae538ee9 artifact;
+no redundant emulator/unchanged pose import run. See docs/PC2004_CCL_CONTACT.md.
+
+Next: native Saru lifecycle/render/CCL with owner profile loading and correctly
+captured pre-movement strength; execute actual score/bounce/death/projectiles and
+connect homing double-invocation/raw-yaw bridge. Source research saved privately
+in /private/tmp/sa3ds-wca36-sonic-controller.asm and sonic-ccl-tail.asm; don't
+repeat it. Full WCA/physics1to1 remain false; continue after publication.
+
+---
+
 # WCA active checkpoint — source shared enemy damage and CCL hit queries
 
 WCA35 adds enemy_damage.[ch]: original16-hit/category0-then1 queries and shared

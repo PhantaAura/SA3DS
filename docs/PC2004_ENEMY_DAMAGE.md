@@ -70,3 +70,12 @@ callers yet, so no redundant emulator or unchanged pose/import gate was run.
 Remaining: source CCL pair masks/attack fields/hit generation and cached damage
 arbitration, actual native player bounce/score/death/effects, projectile behavior,
 full task scheduling and real enemy/homing integration. No native combat claim.
+
+## WCA36 contact producer foundation
+
+ccl_contact.[ch] now produces original-order hit lists, last-contact caches and
+victim task/CCL damage flags from the source sphere path, and reconstructs Sonic's
+pre-movement attack/defense update. Its host regression feeds that actual contact
+output into this shared damage helper and observes original score/bounce requests.
+Actual native CCL scheduling/profile loading and execution remain pending.
+See docs/PC2004_CCL_CONTACT.md for exact scope and physical-response evidence.
