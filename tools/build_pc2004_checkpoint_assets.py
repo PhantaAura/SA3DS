@@ -25,11 +25,11 @@ def build(exe,system):
  if not rows or len(rows)>32:raise ValueError('checkpoint placement limit')
  co=64+len(rows)*40;po=co+48;ro=po+96;no=ro+16;land=no+36;lo=land+24;total=lo+4100
  config=bytearray(total)
- struct.pack_into('<8s9I2f',config,0,b'SA3CHKP\0',1,len(rows),64,co,po,ro,no,lo,total,360000.,360100.)
+ struct.pack_into('<8s9I2f',config,0,b'SA3CHKP\0',2,len(rows),64,co,po,ro,no,lo,total,360000.,360100.)
  struct.pack_into("<I",config,52,land)
  for i,row in enumerate(rows):struct.pack_into('<II32s',config,64+i*40,*row)
  config[co:co+48]=r(0x916a08,48);config[po:po+96]=r(0x91cbf0,96)
- for i,category in enumerate((0,3)):
+ for i,category in enumerate((0,4)):
   struct.pack_into('<BBBxI',config,ro+i*8,r(0x90e3bc+category,1)[0],r(0x90e3b0+category,1)[0],r(0x90e3c8+category,1)[0],struct.unpack('<I',r(0x90e3d4+category*4,4))[0])
  for i,n in enumerate(nodes):struct.pack_into('<3f',config,no+i*12,*n.position)
  config[land:land+24]=r(0x916a50,24)
@@ -42,8 +42,8 @@ def build(exe,system):
   materials,textures,used=compact_textures(materials,pvm)
   payload=sa3dspak.build([('METADATA',b'{"scope":"owner checkpoint Basic component"}',0),('GEOMETRY',geometry,0),('MATERIALS',build_material_chunk(materials),0),('TEXTURES',textures,0)])
   chunks.append((f'VISUAL{index}',payload,0));report.append({'node':node,'active':active,'model':hex(nodes[node].model_va),'textures':used,'geometry':meta})
- metadata={'source_profile':'PC2004-checkpoint-v1','source_exe_sha256':d.sha256,'source_pvm_sha256':pvm.sha256(),
-  'source_set_sha256':[s.sha256 for s in sources],'counts_by_act':[sum(row[0]==act for row in rows) for act in (0,1)],'components':report,
+ metadata={'source_profile':'PC2004-checkpoint-v2','source_exe_sha256':d.sha256,'source_pvm_sha256':pvm.sha256(),
+  'source_set_sha256':[s.sha256 for s in sources],'collision_categories':[0,4],'counts_by_act':[sum(row[0]==act for row in rows) for act in (0,1)],'components':report,
   'scope':'private original placement/CCI/player CCI/rules/trig/Basic art; task/post transforms/collision/respawn are runtime-owned'}
  data=sa3dspak.build([('METADATA',json.dumps(metadata,sort_keys=True).encode(),0),('CHECKPOINT',config,0),*chunks]);sa3dspak.parse(data)
  return data,metadata

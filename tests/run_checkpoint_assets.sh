@@ -9,5 +9,5 @@ cc -std=c11 -O2 -ffp-contract=off -Wall -Wextra -Werror -Isrc/game -Isrc/sa3c -I
 if [ "$#" -gt 0 ]; then "$assets_tmp/test" "$@"; else
  python3 tests/make_emerald_coast_visual_fixture.py "$assets_tmp/visual.sa3dspak"
  python3 tests/make_checkpoint_assets_fixture.py "$assets_tmp/visual.sa3dspak" "$assets_tmp/checkpoint.sa3dspak"
- "$assets_tmp/test" "$assets_tmp/checkpoint.sa3dspak" "$assets_tmp/checkpoint.reserved.sa3dspak" "$assets_tmp/checkpoint.cci.sa3dspak"
+ "$assets_tmp/test" "$assets_tmp/checkpoint.sa3dspak" "$assets_tmp/checkpoint.reserved.sa3dspak" "$assets_tmp/checkpoint.cci.sa3dspak" "$assets_tmp/checkpoint.version.sa3dspak"
 fi

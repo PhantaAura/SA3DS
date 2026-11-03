@@ -13,7 +13,8 @@ typedef struct {
     SA3DSCCLRules rules[2];
     float node_positions[3][3],land_offsets[2][3],load_squared,unload_squared;
 } SA3DSCheckpointAssets;
-/*Borrowed immutable owner-generated package; bytes must outlive all views.*/
+/*Version2 retains the source CCL_Init category4 rules (v1 used enemy3).
+ * Borrowed immutable owner-generated package; bytes must outlive all views.*/
 int sa3ds_checkpoint_assets_open(SA3DSCheckpointAssets *out,const void *bytes,size_t size);
 /*44EEF0 +44EFE0 callbacks: parent T/Rz/Rx/Ry; each post T/Ry(+/-)/Rx.
  * Ignores the post's default NJS rotation/UNIT bits exactly as its callback.*/

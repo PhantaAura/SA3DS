@@ -35,11 +35,17 @@ def audit(exe,system):
  with tempfile.TemporaryDirectory(prefix='sa3ds-checkpoint-owner-') as tmp:
   pak=Path(tmp)/'checkpoint.sa3dspak';pak.write_bytes(package)
   output=subprocess.check_output(['bash',str(ROOT/'tests/run_checkpoint_assets.sh'),str(pak),'dump'],text=True,cwd=ROOT)
- actual={};textures={}
+ actual={};textures={};rules={}
  for line in output.splitlines():
   fields=line.split()
+  if fields[0]=='RULES':rules[int(fields[1])]=tuple(map(int,fields[2:]));continue
   if fields[0]=='TEXTURE':textures[int(fields[1])]=int(fields[2]);continue
   actual[tuple(map(int,fields[:3]))]=list(map(float,fields[3:]))
+ assert r(0x44f5c7,1)==b"\x6a"
+ checkpoint_category=r(0x44f5c8,1)[0]
+ for i,category in enumerate((0,checkpoint_category)):
+  expected=(r(0x90e3bc+category,1)[0],r(0x90e3b0+category,1)[0],r(0x90e3c8+category,1)[0],struct.unpack('<I',r(0x90e3d4+category*4,4))[0])
+  assert rules[i]==expected,(category,rules[i],expected)
  pvm=PVMArchive(read_source(system,'OBJ_REGULAR.PVM'),'OBJ_REGULAR.PVM')
  for component in (1,2,3,4):assert textures[component]==pvm.entries[59 if component<3 else 60].global_index
  phases=((16384,-16384),(16384,-11833),(0,-16384),(9130,32767),(-16384,-32768),(125,-987))

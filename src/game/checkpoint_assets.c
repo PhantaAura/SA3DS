@@ -22,7 +22,7 @@ int sa3ds_checkpoint_assets_open(SA3DSCheckpointAssets*out,const void*bytes,size
     if(seen!=127||sa3dspak_find(&pak,"CHECKPOINT",&config)!=SA3DSPAK_OK||config.size<64)return 0;
     const uint8_t*b=config.data;
     uint32_t n=r32(b+12),co=64+n*40,po=co+48,ro=po+96,no=ro+16,land=no+36,lo=land+24,total=lo+4100;
-    if(memcmp(b,"SA3CHKP\0",8)||r32(b+8)!=1||!n||n>32||r32(b+16)!=64||
+    if(memcmp(b,"SA3CHKP\0",8)||r32(b+8)!=2||!n||n>32||r32(b+16)!=64||
        r32(b+20)!=co||r32(b+24)!=po||r32(b+28)!=ro||r32(b+32)!=no||
        r32(b+36)!=lo||r32(b+40)!=total||total!=config.size||
        rf(b+44)!=360000.f||rf(b+48)!=360100.f||r32(b+52)!=land||r32(b+56)||r32(b+60))return 0;

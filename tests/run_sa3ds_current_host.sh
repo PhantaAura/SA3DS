@@ -145,3 +145,6 @@ bash tests/run_restart_record.sh
 printf "\n== Original checkpoint task and external asset reader ==\n"
 bash tests/run_checkpoint_task.sh
 bash tests/run_checkpoint_assets.sh
+
+printf "\n== Original checkpoint player/box contact ==\n"
+bash tests/run_checkpoint_contact.sh

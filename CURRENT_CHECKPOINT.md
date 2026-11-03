@@ -1,3 +1,38 @@
+# WCA active checkpoint — original thin-box contact and category correction
+
+WCA48 adds419C90/4199D0 primary7/form3 checkpoint sweep/contact/cache/status,
+source .4f/2.5 sample behavior and strict side/top/underside bounds. Important:
+checkpoint CCI is NOT a sphere. Fixed WCA47 builder's wrong enemy category3 to
+sourceCCL_Init category4; package/reader version2 rejects version1.
+See docs/PC2004_CHECKPOINT_CONTACT.md. Native connection still pending.
+
+Required host and owner pose/import gates PASS; final focused version rejection
+and raw-owner oracle PASS7placements/42poses/2016components,max4.72656257e-6,
+including source-derived category4 rules.26-span exact-owner witnesses PASS.
+Final staged native compilation PASS, output still WCA45 byte-identical440076B/
+1d8b24d8 because these components are unreferenced. No new emulator run needed.
+Correct private package150448B/6714ef87 is /private/tmp/sa3ds-wca48-checkpoint.sa3dspak,
+notinstalled. DO NOT use the earlier WCA47 package03801349 (wrong category).
+
+Next MUST connect native posts/art/CCL/history/SET persistence/time/death restore;
+avoid further source-only checkpoint churn when useful native progress is ready.
+Use list6 checkpoint task before final CCL, primary7 vsbox3 source sweep (not
+sa3ds_ccl_sphere_contact), category0/4 and outer_flags bit1 for activation.
+Source history4419C0 selector1 is a player task-foot ring buffer. Current port
+needs an explicit previous-task snapshot; source history/order parity is separate.
+Clock426070 runs AFTER world tasks in413D40; manager426040 disables on death
+request,426030 enables AFTER final fade world tick. Source normal Sonic timer
+rolls60/60 and caps99:59:59; raw clock fields and source-frame counter differ.
+Source414810 preserves course time on a different-act start; debug reset mayzero.
+Canonical source task-angle bridge already in pc2004_task_frame.c; full original
+angle-history parity is not established. Bounded native fixture must disclose
+any death-command injection instead of claiming natural enemy/death traversal.
+
+Full WCA/PHYSICS_1TO1/physical hardware gates remain incomplete. Avoid unchanged
+Sonic pose matrices, failed CUA arrows, REA list/current_document and cold analysis.
+
+---
+
 # WCA active checkpoint — original post task and external checkpoint assets
 
 WCA47 adds portable44F540/430/150 task phases, source signed16 spin/settle,

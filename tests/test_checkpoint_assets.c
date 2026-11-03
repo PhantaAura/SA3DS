@@ -18,6 +18,7 @@ int main(int argc,char**argv){
         assert(sa3t_texture(&a.components[i].textures,material.texture_id,&tex,&rgba)==SA3T_OK);
         printf("TEXTURE %u %u\n",i,tex.global_index);
     }
+    if(dump)for(unsigned i=0;i<2;i++)printf("RULES %u %u %u %u %u\n",i,a.rules[i].push_receive,a.rules[i].push_inhibit,a.rules[i].damage_receive,a.rules[i].excluded_attributes);
     const int32_t phase[][2]={{16384,-16384},{16384,-11833},{0,-16384},{9130,32767},{-16384,-32768},{125,-987}};
     for(unsigned i=0;i<a.placements.count;i++){
         SA3DSMovementPlacement p;assert(sa3ds_movement_objects_placement(&a.placements,i,&p));assert((p.type&4095)==19);

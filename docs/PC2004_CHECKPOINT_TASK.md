@@ -1,3 +1,7 @@
+> WCA48 correction: use the version2 package and category4 rules documented in
+> PC2004_CHECKPOINT_CONTACT.md. The earlier private WCA47 category3 package is
+> superseded; do not install it. Task and visual pose findings remain valid.
+
 # WCA47 — original checkpoint task and owner assets
 
 This adds the portable original post task and an external owner-data pipeline.
