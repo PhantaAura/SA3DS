@@ -132,3 +132,6 @@ bash tests/run_ccl_contact.sh
 
 # Source player damage, ordinary hurt physics and animation recovery.
 bash tests/run_player_damage.sh
+
+# Original scattered-ring task equations and lifecycle.
+bash tests/run_ring_scatter.sh

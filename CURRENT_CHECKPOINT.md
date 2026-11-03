@@ -1,3 +1,23 @@
+# WCA active checkpoint — scattered-ring source task
+
+WCA41 adds source44FD10/44F7A0 task equations and explicit collision/display/
+award/effect requests. Required host gate and exact-owner static witnesses PASS.
+See docs/PC2004_RING_SCATTER.md. Native damage still retains scatter requests;
+this task is NOT connected to native gameplay. WCA40 remains the runnable
+preview (426800B/5c75fb18,commit8b780d4). Full WCA/physics/hardware are incomplete.
+
+Next: owner external CCI/category7 rules, native scattered-ring allocation/list
+order/RNG, floor/tilt/CCL and real render/pickup connection. Source callbacks and
+render-dependent clocks must follow the actual task schedule. Then bounded
+native damage/scatter/collection verification; no redundant pose matrix rerun.
+
+New REA whole-game analysis timed out330s. Do not retry it unchanged. Successful
+private targeted no-analysis Ghidra project/script and disassembly paths are in
+the document; private decompiled code stays outside Git. Existing Wine Frida
+failures also remain unchanged. No banked reset used or needed.
+
+---
+
 # WCA active checkpoint — native ordinary player hurt
 
 WCA40 connects prior CCL damage, timer/shield/ring-loss requests, source recoil,
