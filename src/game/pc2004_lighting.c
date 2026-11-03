@@ -28,7 +28,7 @@ int sa3ds_ec_character_lights(const SA3DSLightingAssets*a,unsigned act,SA3DSLigh
  memset(lights,0,4*sizeof(*lights));SA3DSLight8*p=&lights[0];const uint8_t*c=a->character[act];
  p->type=3;p->diffuse[3]=1;
  for(unsigned k=0;k<3;k++){
-  p->diffuse[k]=rf(c+16);p->specular[k]=rf(c+20+k*4);p->ambient[k]=rf(c+52+k*4);
+  p->diffuse[k]=rf(c+16);p->specular[k]=rf(c+52+k*4);p->ambient[k]=rf(c+20+k*4);
   p->direction[k]=rf((c[3]&2?c:a->stage)+4+k*4);
   if(c[3]&4)p->direction[k]=-p->direction[k];
  }

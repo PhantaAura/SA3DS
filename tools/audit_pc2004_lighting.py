@@ -22,7 +22,9 @@ def audit(exe):
   assert len(rows)==2
   #40AA30 normal EC row3 is selected for act0 and act1 fallback.
   p=r(0x903e88+3*96,96);f=lambda offset:struct.unpack_from('<f',p,offset)[0]
-  expected=[f(16)]*3+[1]+[f(20),f(24),f(28),0]+[f(52),f(56),f(60),0]+[0]*3+[f(4),f(8),f(12)]+[0]*7
+  #40A653/65D/665 store profile+20/24/28 at LIGHT8+36/40/44 (ambient).
+  #40A677/6AF/6B5 store profile+52/56/60 at LIGHT8+20/24/28 (specular).
+  expected=[f(16)]*3+[1]+[f(52),f(56),f(60),0]+[f(20),f(24),f(28),0]+[0]*3+[f(4),f(8),f(12)]+[0]*7
   for act,row in enumerate(rows):
    assert int(row[0])==act and int(row[1])==3
    actual=list(map(float,row[2:]));assert struct.pack('<25f',*actual)==struct.pack('<25f',*expected)

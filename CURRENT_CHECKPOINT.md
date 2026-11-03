@@ -1,3 +1,20 @@
+# WCA57 — corrected light fields and verified Basic vertex contract
+
+Corrected WCA55's shared builder/oracle ambient/specular offset error. Exact
+40A630 stores prove ambient .75/specular .805;26 owner spans now constrain the
+mapping and original Basic normal+UV FVF152/36-byte layout. Owner API oracle,
+required cumulative host and native build PASS. No importer/pose changes;
+unchanged pose matrix not repeated. Native helper remains unconnected and the
+binary is byte-identical to inspected WCA56 (462596B/78f5506a); no redundant
+emulator run. External raw profile package unchanged/uninstalled.
+See docs/PC2004_CHARACTER_LIGHT_STATE.md.
+
+Next: resolve inherited global ambient/COLORVERTEX/local-viewer/normalization,
+normal transforms and specular texture composition before native light hookup.
+Full CP1–CP9/retail/physical Old3DS acceptance stays open, PHYSICS_1TO1=false.
+
+---
+
 # WCA56 — native ordinary Sonic constant-white material
 
 Corrected the source-observed ordinary Sonic material binding: constant white

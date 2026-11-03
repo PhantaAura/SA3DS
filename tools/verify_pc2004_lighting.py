@@ -5,6 +5,16 @@ import hashlib,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.verify_pc2004_ec_route import verified_reader
 RANGES={
+ (0x784ae0,224):'3304a8add911f598d77846b43a0cfb6b53ec8b19ea559820c1b6f3f47efc6ae6',
+ (0x7835f0,1232):'5d89d4feb3d7485b4698841745832e69df93fb0fd530d7d3153ced11a604f002',
+ (0x78e720,128):'11a9bc126951c60e5fc539565e703bce9bbb41efee50c968e460d55164ff557a',
+ (0x794540,128):'7cadb29a2fa058374d255bca837284d7b28982b71f1e345735856746f461f8a8',
+ (0x794600,48):'e9a6180defb36b84bebf24568c6e24737ac222f4014edd4d49c37ecebde92a88',
+ (0x791860,224):'cb7c5596b1bd473978e458dcedf4469f4c535be0f53a7fc81316bbe0721087a0',
+ (0x791ab0,32):'86c198590c585bacd30d07870047f2919dd6357e77bb135f177f2f052db5d03c',
+ (0x389d690,192):'96d764260d12cf72ead76cc4a1a1eaeb4d9f28c50d09028f4ee49df1638e5489',
+ (0x389d864,108):'6aea8a377e69a80e18b1fb8f68b5f96ceec92d2204be01aaeaa1131807aab4f3',
+
  (0x77ff90,48):'4173a1203a12cbea0b7b44ac8708b4478f39d837954e5f036aeab6cff8cec4b2',
  (0x402f40,208):'ef557ea95f23bf2f4fbca1703cadfbbbdf315952a6d419ab901fb5cf84024799',
  (0x4128a0,64):'35ff0e003569ab59837752ecdd4d4a61de30ad8fc122aa74acdcda8fd7a8da4b',
@@ -27,7 +37,18 @@ def verify(exe):
  r=verified_reader(exe)
  for (a,n),digest in RANGES.items():assert hashlib.sha256(r(a,n)).hexdigest()==digest,hex(a)
  assert r(0x903e88+3*96,4)==bytes((1,0,0,3))
+ #Actual stores into the D3DLIGHT8 snapshot: avoid swapping table fields.
+ for address,op in {0x40a653:'a374dbab03',0x40a65d:'890d78dbab03',
+                    0x40a665:'89157cdbab03',0x40a677:'a364dbab03',
+                    0x40a6af:'890d68dbab03',0x40a6b5:'89156cdbab03'}.items():
+  assert r(address,len(bytes.fromhex(op)))==bytes.fromhex(op),hex(address)
+ #Basic normal+UV/no-mesh-color dispatch5, polygon type0/1/3.
+ assert struct.unpack('<I',r(0x389d710+5*4,4))[0]==0x389d6e0
+ assert struct.unpack('<4I',r(0x389d6e0,16))==(0x783830,0x783920,0x78c5a0,0x7835f0)
+ #Buffer index8: XYZ,NORMAL,DIFFUSE,TEX1, no SPECULAR; 36-byte stride.
+ assert struct.unpack('<I',r(0x389d888+8*4,4))[0]==36
+ assert struct.unpack('<I',r(0x389d8ac+8*4,4))[0]==0x152
  #Raw components reach FILD/FSTP, then Device8 SetMaterial(slot42).
  assert r(0x784969,6)==bytes.fromhex('ff91a8000000')
- print('Lighting owner witnesses: PASS exact SHA,17 spans,constant-white display/copy/resolve chain,EC ordinary profile and raw material API boundary; static state only')
+ print(f'Lighting owner witnesses: PASS exact SHA,{len(RANGES)} spans,ambient/specular stores,Basic normal+UV FVF152/stride36,constant-white chain and API boundary; static state only')
 if __name__=='__main__':verify(Path(sys.argv[1]))
