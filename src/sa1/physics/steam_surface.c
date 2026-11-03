@@ -1,3 +1,4 @@
+#include "pc2004_task_frame.h"
 #include "pc2004_ground_accel.h"
 #include "pc2004_air_attack.h"
 #include "steam_surface.h"
@@ -500,6 +501,44 @@ static int handle_surface_ball_state(SA1PlayerState *player,
     return 0;
 }
 
+/*492300 is a complete source velocity update at EACH invocation, including
+ * initialization. TRACK bypasses gravity/acceleration; other outcomes call
+ * the existing44C270+443F50 reconstruction once. Position is integrated later.*/
+static int homing_velocity(SA1PlayerState*player,const SA1Input*input,float camera_yaw,
+    SA1SurfaceFrame*frame,SA1SteamSurfaceDebug*dbg,const SA1PC2004HomingServices*h){
+    uint16_t raw_yaw;if(!h||!sa1_pc2004_task_yaw(frame,&raw_yaw))goto fail;
+    SurfaceSpeed speed=world_to_surface(frame,player->vel);
+    SA1PC2004AirAttack state={.action=14,.timer=player->pc2004_air_attack_timer,.age=player->pc2004_air_attack_age};
+    SA1PC2004HomingInput in={.list=h->list,
+        .player_task_origin=sa1_vec3_sub(player->pos,sa1_vec3_scale(frame->up,SA1_SUPPORT_OFFSET_CANDIDATE)),
+        .local_speed={speed.forward,speed.normal,-speed.side},.task_yaw=raw_yaw,.partner_id=h->partner_id,
+        .special_player=h->special_player,.resolve=h->resolve,.resolve_context=h->resolve_context,.math=h->math};
+    SA1PC2004HomingResult result;if(!sa1_pc2004_homing_step(&state,&in,&result))goto fail;
+    player->pc2004_homing_calls++;player->pc2004_air_attack_timer=result.next.timer;
+    if(result.mode==SA1_PC2004_HOMING_TRACK){
+        if(!sa1_pc2004_task_turn(frame,raw_yaw,result.task_yaw,&h->math))goto fail;
+        player->vel=result.world_velocity;player->pc2004_homing_target=result.selected_id;player->pc2004_homing_tracks++;
+    }else{
+        player->vel=surface_to_world(frame,(SurfaceSpeed){result.local_speed.forward,-result.local_speed.side,result.local_speed.normal});
+        surface_running(player,input,camera_yaw,frame,dbg);
+    }
+    return 1;
+fail:player->pc2004_homing_failed=true;return 0;
+}
+static int homing_initialize(SA1PlayerState*p,const SA1Input*input,float camera_yaw,
+    SA1SurfaceFrame*frame,SA1SteamSurfaceDebug*dbg,const SA1PC2004HomingServices*h){
+    if(!h||!h->list){p->pc2004_homing_failed=true;return 0;}
+    if(!h->list->count&&!h->partner_id){
+        SurfaceSpeed speed=world_to_surface(frame,p->vel);speed.forward=h->special_player?10.f:5.f;
+        p->vel=surface_to_world(frame,speed);p->pc2004_air_attack_timer=1;return 1;
+    }
+    if(!homing_velocity(p,input,camera_yaw,frame,dbg,h))return 0;
+    /*494B80's post-call nonzero-timer write is ALWAYS5, including special
+     * player. The10 branch applies only to the truly empty-list initializer.*/
+    if(p->pc2004_air_attack_timer!=0){SurfaceSpeed speed=world_to_surface(frame,p->vel);speed.forward=5.f;p->vel=surface_to_world(frame,speed);}
+    return 1;
+}
+
 void sa1_physics_step_steam_sonic_surface(
     SA1PlayerState *player,
     const SA1Input *input,
@@ -513,6 +552,8 @@ void sa1_physics_step_steam_sonic_surface(
     memset(dbg, 0, sizeof(*dbg));
     dbg->used_general_contact = 1;
     int just_jumped = 0;
+    player->pc2004_homing_calls=player->pc2004_homing_tracks=0;
+    player->pc2004_homing_failed=false;player->pc2004_homing_target=0;
     player->animation_input_active = sa1_sadx_filter_logical_analog(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;
@@ -537,14 +578,14 @@ void sa1_physics_step_steam_sonic_surface(
     int skip_attack_hold=0;
     if(!player->grounded&&player->pc2004_action_state_valid&&
        (player->pc2004_action_state==8||player->pc2004_action_state==14)){
-        /* The current native object set supplies no homing target list or
-         * player partner target. Do not advertise this as target pursuit. */
+        const SA1PC2004HomingServices*h=world->homing;
         SA1PC2004AirAttack current={player->pc2004_action_state,
             player->ball_form?0x500u:0u,
             player->animation_airborne_request_valid?player->animation_airborne_request:14,
             player->pc2004_air_attack_timer,player->pc2004_air_attack_age};
-        SA1PC2004AirAttackSelection selection=sa1_pc2004_air_attack_select_no_target(
-            current,input->jump_pressed,input->action_pressed,-1,0);
+        SA1PC2004AirAttackSelection selection=h?
+            sa1_pc2004_air_attack_select(current,input->jump_pressed,input->action_pressed,h->first_hit_category):
+            sa1_pc2004_air_attack_select_no_target(current,input->jump_pressed,input->action_pressed,-1,0);
         player->pc2004_action_state=selection.next.action;
         player->pc2004_air_attack_timer=selection.next.timer;
         player->pc2004_air_attack_age=selection.next.age;
@@ -555,9 +596,12 @@ void sa1_physics_step_steam_sonic_surface(
             SurfaceSpeed speed=world_to_surface(&frame,player->vel);speed.forward=selection.forward;
             player->vel=surface_to_world(&frame,speed);
         }
+        if(selection.entered&&h&&!homing_initialize(player,input,camera_yaw,&frame,dbg,h))return;
     }
     int source_air_attack=player->pc2004_action_state_valid&&player->pc2004_action_state==14;
-    if(source_air_attack){
+    if(source_air_attack&&world->homing){
+        if(!homing_velocity(player,input,camera_yaw,&frame,dbg,world->homing))return;
+    }else if(source_air_attack){
         SurfaceSpeed speed=world_to_surface(&frame,player->vel);
         SA1PC2004LocalVector local={speed.forward,speed.normal,speed.side};
         SA1PC2004AirAttack clock={.action=14,.timer=player->pc2004_air_attack_timer};

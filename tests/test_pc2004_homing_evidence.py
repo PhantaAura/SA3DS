@@ -14,16 +14,21 @@ RANGES={
  (0x4b83f0,0x76):'d62b3950d9a761f1f4b013b8eea1ec0466b857fe8026955b462aeb90c40c8af5',
  (0x492300,0x410):'f0dfac60151d1eebc1fe5834ec1fd8402e53b187b289164b7a8dc533c8582c71',
 }
+RANGES.update({(4803456, 224): 'b080d105ff0a6636e0507f839feccc41890e4ec7720e49275fe89bcd71faffdb', (4451472, 144): 'b88da2908b69d443103cfe9fa2e4ac41b78beddced10be6eda78847019c29116', (4951680, 258): '390a452fed0cf1226bc1b60690a8057835212d164aeb6d08cd12e864d10efef2'})
+
+RANGES[(0x784e20,0xc0)]='af58b36760305cec26094ae644984fbe6dc6e9bd90eb316dfd53aa86689c12af'
+
 def verify(path):
  r=verified_reader(path)
  for (a,n),digest in RANGES.items():assert hashlib.sha256(r(a,n)).hexdigest()==digest,hex(a)
+ assert struct.unpack('<d',r(0x7dcce8,8))[0]==-0.15915497620314795
  assert r(0x450435,4)==bytes.fromhex('c646020b')
  assert r(0x4383bf,3)==bytes.fromhex('0fb7c0')  #unsigned absolute delta includes32768
  assert struct.unpack('<d',r(0x7dccc8,8))[0]==0.15915497620314795
  assert struct.unpack('<d',r(0x7dccd0,8))[0]==65536.
  for address,value in [(0x7dcb64,10000.),(0x7dd568,.1),(0x7dd578,.7)]:
   assert r(address,4)==struct.pack('<f',value),hex(address)
- print('PC2004 homing evidence: PASS collection/range/order/ring-ID/pursuit/turn/RNG ranges and source bearing constants; static only')
+ print('PC2004 homing evidence: PASS collection/range/order/ring-ID/pursuit/turn/RNG, initializer, physical Rz-Rx-Ry rotation and principal-X normal-angle ranges/constants; static only')
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('usage: test_pc2004_homing_evidence.py OWNER_SONIC_EXE')
  verify(Path(sys.argv[1]))

@@ -1,3 +1,27 @@
+# WCA active checkpoint — native ordinary homing
+
+WCA39 registers original Saru CCL targets, connects optional world services and
+source494B80 initializer plus SAME-tick492300 movement. Native task-Y/side-axis
+conversion uses the canonical43EC90 matrix, with principal-X/pole limitations
+explicit. Prior cached CCL category drives action14 cancel. Empty services match
+legacy empty-target movement. See docs/PC2004_HOMING_NATIVE.md.
+
+Required host gate, extended exact-owner witnesses and staged native build PASS.
+Final412344B/12b1d541 itself ran the Azahar2126 Old3DS/Vulkan original row26 H
+fixture:180ticks,entry2calls/2TRACK,target3,timer0;15tracks,score10,bounce1,death1.
+Initial326c887d fixture FAILED because its second press was below the target;
+source upward clamp/decay worked. Only normal jump timing changed, no physics
+change to force a pass. Private probe marker removed; owner data outside Git.
+Unchanged pose/import checks were not repeated. No retail/hardware claim.
+
+Next: original player hurt/ring loss/invulnerability and bomb/death effect
+execution, plus remaining controller/terrain/frame parity. Full CCL/SET/RNG,
+rotation history/loops/partner/power-ups, audio/effects, monitors/checkpoints,
+whale/events and natural complete course remain open. Full goal/physics1to1
+remain incomplete. Don't repeat existing cold REA/failed Wine Frida attempts.
+
+---
+
 # WCA active checkpoint — native Sonic/enemy attack contacts
 
 WCA38 connects previous-pass player/NPC sphere CCL to Saru shared damage,

@@ -50,4 +50,13 @@ int sa1_pc2004_homing_collect(SA1PC2004HomingList *list,int player_index,
 int sa1_pc2004_homing_step(const SA1PC2004AirAttack *state,
     const SA1PC2004HomingInput *input,SA1PC2004HomingResult *out);
 unsigned sa1_pc2004_homing_angle_distance(uint16_t from,uint16_t to);
+/*World-owned live services. Candidate order/distances belong to the previous
+ * completed CCL pass; resolver returns CURRENT task/first-shape data. */
+typedef struct SA1PC2004HomingServices {
+    const SA1PC2004HomingList *list;
+    SA1PC2004HomingResolve resolve;void *resolve_context;
+    SA1PC2004HomingMath math;
+    uint32_t partner_id;
+    int special_player,first_hit_category;
+} SA1PC2004HomingServices;
 #endif

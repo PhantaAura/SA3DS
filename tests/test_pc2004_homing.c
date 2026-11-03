@@ -62,5 +62,5 @@ int main(void){
     in.math.random15=0;assert(!sa1_pc2004_homing_step(&state,&in,&r));
     list.count=0;state.timer=0;
     assert(sa1_pc2004_homing_step(&state,&in,&r)&&r.mode==SA1_PC2004_HOMING_DECAY_ACCEL&&r.next.timer==1);
-    puts("PC2004 homing: PASS task-range/list order/ring exclusion/cap, cached distance/current centers, angle boundary/turn cap, upward entry rule, partner tie, injected source RNG; native targets not connected");
+    puts("PC2004 homing: PASS task-range/list order/ring exclusion/cap, cached distance/current centers, angle boundary/turn cap, upward entry rule, partner tie, injected source RNG; kernel-only checks; controller/native verification is separate");
 }

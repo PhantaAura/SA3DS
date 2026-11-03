@@ -284,6 +284,8 @@ void sa1_physics_step_steam_sonic_flat(
         world->query_surface(world->context, player->pos.x, player->pos.z) :
         (SA1Surface){0};
     int just_jumped = 0;
+    player->pc2004_homing_calls=player->pc2004_homing_tracks=0;
+    player->pc2004_homing_failed=false;player->pc2004_homing_target=0;
     player->animation_input_active = sa1_sadx_filter_logical_analog(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;

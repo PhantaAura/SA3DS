@@ -30,6 +30,7 @@ typedef SA1Contact (*SA1ContactQuery)(void *context, SA1Vec3 position,
                                       SA1Vec3 probe_direction,
                                       float max_distance);
 
+struct SA1PC2004HomingServices;
 typedef struct {
     SA1SurfaceQuery query_surface;
     SA1ContactQuery query_contact;
@@ -40,6 +41,7 @@ typedef struct {
     float reset_min_y;
     float reset_min_z;
     float reset_max_z;
+    const struct SA1PC2004HomingServices *homing; /*NULL preserves empty-target specialization*/
 } SA1PhysicsWorld;
 
 SA1Vec3 sa1_surface_normal(float grad_x, float grad_z);

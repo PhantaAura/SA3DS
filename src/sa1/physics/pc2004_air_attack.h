@@ -4,6 +4,10 @@
 #include "pc2004_motion.h"
 typedef struct {uint8_t action;uint16_t status,animation;int16_t timer,age;} SA1PC2004AirAttack;
 typedef struct {SA1PC2004AirAttack next;int entered,write_forward,skip_jump_hold;float forward;} SA1PC2004AirAttackSelection;
+/* Source action selector before494B80. Entered action14 starts timer-1/age0;
+ * caller must run real initializer and same-tick movement, in that order. */
+SA1PC2004AirAttackSelection sa1_pc2004_air_attack_select(
+    SA1PC2004AirAttack current,int jump_pressed,int action_pressed,int first_hit_category);
 /* Ordinary empty-target-list/441BF0==-1 specialization of action8->14.
  * Source CCL first other category is supplied separately (-1 means none).
  * special_player is player-work flag8000, not task status8000.

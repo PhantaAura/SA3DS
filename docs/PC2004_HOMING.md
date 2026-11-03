@@ -104,3 +104,12 @@ native build passed. The unreferenced module is removed by linking; the native
 `c772cbb8634e1cc9bc0dcf4f76c3198ee9df2ed06f7ab89b80bf7265200669e3`.
 No duplicate emulator run or unchanged pose oracle was needed. No native target
 pursuit, retail trace, full-course or hardware success is claimed.
+
+
+## WCA39 native connection
+
+The historical WCA29 native-target absence above is superseded by WCA39's
+real E SARU CCL registration, canonical task frame bridge, source initialization
+and same-tick movement. See PC2004_HOMING_NATIVE.md for exact artifact, successful
+bounded pursuit/contact fixture, initial upward-target fixture failure and
+remaining retail/full-controller/frame/task/effects/hardware gaps.

@@ -35,6 +35,10 @@ typedef struct {
      * status/player-work flags are not reconstructed by this snapshot. */
     uint8_t pc2004_ccl_action;
     bool pc2004_ccl_ball,pc2004_ccl_state_valid;
+    /*Native pursuit diagnostics, cleared each public movement tick.*/
+    uint8_t pc2004_homing_calls,pc2004_homing_tracks;
+    bool pc2004_homing_failed;
+    uint32_t pc2004_homing_target;
     uint32_t jump_ticks;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
     int16_t pc2004_air_attack_timer,pc2004_air_attack_age;
