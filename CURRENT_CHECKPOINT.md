@@ -1,3 +1,21 @@
+# WCA51 — native original respawn protection
+
+Original441F80 list0 task now runs after valid-record reload:120 protected
+world updates, clearing flags6 bit8000 on pre-incremented counter121. Fade-in
+ticks count; this is separate from hurt-timer blinking. Required host gate,
+exact-owner35-span verifier, native build and exact-artifact bounded Azahar
+replay PASS. Artifact457164B/6f8c03b77722588ac9c5c24c392bf15176890af4c33ba878229a4157f0e951e8.
+Native sourceFrames395(counter1,8000) through515(counter121,0000), with
+checkpoint save/restore/clock/SET/lives/control assertions all passing.
+See docs/PC2004_RESPAWN_PROTECTION.md for full evidence/limits.
+
+Next: checkpoint sound/effects/original time glyph presentation, other death
+causes/game over, original contact-history phases/reset semantics; then natural
+course progression. Full CP1–CP9/retail trajectories/Old3DS acceptance remain open.
+Temporary private fixture flags removed after the passing replay.
+
+---
+
 # WCA50 — correct original checkpoint child-task interpretation
 
 Exact owner callbacks are inert RET, not missing dynamic-land collision. The

@@ -5,6 +5,7 @@ import hashlib,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.verify_pc2004_ec_route import verified_reader
 RANGES={
+ (0x441f80,80):'468145510c8e3e7a774b95481691cb7b9bc1dad4986ce1ad2c475b0d016623fd',
  (0x40b940,132):'852bad05de46899efa4d32e5686ddbc85c857041b79c6cb4257e903db96765b3',
  (0x51f680,1):'ae3f4619b0413d70d3004b9131c3752153074e45725be13b9a148978895e359e',
  (0x4383a0,16):'3d3c254d21549acf3d9c4c3d574725f870d33d6caf71068571a33ef8c2853946',
@@ -62,7 +63,7 @@ def verify(exe):
  assert struct.unpack('<f',r(0x7dcb34,4))[0]==10.
  assert struct.unpack('<d',r(0x7dccd0,8))[0]==65536.
  assert struct.unpack('<d',r(0x7df1a0,8))[0]==1./360.
- print('Restart record owner witnesses: PASS exact SHA,34 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and inert child callback/constructor,task/shape dispatchers; native activation/visuals remain separate')
+ print('Restart record owner witnesses: PASS exact SHA,35 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and inert child callback/constructor,task/shape dispatchers; native activation/visuals remain separate')
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('usage: verify_pc2004_restart_record.py OWNER_SONIC_EXE')
  verify(Path(sys.argv[1]))

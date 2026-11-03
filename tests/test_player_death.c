@@ -9,6 +9,25 @@
 static SA1Surface floor_surface(void*c,float x,float z){(void)c;(void)x;(void)z;return (SA1Surface){.ground_y=0,.normal={0,1,0},.valid=true};}
 static uint16_t random15(void*c){(void)c;return 0;}
 int main(void){
+    SA3DSPlayerProtectionTask protection={.active=1};uint16_t flags=0x4003;uint8_t destroy;
+    SA3DSPlayerDamageWorld protection_world={0};
+    for(unsigned tick=1;tick<=121;tick++){
+        assert(sa3ds_player_protection_tick(&protection,&flags,&destroy));
+        assert(protection.counter==tick&&destroy==(tick==121));
+        assert(flags==(tick<=120?0xc003:0x4003));
+        SA3DSPlayerDamageState immune={.status=4,.flags6=(uint16_t)(flags&~0x4000u),.timer=99};
+        SA3DSPlayerDamageResult result;
+        assert(sa3ds_player_damage_tick(&immune,&protection_world,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE,&result));
+        if(tick<=120)assert(!result.checked&&!result.accepted&&immune.timer==0&&(immune.status&0x8000));
+        else assert(immune.timer==98); /*normal hurt-timer path restored*/
+    }
+    assert(sa3ds_player_protection_tick(&protection,&flags,&destroy)&&!destroy&&flags==0x4003);
+    protection=(SA3DSPlayerProtectionTask){.counter=119,.active=1};
+    assert(sa3ds_player_protection_tick(&protection,NULL,&destroy)&&!destroy);
+    assert(sa3ds_player_protection_tick(&protection,NULL,&destroy)&&destroy);
+    protection=(SA3DSPlayerProtectionTask){.counter=65535,.active=1};flags=3;
+    assert(sa3ds_player_protection_tick(&protection,&flags,&destroy)&&!destroy&&protection.counter==0&&flags==0x8003);
+
     SA3DSPlayerDeathTask task={.active=1};SA3DSPlayerDeathTaskResult death;
     for(unsigned n=0;n<121;n++){assert(sa3ds_player_death_task_tick(&task,0,1,&death));assert(!death.stage_request&&!death.destroy);}
     assert(task.counter==121);assert(sa3ds_player_death_task_tick(&task,1,1,&death));

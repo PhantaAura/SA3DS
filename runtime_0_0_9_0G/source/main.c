@@ -177,6 +177,9 @@ static SA3DSPlayerDamageResult g_player_damage_requests;
 static int g_player_damage_blocked;
 typedef struct SA3DSNativeDeath{struct SA3DSNativeDeath*next;SA3DSPlayerDeathTask task;} SA3DSNativeDeath;
 static SA3DSNativeDeath*g_death_head;
+typedef struct SA3DSNativeProtection{struct SA3DSNativeProtection*next;SA3DSPlayerProtectionTask task;} SA3DSNativeProtection;
+static SA3DSNativeProtection*g_protection_head;
+static unsigned g_protection_created,g_protection_finished;
 static SA3DSStageRestart g_stage_restart;
 static SA3DSCourseClock g_course_clock;
 static SA3DSRestartRecord g_restart_record;
@@ -208,6 +211,7 @@ static unsigned g_death_created,g_death_alloc_failed,g_death_requests,g_death_tr
 static int g_death_probe,g_death_probe_pause_fade;
 static unsigned g_death_probe_ticks,g_death_probe_poses,g_death_probe_clamps,g_death_probe_control;
 static void clear_native_death(void);
+static void clear_native_protection(void);
 static unsigned g_saru_frame_actors;
 static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
@@ -412,7 +416,7 @@ static void trace_toggle(void) {
 }
 
 static void reset_selected_zone(void) {
-    clear_native_death();g_stage_restart.state=15;g_stage_restart.request=0;
+    clear_native_death();clear_native_protection();g_stage_restart.state=15;g_stage_restart.request=0;
     g_stage_restart.fade_alpha=g_stage_restart.fade_active=g_stage_restart.fade_delay=0;
     g_player_damage_blocked=0;memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
     sa3ds_wz_tick_reset(&g_tick_clock);
@@ -1363,8 +1367,8 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_tas
          * body overlap. Original Saru task ID is0; SET kind29 is not that ID.*/
         if(sa1_pc2004_homing_collect(&g_homing_list,0,0,s->ccl.outer_flags,0,s->ccl.hits.actor_id,
             g_player_enemy_ccl.task_position,s->ccl.task_position)<0)return 0;
-        /* Ordinary modeled actions have no player-work invincibility flags;
-         * source power-ups/actions outside this controller remain pending. */
+        /*Player work flags6 includes the source441F80 respawn protection bit;
+         * other source power-ups/actions remain pending.*/
         for(unsigned shape=0;shape<2;shape++){
             SA3DSCCLContactResult contact;
             if(!sa3ds_ccl_sphere_contact(&g_player_enemy_ccl,&g_player_enemy_shapes[shape],shape,&s->ccl,&s->shape,0,&contact))return 0;
@@ -1641,7 +1645,7 @@ static void begin_checkpoint_probe(void){
     g_player.ground_normal=ground.normal;g_player.surface_id=ground.surface_id;g_player.grounded=true;g_player.surface_frame_active=false;
     g_player.yaw=atan2f(g_checkpoint_probe_direction.x,g_checkpoint_probe_direction.z);
     reset_springs();reset_checkpoints(0);g_checkpoint_contacts=g_checkpoint_draws=0;
-    g_checkpoint_activations=0;g_checkpoint_probe=1;g_checkpoint_probe_row=row;g_checkpoint_probe_ticks=g_checkpoint_probe_age=g_checkpoint_probe_control=0;
+    g_checkpoint_activations=0;g_protection_created=g_protection_finished=0;g_checkpoint_probe=1;g_checkpoint_probe_row=row;g_checkpoint_probe_ticks=g_checkpoint_probe_age=g_checkpoint_probe_control=0;
     g_checkpoint_probe_injected=0;g_checkpoint_probe_reload_error=-1;g_camera.yaw=0;
     sa3ds_wz_tick_reset(&g_tick_clock);g_last_frame_ms=osGetTime();
     boot_log("CHECKPOINT_PROBE","BEGIN: original placement approach uses ordinary input; zero-ring damage report will be injected after real activation; no enemy-cause/course parity claim");return;
@@ -1737,6 +1741,27 @@ static int draw_scatter(void){
     return 1;
 }
 
+static void clear_native_protection(void){
+    while(g_protection_head){SA3DSNativeProtection*n=g_protection_head;g_protection_head=n->next;free(n);}
+    g_player.pc2004_player_flags6&=(uint16_t)~0x8000u;
+}
+static int spawn_native_protection(void){
+    SA3DSNativeProtection*n=calloc(1,sizeof(*n));
+    if(!n){boot_log("RESPAWN_PROTECTION","Source-style task allocation failed");return 1;}
+    n->task.active=1;n->next=g_protection_head;g_protection_head=n;g_protection_created++;return 1;
+}
+static int tick_native_protection(void){
+    for(SA3DSNativeProtection**link=&g_protection_head;*link;){
+        SA3DSNativeProtection*n=*link;uint8_t destroy;
+        if(!sa3ds_player_protection_tick(&n->task,&g_player.pc2004_player_flags6,&destroy))return 0;
+        if(n->task.counter==1||destroy){
+            char note[128];snprintf(note,sizeof(note),"sourceFrame=%lu counter=%u flags6=%04x destroy=%u",
+                (unsigned long)g_source_frame,n->task.counter,g_player.pc2004_player_flags6,destroy);boot_log("RESPAWN_PROTECTION",note);
+        }
+        if(destroy){*link=n->next;free(n);g_protection_finished++;continue;}link=&n->next;
+    }
+    return 1;
+}
 static void clear_native_death(void){
     while(g_death_head){SA3DSNativeDeath*n=g_death_head;g_death_head=n->next;free(n);}
 }
@@ -1778,6 +1803,7 @@ static int native_stage_reload(void){
         memcpy(g_checkpoint_probe_reload_clock,g_course_clock.time,3);
     }
     g_rings.rings=0;reset_checkpoints(1);
+    if(saved&&!spawn_native_protection())return 0;
     if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
     reset_springs();clear_native_death();g_player_damage_blocked=0;
     memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
@@ -1794,7 +1820,7 @@ static int native_stage_reload(void){
 static int native_stage_begin(SA3DSStageRestartResult*out){
     uint8_t previous=g_stage_restart.state;
     if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
-    if(out->clear_world){clear_native_death();reset_springs();reset_checkpoints(1);}
+    if(out->clear_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);}
     if(out->clear_rings)g_rings.rings=0;
     if(out->reload_stage&&!native_stage_reload())return 0;
     if(out->game_over_pending){boot_log("STAGE_FLOW","PENDING: source game-over screen/menu executor");g_paused=1;}
@@ -2046,7 +2072,7 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     destroy_checkpoints();
-    clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
+    clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
     destroy_saru();
@@ -2244,6 +2270,7 @@ int main(void) {
                     if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
                     continue;
                 }
+                if(!tick_native_protection()){fail_screen("Source respawn protection task failed");break;}
                 if(!tick_native_death()){fail_screen("Source death task failed");break;}
             }
             uint32_t previous_extra_lives=g_rings.extra_lives;
@@ -2517,7 +2544,7 @@ int main(void) {
                 if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
                 if(previous_stage!=g_stage_restart.state){char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d",
                     (unsigned long)g_source_frame,previous_stage,g_stage_restart.state,g_stage_restart.lives);boot_log("STAGE_FLOW",note);}
-                if(g_checkpoint_probe&&(g_checkpoint_probe_control>=12||g_checkpoint_probe_ticks>=900)){
+                if(g_checkpoint_probe&&((g_checkpoint_probe_control>=12&&g_protection_finished)||g_checkpoint_probe_ticks>=900)){
                     unsigned persisted=0;for(unsigned n=0;n<g_checkpoint_assets.placements.count;n++){
                         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,n,&p);
                         if(p.act==g_ec_act_index&&p.source_row==g_checkpoint_probe_row&&g_checkpoint_states[n].task.action==3&&
@@ -2528,7 +2555,7 @@ int main(void) {
                     float away=sa1_vec3_length(sa1_vec3_sub(g_checkpoint_probe_death_position,g_checkpoint_probe_record.task_position));
                     int pass=g_checkpoint_activations==1&&g_checkpoint_saved_row==g_checkpoint_probe_row&&g_checkpoint_contacts&&
                         g_checkpoint_draws&&g_checkpoint_probe_reload_error>=0&&g_checkpoint_probe_reload_error<.0001f&&
-                        clock_ok&&away>5&&persisted&&g_death_created==1&&g_death_requests==1&&g_death_trigger_counter==122&&g_stage_restart.lives==3&&g_stage_restart.restart_count==1&&g_checkpoint_probe_control>=12;
+                        clock_ok&&away>5&&persisted&&g_death_created==1&&g_death_requests==1&&g_death_trigger_counter==122&&g_stage_restart.lives==3&&g_stage_restart.restart_count==1&&g_checkpoint_probe_control>=12&&g_protection_created==1&&g_protection_finished==1&&!(g_player.pc2004_player_flags6&0x8000);
                     char note[300];snprintf(note,sizeof(note),"%s ticks=%u row=%lu saves=%u contacts=%u draws=%u reloadError=%.7f clock=%d away=%.3f persisted=%u lives=%d restarts=%lu control=%u deathInjected=%d deathCounter=%u",
                         pass?"PASS":"FAIL",g_checkpoint_probe_ticks,(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations,
                         g_checkpoint_contacts,g_checkpoint_draws,g_checkpoint_probe_reload_error,clock_ok,away,persisted,
