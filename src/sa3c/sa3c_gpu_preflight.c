@@ -15,7 +15,10 @@ static int gpu_dimension_ok(uint16_t v) {
     return v >= 8 && v <= 1024 && (v & (uint16_t)(v - 1)) == 0;
 }
 uint32_t sa3ds_visual_material_rgba(uint32_t argb) {
-    return ((argb & 0x00FFFFFFu) << 8) | (argb >> 24);
+    /* PICA TEV constant register: R at bit0, G8, B16, A24.
+     * Texture pixel upload has a separate packing contract. */
+    return (argb & 0xFF00FF00u) | ((argb >> 16) & 0xFFu) |
+           ((argb & 0xFFu) << 16);
 }
 
 SA3DSVisualResult sa3ds_visual_preflight(

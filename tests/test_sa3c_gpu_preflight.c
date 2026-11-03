@@ -28,10 +28,21 @@ static void wr32(uint8_t *p, uint32_t v) {
 }
 
 int main(int argc, char **argv) {
-    assert(sa3ds_visual_material_rgba(0xFF000000u) == 0x000000FFu);
-    assert(sa3ds_visual_material_rgba(0x80336699u) == 0x33669980u);
-    assert(sa3ds_visual_material_rgba(0x00FFFFFFu) == 0xFFFFFF00u);
-    assert(sa3ds_visual_material_rgba(0xFFB2B2B2u) == 0xB2B2B2FFu);
+    assert(sa3ds_visual_material_rgba(0xFF000000u) == 0xFF000000u);
+    assert(sa3ds_visual_material_rgba(0x80336699u) == 0x80996633u);
+    assert(sa3ds_visual_material_rgba(0x00FFFFFFu) == 0x00FFFFFFu);
+    assert(sa3ds_visual_material_rgba(0xFFB2B2B2u) == 0xFFB2B2B2u);
+    assert(sa3ds_visual_material_rgba(0xFFFF0000u)==0xFF0000FFu);
+    assert(sa3ds_visual_material_rgba(0xFF0000FFu)==0xFFFF0000u);
+    /* Decode as the actual TEV register does, including independent alpha. */
+    for(uint32_t value=0;value<256;value++){
+        uint32_t source=(value<<24)|((255-value)<<16)|(value<<8)|37u;
+        uint32_t reg=sa3ds_visual_material_rgba(source);
+        assert((reg&255u)==255u-value);
+        assert(((reg>>8)&255u)==value);
+        assert(((reg>>16)&255u)==37u);
+        assert((reg>>24)==value);
+    }
     if (argc != 3) {
         fprintf(stderr, "usage: %s OWNER_GENERATED.sa3c OWNER_GENERATED.sa3t\n", argv[0]);
         return 2;

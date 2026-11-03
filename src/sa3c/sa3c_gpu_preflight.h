@@ -64,7 +64,7 @@ SA3DSGeometryResult sa3ds_geometry_preflight(
 const char *sa3ds_geometry_result_name(SA3DSGeometryResult result);
 
 /* NJS_MATERIAL diffuse is packed AARRGGBB in the owner-derived SA3C.
- * C3D_TexEnvColor uses the existing RRGGBBAA packing. Do not turn valid
+ * C3D_TexEnvColor consumes AABBGGRR (R in the low byte). Do not turn valid
  * black diffuse into white or discard the source material alpha. */
 uint32_t sa3ds_visual_material_rgba(uint32_t diffuse_argb);
 

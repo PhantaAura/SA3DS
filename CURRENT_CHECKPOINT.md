@@ -1,3 +1,20 @@
+# WCA active checkpoint — corrected native material channels
+
+WCA45 fixes shared Sonic/EC TEV material packing from incorrect RRGGBBAA to
+PICA AABBGGRR, preserving original AARRGGBB source channels/alpha. Baseline CPU
+texture packing remains unchanged. See docs/PICA_MATERIAL_COLOR.md.
+Required cumulative host gate and staged native build PASS. Exact440076B/
+1d8b24d8 artifact booted Azahar2126 Old3DS/Vulkan; sand/white structures now lack
+previous pink cast. Sonic lighting and matched running/walking visuals remain
+incomplete; no full retail raster/hardware parity claim.
+WCA44 source1434947 is pushed/Desktop synced with a local preview; its collision
+revalidation saving is measured on host, physical movement-freeze fix pending.
+Full WCA, PHYSICS_1TO1 and physical acceptance remain incomplete. Continue stage
+objects/checkpoints/events/audio and remaining controller/camera/rendering gates.
+Avoid redundant unchanged pose matrices, cold REA and failed CUA arrow holds.
+
+---
+
 # WCA active checkpoint — resident collision validation reuse
 
 WCA44 removes full package CRC/array revalidation from normal collision-region
