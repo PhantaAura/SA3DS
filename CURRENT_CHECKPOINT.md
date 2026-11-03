@@ -1,3 +1,21 @@
+# WCA active checkpoint — resident collision validation reuse
+
+WCA44 removes full package CRC/array revalidation from normal collision-region
+recentering by retaining a borrowed immutable validated archive per live region.
+Fresh packages still validate; no global address cache, geometry/mask/physics
+change or extra transformed-world cache. See docs/EC_RESIDENCY_STALLS.md.
+Required host gate and staged native build PASS. Five owner regions have identical
+triangles/masks/grid; host fresh13.6–14.6ms versus cached0.21–1.04ms.
+Final440076B/b8e87b49 booted in Azahar Old3DS/Vulkan. CUA movement did not register,
+so native boundary/hardware freeze improvement remains UNVERIFIED. Region logs
+now report buildMs. Per-event SD logging/other costs still need evidence.
+Full WCA and physical Old3DS acceptance remain incomplete. WCA43 death/restart
+source checkpoint73fe868 is pushed. Next audit TEV material color packing, then
+continue all open full-course/controller/objects/events/audio gates. Do not
+repeat unchanged pose matrices, cold REA or failed CUA arrow holds.
+
+---
+
 # WCA active checkpoint — native zero-ring death and act-start respawn
 
 WCA43 connects command50/action86, original116/118 death clips, source122-update

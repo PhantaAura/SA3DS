@@ -26,6 +26,17 @@ int main(int argc,char **argv){
     assert(sa3ds_ec_residency_needs_recenter(&stage,(SA1Vec3){8192+257,0,-16384}));
     assert(sa3ds_ec_residency_recenter(&stage,bytes,(size_t)n,8320,-16256,&p));
     assert(stage.world.context==&stage);
+    /* A cached recenter must retain exactly the freshly validated geometry,
+     * contact edge masks, grid ordering and source identities. */
+    SA3DSECCollision fresh;
+    assert(stage.archive.package==bytes&&stage.archive.package_size==(size_t)n);
+    assert(sa3ds_ec_collision_open_region(&fresh,bytes,(size_t)n,1,8320,-16256));
+    assert(stage.triangle_count==fresh.triangle_count);
+    assert(stage.reference_count==fresh.reference_count);
+    assert(!memcmp(stage.triangles,fresh.triangles,stage.triangle_count*sizeof(*stage.triangles)));
+    assert(!memcmp(stage.cells,fresh.cells,sizeof(stage.cells)));
+    assert(!memcmp(stage.references,fresh.references,stage.reference_count*sizeof(*stage.references)));
+    sa3ds_ec_collision_destroy(&fresh);
     assert(stage.world.reset_min_x==-100000&&stage.world.reset_max_z==100000);
     assert(!memcmp(&reset,&stage.world.reset_position,sizeof reset));
     int32_t surface=p.surface_id;p.surface_id=before.surface_id;
@@ -36,7 +47,17 @@ int main(int argc,char **argv){
     assert(!sa3ds_ec_residency_recenter(&stage,bytes,(size_t)n,NAN,0,&p));
     assert(stage.triangles==triangles&&!memcmp(&p,&before,sizeof p));
     assert(stage.world.query_surface(stage.world.context,p.pos.x,p.pos.z).valid);
+    /* A newly supplied package must still pass integrity validation and a
+     * rejection must not discard the live region or player state. */
+    unsigned char*bad=malloc((size_t)n);assert(bad);memcpy(bad,bytes,(size_t)n);
+    bad[n-1]^=1;
+    assert(!sa3ds_ec_residency_recenter(&stage,bad,(size_t)n,8320,-16256,&p));
+    assert(stage.triangles==triangles&&!memcmp(&p,&before,sizeof p));
+    SA3DSECCollisionArchive rejected;
+    assert(!sa3ds_ec_collision_archive_open(&rejected,bad,(size_t)n));
+    assert(!rejected.package&&!rejected.collision);
+    free(bad);
     sa3ds_ec_collision_destroy(&stage);free(bytes);
-    puts("Emerald Coast residency: PASS (source start bridge, moving region, stable context/source identity/state, atomic rejection)");
+    puts("Emerald Coast residency: PASS (source start bridge, moving region, cached/fresh geometry and masks, fresh-package integrity, stable context/source identity/state, atomic rejection)");
     return 0;
 }

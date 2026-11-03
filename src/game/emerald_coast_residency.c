@@ -10,7 +10,12 @@ int sa3ds_ec_residency_recenter(SA3DSECCollision*s,const void*data,size_t size,
     float x,float z,SA1PlayerState*p){
     if(!s||!p)return 0;
     SA3DSECCollision next;
-    if(!sa3ds_ec_collision_open_region(&next,data,size,s->act_index,x,z))return 0;
+    /* The native loader owns these immutable bytes for the whole session.
+     * A different package still takes the full untrusted validation path. */
+    int loaded=s->archive.package==data&&s->archive.package_size==size?
+        sa3ds_ec_collision_open_archive_region(&next,&s->archive,s->act_index,x,z):
+        sa3ds_ec_collision_open_region(&next,data,size,s->act_index,x,z);
+    if(!loaded)return 0;
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;

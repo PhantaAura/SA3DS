@@ -102,11 +102,13 @@ int sa3ds_ec_collision_open_region(SA3DSECCollision*s,const void*data,size_t siz
     uint32_t act_index,float center_x,float center_z){
     if(!s)return 0;
     memset(s,0,sizeof(*s));
-    float min_x=center_x+GRID_MIN,max_x=center_x+GRID_MAX;
-    float min_z=center_z+GRID_MIN,max_z=center_z+GRID_MAX;
-    if(!data||!isfinite(center_x)||!isfinite(center_z)||
-       !isfinite(min_x)||!isfinite(max_x)||!isfinite(min_z)||!isfinite(max_z)||
-       !(min_x<max_x)||!(min_z<max_z))return 0;
+    SA3DSECCollisionArchive archive;
+    if(!sa3ds_ec_collision_archive_open(&archive,data,size))return 0;
+    return sa3ds_ec_collision_open_archive_region(s,&archive,act_index,center_x,center_z);
+}
+int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive*out,const void*data,size_t size){
+    if(!out)return 0;
+    memset(out,0,sizeof(*out));
     SA3DSPak pak;SA3DSPakChunk chunk;
     if(sa3dspak_open(&pak,data,size)!=SA3DSPAK_OK||
        sa3dspak_find(&pak,"COLLISION",&chunk)!=SA3DSPAK_OK||chunk.size<64)return 0;
@@ -119,13 +121,10 @@ int sa3ds_ec_collision_open_region(SA3DSECCollision*s,const void*data,size_t siz
        !span(io,ni,80,chunk.size)||!span(vo,nv,12,chunk.size)||!span(xo,nx,2,chunk.size)||
        ao<64||ao+(uint64_t)na*32>mo||mo+(uint64_t)nm*32>io||
        io+(uint64_t)ni*80>vo||vo+(uint64_t)nv*12>xo||xo+(uint64_t)nx*2!=chunk.size)return 0;
-    uint32_t first=0,count=0;
     for(uint32_t i=0;i<na;i++){
         const uint8_t*a=b+ao+(size_t)i*32;
         if(r32(a+4)>ni||r32(a+8)>ni-r32(a+4))return 0;
-        if(r32(a)==act_index){if(count)return 0;first=r32(a+4);count=r32(a+8);}
     }
-    if(!count)return 0;
     for(uint32_t i=0;i<nv;i++)if(!finite3(point(b+vo+(size_t)i*12)))return 0;
     for(uint32_t i=0;i<nx;i++)if(r16(b+xo+(size_t)i*2)>=nv)return 0;
     for(uint32_t i=0;i<nm;i++){
@@ -137,6 +136,31 @@ int sa3ds_ec_collision_open_region(SA3DSECCollision*s,const void*data,size_t siz
         if(r32(r)>=nm||!finite3(point(r+16))||!isfinite(rf(r+28))||rf(r+28)<0||
            !finite3(point(r+32))||!finite3(point(r+44))||!finite3(point(r+56)))return 0;
     }
+    *out=(SA3DSECCollisionArchive){data,size,b,na,nm,ni,nv,nx,ao,mo,io,vo,xo};
+    return 1;
+}
+int sa3ds_ec_collision_open_archive_region(SA3DSECCollision*s,
+    const SA3DSECCollisionArchive*archive,uint32_t act_index,float center_x,float center_z){
+    if(!s)return 0;
+    /* Permit callers to rebuild from their current stage's borrowed view. */
+    SA3DSECCollisionArchive source={0};if(archive)source=*archive;
+    memset(s,0,sizeof(*s));
+    float min_x=center_x+GRID_MIN,max_x=center_x+GRID_MAX;
+    float min_z=center_z+GRID_MIN,max_z=center_z+GRID_MAX;
+    if(!source.package||!source.collision||!isfinite(center_x)||!isfinite(center_z)||
+       !isfinite(min_x)||!isfinite(max_x)||!isfinite(min_z)||!isfinite(max_z)||
+       !(min_x<max_x)||!(min_z<max_z))return 0;
+    const uint8_t*b=source.collision;
+    uint32_t na=source.act_count,ni=source.instance_count,mo=source.model_offset,io=source.instance_offset;
+    uint32_t ao=source.act_offset,vo=source.vertex_offset,xo=source.index_offset;
+    uint32_t first=0,count=0;
+    for(uint32_t i=0;i<na;i++){
+        const uint8_t*a=b+ao+(size_t)i*32;
+        if(r32(a+4)>ni||r32(a+8)>ni-r32(a+4))return 0;
+        if(r32(a)==act_index){if(count)return 0;first=r32(a+4);count=r32(a+8);}
+    }
+    if(!count)return 0;
+    s->archive=source;
     s->act_index=act_index;s->center_x=center_x;s->center_z=center_z;
     s->min_x=min_x;s->max_x=max_x;s->min_z=min_z;s->max_z=max_z;
     s->triangles=calloc(MAX_TRIANGLES,sizeof(*s->triangles));

@@ -848,10 +848,12 @@ static void ec_refresh_collision_region(void){
     float x=floorf(g_player.pos.x/256.0f+0.5f)*256.0f;
     float z=floorf(g_player.pos.z/256.0f+0.5f)*256.0f;
     if(g_ec_failed_region_valid&&x==g_ec_failed_region_x&&z==g_ec_failed_region_z)return;
+    uint64_t region_start=osGetTime();
     if(sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player)){
         g_ec_failed_region_valid=0;
-        char line[128];snprintf(line,sizeof(line),"act=%lu center=%.0f,%.0f triangles=%lu",
-            (unsigned long)g_ec_act_index,x,z,(unsigned long)g_ec_collision.triangle_count);boot_log("REGION",line);
+        char line[128];snprintf(line,sizeof(line),"act=%lu center=%.0f,%.0f triangles=%lu buildMs=%llu validatedResident=1",
+            (unsigned long)g_ec_act_index,x,z,(unsigned long)g_ec_collision.triangle_count,
+            (unsigned long long)(osGetTime()-region_start));boot_log("REGION",line);
     }else{
         g_ec_failed_region_valid=1;g_ec_failed_region_x=x;g_ec_failed_region_z=z;
         boot_log("REGION","No valid replacement support region; retaining previous geometry without invented support");

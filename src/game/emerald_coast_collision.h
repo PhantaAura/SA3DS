@@ -24,8 +24,18 @@ typedef struct {
      * marked, preserving genuine support departure. */
     uint8_t support_edge_mask;
 } SA3DSECTriangle;
+/* Borrowed immutable package view: prepare once after loading, then keep the
+ * package bytes alive and unchanged until all regions using this view die. */
+typedef struct {
+    const void *package;
+    size_t package_size;
+    const uint8_t *collision;
+    uint32_t act_count,model_count,instance_count,vertex_count,index_count;
+    uint32_t act_offset,model_offset,instance_offset,vertex_offset,index_offset;
+} SA3DSECCollisionArchive;
 typedef struct {
     SA1PhysicsWorld world;
+    SA3DSECCollisionArchive archive;
     SA3DSECTriangle *triangles;
     uint32_t triangle_count,instance_count;
     uint32_t cells[SA3DS_EC_GRID_SIDE*SA3DS_EC_GRID_SIDE+1u];
@@ -44,6 +54,13 @@ typedef struct {
 int sa3ds_ec_collision_open(SA3DSECCollision *out,const void *package,size_t size);
 int sa3ds_ec_collision_open_region(SA3DSECCollision *out,
     const void *package,size_t size,uint32_t act_index,float center_x,float center_z);
+/* The ordinary open functions validate fresh/untrusted bytes. Regions opened
+ * from a prepared archive reuse that validation, never cache by address alone. */
+int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive *out,
+    const void *package,size_t size);
+int sa3ds_ec_collision_open_archive_region(SA3DSECCollision *out,
+    const SA3DSECCollisionArchive *archive,uint32_t act_index,
+    float center_x,float center_z);
 void sa3ds_ec_collision_destroy(SA3DSECCollision *stage);
 /* Static resident-triangle adapter for49E920: highest upward floor no higher
  * than ceiling, ignoring land flags400002. Returns0 outside the guaranteed
