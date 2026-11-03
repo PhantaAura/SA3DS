@@ -203,7 +203,23 @@ static void owner_controller_cases(SA3DSECCollision*s){
     if(trace)assert(!fclose(trace));
     printf("Owner controller/animation: PASS (%u signed roll exits, %u retained rolls, %u stationary/moving charge-duration cases, %u air-turn ticks + landing)\n",exits,rolls,charges,air_turns);
 }
+static void npc_floor_cases(void){
+    SA3DSECTriangle t[4]={0};uint32_t refs[4]={0,1,2,3};
+    SA3DSECCollision s={.triangles=t,.triangle_count=4,.references=refs};
+    for(unsigned i=0;i<4;i++){
+        t[i]=(SA3DSECTriangle){.a={-2,(float)i*10,-2},.b={2,(float)i*10,-2},.c={0,(float)i*10,2},
+            .normal={0,1,0},.min_x=-2,.max_x=2,.min_z=-2,.max_z=2,.flags=1};
+    }
+    unsigned cell=8*16+8;for(unsigned i=cell+1;i<=256;i++)s.cells[i]=4;
+    float h;assert(sa3ds_ec_collision_floor_below(&s,0,25,0,&h)&&h==20);
+    t[2].flags|=0x400000;assert(sa3ds_ec_collision_floor_below(&s,0,25,0,&h)&&h==10);
+    t[1].flags|=2;assert(sa3ds_ec_collision_floor_below(&s,0,25,0,&h)&&h==0);
+    assert(sa3ds_ec_collision_floor_below(&s,0,-1,0,&h)&&h==-1000000);
+    h=123;assert(!sa3ds_ec_collision_floor_below(&s,491,40,0,&h)&&h==123);
+    puts("Static NPC floor adapter: PASS highest-below/attribute exclusion/no-floor/residency cases; not retail polygon parity");
+}
 int main(int argc,char**argv){
+    npc_floor_cases();
     assert(argc>=2);size_t n;unsigned char*b=load(argv[1],&n);SA3DSECCollision s;
     if(argc>2&&argv[2][0]=='r'){
         assert(!sa3ds_ec_collision_open(&s,b,n));free(b);puts("Malformed collision package rejected: PASS");return 0;

@@ -20,7 +20,8 @@ assert 'Mtx_Multiply(&sonic_mv,&g_ec_view,&model);' in main
 assert 'g_ec_model_lift' not in main
 boot_menu=main[main.index('static int boot_menu(void)'):main.index('static void boot_result')]
 assert 'gfxSwapBuffers();' in boot_menu
-stage_model=main[main.index('SA3CMatrix actor;'):main.index('} else if (g_pose_lab)',main.index('SA3CMatrix actor;'))]
+sonic_model=main.index('C3D_Mtx sonic_mv;')
+stage_model=main[sonic_model:main.index('} else if (g_pose_lab)',sonic_model)]
 assert 'Mtx_Scale' not in stage_model
 assert main.index('sa3ds_ec_gpu_draw(&g_ec_gpu,0)')<main.index('sa3ds_sonic_gpu_draw(&g_sonic_gpu')<main.rindex('sa3ds_ec_gpu_draw(&g_ec_gpu,1)')
 assert 'sa3ds_upload_rgba8_cpu' in gpu and 'C3D_SyncDisplayTransfer' not in gpu

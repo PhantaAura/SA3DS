@@ -11,13 +11,14 @@ int sa3ds_saru_definitions_open(SA3DSSaruDefinitions*out,const void*data,size_t 
     SA3DSPak pak;SA3DSPakChunk c,metadata;
     if(sa3dspak_open(&pak,data,size)!=SA3DSPAK_OK||pak.toc_count!=2||
        sa3dspak_find(&pak,"SARU",&c)!=SA3DSPAK_OK||sa3dspak_find(&pak,"METADATA",&metadata)!=SA3DSPAK_OK||
-       c.flags||metadata.flags||c.size<112||memcmp(c.data,"SA3SARU\0",8)||r32(c.data+8)!=1)return 0;
-    uint32_t count=r32(c.data+12),co=r32(c.data+24);
+       c.flags||metadata.flags||c.size<112||memcmp(c.data,"SA3SARU\0",8)||(r32(c.data+8)!=1&&r32(c.data+8)!=2))return 0;
+    uint32_t count=r32(c.data+12),co=r32(c.data+24),version=r32(c.data+8);
+    uint32_t profile_bytes=version==2?112u:0u;
     if(count>2046||r32(c.data+16)!=64||r32(c.data+20)!=40||co!=64+count*40||
-       r32(c.data+28)!=48||r32(c.data+32)!=co+48||c.size!=co+48||r32(c.data+36)!=3||
+       r32(c.data+28)!=48||r32(c.data+32)!=co+48+profile_bytes||c.size!=co+48+profile_bytes||r32(c.data+36)!=3||
        r32(c.data+40)!=2||rf(c.data+44)!=360000.f||rf(c.data+48)!=490000.f||
        !isfinite(rf(c.data+52))||rf(c.data+52)<=0||rf(c.data+52)>1024||
-       !isfinite(rf(c.data+56))||rf(c.data+56)<=0||rf(c.data+56)>128||r32(c.data+60))return 0;
+       !isfinite(rf(c.data+56))||rf(c.data+56)<=0||rf(c.data+56)>128||r32(c.data+60)!=(version==2?co+48:0))return 0;
     SA3DSSaruDefinitions next={.placements={c.data+64,0,count},.collider=c.data+co,
         .load_squared=rf(c.data+44),.unload_squared=rf(c.data+48),.visibility_radius=rf(c.data+52),.display_scale=rf(c.data+56)};
     SA3DSMovementPlacement previous={0},p;
@@ -31,6 +32,16 @@ int sa3ds_saru_definitions_open(SA3DSSaruDefinitions*out,const void*data,size_t 
     if(next.collider[0]||next.collider[1])return 0; /*profile uses one form0 sphere*/
     for(unsigned i=0;i<7;i++)if(!isfinite(rf(next.collider+8+i*4))||fabsf(rf(next.collider+8+i*4))>1024)return 0;
     if(rf(next.collider+20)<=0)return 0;
+    if(version==2){
+        next.player_colliders=c.data+co+48;next.collision_rules=next.player_colliders+96;
+        if(next.player_colliders[0]!=0||next.player_colliders[1]!=7||next.player_colliders[48]!=2||next.player_colliders[49]!=1||
+           next.collision_rules[3]||next.collision_rules[11])return 0;
+        for(unsigned shape=0;shape<2;shape++){
+            const uint8_t*record=next.player_colliders+shape*48;
+            for(unsigned i=0;i<7;i++)if(!isfinite(rf(record+8+i*4))||fabsf(rf(record+8+i*4))>1024)return 0;
+            if(rf(record+20)<=0)return 0;
+        }
+    }
     *out=next;return 1;
 }
 int sa3ds_saru_initialize(const SA3DSMovementPlacement*p,uint16_t random15,double sx,double cx,SA3DSSaruInitial*out){

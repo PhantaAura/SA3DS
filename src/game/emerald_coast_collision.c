@@ -195,6 +195,20 @@ int sa3ds_ec_collision_open_region(SA3DSECCollision*s,const void*data,size_t siz
 fail:sa3ds_ec_collision_destroy(s);return 0;
 }
 
+int sa3ds_ec_collision_floor_below(SA3DSECCollision*s,float x,float ceiling,float z,float*height){
+    if(!s||!height||!s->triangles||!isfinite(x)||!isfinite(z)||!isfinite(ceiling)||
+       hypotf(x-s->center_x,z-s->center_z)>490.f)return 0;
+    float best=-1000000.f;unsigned c=cell_z(s,z)*16u+cell_x(s,x);
+    s->queries++;
+    for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+        SA3DSECTriangle*t=&s->triangles[s->references[j]];s->triangle_tests++;
+        if((t->flags&0x400002u)||t->normal.y<=0||x<t->min_x||x>t->max_x||z<t->min_z||z>t->max_z)continue;
+        float y=t->a.y-(t->normal.x*(x-t->a.x)+t->normal.z*(z-t->a.z))/t->normal.y;
+        if(y<=ceiling&&y>best&&inside(t,(SA1Vec3){x,y,z}))best=y;
+    }
+    *height=best;return 1;
+}
+
 SA1Surface sa3ds_ec_collision_surface(void*ctx,float x,float z){
     SA3DSECCollision*s=ctx;SA1Surface result={0};float best=1e30f;
     if(!s||!isfinite(x)||!isfinite(z)||x<s->min_x||x>s->max_x||z<s->min_z||z>s->max_z)return result;

@@ -201,9 +201,9 @@ static int draw_command(const SA3CDrawCommand *cmd, void *user) {
     return 0;
 }
 
-int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
-    const SA3TArchive *t, SA3DSSonicTextureTrace trace, void *userdata) {
-    if (!r || !c || !t || t->texture_count==0 || t->texture_count!=c->sections[6].count) return 0;
+int sa3ds_sonic_gpu_init_instances_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
+    const SA3TArchive *t,uint32_t instances,SA3DSSonicTextureTrace trace,void *userdata) {
+    if (!r || !c || !t || !instances || t->texture_count==0 || t->texture_count!=c->sections[6].count) return 0;
     tex_trace(trace,userdata,"GPU init ENTER",0,t->texture_count,0,0);
     SA3DSVisualReport visual;
     if (sa3ds_visual_preflight(c,t,&visual)!=SA3DS_VISUAL_OK) {
@@ -238,7 +238,7 @@ int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
        Every draw must retain its own GPU-readable vertex span until the
        synchronized next frame; sharing a single scratch span is unsafe. */
     tex_trace(trace,userdata,"vertex budget ENTER",0,r->texture_count,0,0);
-    r->last_batch_error=sa3ds_gpu_batch_budget(c,&r->batch);
+    r->last_batch_error=sa3ds_gpu_batch_budget_instances(c,instances,&r->batch);
     if (r->last_batch_error!=SA3DS_BATCH_OK) {
         tex_trace(trace,userdata,"vertex budget FAIL",0,r->texture_count,0,0);
         sa3ds_sonic_gpu_destroy(r); return 0;
@@ -254,6 +254,10 @@ int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
     return 1;
 }
 
+int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu*r,const SA3CCharacter*c,
+    const SA3TArchive*t,SA3DSSonicTextureTrace trace,void*userdata){
+    return sa3ds_sonic_gpu_init_instances_traced(r,c,t,1,trace,userdata);
+}
 /* Retain the original public entry point for other WIP9 source users. */
 int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r, const SA3CCharacter *c, const SA3TArchive *t) {
     return sa3ds_sonic_gpu_init_traced(r,c,t,NULL,NULL);
@@ -269,14 +273,23 @@ void sa3ds_sonic_gpu_destroy(SA3DSSonicGpu *r) {
     memset(r,0,sizeof(*r));
 }
 
-int sa3ds_sonic_gpu_draw(SA3DSSonicGpu *r, uint16_t root_node, const SA3CMatrix *world, size_t world_count, SA3CRenderStats *out_stats) {
-    if (!r || !world) return 0;
+void sa3ds_sonic_gpu_begin_frame(SA3DSSonicGpu*r){
+    if(!r)return;
     r->frame_draws=r->frame_triangles=r->frame_vertices=0;
     sa3ds_gpu_batch_reset(&r->batch);
     r->last_batch_error=SA3DS_BATCH_OK;
+}
+int sa3ds_sonic_gpu_draw_append(SA3DSSonicGpu*r,uint16_t root_node,const SA3CMatrix*world,size_t world_count,SA3CRenderStats*out_stats){
+    if(!r||!world)return 0;
     EmitCtx ctx={r}; SA3CRenderStats st;
     SA3CPoseResult pr=sa3c_render_emit(r->character,root_node,world,world_count,draw_command,&ctx,&st);
     if (pr!=SA3C_POSE_OK) return 0;
     if (out_stats) *out_stats=st;
     return 1;
+}
+
+int sa3ds_sonic_gpu_draw(SA3DSSonicGpu*r,uint16_t root,const SA3CMatrix*world,size_t count,SA3CRenderStats*stats){
+    if(!r||!world)return 0;
+    sa3ds_sonic_gpu_begin_frame(r);
+    return sa3ds_sonic_gpu_draw_append(r,root,world,count,stats);
 }

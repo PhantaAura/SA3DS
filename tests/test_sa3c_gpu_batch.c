@@ -41,6 +41,16 @@ int main(void) {
     assert(sa3ds_gpu_batch_reserve(&batch,0,&b)==SA3DS_BATCH_ARGUMENT);
     assert(sa3ds_gpu_batch_reserve(NULL,1,&b)==SA3DS_BATCH_ARGUMENT);
 
+    assert(sa3ds_gpu_batch_budget_instances(&c,2,&batch)==SA3DS_BATCH_OK);
+    assert(batch.vertex_capacity==24&&batch.draw_capacity==6);
+    for(unsigned instance=0;instance<2;instance++){
+        assert(sa3ds_gpu_batch_reserve(&batch,3,&a)==SA3DS_BATCH_OK&&a==instance*12);
+        assert(sa3ds_gpu_batch_reserve(&batch,3,&b)==SA3DS_BATCH_OK&&b==instance*12+3);
+        assert(sa3ds_gpu_batch_reserve(&batch,6,&d)==SA3DS_BATCH_OK&&d==instance*12+6);
+    }
+    assert(sa3ds_gpu_batch_reserve(&batch,3,&a)==SA3DS_BATCH_CAPACITY);
+    assert(sa3ds_gpu_batch_budget_instances(&c,0,&batch)==SA3DS_BATCH_ARGUMENT);
+    assert(sa3ds_gpu_batch_budget_instances(&c,UINT32_MAX,&batch)==SA3DS_BATCH_OVERFLOW);
     wr16(data+96,2); /* bad node->model reference */
     assert(sa3ds_gpu_batch_budget(&c,&batch)==SA3DS_BATCH_BAD_REFERENCE);
     wr16(data+96,1);

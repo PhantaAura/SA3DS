@@ -9,6 +9,8 @@
 #include "panel_visual.h"
 #include "spring_visual.h"
 #include "ring_replay.h"
+#include "saru_actor.h"
+#include "saru_pose.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -115,6 +117,25 @@ static SA3DSPanelVisual g_panel_visual;
 static SA3DSECGpu g_panel_gpu[3];
 static uint8_t *g_panel_visual_bytes;
 static size_t g_panel_visual_size;
+typedef struct {SA3DSSaruActor actor;uint8_t loaded,display;int32_t next,previous;} SA3DSNativeSaru;
+static SA3DSSaruDefinitions g_saru_definitions;
+static SA3DSNativeSaru *g_saru_states;
+static uint8_t *g_saru_definition_bytes,*g_saru_character_bytes,*g_saru_texture_bytes;
+static size_t g_saru_definition_size,g_saru_character_size,g_saru_texture_size;
+static SA3CCharacter g_saru_character;
+static SA3TArchive g_saru_textures;
+static SA3DSSonicGpu g_saru_gpu;
+static SA3CTransform g_saru_local[38];
+static SA3CMatrix g_saru_world[38];
+static uint16_t g_saru_frames[6];
+static uint32_t g_saru_rng=1,g_saru_projectiles,g_saru_sounds,g_saru_dust;
+static SA3DSCCLQueryCursor g_saru_damage_cursor;
+static int g_saru_ready;
+static int32_t g_saru_head=-1;
+static unsigned g_saru_frame_actors;
+static int g_saru_probe;
+static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
+static void reset_saru(void);
 static int g_panels_ready;
 static int g_panel_probe;
 static unsigned g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_mask,g_panel_probe_draws,g_panel_probe_sim_mask;
@@ -874,7 +895,7 @@ static double spring_source_sin(void *context,uint16_t angle){
     return sa3ds_ring_group_sin((const SA3DSRings*)context,angle);
 }
 static void reset_springs(void){
-    g_spring_head=-1;reset_panels();
+    g_spring_head=-1;reset_panels();reset_saru();
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
     memset(&g_spring_pending,0,sizeof(g_spring_pending));
 }
@@ -1162,6 +1183,146 @@ fail:
     boot_log("PANEL_PROBE","FAIL: original placement lacks supported nearby terrain");g_paused=1;
 }
 
+static void reset_saru(void){
+    g_saru_head=-1;g_saru_rng=1;sa3ds_ccl_query_reset(&g_saru_damage_cursor);
+    if(g_saru_states)memset(g_saru_states,0,g_saru_definitions.placements.count*sizeof(*g_saru_states));
+}
+static uint16_t saru_random(void*context){
+    (void)context;g_saru_rng=g_saru_rng*214013u+2531011u;return (uint16_t)((g_saru_rng>>16)&32767u);
+}
+static double saru_sine(void*context,uint16_t angle){(void)context;return spring_source_sin(&g_rings,angle);}
+static int32_t saru_atan(void*context,double y,double x){(void)context;return (int32_t)trunc(atan2(y,x)*65536.*.15915497620314795);}
+static double saru_floor(void*context,const SA3DSSaruActor*actor){
+    (void)context;float height;
+    /* Caller verifies coverage before entering the source task. */
+    if(!sa3ds_ec_collision_floor_below(&g_ec_collision,actor->position.x,actor->position.y+4.f,actor->position.z,&height))return NAN;
+    return height;
+}
+static int saru_damage(void*context,SA3DSSaruActor*actor){
+    (void)context;
+    /* Native NPC CCL and global explosion producer are not connected yet.
+     * Execute the shared source decision with the actual empty world, rather
+     * than inventing attacks or awarding score without a source contact. */
+    SA3DSEnemyDamageInput world={.explosion_radius=-1};SA3DSEnemyDamageResult result;
+    return sa3ds_saru_damage_check(actor,&world,&g_saru_damage_cursor,&result)&&result.killed;
+}
+static const SA3DSSaruServices g_saru_services={.sine=saru_sine,.atan_bams=saru_atan,.random15=saru_random,.floor_height=saru_floor,.damage=saru_damage};
+static void destroy_saru(void){
+    sa3ds_sonic_gpu_destroy(&g_saru_gpu);free(g_saru_states);g_saru_states=NULL;
+    sa3ds_free_file(g_saru_definition_bytes);sa3ds_free_file(g_saru_character_bytes);sa3ds_free_file(g_saru_texture_bytes);
+    g_saru_definition_bytes=g_saru_character_bytes=g_saru_texture_bytes=NULL;
+    memset(&g_saru_definitions,0,sizeof(g_saru_definitions));g_saru_ready=0;g_saru_head=-1;
+}
+static void load_saru(void){
+    if(!g_ec_combined||!g_rings_ready||!g_rings.quarter_lut)goto fail;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/saru_definitions.sa3dspak",&g_saru_definition_bytes,&g_saru_definition_size)||
+       !sa3ds_saru_definitions_open(&g_saru_definitions,g_saru_definition_bytes,g_saru_definition_size)||
+       !g_saru_definitions.player_colliders||!g_saru_definitions.placements.count||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/saru.sa3c",&g_saru_character_bytes,&g_saru_character_size)||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/saru.sa3t",&g_saru_texture_bytes,&g_saru_texture_size)||
+       sa3c_character_open(&g_saru_character,g_saru_character_bytes,g_saru_character_size)!=SA3C_OK||
+       sa3c_character_validate_references(&g_saru_character)!=SA3C_OK||
+       g_saru_character.sections[0].count!=38||g_saru_character.sections[7].count!=6||
+       sa3t_open(&g_saru_textures,g_saru_texture_bytes,g_saru_texture_size)!=SA3T_OK)goto fail;
+    SA3DSGeometryReport geometry;
+    if(sa3ds_geometry_preflight(&g_saru_character,&geometry)!=SA3DS_GEOMETRY_OK)goto fail;
+    for(unsigned n=0;n<6;n++)if(!(g_saru_frames[n]=action_frame_count(&g_saru_character,n)))goto fail;
+    g_saru_states=calloc(g_saru_definitions.placements.count,sizeof(*g_saru_states));
+    if(!g_saru_states||!sa3ds_sonic_gpu_init_instances_traced(&g_saru_gpu,&g_saru_character,&g_saru_textures,
+        g_saru_definitions.placements.count,log_texture_stage,NULL))goto fail;
+    g_saru_ready=1;reset_saru();
+    boot_log("SARU","Owner models/6 motions/SET loaded; native ordinary AI/display; NPC CCL, bombs, effects and source culling remain incomplete");return;
+fail:destroy_saru();boot_log("SARU","Owner resources unavailable or invalid; native enemies remain incomplete");
+}
+static int tick_saru(void){
+    if(!g_saru_ready)return 1;
+    SA1Vec3 player=sa3ds_ec_task_origin(&g_player);
+    for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
+        SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_saru_definitions.placements,n,&p);
+        SA3DSNativeSaru*s=&g_saru_states[n];SA1Vec3 delta=sa1_vec3_sub(player,p.position);
+        float distance=sa1_vec3_dot(delta,delta);
+        /* Bounded activation adapter: source46C010 camera relevance and SET
+         * task persistence still require reconstruction. Keep the recovered
+         * 600/700 source radii, never spring's unrelated unload threshold. */
+        if(p.act!=g_ec_act_index||(s->loaded&&distance>g_saru_definitions.unload_squared)){
+            if(s->loaded){if(s->previous>=0)g_saru_states[s->previous].next=s->next;else g_saru_head=s->next;
+                if(s->next>=0)g_saru_states[s->next].previous=s->previous;}
+            memset(s,0,sizeof(*s));continue;
+        }
+        if(!s->loaded){
+            unsigned high=(p.type>>12)&7u;
+            if(distance>g_saru_definitions.load_squared||(high&&(high==1?g_rings.clip_level>=1:g_rings.clip_level>=2)))continue;
+            if(!sa3ds_saru_actor_init(&s->actor,&p,&g_saru_services))return 0;
+            s->loaded=1;s->previous=-1;s->next=g_saru_head;
+            if(g_saru_head>=0)g_saru_states[g_saru_head].previous=(int32_t)n;
+            g_saru_head=(int32_t)n;
+        }
+    }
+    for(int32_t n=g_saru_head;n>=0;n=g_saru_states[n].next){
+        SA3DSNativeSaru*s=&g_saru_states[n];s->display=0;
+        /* Do not interpret nonresident terrain as the source missing-floor
+         * sentinel. Defer this bounded adapter until its complete orbit fits
+         * the resident static query (490 includes source candidate radius10). */
+        if((s->actor.status&0x2000)&&hypotf(s->actor.origin.x-g_ec_collision.center_x,s->actor.origin.z-g_ec_collision.center_z)+s->actor.scale.z>490.f)continue;
+        float center[3]={s->actor.position.x,s->actor.position.y,s->actor.position.z};
+        SA3DSSaruActorInput in={.player_position=player,.action_frames=g_saru_frames,
+            .visible=sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,g_saru_definitions.visibility_radius)};
+        SA3DSSaruActorResult out;
+        if(!sa3ds_saru_actor_tick(&s->actor,&in,&g_saru_services,&out))return 0;
+        s->display=out.display;
+        if(g_saru_probe&&s->actor.action<32)g_saru_probe_actions|=1u<<s->actor.action;
+        g_saru_projectiles+=out.projectile;g_saru_sounds+=out.sound_count;g_saru_dust+=out.dust_bursts;
+        /* Requests remain observable counters until their source executors are
+         * connected. No substitute bomb, score, damage or animal is spawned. */
+    }
+    return 1;
+}
+static int draw_saru(void){
+    g_saru_frame_actors=0;if(!g_saru_ready)return 1;
+    sa3ds_sonic_gpu_begin_frame(&g_saru_gpu);
+    for(int32_t n=g_saru_head;n>=0;n=g_saru_states[n].next){
+        const SA3DSNativeSaru*s=&g_saru_states[n];const SA3DSSaruActor*a=&s->actor;
+        float center[3]={a->position.x,a->position.y,a->position.z};
+        if(!s->display||!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,g_saru_definitions.visibility_radius))continue;
+        uint16_t root=INVALID_U16;
+        if(sa3ds_saru_pose_sample(&g_saru_character,&a->animation,g_saru_local,&root)!=SA3C_POSE_OK||
+           sa3c_pose_build_world_animated(&g_saru_character,root,g_saru_local,38,g_saru_world,38)!=SA3C_POSE_OK)return 0;
+        /*4AB2B0 read-only normal display: T*Ry(X+Y)*S*Ry(8000).
+         * Bob is specific to the logic render helper, not normal display. */
+        C3D_Mtx model,mv;Mtx_Identity(&model);Mtx_Translate(&model,a->position.x,a->position.y,a->position.z,true);
+        Mtx_RotateY(&model,(uint16_t)((uint32_t)a->angles[0]+(uint32_t)a->angles[1])*(2.f*PI/65536.f),true);
+        Mtx_Scale(&model,a->scale.x*g_saru_definitions.display_scale,a->scale.y*g_saru_definitions.display_scale,a->scale.x*g_saru_definitions.display_scale);
+        Mtx_RotateY(&model,PI,true);Mtx_Multiply(&mv,&g_ec_view,&model);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+        if(!sa3ds_sonic_gpu_draw_append(&g_saru_gpu,root,g_saru_world,38,NULL))return 0;
+        g_saru_frame_actors++;
+    }
+    if(g_saru_probe){g_saru_probe_draws+=g_saru_frame_actors;
+        if(g_saru_frame_actors>g_saru_probe_max_actors)g_saru_probe_max_actors=g_saru_frame_actors;}
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);return 1;
+}
+static void begin_saru_probe(void){
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_saru_probe.flag","rb");if(!f)return;
+    unsigned row=0;int parsed=fscanf(f,"%u",&row)==1;fclose(f);
+    if(!parsed||!g_saru_ready||!g_ec_full_route)goto fail;
+    SA3DSMovementPlacement target={0};int found=0;
+    for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
+        SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_saru_definitions.placements,n,&p))goto fail;
+        if(p.act==g_ec_act_index&&p.source_row==row){target=p;found=1;break;}
+    }
+    float x=target.position.x,z=target.position.z-70.f;
+    if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player))goto fail;
+    g_ec_collision.reference_y=target.position.y+8;
+    SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,x,z);if(!floor.valid||floor.normal.y<.8f)goto fail;
+    g_player.pos=(SA1Vec3){x,floor.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,z};g_player.vel=(SA1Vec3){0};
+    g_player.grounded=true;g_player.ground_normal=floor.normal;g_player.surface_id=floor.surface_id;
+    g_player.surface_frame_active=false;g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
+    reset_springs();g_camera.yaw=0;g_saru_probe=1;
+    g_saru_probe_ticks=g_saru_probe_draws=g_saru_probe_actions=g_saru_probe_max_actors=0;
+    boot_log("SARU_PROBE","BEGIN: explicit original-placement ordinary AI/display fixture; combat/course parity not tested");return;
+fail:boot_log("SARU_PROBE","FAIL: missing original resource/placement/support");g_paused=1;
+}
+
 static int init_scene(void) {
     boot_checkpoint("Parsing 3DS shader");
     g_dvlb=DVLB_ParseFile((u32*)sonic_shbin,sonic_shbin_size);
@@ -1195,6 +1356,7 @@ static int init_scene(void) {
         load_background();
         load_springs();
         load_panels();
+        load_saru();
         if(g_ec_combined){
             uint16_t root=INVALID_U16;SA3DSPoseMetrics stand;
             if(sa3c_pose_sample_action(&g_character,1,0,0,g_local,g_node_count,&root)!=SA3C_POSE_OK||
@@ -1242,7 +1404,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -1324,6 +1486,7 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     trace_stop();
+    destroy_saru();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
@@ -1445,7 +1608,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -1526,7 +1689,7 @@ int main(void) {
                 g_camera.yaw=0;
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
-            if(g_spring_probe||g_panel_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_spring_probe||g_panel_probe||g_saru_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
             if(g_air_attack_probe){
                 tick_input=(SA1Input){0};
                 tick_input.jump_pressed=g_air_attack_probe_ticks==0||g_air_attack_probe_ticks==3;
@@ -1621,6 +1784,12 @@ int main(void) {
              * movement/animation phase; consume them next player tick. */
             tick_springs();
             tick_panels(&physics_done);
+            if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
+            if(g_saru_probe&&++g_saru_probe_ticks>=180){
+                char note[220];snprintf(note,sizeof(note),"%s ticks=%u draws=%u maxActors=%u actions=%08x projectileRequests=%lu; ordinary AI/display fixture only",
+                    g_saru_probe_draws&&g_saru_probe_actions?"PASS":"FAIL",g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_max_actors,g_saru_probe_actions,(unsigned long)g_saru_projectiles);
+                boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
+            }
             if(g_panel_probe&&++g_panel_probe_ticks>=32){
                 char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x; explicit placement fixture only",
                     g_panel_probe_boosts&&g_panel_probe_draws&&g_panel_probe_sim_mask==255?"PASS":"FAIL",

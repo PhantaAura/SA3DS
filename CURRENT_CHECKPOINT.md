@@ -1,3 +1,25 @@
+# WCA active checkpoint — native E SARU ordinary AI/display
+
+WCA37 connects owner original enemy rig/6 clips/SET to native task updates and
+read-only normal display. Compatible v2 external definitions carry original
+player CCI/category rules for the next CCL bridge. Shared GPU textures and a
+bounded multi-instance append arena preserve pending actor vertex data.
+Static highest-floor-below adapter excludes source land flags and distinguishes
+unavailable residency from missing floor. See docs/PC2004_SARU_NATIVE.md.
+
+Required host, exact-owner pose/import and staged native build PASS. Exact
+401128B/3f81bd66 artifact ran the original act0 row26 fixture in Azahar2126
+Old3DS/Vulkan:180ticks,163actor draws,states0/2/5/6,visibly inspected. Only one
+visible actor in this fixture; no native multi-actor raster/combat/course/retail/
+hardware claim. Owner payloads stay outside Git. Probe marker removed after run.
+
+Next: native pre-movement Sonic strength snapshot, previous-pass actor/player
+CCL, actual bounce/score/death/projectile/effect execution and homing. Source
+camera relevance/full SET persistence/RNG order/logic multipass rendering and
+retail floor arbitration remain open. Full WCA/physics1to1 are false; continue.
+
+---
+
 # WCA active checkpoint — source CCL contacts and Sonic attack strengths
 
 WCA36 adds ccl_contact.[ch]:49AA48 primary attack/defense priority and secondary

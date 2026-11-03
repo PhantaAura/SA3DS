@@ -45,6 +45,11 @@ int sa3ds_ec_collision_open(SA3DSECCollision *out,const void *package,size_t siz
 int sa3ds_ec_collision_open_region(SA3DSECCollision *out,
     const void *package,size_t size,uint32_t act_index,float center_x,float center_z);
 void sa3ds_ec_collision_destroy(SA3DSECCollision *stage);
+/* Static resident-triangle adapter for49E920: highest upward floor no higher
+ * than ceiling, ignoring land flags400002. Returns0 outside the guaranteed
+ * resident radius (not a missing floor);1 includes source no-floor -1e6.
+ * Polygon edge arithmetic/dynamic platforms are not retail-equivalent. */
+int sa3ds_ec_collision_floor_below(SA3DSECCollision *stage,float x,float ceiling,float z,float *height);
 SA1Surface sa3ds_ec_collision_surface(void *context,float x,float z);
 SA1Contact sa3ds_ec_collision_contact(void *context,SA1Vec3 position,
     SA1Vec3 probe,float range);

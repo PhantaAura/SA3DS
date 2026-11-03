@@ -9,6 +9,7 @@ int main(int argc,char **argv){
     if(argc==3){
         size_t n,l;void*b=load(argv[1],&n),*lut=load(argv[2],&l);assert(l==4100);
         SA3DSSaruDefinitions defs;assert(sa3ds_saru_definitions_open(&defs,b,n));
+        if(defs.player_colliders){assert(defs.collision_rules&&defs.player_colliders[1]==7&&defs.player_colliders[49]==1);assert(defs.collision_rules[0]==1&&defs.collision_rules[8]==2);}
         SA3DSRings math={.quarter_lut=lut};
         for(uint32_t i=0;i<defs.placements.count;i++){
             SA3DSMovementPlacement p;assert(sa3ds_movement_objects_placement(&defs.placements,i,&p));

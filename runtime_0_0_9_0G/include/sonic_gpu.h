@@ -43,6 +43,13 @@ int sa3ds_upload_rgba8_cpu(C3D_Tex *tex,uint16_t width,uint16_t height,
 int sa3ds_sonic_gpu_init_traced(SA3DSSonicGpu *r, const SA3CCharacter *c,
     const SA3TArchive *t, SA3DSSonicTextureTrace trace, void *userdata);
 int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r, const SA3CCharacter *c, const SA3TArchive *t);
+/*Shared textures and a bounded vertex arena for multiple pending rig draws.
+ *Begin once after synchronized C3D_FrameBegin; append every actor/eye/pass. */
+int sa3ds_sonic_gpu_init_instances_traced(SA3DSSonicGpu *r,const SA3CCharacter *c,
+    const SA3TArchive *t,uint32_t instances,SA3DSSonicTextureTrace trace,void *userdata);
+void sa3ds_sonic_gpu_begin_frame(SA3DSSonicGpu *r);
+int sa3ds_sonic_gpu_draw_append(SA3DSSonicGpu *r,uint16_t root_node,
+    const SA3CMatrix *world,size_t world_count,SA3CRenderStats *out_stats);
 void sa3ds_sonic_gpu_destroy(SA3DSSonicGpu *r);
 int sa3ds_sonic_gpu_draw(SA3DSSonicGpu *r, uint16_t root_node, const SA3CMatrix *world, size_t world_count, SA3CRenderStats *out_stats);
 

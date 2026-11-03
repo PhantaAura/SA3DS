@@ -31,6 +31,9 @@ typedef struct {
 
 SA3DSBatchResult sa3ds_gpu_batch_budget(const SA3CCharacter *c,
                                         SA3DSGpuBatch *batch);
+/*Bound all pending rig instances for one synchronized GPU frame. */
+SA3DSBatchResult sa3ds_gpu_batch_budget_instances(const SA3CCharacter *character,
+    uint32_t instances,SA3DSGpuBatch *batch);
 void sa3ds_gpu_batch_reset(SA3DSGpuBatch *batch);
 SA3DSBatchResult sa3ds_gpu_batch_reserve(SA3DSGpuBatch *batch,
                                          uint32_t vertex_count,

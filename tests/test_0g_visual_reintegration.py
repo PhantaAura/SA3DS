@@ -21,9 +21,15 @@ assert g_lab.replace(new_camera,old_camera)==f_lab, 'lab submission/cleanup chan
 f_gpu=(f/'source/sonic_gpu.c').read_text()
 g_gpu=(g/'source/sonic_gpu.c').read_text()
 assert f_gpu[f_gpu.index('static void xform('):f_gpu.index('int sa3ds_sonic_gpu_init(')] == \
-       g_gpu[g_gpu.index('static void xform('):g_gpu.index('int sa3ds_sonic_gpu_init_traced(')], 'original mesh draw path changed'
-assert f_gpu[f_gpu.index('void sa3ds_sonic_gpu_destroy('):] == \
-       g_gpu[g_gpu.index('void sa3ds_sonic_gpu_destroy('):], 'original GPU cleanup/draw path changed'
+       g_gpu[g_gpu.index('static void xform('):g_gpu.index('int sa3ds_sonic_gpu_init_instances_traced(')], 'original mesh draw path changed'
+assert f_gpu[f_gpu.index('void sa3ds_sonic_gpu_destroy('):f_gpu.index('int sa3ds_sonic_gpu_draw(')] == \
+       g_gpu[g_gpu.index('void sa3ds_sonic_gpu_destroy('):g_gpu.index('void sa3ds_sonic_gpu_begin_frame(')], 'original GPU cleanup changed'
+# Shared multi-actor append is now explicit; the legacy wrapper must still
+# reset once then emit through the same original pose/render callback.
+wrapper=g_gpu[g_gpu.index('int sa3ds_sonic_gpu_draw('):]
+assert 'sa3ds_sonic_gpu_begin_frame(r)' in wrapper
+assert 'return sa3ds_sonic_gpu_draw_append(r,root,world,count,stats)' in wrapper
+assert 'sa3c_render_emit(r->character,root_node,world,world_count,draw_command,&ctx,&st)' in g_gpu
 assert 'gspWaitForPPF();' not in g_gpu
 assert 'C3D_SyncDisplayTransfer(' in g_gpu and 'upload_rgba8_cpu(' in g_gpu
 assert 'sa3ds_sonic_gpu_init_traced(' in g_gpu

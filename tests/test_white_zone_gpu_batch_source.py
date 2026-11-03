@@ -23,3 +23,14 @@ assert 'sa3ds_gpu_batch_result_name(g_sonic_gpu.last_batch_error)' in main
 assert '../src/sa3c' in make
 assert 'r->scratch_capacity=max_mesh_indices' not in gpu
 print('White Zone Citro3D per-draw vertex isolation contract: PASS')
+
+# The active0G runtime must also preserve queued vertices across actor draws.
+gpu=(root/'runtime_0_0_9_0G/source/sonic_gpu.c').read_text()
+main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
+assert 'sa3ds_gpu_batch_budget_instances(c,instances,&r->batch)' in gpu
+begin=gpu.split('void sa3ds_sonic_gpu_begin_frame(',1)[1].split('int sa3ds_sonic_gpu_draw_append(',1)[0]
+append=gpu.split('int sa3ds_sonic_gpu_draw_append(',1)[1].split('int sa3ds_sonic_gpu_draw(',1)[0]
+assert 'sa3ds_gpu_batch_reset' in begin and 'sa3ds_gpu_batch_reset' not in append
+assert 'sa3ds_sonic_gpu_begin_frame(&g_saru_gpu)' in main
+assert 'sa3ds_sonic_gpu_draw_append(&g_saru_gpu' in main
+print('Current0G shared actor arena reset/append contract: PASS')

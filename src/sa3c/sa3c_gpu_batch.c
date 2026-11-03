@@ -17,9 +17,9 @@ static uint32_t rd32(const uint8_t *p) {
            ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-SA3DSBatchResult sa3ds_gpu_batch_budget(const SA3CCharacter *c,
-                                        SA3DSGpuBatch *batch) {
-    if (!c || !c->data || !batch) return SA3DS_BATCH_ARGUMENT;
+SA3DSBatchResult sa3ds_gpu_batch_budget_instances(const SA3CCharacter *c,
+                                        uint32_t instances,SA3DSGpuBatch *batch) {
+    if (!c || !c->data || !batch || !instances) return SA3DS_BATCH_ARGUMENT;
     memset(batch, 0, sizeof(*batch));
     const SA3CSection *nodes = &c->sections[0];
     const SA3CSection *models = &c->sections[1];
@@ -54,11 +54,15 @@ SA3DSBatchResult sa3ds_gpu_batch_budget(const SA3CCharacter *c,
         }
     }
     if (total == 0) return SA3DS_BATCH_EMPTY;
-    batch->vertex_capacity = total;
-    batch->draw_capacity = draws;
+    if(total>SA3DS_BATCH_MAX_VERTICES/instances||draws>UINT32_MAX/instances)return SA3DS_BATCH_OVERFLOW;
+    batch->vertex_capacity = total*instances;
+    batch->draw_capacity = draws*instances;
     return SA3DS_BATCH_OK;
 }
 
+SA3DSBatchResult sa3ds_gpu_batch_budget(const SA3CCharacter*c,SA3DSGpuBatch*batch){
+    return sa3ds_gpu_batch_budget_instances(c,1,batch);
+}
 void sa3ds_gpu_batch_reset(SA3DSGpuBatch *batch) {
     if (!batch) return;
     batch->cursor = 0;

@@ -12,7 +12,10 @@ f32=lambda x:struct.unpack('<f',struct.pack('<f',x))[0]
 def verify(exe,system,package):
  r=verified_reader(exe);original=Path(package).read_bytes();expected,_=build(exe,system);assert original==expected
  parsed=sa3dspak.parse(original);b=next(c['data'] for c in parsed['chunks'] if c['type']=='SARU')
- assert b[-48:]==r(0x96c9e8,48)
+ co=struct.unpack_from('<I',b,24)[0];assert b[co:co+48]==r(0x96c9e8,48)
+ assert b[co+48:co+144]==r(0x91cbf0,96)
+ for i,category in enumerate((0,3)):
+  assert struct.unpack_from('<BBB x I',b,co+144+i*8)==(r(0x90e3bc+category,1)[0],r(0x90e3b0+category,1)[0],r(0x90e3c8+category,1)[0],struct.unpack('<I',r(0x90e3d4+category*4,4))[0])
  lut=r(0x88af78,4100);values=struct.unpack('<1025f',lut)
  def sample(i):
   i%=4096

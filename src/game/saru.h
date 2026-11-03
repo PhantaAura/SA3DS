@@ -5,6 +5,7 @@
 typedef struct {
     SA3DSMovementObjects placements;
     const uint8_t *collider; /*48 source CCL bytes, borrowed owner payload */
+    const uint8_t *player_colliders,*collision_rules; /*v2:96+16 owner bytes;v1 NULL*/
     float load_squared,unload_squared,visibility_radius,display_scale;
 } SA3DSSaruDefinitions;
 typedef struct {

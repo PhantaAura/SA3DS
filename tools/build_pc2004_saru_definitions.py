@@ -36,13 +36,17 @@ def build(exe,system):
   for index,p in enumerate(source.records):
    if p.type_word&4095==29:rows.append((act,index,p.raw));n+=1
   counts.append(n);hashes.append(source.sha256)
- co=64+len(rows)*40;blob=bytearray(co+48)
- struct.pack_into('<8s9I4fI',blob,0,b'SA3SARU\0',1,len(rows),64,40,co,48,len(blob),3,2,
-     registry[3],struct.unpack('<f',r(0x4acfa1,4))[0],struct.unpack('<f',r(0x4ab2e6,4))[0],struct.unpack('<f',r(0x7dcb30,4))[0],0)
+ co=64+len(rows)*40;blob=bytearray(co+48+112)
+ struct.pack_into('<8s9I4fI',blob,0,b'SA3SARU\0',2,len(rows),64,40,co,48,len(blob),3,2,
+     registry[3],struct.unpack('<f',r(0x4acfa1,4))[0],struct.unpack('<f',r(0x4ab2e6,4))[0],struct.unpack('<f',r(0x7dcb30,4))[0],co+48)
  for i,row in enumerate(rows):struct.pack_into('<II32s',blob,64+i*40,*row)
- blob[co:]=r(0x96c9e8,48)
- metadata={'source_profile':'PC2004-Saru-definitions-v1','source_exe_sha256':PROFILE_SHA256,
-  'source_set_sha256':hashes,'counts_by_act':counts,'scope':'placements/CCL/init only; original AI/model clips/projectile/death integration pending'}
+ blob[co:co+48]=r(0x96c9e8,48)
+ blob[co+48:co+144]=r(0x91cbf0,96)
+ for index,category in enumerate((0,3)):
+  struct.pack_into('<BBB x I',blob,co+144+index*8,
+      r(0x90e3bc+category,1)[0],r(0x90e3b0+category,1)[0],r(0x90e3c8+category,1)[0],struct.unpack('<I',r(0x90e3d4+category*4,4))[0])
+ metadata={'source_profile':'PC2004-Saru-definitions-v2','source_exe_sha256':PROFILE_SHA256,
+  'source_set_sha256':hashes,'counts_by_act':counts,'scope':'original placements/CCL/init and player collision profile; runtime/assets remain separate'}
  data=sa3dspak.build([('METADATA',json.dumps(metadata,sort_keys=True).encode(),0),('SARU',blob,0)])
  sa3dspak.parse(data);return data,counts
 if __name__=='__main__':
