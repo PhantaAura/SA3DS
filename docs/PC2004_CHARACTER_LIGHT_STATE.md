@@ -88,13 +88,26 @@ Each writes XYZ at0, normal at12, resolved packed diffuse at24 and UV at28/32.
 The buffer-init table's ninth entry is36-byte stride/FVF152 (XYZ,NORMAL,DIFFUSE,
 TEX1; no separate SPECULAR).794600 binds that FVF and stream stride. Diffuse is
 therefore supplied by the resolved per-vertex color, not absent from the stream.
-781CC0 selects COLOR1 for diffuse/specular;791860 restores material sources.
+781CC0 selects COLOR1 for diffuse/ambient;791860 restores material sources.
+D3D8 render-state145/147 are diffuse/ambient;146 is specular. The earlier
+WCA57 wording called147 specular incorrectly; no native code depended on it.
 These are static API/vertex contracts, not a measured PC driver output.
 
 Remaining shading work includes complete inherited global ambient/COLORVERTEX/
 LOCALVIEWER/NORMALIZENORMALS state, model/view normal transforms, driver clamping,
 specular composition after texturing, and native raster comparison.412420 mode0
-can set global ambient0/normalization1, while device setup796710 initializes a
+can set global ambient0/COLORVERTEX1, while device setup796710 initializes a
 different global ambient; the actual ordinary gameplay ordering must be traced.
 Do not substitute an assumed brightness multiplier. Full retail/hardware parity
 and CP1–CP9 remain incomplete.
+
+
+D3D8 enum cross-check: COLORVERTEX141, LOCALVIEWER142, NORMALIZENORMALS143;
+DIFFUSEMATERIALSOURCE145, SPECULARMATERIALSOURCE146, AMBIENTMATERIALSOURCE147.
+Thus412420's0x8D is COLORVERTEX, not normal normalization. Device reset791860
+sets all four material sources to MATERIAL;781CC0 then switches diffuse/ambient
+to COLOR1. Specular remains material-sourced across this bounded chain.
+The matching D3D8 header is linked above; initial defaults are additionally
+documented in SwiftShader's D3D8 Reset implementation:
+https://swiftshader.googlesource.com/SwiftShader.git/+/99764be9bf00a4b296eae5c08845d97fe6798db1/src/D3D8/Direct3DDevice8.cpp
+A third-party D3D8 implementation is corroboration, not a retail driver trace.

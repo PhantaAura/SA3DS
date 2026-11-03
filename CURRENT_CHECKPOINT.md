@@ -9,6 +9,9 @@ binary is byte-identical to inspected WCA56 (462596B/78f5506a); no redundant
 emulator run. External raw profile package unchanged/uninstalled.
 See docs/PC2004_CHARACTER_LIGHT_STATE.md.
 
+D3D8 enum cross-check:781CC0 selects COLOR1 for diffuse/ambient (145/147),
+not specular146;412420 sets COLORVERTEX141, not normalization143.
+
 Next: resolve inherited global ambient/COLORVERTEX/local-viewer/normalization,
 normal transforms and specular texture composition before native light hookup.
 Full CP1–CP9/retail/physical Old3DS acceptance stays open, PHYSICS_1TO1=false.
