@@ -43,14 +43,29 @@ artifact remains WCA54's462612-byte d78093b65f4e16b8f94fd38649ceae0b684dff033055
 No redundant emulator replay ran. Source material/light values are not baked
 into redistributed assets or reference code. CPU upload/SD/boot paths unchanged.
 
-## Next native correction
+## WCA56 — native ordinary Sonic constant diffuse
 
 Source4948C0 sets draw-control10 and constant white via4128A0/402F40/77FF90.
 403470->77EF70 invokes781CC0, which copies the constant color and sets work bit2;
-784850 then resolves diffuse from that copied constant. The native Sonic path
-currently multiplies by each mesh's stored diffuse, including grayB2 and blueB1,
-which is a distinct pending source-state mismatch. Verify the exact chain and
-wire only the supported ordinary Sonic profile; keep Pose Lab and unrelated
-actors explicit. Then recover the remaining material-source/FVF/normal/view and
-specular-composition rules before enabling native character lighting. Full WCA,
+784850 then resolves diffuse from that copied constant. The previous native Sonic path
+multiplied by each mesh's stored diffuse, including grayB2 and blueB1. The ordinary
+Emerald Coast Sonic renderer now explicitly binds the copied white diffuse;
+Pose Lab and unrelated actors retain the stored-material default. The texture
+uploader, model emitter, shader, scale and animation are unchanged. The source
+witness now checks17 spans across the display/action/constant-copy chain.
+Required host gate and native build PASS. The integration guard permits only
+this resolved-material branch and still compares the remaining mesh emitter
+against the preserved baseline. Native raster inspection is recorded below.
+
+Recover remaining material-source/FVF/normal/view and specular-composition rules
+before enabling native character lighting. Full WCA,
 retail lighting/animation trajectories and physical Old3DS acceptance remain open.
+
+
+WCA56 exact462596-byte artifact SHA256
+78f5506a69818cfa4570bbb5c587020ba9b5c3f49dcccc1e73bda753989f8429
+booted in Azahar2126 Old3DS/Vulkan with owner SD packages. Boot diagnostics
+confirmed SONIC_MATERIAL binding. Rear/side camera raster inspection showed
+white gloves/shoes and textured Sonic; Sonic's body remains flat without
+directional/specular shading. No retail pixel, trajectory or physical Old3DS
+claim. Temporary private EC autoboot flag removed after inspection.

@@ -139,9 +139,11 @@ static void xform(const SA3CMatrix *m, float x,float y,float z, float *out) {
     out[2]=x*m->m[2]+y*m->m[6]+z*m->m[10]+m->m[14];
 }
 
-static uint32_t material_rgba(const SA3CCharacter *c, uint16_t material_index) {
+static uint32_t material_rgba(const SA3DSSonicGpu *r, uint16_t material_index) {
+    const SA3CCharacter *c=r->character;
     const SA3CSection *s=&c->sections[5];
     if ((uint32_t)material_index >= s->count) return 0xFFFFFFFFu;
+    if(r->constant_diffuse_enabled)return sa3ds_visual_material_rgba(r->constant_diffuse_argb);
     const uint8_t *m=c->data+s->offset+(size_t)material_index*s->stride;
     return sa3ds_visual_material_rgba(rd32(m));
 }
@@ -192,7 +194,7 @@ static int draw_command(const SA3CDrawCommand *cmd, void *user) {
     C3D_TexEnvInit(env);
     C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);
     C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
-    C3D_TexEnvColor(env,material_rgba(c,cmd->material_index));
+    C3D_TexEnvColor(env,material_rgba(r,cmd->material_index));
 
     C3D_DrawArrays(GPU_TRIANGLES,0,cmd->index_count);
     r->frame_draws++;

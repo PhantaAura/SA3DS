@@ -2039,6 +2039,10 @@ static int init_scene(void) {
         ec_apply_texture_override();
         if (g_ec_combined && !sa3ds_sonic_gpu_init_traced(&g_sonic_gpu,
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
+        if(g_ec_combined){
+            g_sonic_gpu.constant_diffuse_argb=0xffffffffu;g_sonic_gpu.constant_diffuse_enabled=1;
+            boot_log("SONIC_MATERIAL","Original4948C0 constant-white diffuse bound; directional/specular lighting still pending");
+        }
         load_rings();
         load_background();
         load_springs();

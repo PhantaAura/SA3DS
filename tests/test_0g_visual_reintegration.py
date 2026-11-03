@@ -20,8 +20,16 @@ assert 'sa3ds_view_point(' in new_camera
 assert g_lab.replace(new_camera,old_camera)==f_lab, 'lab submission/cleanup changed outside camera conversion'
 f_gpu=(f/'source/sonic_gpu.c').read_text()
 g_gpu=(g/'source/sonic_gpu.c').read_text()
-assert f_gpu[f_gpu.index('static void xform('):f_gpu.index('int sa3ds_sonic_gpu_init(')] == \
-       g_gpu[g_gpu.index('static void xform('):g_gpu.index('int sa3ds_sonic_gpu_init_instances_traced(')], 'original mesh draw path changed'
+# WCA56 permits the exact-owner781CC0/784850 constant diffuse context.
+# Normalize only that explicit addition, then retain the entire old draw guard.
+mesh=g_gpu[g_gpu.index('static void xform('):g_gpu.index('int sa3ds_sonic_gpu_init_instances_traced(')]
+constant='    if(r->constant_diffuse_enabled)return sa3ds_visual_material_rgba(r->constant_diffuse_argb);\n'
+assert mesh.count(constant)==1
+mesh=mesh.replace(constant,'',1).replace(
+    'static uint32_t material_rgba(const SA3DSSonicGpu *r, uint16_t material_index) {\n    const SA3CCharacter *c=r->character;',
+    'static uint32_t material_rgba(const SA3CCharacter *c, uint16_t material_index) {',1).replace(
+    'material_rgba(r,cmd->material_index)','material_rgba(c,cmd->material_index)',1)
+assert f_gpu[f_gpu.index('static void xform('):f_gpu.index('int sa3ds_sonic_gpu_init(')] == mesh, 'mesh draw changed outside owner constant-diffuse context'
 assert f_gpu[f_gpu.index('void sa3ds_sonic_gpu_destroy('):f_gpu.index('int sa3ds_sonic_gpu_draw(')] == \
        g_gpu[g_gpu.index('void sa3ds_sonic_gpu_destroy('):g_gpu.index('void sa3ds_sonic_gpu_begin_frame(')], 'original GPU cleanup changed'
 # Shared multi-actor append is now explicit; the legacy wrapper must still
@@ -41,6 +49,9 @@ assert 'int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r,' in g_header
 assert 'int sa3ds_sonic_gpu_init_traced(' in g_header
 
 s=(g/'source/main.c').read_text()
+assert s.count('g_sonic_gpu.constant_diffuse_enabled=1')==1
+assert 'if(g_ec_combined){\n            g_sonic_gpu.constant_diffuse_argb=0xffffffffu;g_sonic_gpu.constant_diffuse_enabled=1;' in s
+
 make=(g/'Makefile').read_text()
 for token in (
     '#include "sa3c_gpu_preflight.h"',

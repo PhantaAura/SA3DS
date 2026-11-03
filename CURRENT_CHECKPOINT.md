@@ -1,3 +1,22 @@
+# WCA56 — native ordinary Sonic constant-white material
+
+Corrected the source-observed ordinary Sonic material binding: constant white
+now replaces stored grayB2/blueB1 diffuse in the EC Sonic context. Pose Lab and
+other actors retain their stored material default. No physics/animation/scale,
+shader or CPU uploader changes. Exact-owner17-span chain verified; cumulative
+host gate and native build PASS. Bounded Azahar2126 Old3DS/Vulkan boot and
+camera-angle raster inspection PASS on462596B artifact SHA256
+78f5506a69818cfa4570bbb5c587020ba9b5c3f49dcccc1e73bda753989f8429.
+White gloves/shoes and textured Sonic render; body remains visibly flat without
+original directional/specular lighting. This is not retail pixel parity.
+See docs/PC2004_CHARACTER_LIGHT_STATE.md. No unchanged owner pose matrix rerun.
+
+Next: recover Basic FVF/material-source/normal/view/specular composition and
+connect the supported owner lighting profile. Full CP1–CP9 and physical Old3DS
+performance/acceptance remain open; PHYSICS_1TO1=false.
+
+---
+
 # WCA55 — original light/material API states recovered
 
 Owner profile extraction + portable104-byte directional-light and68-byte material

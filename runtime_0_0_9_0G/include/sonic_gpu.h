@@ -29,6 +29,10 @@ typedef struct {
     uint32_t frame_triangles;
     uint32_t frame_vertices;
     int v_flip_debug;
+    /*Caller-resolved781CC0/784850 constant diffuse state; zero keeps raw
+     *asset/Pose Lab material presentation. Ordinary Sonic display binds white.*/
+    uint32_t constant_diffuse_argb;
+    int constant_diffuse_enabled;
 } SA3DSSonicGpu;
 
 /* Diagnostic events are emitted *before* each potentially blocking GPU step.
