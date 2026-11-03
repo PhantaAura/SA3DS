@@ -50,6 +50,8 @@ void sa3ds_ec_collision_destroy(SA3DSECCollision *stage);
  * resident radius (not a missing floor);1 includes source no-floor -1e6.
  * Polygon edge arithmetic/dynamic platforms are not retail-equivalent. */
 int sa3ds_ec_collision_floor_below(SA3DSECCollision *stage,float x,float ceiling,float z,float *height);
+/*Same selected static floor, also returns its upward normal (upright if absent).*/
+int sa3ds_ec_collision_floor_below_frame(SA3DSECCollision *stage,float x,float ceiling,float z,float *height,SA1Vec3 *normal);
 SA1Surface sa3ds_ec_collision_surface(void *context,float x,float z);
 SA1Contact sa3ds_ec_collision_contact(void *context,SA1Vec3 position,
     SA1Vec3 probe,float range);

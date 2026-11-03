@@ -1,3 +1,26 @@
+# WCA active checkpoint — native scattered rings and recovery pickup
+
+WCA42 connects source scatter tasks to native allocation/list order, external
+owner CCI/category7 rules, static floor/tilt services, player CCL, original ring
+rendering and signed16 awards. See docs/PC2004_RING_SCATTER_NATIVE.md.
+Required host and owner pose/import gates PASS. Final433652B/1892f46a itself
+passed Azahar2126 Old3DS/Vulkan row28R fixture:129ticks,7lost/7spawned,896task
+updates,566CCLqueues,508draws,1ring actually recollected; no allocation failure,
+no deferred floor query. Native task expiry/particle art not checked by that
+short fixture. Screenshot inspected; no retail/hardware parity claim.
+
+Owner scatter package432B/913ba35b is external in private/shared SD assets;
+fixture/autoboot flags removed. CPU uploader/SD pair/diagnostics preserved.
+Current SET/shared spawn-phase, global RNG/list/contact ordering, static floor
+angle precision/long-lived residency and pause/display parity remain partial.
+
+Next: real player death command/respawn and pickup/shadow/audio executors, plus
+all remaining full-course CP1–CP9 and physical Old3DS acceptance gates. Full WCA
+and PHYSICS_1TO1 remain incomplete. Don't rerun unchanged matrices or cold REA.
+Private successful targeted Ghidra artifacts are documented in WCA41 notes.
+
+---
+
 # WCA active checkpoint — scattered-ring source task
 
 WCA41 adds source44FD10/44F7A0 task equations and explicit collision/display/

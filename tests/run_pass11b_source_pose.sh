@@ -48,3 +48,6 @@ python3 tools/audit_pc2004_animated_world.py \
 
 # Exact executable damage selector/recoil/blink/ring-loss witnesses.
 python3 tools/verify_pc2004_player_damage.py "$SONIC_EXE_PATH"
+
+# Original scattered-ring dispatcher and source memory operands.
+python3 tools/verify_pc2004_ring_scatter.py "$SONIC_EXE_PATH"
