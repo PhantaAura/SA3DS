@@ -1,3 +1,34 @@
+# WCA active checkpoint — original post task and external checkpoint assets
+
+WCA47 adds portable44F540/430/150 task phases, source signed16 spin/settle,
+display-before-activation snapshots, saved-SET initialization and explicit
+restart/persistence/sound/effect/time-display requests. It also builds/reads an
+external original seven-placement/five-component checkpoint package with CCI,
+player rules, source LUT and separate visual/dynamic-land offsets. Callback
+poses follow parent Z/X/Y and post Y/X, not ordinary static NJS evaluation.
+See docs/PC2004_CHECKPOINT_TASK.md. Native gameplay is NOT connected yet.
+
+Required host gate, exact-owner pose/import gate and staged native compilation
+PASS. Raw-owner checkpoint oracle42poses/2016matrix components,max4.72656257e-6;
+texture59/60 selection verified.20-span exact-owner witnesses PASS. Finalprivate
+package150416B/03801349 is /private/tmp/sa3ds-wca47-checkpoint.sa3dspak, notinstalled.
+Unreferenced components are linker-discarded: native artifact remains exactly
+WCA45's440076B/1d8b24d8, no redundant emulator boot or gameplay claim.
+
+Next: native checkpoint loader/art/list6 task BEFORE CCL pass, source CCL cache,
+SET flags10/4, original time service, actual player record capture/death restore,
+then one bounded native activation/death/checkpoint raster fixture. Dynamic-land
+children, camera clipping/clock order and full natural traversal remain gates.
+Original46BA40 confirms unload=loadSquared+100.46C010 tests camera/player range;
+46B750 admits equality. New private /private/tmp/sa3ds-wca47-set-distance.asm.
+WCA46 record helper is available; nativeStageReload still always uses act start.
+
+Full WCA/PHYSICS_1TO1/Old3DS acceptance remain incomplete. Collision freeze
+improvement remains host-measured only. Do not repeat unchanged pose matrices,
+failed CUA arrow holds, REA list/current-document calls or cold whole-game REA.
+
+---
+
 # WCA active checkpoint — checkpoint restart record source contract
 
 WCA46 implements portable original44ED50/70,44EE70/44EDB0 session payload:

@@ -54,3 +54,6 @@ python3 tools/verify_pc2004_ring_scatter.py "$SONIC_EXE_PATH"
 
 # Ordinary death task, source task order and action-stage restart/faders.
 python3 tools/verify_pc2004_player_death.py "$SONIC_EXE_PATH"
+
+# Original checkpoint post callbacks, SET rows and active/inactive textures.
+python3 tools/audit_pc2004_checkpoint_assets.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")"

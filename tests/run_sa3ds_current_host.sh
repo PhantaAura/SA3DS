@@ -141,3 +141,7 @@ bash tests/run_player_death.sh
 
 printf "\n== Source checkpoint restart record ==\n"
 bash tests/run_restart_record.sh
+
+printf "\n== Original checkpoint task and external asset reader ==\n"
+bash tests/run_checkpoint_task.sh
+bash tests/run_checkpoint_assets.sh
