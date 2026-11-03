@@ -1,3 +1,27 @@
+# WCA54 — native original game-over menu, Continue and Quit
+
+Exact462612B/d78093b65f4e16b8f94fd38649ceae0b684dff033055f0a90c83a937cf6dd4e3
+artifact has bounded Azahar Old3DS/Vulkan evidence: original menu artwork/tint,
+real HID D-pad selection, A Continue to act0/lives4/valid record/dead clear,
+fresh0/1/4/15 fade, and Quit returning to emulator game list. Timeout boundary
+is host-verified, not separately run natively. First d44855cc candidate failed
+rotation/tint raster; corrected exact artifact was inspected and exercised.
+See docs/PC2004_GAMEOVER_NATIVE.md. Required host/core, final source guards and
+native build PASS; unchanged owner pose matrix not repeated after WCA53.
+
+External gameover_assets.sa3dspak263024B/1486b393 installed in both owner SDs.
+Temporary private autoboot/Saru G fixture flags removed. Desktop preview updated.
+No owner assets/build/private reference enter Git. Full WCA/1:1/hardware gates open.
+
+Next useful native gaps: original lighting/material presentation (Sonic is still
+flat blue), menu Circle Pad virtual input/audio, remaining HUD/audio, full route
+camera/physics/events/whale/goal completion. Do not repeat failed short CUA arrow
+holds or unchanged pose matrices; post-Continue arrow attempt was only limited
+motion, not held-input/retail proof. Original front-end/other stage profiles are
+not implemented by the stage-only Quit-to-launcher wrapper.
+
+---
+
 # WCA53 — original game-over menu and owner art ready for native connection
 
 Portable original selection/timer/confirm/quit/retry requests and nine pulse-tinted

@@ -81,5 +81,10 @@ int main(void){
     }
     assert(flow.state==18&&flow.lives==-1);
     assert(sa3ds_stage_restart_begin(&flow,1,&phase)&&phase.game_over_pending&&!phase.run_world);
+    sa3ds_stage_restart_init(&flow);flow.state=0;unsigned fresh=0;
+    do{assert(sa3ds_stage_restart_begin(&flow,1,&phase));fresh++;assert(!phase.run_world);}while(!phase.reload_stage&&fresh<100);
+    assert(fresh==6&&flow.state==4&&flow.restart_count==0&&flow.lives==4);
+    fresh=0;do{assert(sa3ds_stage_restart_begin(&flow,1,&phase));fresh++;assert(phase.run_world&&!phase.controls_enabled);}while(flow.state!=15&&fresh<100);
+    assert(fresh==49&&flow.fade_alpha==0&&flow.restart_count==0);
     printf("Death/restart: PASS command50/86,122nd-update task request/order/special/wrap,passive original118 pose (%u air/%u ground/%u clamp),fade46/6/49 boundaries,43-update game-over fade and signed lives; game-over executor separate\n",air,ground,clamps);
 }

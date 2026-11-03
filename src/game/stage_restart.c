@@ -44,6 +44,13 @@ int sa3ds_stage_restart_begin(SA3DSStageRestart*f,unsigned interval,SA3DSStageRe
         if(fade_out(f,interval)!=0){r->clear_world=r->clear_rings=1;sa3ds_stage_restart_add_lives(f,-1);f->request=0;f->state=2;}
         else r->run_world=1;
         return 1;
+    case 0:f->fade_active=1;f->fade_delay=5;f->fade_value=291;fade_draw(f);f->state=1;
+        /*416610 fresh stage0 falls through1; unlike death2/3 no restart increment.*/
+        /*fallthrough*/
+    case 1:
+        r->fade_draw=1;
+        if(fade_in(f,interval)==0){r->reload_stage=1;f->state=4;}
+        return 1;
     case 2:f->fade_active=1;f->fade_delay=5;f->fade_value=291;fade_draw(f);f->state=3;
         /*Source case2 falls through into3 in the same game-manager call.*/
         /*fallthrough*/

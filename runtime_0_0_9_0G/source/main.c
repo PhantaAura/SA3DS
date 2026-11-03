@@ -21,6 +21,7 @@
 #include "checkpoint_assets.h"
 #include "checkpoint_contact.h"
 #include "checkpoint_player.h"
+#include "game_over.h"
 #include "course_clock.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
@@ -182,6 +183,13 @@ static SA3DSNativeProtection*g_protection_head;
 static unsigned g_protection_created,g_protection_finished;
 static SA3DSStageRestart g_stage_restart;
 static int g_gameover_probe;static unsigned g_gameover_world_ticks;
+static SA3DSGameOver g_game_over_menu;
+static SA3DSGameOverSprite g_game_over_sprites[9];
+static SA3TArchive g_game_over_archive;static uint8_t*g_game_over_bytes;static size_t g_game_over_size;
+static C3D_Tex g_game_over_textures[7];static unsigned g_game_over_loaded;
+static SA3DSLabVertex*g_game_over_vertices;
+static uint32_t g_game_over_pressed;static int g_game_over_draw,g_game_over_exit,g_game_over_retry_probe;
+static unsigned g_game_over_frames;static int g_game_over_release;
 static SA3DSCourseClock g_course_clock;
 static SA3DSRestartRecord g_restart_record;
 typedef struct {SA3DSCheckpointTask task;SA3DSCheckpointResult draw;SA3DSCCLBody ccl;SA3DSCCLShape shape;
@@ -417,6 +425,7 @@ static void trace_toggle(void) {
 }
 
 static void reset_selected_zone(void) {
+    g_game_over_menu=(SA3DSGameOver){.pulse=g_game_over_menu.pulse};g_game_over_draw=0;g_game_over_pressed=0;
     clear_native_death();clear_native_protection();g_stage_restart.state=15;g_stage_restart.request=0;
     g_stage_restart.fade_alpha=g_stage_restart.fade_active=g_stage_restart.fade_delay=0;
     g_player_damage_blocked=0;memset(&g_player_damage_requests,0,sizeof(g_player_damage_requests));
@@ -1803,6 +1812,7 @@ static int native_stage_reload(void){
         g_checkpoint_probe_reload_error=sa1_vec3_length(sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),g_checkpoint_probe_record.task_position));
         memcpy(g_checkpoint_probe_reload_clock,g_course_clock.time,3);
     }
+    if(!saved)checkpoint_seed_record();
     g_rings.rings=0;reset_checkpoints(1);
     if(saved&&!spawn_native_protection())return 0;
     if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
@@ -1818,20 +1828,114 @@ static int native_stage_reload(void){
         restart.task_origin.x,restart.task_origin.y,restart.task_origin.z,(unsigned long)g_checkpoint_saved_row);boot_log("STAGE_RELOAD",note);
     return 1;
 }
+static void destroy_game_over_art(void){
+    for(unsigned i=0;i<g_game_over_loaded;i++)C3D_TexDelete(&g_game_over_textures[i]);
+    g_game_over_loaded=0;if(g_game_over_vertices)linearFree(g_game_over_vertices);g_game_over_vertices=NULL;
+    sa3ds_free_file(g_game_over_bytes);g_game_over_bytes=NULL;g_game_over_size=0;
+    memset(&g_game_over_archive,0,sizeof(g_game_over_archive));
+}
+static int load_game_over_art(void){
+    if(g_game_over_loaded==7)return 1;
+    SA3DSPak pak;SA3DSPakChunk c,meta;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/gameover_assets.sa3dspak",&g_game_over_bytes,&g_game_over_size)||
+        g_game_over_size>1024u*1024u||sa3dspak_open(&pak,g_game_over_bytes,g_game_over_size)!=SA3DSPAK_OK||pak.toc_count!=2||
+        sa3dspak_find(&pak,"TEXTURES",&c)!=SA3DSPAK_OK||c.flags||
+        sa3dspak_find(&pak,"METADATA",&meta)!=SA3DSPAK_OK||meta.flags||
+        sa3t_open(&g_game_over_archive,c.data,(size_t)c.size)!=SA3T_OK||g_game_over_archive.texture_count!=7)goto fail;
+    /*All validation precedes GPU allocation. Source English and Japanese labels differ.*/
+    for(unsigned i=0;i<7;i++){
+        SA3TTexture t;const uint8_t*rgba;
+        if(sa3t_texture(&g_game_over_archive,i,&t,&rgba)!=SA3T_OK||t.width<8||t.height<8||t.width>256||t.height>256||
+            (t.width&(t.width-1))||(t.height&(t.height-1)))goto fail;
+        if((i==0&&(t.width!=8||t.height!=8))||(i==1&&(t.width!=256||t.height!=32))||
+            (i>=2&&i<=4&&(t.width!=128||t.height!=64)))goto fail;
+    }
+    g_game_over_vertices=linearAlloc(54*sizeof(*g_game_over_vertices));if(!g_game_over_vertices)goto fail;
+    for(unsigned i=0;i<7;i++){
+        SA3TTexture t;const uint8_t*rgba;sa3t_texture(&g_game_over_archive,i,&t,&rgba);
+        if(!sa3ds_upload_rgba8_cpu(&g_game_over_textures[i],t.width,t.height,rgba,i,7,log_texture_stage,NULL))goto fail;
+        g_game_over_loaded++;C3D_TexSetFilter(&g_game_over_textures[i],GPU_LINEAR,GPU_LINEAR);
+        C3D_TexSetWrap(&g_game_over_textures[i],GPU_CLAMP_TO_EDGE,GPU_CLAMP_TO_EDGE);
+    }
+    boot_log("GAMEOVER_ART","Original seven-image external menu loaded through CPU uploader");return 1;
+fail:destroy_game_over_art();return 0;
+}
+static int native_game_over_tick(SA3DSStageRestartResult*out){
+    *out=(SA3DSStageRestartResult){0};
+    if(g_game_over_menu.finished)return 1;
+    /*Private fixture waits for a real HID event after12 menu updates, preserving
+     *the inspected screen. Ordinary menu timing is never held.*/
+    if(g_gameover_probe&&g_game_over_menu.initialized&&g_game_over_menu.timer<=1188&&!g_game_over_pressed)return 1;
+    SA3DSGameOverResult menu;
+    if(!sa3ds_game_over_tick(&g_game_over_menu,g_game_over_pressed,&menu))return 0;
+    g_game_over_pressed=0;
+    if(menu.initialize){
+        if(!load_game_over_art())return 0;
+        g_saru_probe=g_death_probe=0;g_stage_restart.state=19;
+        boot_log("GAMEOVER_MENU","Original18/19 entered; music1A requested, audio executor pending");
+        consoleClear();printf("GAME OVER\n\nD-pad: choose\nA / START: confirm\n");
+    }
+    if(menu.draw){if(!sa3ds_game_over_sprites(&g_game_over_menu,g_game_over_sprites))return 0;g_game_over_draw=1;}
+    if(menu.retry||menu.quit){
+        char note[140];snprintf(note,sizeof(note),"choice=%s timer=%ld selection=%u; source stage-exit request",
+            menu.retry?"retry":"quit",(long)g_game_over_menu.timer,g_game_over_menu.selection);boot_log("GAMEOVER_CHOICE",note);
+        g_game_over_draw=0;g_game_over_release=menu.release_textures;
+        if(menu.quit){g_stage_restart.state=21;g_game_over_exit=1;return 1;}
+        g_game_over_retry_probe=g_gameover_probe;g_gameover_probe=0;
+        /*Current native executable hosts EC as a stage-only profile. Retry
+         *re-enters the original initial act; quit returns to its launcher.*/
+        if(g_ec_act_index!=0&&!ec_change_act(0))return 0;
+        reset_selected_zone();emerald_coast_help();sa3ds_restart_record_clear(&g_restart_record);
+        sa3ds_stage_restart_init(&g_stage_restart);g_stage_restart.state=0;
+        g_paused=0;sa3ds_wz_tick_reset(&g_tick_clock);g_last_frame_ms=osGetTime();
+    }
+    return 1;
+}
+static int draw_game_over(void){
+    if(!g_game_over_draw)return 1;
+    if(g_game_over_loaded!=7||!g_game_over_vertices)return 0;
+    C3D_Mtx identity,projection;Mtx_Identity(&identity);
+    Mtx_OrthoTilt(&projection,-1,1,-1,1,0,1,false);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&projection);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&identity);
+    C3D_DepthTest(false,GPU_ALWAYS,GPU_WRITE_COLOR);C3D_AlphaTest(true,GPU_GREATER,0);C3D_CullFace(GPU_CULL_NONE);
+    C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA);
+    C3D_TexEnv*env=C3D_GetTexEnv(0);C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
+    for(unsigned i=0;i<9;i++){
+        SA3DSGameOverSprite*s=&g_game_over_sprites[i];SA3TTexture t;const uint8_t*rgba;
+        if(sa3t_texture(&g_game_over_archive,s->texture,&t,&rgba)!=SA3T_OK)return 0;
+        float left=s->x/320.f-1.f,right=(s->x+t.width*s->scale_x)/320.f-1.f;
+        float top=1.f-s->y/240.f,bottom=1.f-(s->y+t.height*s->scale_y)/240.f;
+        SA3DSLabVertex quad[6]={{{left,bottom,0},{0,1}},{{right,bottom,0},{1,1}},{{left,top,0},{0,0}},
+            {{left,top,0},{0,0}},{{right,bottom,0},{1,1}},{{right,top,0},{1,0}}};
+        memcpy(g_game_over_vertices+i*6,quad,sizeof(quad));
+    }
+    GSPGPU_FlushDataCache(g_game_over_vertices,54*sizeof(*g_game_over_vertices));
+    C3D_BufInfo*buffer=C3D_GetBufInfo();BufInfo_Init(buffer);BufInfo_Add(buffer,g_game_over_vertices,sizeof(*g_game_over_vertices),2,0x10);
+    /*These source rectangles do not intersect out of far-to-near call order;
+     *the native screen uses that order with ordinary source-alpha blending.*/
+    for(unsigned i=0;i<9;i++){
+        uint32_t argb=g_game_over_sprites[i].argb;
+        C3D_TexEnvColor(C3D_GetTexEnv(0),(argb&0xff00ff00u)|((argb&255u)<<16)|((argb>>16)&255u));
+        C3D_TexBind(0,&g_game_over_textures[g_game_over_sprites[i].texture]);C3D_DrawArrays(GPU_TRIANGLES,i*6,6);
+    }
+    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);C3D_AlphaTest(true,GPU_GREATER,15);
+    g_game_over_frames++;
+    if(g_gameover_probe&&g_game_over_frames==1)boot_log("GAMEOVER_SCREEN","First original menu raster submitted; private fixture holds after12 updates until HID event");
+    return 1;
+}
 static int native_stage_begin(SA3DSStageRestartResult*out){
+    if(g_stage_restart.state==18||g_stage_restart.state==19||g_game_over_exit)return native_game_over_tick(out);
     uint8_t previous=g_stage_restart.state;
     if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
     if(out->clear_world&&!out->run_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);}
     if(out->clear_rings&&!out->run_world)g_rings.rings=0;
     if(out->reload_stage&&!native_stage_reload())return 0;
     if(previous==8&&out->run_world)g_gameover_world_ticks++;
-    if(out->game_over_pending&&g_gameover_probe){
-        char note[180];snprintf(note,sizeof(note),"%s worldTicks=%u state=%u alpha=%u deathCounter=%u restarts=%lu; retry/quit presentation remains pending",
-            g_gameover_world_ticks==43&&g_stage_restart.state==18&&g_stage_restart.fade_alpha==255&&g_death_trigger_counter==122&&!g_stage_restart.restart_count?"PASS":"FAIL",
-            g_gameover_world_ticks,g_stage_restart.state,g_stage_restart.fade_alpha,g_death_trigger_counter,(unsigned long)g_stage_restart.restart_count);
-        boot_log("GAMEOVER_PROBE",note);g_gameover_probe=0;
+    if(previous==4&&g_stage_restart.state==15&&g_game_over_retry_probe){
+        boot_log("GAMEOVER_RETRY",g_stage_restart.lives==4&&g_ec_act_index==0&&g_restart_record.valid&&!(g_player.pc2004_player_flags6&0x4000)?"PASS: fresh act0,lives4,valid initial restart,dead flag clear; bounded native handoff":"FAIL: fresh stage retry state");g_game_over_retry_probe=0;
     }
-    if(out->game_over_pending){boot_log("STAGE_FLOW","PENDING: source game-over screen/menu executor");g_paused=1;}
     if(previous!=g_stage_restart.state){
         char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d alpha=%u",
             (unsigned long)g_source_frame,previous,g_stage_restart.state,g_stage_restart.lives,g_stage_restart.fade_alpha);boot_log("STAGE_FLOW",note);
@@ -2080,7 +2184,8 @@ static int sample_pose(void) {
 
 static void cleanup(void) {
     destroy_checkpoints();
-    clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
+    if(g_game_over_loaded)C3D_FrameSync();
+    destroy_game_over_art();clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
     destroy_saru();
@@ -2132,6 +2237,9 @@ int main(void) {
         boot_checkpoint("GPU-only: draw solid blue top");
         /* Citro3D submits the TOP target. The bottom text is a diagnostic. */
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        /*Source menu release is deferred only until all previous menu draws
+         *retire; do not free textures still referenced by queued GPU work.*/
+        if(g_game_over_release&&!g_game_over_draw){destroy_game_over_art();g_game_over_release=0;}
         C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,0x3060B0FFu,0);
         C3D_FrameDrawOn(g_target);
         C3D_FrameEnd(0);
@@ -2223,7 +2331,13 @@ int main(void) {
     while (aptMainLoop()) {
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
-        if (down&KEY_START) break;
+        if(g_game_over_exit)break;
+        if(g_emerald_coast&&(g_stage_restart.state==18||g_stage_restart.state==19)&&!(held&KEY_SELECT)){
+            if(down&KEY_A)g_game_over_pressed|=4;
+            if(down&KEY_START)g_game_over_pressed|=8;
+            if(down&KEY_DLEFT)g_game_over_pressed|=0x40;
+            if(down&KEY_DRIGHT)g_game_over_pressed|=0x80;
+        }else if(down&KEY_START)break;
         if (g_pose_lab) pose_lab_keys(down);
         int modifier=!g_pose_lab && ((held&KEY_SELECT)!=0);
         if (!g_pose_lab && !g_emerald_coast && (down&KEY_SELECT) && !(held&(KEY_L|KEY_R|KEY_X|KEY_Y|KEY_DLEFT))) g_dev_overlay=!g_dev_overlay;
@@ -2611,16 +2725,20 @@ int main(void) {
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"frame %u begin stage=%d sonic=%d",g_rendered_frames,g_emerald_coast,!g_emerald_coast||g_ec_combined);boot_log("FRAME",frame_line);}
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameBegin");
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        /*Source menu release is deferred only until all previous menu draws
+         *retire; do not free textures still referenced by queued GPU work.*/
+        if(g_game_over_release&&!g_game_over_draw){destroy_game_over_art();g_game_over_release=0;}
         if(probe_log)boot_log("FRAME","begin returned");
         C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,
             g_pose_lab?0x9EBAD2FFu:CLEAR_COLOR,0);
         C3D_FrameDrawOn(g_target);
         if (g_boottrace_first_frame) boot_log("ENTER","First sample_pose (Sonic + lab draw)");
-        if (!sample_pose()) {
+        if (!(g_emerald_coast&&g_stage_restart.state>=18)&&!sample_pose()) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
         if(!draw_stage_fade()){fail_screen("Source stage fade draw failed");break;}
+        if(!draw_game_over()){fail_screen("Original game-over menu draw failed");break;}
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu modDraws=%lu modBytes=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count),(unsigned long)g_ec_gpu.override_submitted_draws,(unsigned long)g_ec_gpu.override_texture_bytes);boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
         if(probe_log)boot_log("FRAME","end returned");
@@ -2672,7 +2790,7 @@ int main(void) {
             "frame=%u tick=%llu pos=%.3f,%.3f,%.3f grounded=%d wall=%lu linear=%lu",
             g_rendered_frames,(unsigned long long)g_player.sim_frame,g_player.pos.x,g_player.pos.y,g_player.pos.z,
             g_player.grounded,(unsigned long)g_ec_collision.wall_hits,(unsigned long)linearSpaceFree());boot_log("PLAY",frame_line);}
-        if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
+        if(g_game_over_draw){} else if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
     }
