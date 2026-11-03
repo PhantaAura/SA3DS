@@ -5,6 +5,8 @@ import hashlib,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.verify_pc2004_ec_route import verified_reader
 RANGES={
+ (0x40b940,132):'852bad05de46899efa4d32e5686ddbc85c857041b79c6cb4257e903db96765b3',
+ (0x51f680,1):'ae3f4619b0413d70d3004b9131c3752153074e45725be13b9a148978895e359e',
  (0x4383a0,16):'3d3c254d21549acf3d9c4c3d574725f870d33d6caf71068571a33ef8c2853946',
  (0x441fd0,64):'d556cad7fb18ec2c4b6345c1905d48751181850239d5091acb24bfc0870c655a',
  (0x413d40,144):'10d0986c6dfadfa5c2dacf1c1abbebbc0cf58e2dfe452cd619245bd0c77713e4',
@@ -43,6 +45,9 @@ def verify(exe):
  for (a,n),digest in RANGES.items():assert hashlib.sha256(r(a,n)).hexdigest()==digest,hex(a)
  registry=struct.unpack('<BBHfIII',r(0x1036420+19*20,20))
  assert registry[:6]==(15,6,1,360000.,0,0x44f540)
+ # Both child tasks use the same inert callback; these are not land meshes.
+ assert r(0x51f680,1)==b'\xc3'
+ for a in (0x44f58b,0x44f5b2):assert r(a,5)==b'\x68'+struct.pack('<I',0x51f680)
  assert r(0x44f5c7,2)==bytes.fromhex('6a04') #CCL_Init category4, not enemy3
  assert r(0x916a08,2)==bytes([0,3]) #CCI ID0 / form3 box
  for a,target in [(0x44ee0a,0x4265f0),(0x44ee0f,0x425cc0),(0x44ee17,0x425be0),
@@ -57,7 +62,7 @@ def verify(exe):
  assert struct.unpack('<f',r(0x7dcb34,4))[0]==10.
  assert struct.unpack('<d',r(0x7dccd0,8))[0]==65536.
  assert struct.unpack('<d',r(0x7df1a0,8))[0]==1./360.
- print('Restart record owner witnesses: PASS exact SHA,32 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and task/shape dispatchers; native activation/visuals remain separate')
+ print('Restart record owner witnesses: PASS exact SHA,34 code spans,clock/ring reset calls,checkpoint registry19/category4/form3 and inert child callback/constructor,task/shape dispatchers; native activation/visuals remain separate')
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('usage: verify_pc2004_restart_record.py OWNER_SONIC_EXE')
  verify(Path(sys.argv[1]))

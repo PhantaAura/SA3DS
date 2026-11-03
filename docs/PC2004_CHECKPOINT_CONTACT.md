@@ -1,5 +1,9 @@
 # WCA48 — original checkpoint player/box contact
 
+WCA50 correction: earlier references below to dynamic-land children/collision
+were an incorrect interpretation. Both child callbacks are inert in the exact
+owner binary. See [child task evidence](PC2004_CHECKPOINT_CHILDREN.md).
+
 WCA47's asset pipeline retained source form3, but its rules builder mistakenly
 selected enemy category3. Source44F5C7 passes category4 to CCL_Init41CAF0.
 This checkpoint fixes that mismatch and upgrades the package/reader to version2;

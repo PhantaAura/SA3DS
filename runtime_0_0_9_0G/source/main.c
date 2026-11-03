@@ -189,7 +189,7 @@ static uint8_t*g_checkpoint_bytes;static size_t g_checkpoint_size;
 static int g_checkpoints_ready;static int32_t g_checkpoint_head=-1;
 static uint32_t g_checkpoint_saved_row=UINT32_MAX;
 static unsigned g_checkpoint_activations,g_checkpoint_contacts,g_checkpoint_draws;
-static unsigned g_checkpoint_sounds,g_checkpoint_effects,g_checkpoint_time_draws,g_checkpoint_land_requests;
+static unsigned g_checkpoint_sounds,g_checkpoint_effects,g_checkpoint_time_draws,g_checkpoint_child_sync_requests;
 static int g_checkpoint_probe,g_checkpoint_probe_injected;
 static uint32_t g_checkpoint_probe_row;
 static unsigned g_checkpoint_probe_ticks,g_checkpoint_probe_age,g_checkpoint_probe_control;
@@ -1574,7 +1574,7 @@ static int tick_checkpoints(void){
                 g_restart_record.minutes,g_restart_record.seconds,g_restart_record.frames,spin);boot_log("CHECKPOINT_SAVE",note);
         }
         g_checkpoint_sounds+=s->draw.play_sound;g_checkpoint_effects+=s->draw.emit_effect;g_checkpoint_time_draws+=s->draw.display_time;
-        if(s->draw.initialize||s->draw.sync_children)g_checkpoint_land_requests+=2; /*real dynamic land executor remains pending*/
+        if(s->draw.initialize||s->draw.sync_children)g_checkpoint_child_sync_requests+=2; /*source child callback51F680 is RET; no land collision executor*/
     }
     return 1;
 }

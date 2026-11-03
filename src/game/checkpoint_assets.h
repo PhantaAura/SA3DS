@@ -11,6 +11,7 @@ typedef struct {
     SA3DSMovementObjects placements;
     const uint8_t *collider,*player_colliders,*quarter_lut;
     SA3DSCCLRules rules[2];
+    /*Legacy package field name; these are inert child offsets, not land meshes.*/
     float node_positions[3][3],land_offsets[2][3],load_squared,unload_squared;
 } SA3DSCheckpointAssets;
 /*Version2 retains the source CCL_Init category4 rules (v1 used enemy3).

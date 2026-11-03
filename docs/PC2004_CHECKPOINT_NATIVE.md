@@ -28,7 +28,9 @@ the final fixture backs away along the traversed approach and waits for measured
 
 ## Remaining fidelity work
 
-Dynamic-land children are requested/counted, not executed as collision objects.
+Correction WCA50: the two child tasks use an inert RET callback, not a dynamic-land
+executor. Their synchronization is counted; no additional physical post collision
+is justified by those children. See PC2004_CHECKPOINT_CHILDREN.md.
 Sound, effects and original time glyph executors remain incomplete. The current
 player bridge uses canonical contact-frame angles, not recovered original angle
 history/Euler branch selection. Full original CCL history phase, scheduler order,

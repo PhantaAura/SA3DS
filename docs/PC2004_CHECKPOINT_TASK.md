@@ -2,6 +2,10 @@
 > PC2004_CHECKPOINT_CONTACT.md. The earlier private WCA47 category3 package is
 > superseded; do not install it. Task and visual pose findings remain valid.
 
+WCA50 correction: earlier references below to dynamic-land children/collision
+were an incorrect interpretation. Both child callbacks are inert in the exact
+owner binary. See [child task evidence](PC2004_CHECKPOINT_CHILDREN.md).
+
 # WCA47 — original checkpoint task and owner assets
 
 This adds the portable original post task and an external owner-data pipeline.

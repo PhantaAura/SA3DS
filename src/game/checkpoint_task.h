@@ -2,7 +2,7 @@
 #define SA3DS_CHECKPOINT_TASK_H
 #include <stdint.h>
 /*44F540 parent task, with44F430 contact and44F150 angular update. Caller owns
- * SET lifetime/clip, dynamic-land children, prior CCL and player restart data.*/
+ * SET lifetime/clip, inert child task bookkeeping, prior CCL and player restart data.*/
 typedef struct {
     uint8_t action;
     int32_t post_x,post_y,velocity_x,velocity_y,time_display;

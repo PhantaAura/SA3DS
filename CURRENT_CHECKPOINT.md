@@ -1,3 +1,21 @@
+# WCA50 — correct original checkpoint child-task interpretation
+
+Exact owner callbacks are inert RET, not missing dynamic-land collision. The
+constructor copies parent position/angles; source44F070/430 updates child offsets
+and angles without registering land meshes. Added exact-owner callback/constructor
+witnesses and corrected the native diagnostic terminology. No invented physical
+post obstacles are introduced. Required host gate and exact-owner34-span verifier
+PASS; native rebuild PASS and byte-identical to WCA49 (no redundant emulator run).
+See docs/PC2004_CHECKPOINT_CHILDREN.md.
+
+Next concrete CP7 gap: original44EDB0 invokes441FD0, which creates the120-count
+441F80 player invulnerability task (player work flags6 bit8000); native reload
+currently resets damage state without reproducing that task. Inspect source task
+order and native damage/CCL flags before implementing. Other checkpoint gaps
+remain full history/clock presentation/effects/audio/natural route.
+
+---
+
 # WCA49 — native checkpoint activation, clock and death respawn
 
 Native row-90 activation/save/death/reload fixture PASS on exact 456300-byte
@@ -8,7 +26,7 @@ one restart and12 ticks resumed control. Damage report injected after measured
 or physical hardware evidence. Required host/owner pose gates and native build PASS.
 See docs/PC2004_CHECKPOINT_NATIVE.md for scope and remaining gaps.
 
-Next: original checkpoint dynamic-land execution and player/contact history,
+Next: original player/contact history and checkpoint presentation,
 then broader natural gameplay. Full CP1–CP9 and strict PC2004 1:1 remain open.
 
 ---

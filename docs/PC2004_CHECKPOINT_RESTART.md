@@ -1,5 +1,9 @@
 # WCA46 — original checkpoint restart record
 
+WCA50 correction: earlier references below to dynamic-land children/collision
+were an incorrect interpretation. Both child callbacks are inert in the exact
+owner binary. See [child task evidence](PC2004_CHECKPOINT_CHILDREN.md).
+
 This checkpoint implements the portable session-record contract. It does not
 activate native checkpoint posts or replace WCA45's runnable preview. Full
 checkpoint gameplay/respawn acceptance remains open.
