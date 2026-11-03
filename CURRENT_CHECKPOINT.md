@@ -1,3 +1,22 @@
+# WCA52 — original game-over fade before screen initialization
+
+Original zero-lives path now runs42C350's43-update world fade before state18,
+with final world update preceding native teardown. No extra life decrement or
+reload. Exact457836B/4accef903822139953ae2568750f9a748f3425bfe26f166469526e3768e76ed1
+artifact passed bounded native actual Saru row28 damage/death/fade fixture;
+first row26 fixture produced no damaging contact and timed out. Required host,
+owner16-span verifier and native build PASS. Opaque top/flow18 raster inspected.
+See docs/PC2004_GAMEOVER_FLOW.md. The retry/quit screen is still pending.
+
+Next: original state18/19 retry/quit/timeout flow,42BFD0 screen and source input
+masks. GAMEOVER_E.PVM directory pixel0 disagrees with PVRT pixel2 at textures2..6;
+strict importer rejects it. Inspect original loader before relaxing validation.
+Source helpers421180 resource load,4338D0 sprite and433F80 scaled sprite,42BFD0
+screen,416610 stage manager. Owner data/private decompile remain outside Git.
+No unchanged pose/import matrix rerun. Full CP1–CP9 and hardware acceptance open.
+
+---
+
 # WCA51 — native original respawn protection
 
 Original441F80 list0 task now runs after valid-record reload:120 protected

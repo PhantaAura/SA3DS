@@ -55,7 +55,21 @@ int sa3ds_stage_restart_begin(SA3DSStageRestart*f,unsigned interval,SA3DSStageRe
         r->fade_draw=r->run_world=1;
         if(fade_in(f,interval)!=0)f->state=15;
         return 1;
-    case 8:r->game_over_pending=1;return 1; /*real game-over executor pending*/
+    case 8:
+        /*42C350: no delay countdown, increments BEFORE drawing, returns -1
+         * on entry value>248. World still runs on the completion update.*/
+        r->fade_draw=r->run_world=1;
+        if(f->fade_active){
+            if(f->fade_value>248){f->fade_value=255;f->fade_active=0;}
+            else{
+                for(unsigned n=0;n<(interval>1?interval:1);n++)
+                    if(f->fade_value<255)f->fade_value=(uint16_t)(f->fade_value+6);
+                if(f->fade_value>255)f->fade_value=255;
+                fade_draw(f);return 1;
+            }
+        }
+        fade_draw(f);r->clear_world=r->clear_rings=1;f->request=0;f->state=18;return 1;
+    case 18:r->game_over_pending=1;return 1; /*original retry/quit screen executor pending*/
     default:return 0;
     }
 }
@@ -63,6 +77,6 @@ int sa3ds_stage_restart_end(SA3DSStageRestart*f,const SA3DSStageRestartResult*be
     if(!f||!begin)return 0;
     if(!begin->process_requests||f->request!=2)return 1;
     f->request=0;
-    if(f->lives<1){f->state=8;return 1;}
+    if(f->lives<1){f->state=8;f->fade_active=1;f->fade_delay=1;f->fade_value=0;return 1;}
     f->state=6;f->fade_active=1;f->fade_delay=1;f->fade_value=f->fade_alpha;fade_draw(f);return 1;
 }

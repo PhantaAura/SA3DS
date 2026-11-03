@@ -73,6 +73,13 @@ int main(void){
     flow.lives=-2;sa3ds_stage_restart_add_lives(&flow,1);assert(flow.lives==127);
     flow.lives=0;sa3ds_stage_restart_add_lives(&flow,-1);assert(flow.lives==-1);
     flow.state=15;flow.request=2;assert(sa3ds_stage_restart_begin(&flow,1,&phase));assert(sa3ds_stage_restart_end(&flow,&phase)&&flow.state==8);
+    for(unsigned n=1;n<=43;n++){
+        assert(sa3ds_stage_restart_begin(&flow,1,&phase));
+        assert(phase.run_world&&!phase.controls_enabled&&!phase.game_over_pending);
+        assert(flow.fade_alpha==(n<43?n*6:255));
+        assert(phase.clear_world==(n==43)&&phase.clear_rings==(n==43));
+    }
+    assert(flow.state==18&&flow.lives==-1);
     assert(sa3ds_stage_restart_begin(&flow,1,&phase)&&phase.game_over_pending&&!phase.run_world);
-    printf("Death/restart: PASS command50/86,122nd-update task request/order/special/wrap,passive original118 pose (%u air/%u ground/%u clamp),fade46/6/49 boundaries and signed lives; game-over executor separate\n",air,ground,clamps);
+    printf("Death/restart: PASS command50/86,122nd-update task request/order/special/wrap,passive original118 pose (%u air/%u ground/%u clamp),fade46/6/49 boundaries,43-update game-over fade and signed lives; game-over executor separate\n",air,ground,clamps);
 }

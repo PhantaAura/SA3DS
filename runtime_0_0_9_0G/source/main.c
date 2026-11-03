@@ -181,6 +181,7 @@ typedef struct SA3DSNativeProtection{struct SA3DSNativeProtection*next;SA3DSPlay
 static SA3DSNativeProtection*g_protection_head;
 static unsigned g_protection_created,g_protection_finished;
 static SA3DSStageRestart g_stage_restart;
+static int g_gameover_probe;static unsigned g_gameover_world_ticks;
 static SA3DSCourseClock g_course_clock;
 static SA3DSRestartRecord g_restart_record;
 typedef struct {SA3DSCheckpointTask task;SA3DSCheckpointResult draw;SA3DSCCLBody ccl;SA3DSCCLShape shape;
@@ -1820,9 +1821,16 @@ static int native_stage_reload(void){
 static int native_stage_begin(SA3DSStageRestartResult*out){
     uint8_t previous=g_stage_restart.state;
     if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
-    if(out->clear_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);}
-    if(out->clear_rings)g_rings.rings=0;
+    if(out->clear_world&&!out->run_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);}
+    if(out->clear_rings&&!out->run_world)g_rings.rings=0;
     if(out->reload_stage&&!native_stage_reload())return 0;
+    if(previous==8&&out->run_world)g_gameover_world_ticks++;
+    if(out->game_over_pending&&g_gameover_probe){
+        char note[180];snprintf(note,sizeof(note),"%s worldTicks=%u state=%u alpha=%u deathCounter=%u restarts=%lu; retry/quit presentation remains pending",
+            g_gameover_world_ticks==43&&g_stage_restart.state==18&&g_stage_restart.fade_alpha==255&&g_death_trigger_counter==122&&!g_stage_restart.restart_count?"PASS":"FAIL",
+            g_gameover_world_ticks,g_stage_restart.state,g_stage_restart.fade_alpha,g_death_trigger_counter,(unsigned long)g_stage_restart.restart_count);
+        boot_log("GAMEOVER_PROBE",note);g_gameover_probe=0;
+    }
     if(out->game_over_pending){boot_log("STAGE_FLOW","PENDING: source game-over screen/menu executor");g_paused=1;}
     if(previous!=g_stage_restart.state){
         char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d alpha=%u",
@@ -1856,7 +1864,7 @@ static int draw_stage_fade(void){
 static void begin_saru_probe(void){
     FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_saru_probe.flag","rb");if(!f)return;
     unsigned row=0;char mode=0,extra=0;int parsed=fscanf(f,"%u %c %c",&row,&mode,&extra)>=1;fclose(f);
-    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';g_hurt_probe=mode=='D'||mode=='R'||mode=='Z';g_scatter_probe=mode=='R';g_death_probe=mode=='Z';g_death_probe_pause_fade=g_death_probe&&extra=='F';
+    g_saru_probe_combat=mode=='C';g_homing_probe=mode=='H';g_hurt_probe=mode=='D'||mode=='R'||mode=='Z';g_scatter_probe=mode=='R';g_death_probe=mode=='Z';g_death_probe_pause_fade=g_death_probe&&extra=='F';g_gameover_probe=g_death_probe&&extra=='G';g_gameover_world_ticks=0;
     if(!parsed||!g_saru_ready||!g_ec_full_route)goto fail;
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
@@ -1887,7 +1895,7 @@ static void begin_saru_probe(void){
          * rather than probing the known incomplete cliff wall adapter.*/
         g_player.yaw=PI;g_player.surface_forward=(SA1Vec3){0,0,-1};g_player.surface_right=(SA1Vec3){-1,0,0};
     }
-    if(g_death_probe){g_rings.rings=0;sa3ds_stage_restart_init(&g_stage_restart);clear_native_death();
+    if(g_death_probe){g_rings.rings=0;sa3ds_stage_restart_init(&g_stage_restart);if(g_gameover_probe)g_stage_restart.lives=0;clear_native_death();
         g_death_created=g_death_alloc_failed=g_death_requests=g_death_trigger_counter=0;
         g_death_probe_ticks=g_death_probe_poses=g_death_probe_clamps=g_death_probe_control=0;}
     g_homing_probe_calls=g_homing_probe_tracks=g_homing_probe_double=g_homing_probe_target=0;
@@ -2540,6 +2548,10 @@ int main(void) {
             if(g_emerald_coast&&g_ec_combined){
                 if(g_rings.extra_lives>=previous_extra_lives)for(uint32_t n=previous_extra_lives;n<g_rings.extra_lives;n++)
                     sa3ds_stage_restart_add_lives(&g_stage_restart,1);
+                if(stage_phase.clear_world&&stage_phase.run_world){
+                    clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);clear_scatter();
+                    if(stage_phase.clear_rings)g_rings.rings=0;
+                }
                 uint8_t previous_stage=g_stage_restart.state;
                 if(!sa3ds_stage_restart_end(&g_stage_restart,&stage_phase)){fail_screen("Source stage request failed");break;}
                 if(previous_stage!=g_stage_restart.state){char note[100];snprintf(note,sizeof(note),"sourceFrame=%lu state=%u->%u lives=%d",

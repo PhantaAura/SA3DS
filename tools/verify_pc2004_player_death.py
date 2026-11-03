@@ -5,6 +5,8 @@ import hashlib,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.verify_pc2004_ec_route import verified_reader
 RANGES={
+ (0x42c350,400): 'c75782510eb8749577b40e4ef1c5fca006f9397561d767e1094d742251439a1b',
+ (0x42bf90,32): 'd05784205d127252c8d7eda2c8047929796531020838c271976b955ae012d2d8',
  (0x40ef40,32):'cfac35e2cf279d1a8c5254b250bfbf57c82900fcbe1c45dd9c1fe355c57537d5',
  (0x440c80,80):'766583051c1afc3fbf407b4903b7eea7496ee559914272b0b89c2b19aee32909',
  (0x40b030,144):'b9619d64c2d6c8e586762e5c8fef324f7917ee2577cec63b543502c80beaf422',
@@ -26,7 +28,7 @@ def call(r,a,target):
 def verify(exe):
  r=verified_reader(exe)
  for (a,n),digest in RANGES.items():assert hashlib.sha256(r(a,n)).hexdigest()==digest,hex(a)
- for case,target in [(2,0x41676b),(3,0x41677e),(4,0x4167a0),(6,0x416e07),(15,0x41680c)]:
+ for case,target in [(2,0x41676b),(3,0x41677e),(4,0x4167a0),(6,0x416e07),(8,0x416f5f),(15,0x41680c)]:
   assert struct.unpack('<I',r(0x417314+case*4,4))[0]==target
  assert struct.unpack('<I',r(0x49a850+85*4,4))[0]==0x49a848
  assert struct.unpack('<I',r(0x49bfbc+86*4,4))[0]==0x49bdb4
@@ -36,7 +38,7 @@ def verify(exe):
  for a,target in [(0x440c96,0x413c90),(0x440cac,0x424830),(0x440cb2,0x40b6c0),
                   (0x49bdc6,0x443ad0),(0x49bdce,0x448e50),(0x49bdd6,0x443f50),
                   (0x49bdde,0x44cdf0),(0x49bde6,0x43ee70)]:call(r,a,target)
- print('Death owner witnesses: PASS exact SHA,14 code spans,task snapshot/head order,old-counter branch,command86/ground87,action-stage dispatcher/faders/lives; static evidence only')
+ print('Death owner witnesses: PASS exact SHA,16 code spans,task snapshot/head order,old-counter branch,command86/ground87,action-stage dispatcher/faders/lives; static evidence only')
 if __name__=='__main__':
  if len(sys.argv)!=2:raise SystemExit('usage: verify_pc2004_player_death.py OWNER_SONIC_EXE')
  verify(Path(sys.argv[1]))
