@@ -75,7 +75,8 @@ def _pixel_rgba(value: int, pixel_format: int) -> tuple[int, int, int, int]:
 class PVMArchive:
     DIRECTORY_ROW_SIZE = 38
 
-    def __init__(self, source: bytes | bytearray | memoryview | Path, label: str | None = None):
+    def __init__(self, source: bytes | bytearray | memoryview | Path, label: str | None = None, *, pixel_format_from_pvrt: bool = False):
+        self.pixel_format_from_pvrt = pixel_format_from_pvrt
         if isinstance(source, Path):
             self.label = label or source.name
             self.data = source.read_bytes()
@@ -129,6 +130,11 @@ class PVMArchive:
             p_pf, p_df, reserved, p_w, p_h = struct.unpack_from("<BBHHH", self.data, off + 8)
             if reserved != 0:
                 raise PVMArchiveError(f"texture {index}: nonzero PVRT reserved field")
+            #77FD80 ->77FBD0 ->77F910 ->77F2F0 reads pixel format from
+            #PVRT, not PVMH. Explicitly opt in for proven stale directory PF;
+            #dimensions/data format still require agreement in this profile.
+            if self.pixel_format_from_pvrt:
+                pf = p_pf
             if (p_pf, p_df, p_w, p_h) != (pf, df, width, height):
                 raise PVMArchiveError(f"texture {index}: directory/PVRT mismatch")
             if df != 9:

@@ -1,3 +1,22 @@
+# WCA53 — original game-over menu and owner art ready for native connection
+
+Portable original selection/timer/confirm/quit/retry requests and nine pulse-tinted
+sprite commands pass focused checks. Original PVRT loader proves English archive
+pixel2 authority despite stale directory pixel0. Explicit opt-in importer fixes
+this profile with unchanged strict default. External English263024B/1486b393 private
+package exists at /private/tmp/sa3ds-wca53-gameover.sa3dspak, not installed yet.
+See docs/PC2004_GAMEOVER_MENU.md. Required host/exact-owner pose-import/build PASS;
+native artifact remains byte-identical WCA52/unreferenced helpers. No new emulator
+run. Native screen is still pending, not a completed game-over loop.
+
+Next MUST connect native UI textures/draws/input/menu tick, then original retry
+fresh-stage entry and quit stage handoff. Avoid further source-only menu churn.
+Confirm owner maskC; toggle300C0. Retain pulse across menu instances. Native Start
+currently exits the app before menu input handling and needs menu-specific routing.
+Full CP1–CP9/retail trajectories/Old3DS acceptance remain open.
+
+---
+
 # WCA52 — original game-over fade before screen initialization
 
 Original zero-lives path now runs42C350's43-update world fade before state18,

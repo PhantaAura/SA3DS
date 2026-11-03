@@ -57,3 +57,5 @@ python3 tools/verify_pc2004_player_death.py "$SONIC_EXE_PATH"
 
 # Original checkpoint post callbacks, SET rows and active/inactive textures.
 python3 tools/audit_pc2004_checkpoint_assets.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")"
+
+python3 tests/test_pc2004_gameover_assets.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")/GAMEOVER_E.PVM"

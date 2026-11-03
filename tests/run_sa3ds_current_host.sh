@@ -151,3 +151,6 @@ bash tests/run_checkpoint_contact.sh
 
 printf "\n== Native checkpoint player and course clock bridge ==\n"
 bash tests/run_checkpoint_player.sh
+
+printf '\n== Original game-over menu ==\n'
+sh tests/run_game_over.sh
