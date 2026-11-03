@@ -213,3 +213,15 @@ It does not execute the retail AI, shared damage or projectile runtime.
 Required host gate and staged native build passed. Pose/import data unchanged;
 no repeated Sonic oracle. Unreferenced actor code leaves the381608B/ae538ee9
 native artifact identical; no repeated emulator run or new FPS/memory claim.
+
+## WCA35 shared damage connection
+
+saru_actor now bridges original4CE030 decisions through enemy_damage.[ch],
+copying its real task status/position and enemy flags/squash/velocityY fields.
+The world caller supplies genuine prior CCL hits, shared query cursor, separate
+cached attacker record, player states and global explosion. Host actor regression
+now invokes this shared implementation at both common-tail calls, preserving
+cursor/score requests and reaching next-tick death. It no longer needs a fake
+kill predicate for that integration check. Native collision generation and
+execution of player bounce/score/death/projectile systems remain pending.
+See docs/PC2004_ENEMY_DAMAGE.md for source rules and exact evidence boundaries.

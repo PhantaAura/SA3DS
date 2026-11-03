@@ -1,13 +1,14 @@
 #ifndef SA3DS_SARU_ACTOR_H
 #define SA3DS_SARU_ACTOR_H
 #include "saru.h"
+#include "enemy_damage.h"
 typedef struct {
     SA1Vec3 origin,position,saved_position,scale;
     int32_t angles[3],target_orbit,player_yaw;
     uint32_t idle_phase,hop_phase,age;
     uint16_t status,counter,packed_tag;
     uint8_t action,previous_action,mode,wait,death_byte9,death_byte10;
-    float squash_velocity,bob,bomb_scale;
+    float squash_velocity,bob,bomb_scale,damage_velocity_y;
     SA3DSSaruAnimation animation;
 } SA3DSSaruActor;
 typedef struct {
@@ -44,6 +45,12 @@ typedef struct {
     const uint16_t *action_frames; /*six counts read from owner's SA3C*/
     int visible,render_suppressed,collision_flag0;
 } SA3DSSaruActorInput;
+/* Connect original shared4CE030 decisions to this actor's real enemy fields.
+ * The world input supplies prior CCL/cache/player/explosion state; live actor
+ * status and position override its corresponding input fields. Outputs must
+ * be executed at each source call, not accumulated once per actor lifetime. */
+int sa3ds_saru_damage_check(SA3DSSaruActor *actor,const SA3DSEnemyDamageInput *world,
+    SA3DSCCLQueryCursor *cursor,SA3DSEnemyDamageResult *out);
 int sa3ds_saru_actor_init(SA3DSSaruActor *actor,const SA3DSMovementPlacement *placement,
     const SA3DSSaruServices *services);
 /* Ordinary4ACF80 action dispatch/common tail, after4258F0/46C010 decisions.

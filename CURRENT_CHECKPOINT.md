@@ -1,3 +1,24 @@
+# WCA active checkpoint — source shared enemy damage and CCL hit queries
+
+WCA35 adds enemy_damage.[ch]: original16-hit/category0-then1 queries and shared
+cursor semantics,4CE030 damage/score/strong-attribute decisions,4CDFE0 local
+player-bounce gates and4C0550 strict explosion range. Separate cached damage
+other/record is preserved. Saru adapter connects the shared decisions to real
+actor enemy fields; its host test retains the cursor across common-tail calls.
+
+Focused/shared actor checks, exact-owner seven-helper/operand witness and required
+host/native build gates PASS. Same381608B/ae538ee9 binary because native callers
+remain pending; no repeat emulator or unchanged pose/import checks. Results are
+source-equation/host evidence, not retail execution or native enemy combat.
+See docs/PC2004_ENEMY_DAMAGE.md. All owner payloads remain outside Git.
+
+Next: original CCL pair masks/Sonic attack shape/hit/cache generation, actual
+native bounce and score/death/effect execution, original projectile construction,
+range/floor/special-mode services, then native actor rendering/list3/homing.
+Full WCA/physics1to1 remain false; continue after checkpoint publication.
+
+---
+
 # WCA active checkpoint — original E SARU ordinary state handlers
 
 WCA34 adds portable saru_actor.[ch] for ordinary4ACF80 dispatch. Idle/gesture/

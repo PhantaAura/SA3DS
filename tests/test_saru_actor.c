@@ -5,12 +5,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-typedef struct {uint16_t random[16];unsigned rng,damage_calls,floor_calls;int kill_at;float floor;double sine;} Context;
+typedef struct {uint16_t random[16];unsigned rng,damage_calls,floor_calls;int kill_at;float floor;double sine;int source_damage,score;SA3DSEnemyDamageInput damage_input;SA3DSCCLQueryCursor cursor;} Context;
 static uint16_t rng(void*p){Context*c=p;assert(c->rng<16);return c->random[c->rng++];}
 static double sine(void*p,uint16_t a){return a==0x4000?1.:a==0xc000?-1.:((Context*)p)->sine;}
 static int32_t angle(void*p,double y,double x){(void)p;return (int32_t)trunc(atan2(y,x)*65536.*.15915497620314795);}
 static double floor_height(void*p,const SA3DSSaruActor*a){(void)a;Context*c=p;c->floor_calls++;return c->floor;}
-static int damage(void*p,SA3DSSaruActor*a){(void)a;Context*c=p;c->damage_calls++;return c->kill_at>0&&(int)c->damage_calls==c->kill_at;}
+static int damage(void*p,SA3DSSaruActor*a){Context*c=p;c->damage_calls++;
+    if(c->source_damage){SA3DSEnemyDamageResult r;assert(sa3ds_saru_damage_check(a,&c->damage_input,&c->cursor,&r));c->score+=r.score_delta;return r.killed;}
+    return c->kill_at>0&&(int)c->damage_calls==c->kill_at;}
+static int player_category(void*p,uint32_t id,unsigned*out){(void)p;if(id!=1)return 0;*out=0;return 1;}
 static SA3DSSaruServices services(Context*c){return (SA3DSSaruServices){c,sine,angle,rng,floor_height,damage};}
 static SA3DSSaruActor actor(unsigned state){return (SA3DSSaruActor){.scale={1,1,40},.status=0x100,.action=(uint8_t)state,.animation={.enemy_flags=0x483,.current_frame=3}};}
 static void step(SA3DSSaruActor*a,SA3DSSaruActorInput*in,Context*c,SA3DSSaruActorResult*r){SA3DSSaruServices v=services(c);assert(sa3ds_saru_actor_tick(a,in,&v,r));}
@@ -101,5 +104,13 @@ int main(int argc,char**argv){
     in.collision_flag0=0;a=actor(8);memset(&c,0,sizeof(c));a.status|=0x400;a.age=600;
     step(&a,&in,&c,&r);assert(a.status&0x400);step(&a,&in,&c,&r);assert(!(a.status&0x400)&&a.counter==2);
     a=actor(11);a.counter=65535;step(&a,&in,&c,&r);assert(a.counter==0&&!r.draw&&r.display);
-    puts("E SARU actor: PASS source ordinary-state transitions/RNG order, strict ranges, turns/orbit, draw/blend phase, throw/death requests and common tail; native/shared damage/projectile execution pending");
+    /*Actual shared damage helper at both common-tail call sites, retaining
+      its source query cursor and actor enemy fields across calls.*/
+    SA3DSCCLHits hits;sa3ds_ccl_hits_reset(&hits,50);hits.hits[0]=(SA3DSCCLHit){0,0,1};
+    a=actor(8);a.status|=4;memset(&c,0,sizeof(c));c.source_damage=1;sa3ds_ccl_query_reset(&c.cursor);
+    c.damage_input=(SA3DSEnemyDamageInput){.hits=&hits,.resolve=player_category,.cached_damage_other_valid=1,.cached_owner_is_player0=1,.explosion_radius=-1,.players={{.present=1,.status=0x100,.character=0}}};
+    in.collision_flag0=1;step(&a,&in,&c,&r);
+    assert(a.action==12&&c.damage_calls==2&&c.score==10&&a.animation.enemy_flags==0x1083&&a.squash_velocity==.35f);
+    step(&a,&in,&c,&r);assert(r.death&&r.destroy&&c.score==10);
+    puts("E SARU actor: PASS source ordinary-state transitions/RNG order, strict ranges, turns/orbit, draw/blend phase, throw/death requests and common tail; shared damage bridge checked; native CCL/projectile execution pending");
 }

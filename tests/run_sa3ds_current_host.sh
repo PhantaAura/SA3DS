@@ -123,3 +123,6 @@ bash tests/run_saru_pose.sh
 
 printf '\n== Original E SARU ordinary actor decisions ==\n'
 bash tests/run_saru_actor.sh
+
+printf '\n== Source shared enemy damage and collision-hit queries ==\n'
+bash tests/run_enemy_damage.sh

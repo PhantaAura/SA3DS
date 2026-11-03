@@ -172,3 +172,12 @@ int sa3ds_saru_actor_tick(SA3DSSaruActor*a,const SA3DSSaruActorInput*in,const SA
     if(s32(a->age)>600)a->status&=(uint16_t)~0x400u;
     a->age++;r->enqueue_collision=(a->status&0x100)!=0;r->display=1;return 1;
 }
+
+int sa3ds_saru_damage_check(SA3DSSaruActor*a,const SA3DSEnemyDamageInput*world,SA3DSCCLQueryCursor*c,SA3DSEnemyDamageResult*out){
+    if(!a||!world||!out)return 0;
+    SA3DSEnemyDamageInput input=*world;input.task_status=a->status;input.position=a->position;
+    SA3DSEnemyDamageState state={a->animation.enemy_flags,a->squash_velocity,a->damage_velocity_y};
+    if(!sa3ds_enemy_damage_check(&state,&input,c,out))return 0;
+    a->animation.enemy_flags=state.enemy_flags;a->squash_velocity=state.squash_velocity;a->damage_velocity_y=state.velocity_y;
+    return 1;
+}

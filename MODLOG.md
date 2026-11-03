@@ -179,3 +179,10 @@ Implemented original ordinary handler/control order, source squash, RNG and
 throw/death requests. Focused/source-owner checks and required host/native gates
 pass. No native/shared damage/projectile execution claim. Original private C
 contains handlers115485..116272;4CDF60 is squash, not terrain. See Saru doc.
+
+## 2026-11-02 WCA35 shared enemy damage
+
+Original CCL hit-query cursor/category priority and4CE030 damage/explosion/
+score/local-bounce rules implemented; separate cached attacker preserved. Saru
+bridge tests call actual shared helper. Host, owner witnesses and native build
+pass; artifact unchanged ae538ee9. Native CCL production/combat still pending.
