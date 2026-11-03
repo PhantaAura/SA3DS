@@ -1,3 +1,22 @@
+# WCA55 — original light/material API states recovered
+
+Owner profile extraction + portable104-byte directional-light and68-byte material
+builders pass host/owner gates. Both EC acts select ordinary row3. Preserve raw
+0..255 material API floats; final renderer material-source/FVF policy is still
+unrecovered. External592B/19823885 private package is not installed. Native build
+PASS but unreferenced helpers are discarded; runnable WCA54 artifact unchanged.
+No redundant emulator replay. See docs/PC2004_CHARACTER_LIGHT_STATE.md.
+
+Next MUST fix ordinary Sonic's missing constant-white material state and inspect
+actual raster. Source4948C0 control10/white ->403470 ->77EF70 ->781CC0 copied
+constant/work bit2 ->784850 resolves constant over stored diffuse. Current native
+Sonic uses stored grayB2/blueB1, potentially darkening textures twice. Preserve
+Pose Lab and other actor behavior; bind the explicit ordinary Sonic context.
+Remaining directional/ambient/specular rendering needs FVF/material-source/
+normal/view rules, not a generic substitute. Full CP1–CP9/hardware acceptance open.
+
+---
+
 # WCA54 — native original game-over menu, Continue and Quit
 
 Exact462612B/d78093b65f4e16b8f94fd38649ceae0b684dff033055f0a90c83a937cf6dd4e3

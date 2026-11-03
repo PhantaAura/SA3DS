@@ -154,3 +154,6 @@ bash tests/run_checkpoint_player.sh
 
 printf '\n== Original game-over menu ==\n'
 sh tests/run_game_over.sh
+
+printf '\n== Original character lighting API state ==\n'
+sh tests/run_pc2004_lighting.sh
