@@ -37,7 +37,7 @@ not necessarily the hit returned by the category query. Attribute1000 sets enemy
 flag800 and enemy velocityY=.7; it requests no player bounce. Otherwise, cached
 other owner task identity selects player0 if equal to the primary task, else1.
 A present player with status100, no low ground bits and character0/2/3 gets the
-441280 local velocity write(0,2,0), followed by4BCBC0(player,0). That follow-up
+441280 world velocity write(0,2,0), then its43EC00 world-to-local cache derivation, followed by4BCBC0(player,0). That follow-up
 is the original optional rumble request, not a homing-action reset. Then enemy
 flag400 is cleared. The port emits these requests; it does not yet mutate the
 native player, score/chain state or hardware rumble.
@@ -57,7 +57,7 @@ hit producer or substituted damage rule is supplied.
 
 Focused host checks cover cursor order/reset/failure/sentinel/current-category,
 category priority, cached attacker separation, squash/flags/score, normal versus
-strong attributes, local bounce gates and strict explosion boundaries. The Saru
+strong attributes, world bounce gates and strict explosion boundaries. The Saru
 actor test also uses the real shared helper at both common-tail damage calls,
 retains its cursor/score requests, and reaches the next-tick death request.
 
@@ -79,3 +79,13 @@ pre-movement attack/defense update. Its host regression feeds that actual contac
 output into this shared damage helper and observes original score/bounce requests.
 Actual native CCL scheduling/profile loading and execution remain pending.
 See docs/PC2004_CCL_CONTACT.md for exact scope and physical-response evidence.
+
+
+WCA38 correction: the original interface incorrectly named the emitted bounce
+vector `bounce_local_velocity`. Exact441280 stores arguments to motionwk world
+velocity before43EC00 derives local Speed. The corrected field is
+`bounce_world_velocity`; its native executor writes authoritative world velocity
+only, preserving all action/status/pose/frame fields. A tilted-frame regression
+case distinguishes world-up(0,2,0) from physical-up.51F680 is an immediate return
+in this exact executable, not a SET persistence update. See
+PC2004_SARU_CONTACT_NATIVE.md for the native connection and remaining gaps.

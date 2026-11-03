@@ -28,11 +28,17 @@ typedef struct {
 typedef struct {
     uint8_t killed,score_delta,rumble_request;
     int bounce_player; /*-1 absent;0/1 from cached owner's task identity*/
-    SA1Vec3 bounce_local_velocity; /*441280 writes local(0,2,0)*/
+    SA1Vec3 bounce_world_velocity; /*441280 writes motionwk world(0,2,0), then derives local Speed*/
 } SA3DSEnemyDamageResult;
 /*4CE030/4CDFE0 plus4C0550 explosion decision. Updates enemy fields and emits
  * original score/bounce/rumble requests; does not generate CCL attack flags,
  * award score, mutate native player state or execute death/effect systems. */
 int sa3ds_enemy_damage_check(SA3DSEnemyDamageState *state,const SA3DSEnemyDamageInput *input,
     SA3DSCCLQueryCursor *cursor,SA3DSEnemyDamageResult *out);
+/*441280's world velocity assignment for an existing selected player. The
+ * port has no separate authoritative local Speed cache; its next movement
+ * projects this world vector through the retained task frame. No action,
+ * status, animation, position, yaw or ground frame is changed by this helper. */
+int sa3ds_enemy_damage_apply_bounce(const SA3DSEnemyDamageResult *result,
+    unsigned player_index,SA1PlayerState *player);
 #endif

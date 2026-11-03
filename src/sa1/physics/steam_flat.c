@@ -389,6 +389,9 @@ void sa1_physics_step_steam_sonic_flat(
         player->animation_accel_residual_valid = true;
     }
 
+    /* Source49AA48 strength uses the selected action/ball, never the action
+     * rewritten by the following terrain landing/departure resolution. */
+    sa1_player_capture_ccl_state(player);
     player->pos.x += player->vel.x;
     player->pos.y += player->vel.y;
     player->pos.z += player->vel.z;

@@ -1,4 +1,5 @@
 #include "enemy_damage.h"
+#include "game_score.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -6,6 +7,16 @@
 typedef struct {unsigned category[8];int exists[8];} Actors;
 static int resolve(void*p,uint32_t id,unsigned*out){Actors*a=p;if(id>=8||!a->exists[id])return 0;*out=a->category[id];return 1;}
 int main(void){
+    SA3DSGameScore score={0};sa3ds_game_score_add(&score,10);
+    assert(score.total==10&&score.chain_amount==0&&score.chain_timer==120);
+    sa3ds_game_score_add(&score,10);assert(score.total==20&&score.chain_amount==10);
+    for(unsigned i=0;i<60;i++)sa3ds_game_score_add(&score,10);
+    assert(score.total==620&&score.chain_amount==500);
+    sa3ds_game_score_tick(&score,0);assert(score.chain_timer==120);
+    for(unsigned i=0;i<120;i++)sa3ds_game_score_tick(&score,1);
+    assert(score.chain_timer==0);sa3ds_game_score_tick(&score,1);assert(score.chain_timer==-1);
+    sa3ds_game_score_tick(&score,1);assert(score.chain_timer==0);
+    sa3ds_game_score_add(&score,10);assert(score.chain_amount==0&&score.total==630);
     Actors actors={.category={2,0,1,0},.exists={1,1,1,1}};
     SA3DSCCLHits hits;sa3ds_ccl_hits_reset(&hits,50);
     hits.hits[0]=(SA3DSCCLHit){0,0,0}; /*null other task*/
@@ -34,7 +45,14 @@ int main(void){
         .players={{.present=1,.status=0x100,.character=0},{.present=1,.status=0x100,.character=2}}};
     SA3DSEnemyDamageResult out;sa3ds_ccl_query_reset(&cursor);
     assert(sa3ds_enemy_damage_check(&state,&in,&cursor,&out));
-    assert(out.killed&&out.score_delta==10&&out.bounce_player==0&&out.bounce_local_velocity.y==2&&out.rumble_request);
+    assert(out.killed&&out.score_delta==10&&out.bounce_player==0&&out.bounce_world_velocity.y==2&&out.rumble_request);
+    SA1PlayerState player={.pos={3,4,5},.vel={6,7,8},.yaw=1.1f,
+        .ground_normal={0,.8f,.6f},.surface_forward={0,-.6f,.8f},.surface_frame_active=true,
+        .ball_form=true,.pc2004_action_state=8,.pc2004_action_state_valid=true};
+    SA1PlayerState expected=player;expected.vel=(SA1Vec3){0,2,0};
+    assert(!sa3ds_enemy_damage_apply_bounce(&out,1,&player)&&player.vel.x==6);
+    assert(sa3ds_enemy_damage_apply_bounce(&out,0,&player));
+    assert(!memcmp(&player,&expected,sizeof(player))); /*world-up, not physical-up*/
     assert(state.squash_velocity==.35f&&state.enemy_flags==0x1083&&state.velocity_y==4);
     /*The cached attacker, not the category-query hit, selects player1.*/
     sa3ds_ccl_query_reset(&cursor);in.cached_owner_is_player0=0;
@@ -64,5 +82,5 @@ int main(void){
     assert(!memcmp(&cursor,&saved,sizeof(cursor))&&!memcmp(&state,&before,sizeof(state)));
     in.explosion_radius=-1;in.explosion_center.x=NAN;
     assert(sa3ds_enemy_damage_check(&state,&in,NULL,&out)&&!out.killed);
-    puts("Enemy damage: PASS source16-hit cursor/category priority/cache separation, task damage flags, score/bounce gates, strong attributes and strict explosion range; native CCL generation/execution pending");
+    puts("Enemy damage: PASS source16-hit cursor/category priority/cache separation, task damage flags, score/bounce gates, strong attributes and strict explosion range; world bounce preserves tilted actor frame; source score/chain/timer boundaries");
 }

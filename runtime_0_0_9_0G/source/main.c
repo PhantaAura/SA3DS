@@ -11,6 +11,8 @@
 #include "ring_replay.h"
 #include "saru_actor.h"
 #include "saru_pose.h"
+#include "ccl_contact.h"
+#include "game_score.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <math.h>
@@ -117,7 +119,8 @@ static SA3DSPanelVisual g_panel_visual;
 static SA3DSECGpu g_panel_gpu[3];
 static uint8_t *g_panel_visual_bytes;
 static size_t g_panel_visual_size;
-typedef struct {SA3DSSaruActor actor;uint8_t loaded,display;int32_t next,previous;} SA3DSNativeSaru;
+typedef struct {SA3DSSaruActor actor;SA3DSCCLBody ccl;SA3DSCCLShape shape;
+    uint8_t loaded,display,queued,dead;int32_t next,previous;} SA3DSNativeSaru;
 static SA3DSSaruDefinitions g_saru_definitions;
 static SA3DSNativeSaru *g_saru_states;
 static uint8_t *g_saru_definition_bytes,*g_saru_character_bytes,*g_saru_texture_bytes;
@@ -132,6 +135,11 @@ static uint32_t g_saru_rng=1,g_saru_projectiles,g_saru_sounds,g_saru_dust;
 static SA3DSCCLQueryCursor g_saru_damage_cursor;
 static int g_saru_ready;
 static int32_t g_saru_head=-1;
+static SA3DSCCLBody g_player_enemy_ccl;
+static SA3DSCCLShape g_player_enemy_shapes[2];
+static SA3DSGameScore g_game_score;
+static unsigned g_saru_contacts,g_saru_damage_events,g_saru_bounces,g_saru_deaths,g_saru_player_hurt_contacts;
+static int g_saru_task_error,g_saru_probe_combat;
 static unsigned g_saru_frame_actors;
 static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
@@ -1185,6 +1193,9 @@ fail:
 
 static void reset_saru(void){
     g_saru_head=-1;g_saru_rng=1;sa3ds_ccl_query_reset(&g_saru_damage_cursor);
+    sa3ds_ccl_body_init(&g_player_enemy_ccl,1);g_player_enemy_ccl.outer_flags=0x80;
+    memset(g_player_enemy_shapes,0,sizeof(g_player_enemy_shapes));
+    g_saru_task_error=0;g_saru_contacts=g_saru_damage_events=g_saru_bounces=g_saru_deaths=g_saru_player_hurt_contacts=0;
     if(g_saru_states)memset(g_saru_states,0,g_saru_definitions.placements.count*sizeof(*g_saru_states));
 }
 static uint16_t saru_random(void*context){
@@ -1198,13 +1209,72 @@ static double saru_floor(void*context,const SA3DSSaruActor*actor){
     if(!sa3ds_ec_collision_floor_below(&g_ec_collision,actor->position.x,actor->position.y+4.f,actor->position.z,&height))return NAN;
     return height;
 }
+static int saru_category(void*context,uint32_t id,unsigned*category){
+    (void)context;if(id==1){*category=0;return 1;}
+    if(id>=2&&id-2<g_saru_definitions.placements.count){
+        const SA3DSNativeSaru*s=&g_saru_states[id-2];if(s->loaded&&!s->dead){*category=3;return 1;}
+    }
+    return 0;
+}
+static uint16_t native_player_status(const SA1PlayerState*p){return (uint16_t)((p->ball_form?0x100:0)|(p->grounded?1:0));}
 static int saru_damage(void*context,SA3DSSaruActor*actor){
-    (void)context;
-    /* Native NPC CCL and global explosion producer are not connected yet.
-     * Execute the shared source decision with the actual empty world, rather
-     * than inventing attacks or awarding score without a source contact. */
-    SA3DSEnemyDamageInput world={.explosion_radius=-1};SA3DSEnemyDamageResult result;
-    return sa3ds_saru_damage_check(actor,&world,&g_saru_damage_cursor,&result)&&result.killed;
+    SA3DSNativeSaru*s=context;if(!s||actor!=&s->actor){g_saru_task_error=1;return 0;}
+    int cached=s->ccl.cached_other_id==1&&s->ccl.cached_other_shape>=0&&s->ccl.cached_other_shape<2;
+    SA3DSEnemyDamageInput world={.explosion_radius=-1,.hits=&s->ccl.hits,.resolve=saru_category,
+        .cached_damage_other_valid=cached,.cached_owner_is_player0=s->ccl.cached_other_id==1,
+        .cached_other_shape_attributes=cached?g_player_enemy_shapes[s->ccl.cached_other_shape].attributes:0,
+        .players={{.present=1,.status=native_player_status(&g_player),.character=0}}};
+    SA3DSEnemyDamageResult result;
+    if(!sa3ds_saru_damage_check(actor,&world,&g_saru_damage_cursor,&result)){g_saru_task_error=1;return 0;}
+    if(result.score_delta){sa3ds_game_score_add(&g_game_score,result.score_delta);g_saru_damage_events++;}
+    if(sa3ds_enemy_damage_apply_bounce(&result,0,&g_player))g_saru_bounces++;
+    return result.killed;
+}
+static SA3DSCCLRules saru_rules(unsigned index){
+    const uint8_t*p=g_saru_definitions.collision_rules+index*8;
+    return (SA3DSCCLRules){p[0],p[1],p[2],(uint32_t)p[4]|((uint32_t)p[5]<<8)|((uint32_t)p[6]<<16)|((uint32_t)p[7]<<24)};
+}
+static void unlink_saru(SA3DSNativeSaru*s){
+    if(s->previous>=0)g_saru_states[s->previous].next=s->next;else g_saru_head=s->next;
+    if(s->next>=0)g_saru_states[s->next].previous=s->previous;
+    s->next=s->previous=-1;
+}
+/* Original player-vs-NPC sphere producer. Prior hits remain intact through all
+ * NPC tasks above;418B60 clear and new pair reports happen only afterwards.
+ * Other CCL categories/players/forms and their task queue remain incomplete. */
+static int saru_ccl_pass(const SA1PlayerState*queued_player){
+    if(!g_saru_ready)return 1;
+    SA3CMatrix model;sa3ds_ec_model_transform(queued_player,&model);
+    SA1Vec3 center={model.m[12],model.m[13],model.m[14]};
+    g_player_enemy_ccl.status=native_player_status(queued_player);
+    g_player_enemy_ccl.task_position=sa3ds_ec_task_origin(queued_player);
+    g_player_enemy_ccl.broad_radius=sa1_vec3_length(queued_player->vel)+SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height;
+    g_player_enemy_ccl.rules=saru_rules(0);
+    for(unsigned i=0;i<2;i++)if(!sa3ds_ccl_shape_decode(&g_player_enemy_shapes[i],g_saru_definitions.player_colliders+i*48,center))return 0;
+    sa3ds_ccl_body_clear(&g_player_enemy_ccl,g_player_enemy_shapes,2);
+    if(queued_player->pc2004_ccl_state_valid){
+        uint8_t action=queued_player->pc2004_ccl_action;
+        g_player_enemy_shapes[0].damage=sa3ds_sonic_ccl_damage_byte(g_player_enemy_shapes[0].damage,action,queued_player->pc2004_ccl_ball?0x100:0,0,0);
+        g_player_enemy_shapes[1].attributes=sa3ds_sonic_ccl_secondary_attributes(g_player_enemy_shapes[1].attributes,action);
+    }
+    for(int32_t n=g_saru_head;n>=0;n=g_saru_states[n].next){
+        SA3DSNativeSaru*s=&g_saru_states[n];s->ccl.status=s->actor.status;
+        sa3ds_ccl_body_clear(&s->ccl,&s->shape,1);s->ccl.task_position=s->actor.position;s->shape.center=s->actor.position;
+        if(!s->queued||!queued_player->pc2004_ccl_state_valid)continue;
+        /* Ordinary modeled actions have no player-work invincibility flags;
+         * source power-ups/actions outside this controller remain pending. */
+        for(unsigned shape=0;shape<2;shape++){
+            SA3DSCCLContactResult contact;
+            if(!sa3ds_ccl_sphere_contact(&g_player_enemy_ccl,&g_player_enemy_shapes[shape],shape,&s->ccl,&s->shape,0,&contact))return 0;
+            if(contact.eligible&&contact.broad_overlap&&!contact.supported)return 0;
+            if(contact.overlap)g_saru_contacts++;
+            /* The actual owner category masks inhibit both displacements.
+             * Do not silently discard an unexpected source push command. */
+            if(contact.pushed_first||contact.pushed_second)return 0;
+        }
+    }
+    if(g_player_enemy_ccl.status&4)g_saru_player_hurt_contacts++;
+    return 1;
 }
 static const SA3DSSaruServices g_saru_services={.sine=saru_sine,.atan_bams=saru_atan,.random15=saru_random,.floor_height=saru_floor,.damage=saru_damage};
 static void destroy_saru(void){
@@ -1231,7 +1301,7 @@ static void load_saru(void){
     if(!g_saru_states||!sa3ds_sonic_gpu_init_instances_traced(&g_saru_gpu,&g_saru_character,&g_saru_textures,
         g_saru_definitions.placements.count,log_texture_stage,NULL))goto fail;
     g_saru_ready=1;reset_saru();
-    boot_log("SARU","Owner models/6 motions/SET loaded; native ordinary AI/display; NPC CCL, bombs, effects and source culling remain incomplete");return;
+    boot_log("SARU","Owner models/6 motions/SET loaded; native ordinary AI/display; player/NPC sphere contacts and world bounce connected; bombs, player hurt, death effects and source culling incomplete");return;
 fail:destroy_saru();boot_log("SARU","Owner resources unavailable or invalid; native enemies remain incomplete");
 }
 static int tick_saru(void){
@@ -1245,35 +1315,42 @@ static int tick_saru(void){
          * task persistence still require reconstruction. Keep the recovered
          * 600/700 source radii, never spring's unrelated unload threshold. */
         if(p.act!=g_ec_act_index||(s->loaded&&distance>g_saru_definitions.unload_squared)){
-            if(s->loaded){if(s->previous>=0)g_saru_states[s->previous].next=s->next;else g_saru_head=s->next;
-                if(s->next>=0)g_saru_states[s->next].previous=s->previous;}
+            if(s->loaded&&!s->dead)unlink_saru(s);
             memset(s,0,sizeof(*s));continue;
         }
         if(!s->loaded){
             unsigned high=(p.type>>12)&7u;
             if(distance>g_saru_definitions.load_squared||(high&&(high==1?g_rings.clip_level>=1:g_rings.clip_level>=2)))continue;
             if(!sa3ds_saru_actor_init(&s->actor,&p,&g_saru_services))return 0;
+            sa3ds_ccl_body_init(&s->ccl,n+2);s->ccl.outer_flags=0x40;s->ccl.status=s->actor.status;s->ccl.rules=saru_rules(1);
+            if(!sa3ds_ccl_shape_decode(&s->shape,g_saru_definitions.collider,s->actor.position))return 0;
+            s->ccl.broad_radius=s->shape.radius;
             s->loaded=1;s->previous=-1;s->next=g_saru_head;
             if(g_saru_head>=0)g_saru_states[g_saru_head].previous=(int32_t)n;
             g_saru_head=(int32_t)n;
         }
     }
-    for(int32_t n=g_saru_head;n>=0;n=g_saru_states[n].next){
-        SA3DSNativeSaru*s=&g_saru_states[n];s->display=0;
+    for(int32_t n=g_saru_head;n>=0;){
+        SA3DSNativeSaru*s=&g_saru_states[n];n=s->next;s->display=0;s->queued=0;
+        s->actor.status=s->ccl.status;
         /* Do not interpret nonresident terrain as the source missing-floor
          * sentinel. Defer this bounded adapter until its complete orbit fits
          * the resident static query (490 includes source candidate radius10). */
         if((s->actor.status&0x2000)&&hypotf(s->actor.origin.x-g_ec_collision.center_x,s->actor.origin.z-g_ec_collision.center_z)+s->actor.scale.z>490.f)continue;
         float center[3]={s->actor.position.x,s->actor.position.y,s->actor.position.z};
         SA3DSSaruActorInput in={.player_position=player,.action_frames=g_saru_frames,
-            .visible=sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,g_saru_definitions.visibility_radius)};
+            .visible=sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,g_saru_definitions.visibility_radius),
+            .collision_flag0=(s->ccl.outer_flags&1)!=0};
         SA3DSSaruActorResult out;
-        if(!sa3ds_saru_actor_tick(&s->actor,&in,&g_saru_services,&out))return 0;
+        SA3DSSaruServices services=g_saru_services;services.context=s;
+        if(!sa3ds_saru_actor_tick(&s->actor,&in,&services,&out)||g_saru_task_error)return 0;
+        if(out.destroy){s->dead=1;unlink_saru(s);g_saru_deaths++;continue;}
+        s->queued=out.enqueue_collision;
         s->display=out.display;
         if(g_saru_probe&&s->actor.action<32)g_saru_probe_actions|=1u<<s->actor.action;
         g_saru_projectiles+=out.projectile;g_saru_sounds+=out.sound_count;g_saru_dust+=out.dust_bursts;
         /* Requests remain observable counters until their source executors are
-         * connected. No substitute bomb, score, damage or animal is spawned. */
+         * connected. No substitute bomb, death fragment or animal is spawned. */
     }
     return 1;
 }
@@ -1303,23 +1380,24 @@ static int draw_saru(void){
 }
 static void begin_saru_probe(void){
     FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_saru_probe.flag","rb");if(!f)return;
-    unsigned row=0;int parsed=fscanf(f,"%u",&row)==1;fclose(f);
+    unsigned row=0;char mode=0;int parsed=fscanf(f,"%u %c",&row,&mode)>=1;fclose(f);
+    g_saru_probe_combat=mode=='C';
     if(!parsed||!g_saru_ready||!g_ec_full_route)goto fail;
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t n=0;n<g_saru_definitions.placements.count;n++){
         SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_saru_definitions.placements,n,&p))goto fail;
         if(p.act==g_ec_act_index&&p.source_row==row){target=p;found=1;break;}
     }
-    float x=target.position.x,z=target.position.z-70.f;
+    float x=target.position.x,z=target.position.z-(g_saru_probe_combat?5.f:70.f);
     if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player))goto fail;
     g_ec_collision.reference_y=target.position.y+8;
     SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,x,z);if(!floor.valid||floor.normal.y<.8f)goto fail;
     g_player.pos=(SA1Vec3){x,floor.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,z};g_player.vel=(SA1Vec3){0};
     g_player.grounded=true;g_player.ground_normal=floor.normal;g_player.surface_id=floor.surface_id;
     g_player.surface_frame_active=false;g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
-    reset_springs();g_camera.yaw=0;g_saru_probe=1;
+    reset_springs();g_game_score=(SA3DSGameScore){0};g_camera.yaw=0;g_saru_probe=1;
     g_saru_probe_ticks=g_saru_probe_draws=g_saru_probe_actions=g_saru_probe_max_actors=0;
-    boot_log("SARU_PROBE","BEGIN: explicit original-placement ordinary AI/display fixture; combat/course parity not tested");return;
+    boot_log("SARU_PROBE","BEGIN: explicit original-placement ordinary AI/display/contact fixture; player hurt/projectiles/effects/course parity not tested");return;
 fail:boot_log("SARU_PROBE","FAIL: missing original resource/placement/support");g_paused=1;
 }
 
@@ -1690,6 +1768,7 @@ int main(void) {
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
             if(g_spring_probe||g_panel_probe||g_saru_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_saru_probe&&g_saru_probe_combat){tick_input.jump_pressed=g_saru_probe_ticks==0;tick_input.jump_held=g_saru_probe_ticks<20;}
             if(g_air_attack_probe){
                 tick_input=(SA1Input){0};
                 tick_input.jump_pressed=g_air_attack_probe_ticks==0||g_air_attack_probe_ticks==3;
@@ -1785,9 +1864,12 @@ int main(void) {
             tick_springs();
             tick_panels(&physics_done);
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
+            if(!saru_ccl_pass(&physics_done)){fail_screen("Native player/NPC CCL failed");break;}
+            sa3ds_game_score_tick(&g_game_score,1);
             if(g_saru_probe&&++g_saru_probe_ticks>=180){
-                char note[220];snprintf(note,sizeof(note),"%s ticks=%u draws=%u maxActors=%u actions=%08x projectileRequests=%lu; ordinary AI/display fixture only",
-                    g_saru_probe_draws&&g_saru_probe_actions?"PASS":"FAIL",g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_max_actors,g_saru_probe_actions,(unsigned long)g_saru_projectiles);
+                char note[280];snprintf(note,sizeof(note),"%s ticks=%u draws=%u maxActors=%u actions=%08x contacts=%u awards=%u score=%lu bounces=%u deaths=%u hurtContacts=%u; bounded original-placement fixture only",
+                    (g_saru_probe_combat?(g_saru_contacts&&g_saru_damage_events&&g_saru_bounces&&g_saru_deaths):(g_saru_probe_draws&&g_saru_probe_actions))?"PASS":"FAIL",
+                    g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_max_actors,g_saru_probe_actions,g_saru_contacts,g_saru_damage_events,(unsigned long)g_game_score.total,g_saru_bounces,g_saru_deaths,g_saru_player_hurt_contacts);
                 boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
             }
             if(g_panel_probe&&++g_panel_probe_ticks>=32){

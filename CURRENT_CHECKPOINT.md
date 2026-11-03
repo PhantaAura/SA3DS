@@ -1,3 +1,26 @@
+# WCA active checkpoint — native Sonic/enemy attack contacts
+
+WCA38 connects previous-pass player/NPC sphere CCL to Saru shared damage,
+world-space bounce, source score/chain state and next-tick task death/removal.
+Both movement paths freeze selected attack fields before terrain landing.
+441280 writes world velocity, correcting the earlier local-vector label.
+51F680 is a source no-op, not SET persistence. Source score resets were kept
+out of actor reset/act handoff. See docs/PC2004_SARU_CONTACT_NATIVE.md.
+
+Required host gate,12-helper exact-owner verifier and staged native build PASS.
+Final406244B/916e741b artifact itself passed Azahar2126 Old3DS/Vulkan original
+row26 jump fixture:180ticks,2contacts,score10,bounce1,taskdeath1,165actor draws,
+max2submitted actors,hurt0. Earlier8452e599 fixture was rerun after the score
+reset correction; final results match. No unchanged pose/import oracle repeat.
+All owner data stays outside Git; private fixture marker removed after check.
+
+Next: native homing registry/task yaw and double-invocation entry; player hurt/
+ring loss/invulnerability; original bomb/death effects and score HUD. Full CCL
+queue/SET persistence/floor/culling/globalRNG and local-cache precision remain
+open. Full WCA/physics1to1 and physical hardware acceptance remain incomplete.
+
+---
+
 # WCA active checkpoint — native E SARU ordinary AI/display
 
 WCA37 connects owner original enemy rig/6 clips/SET to native task updates and

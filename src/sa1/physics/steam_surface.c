@@ -640,6 +640,9 @@ void sa1_physics_step_steam_sonic_surface(
      * The next airborne tick must retain this orientation, not the old frame. */
     sync_player_frame(player, &frame, NULL);
 
+    /* Source49AA48 strength uses the selected action/ball, never the action
+     * rewritten by the following terrain landing/departure resolution. */
+    sa1_player_capture_ccl_state(player);
     player->pos = sa1_vec3_add(player->pos, player->vel);
 
     if (player->grounded) {

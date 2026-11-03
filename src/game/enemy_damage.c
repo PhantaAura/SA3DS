@@ -49,10 +49,15 @@ int sa3ds_enemy_damage_check(SA3DSEnemyDamageState*s,const SA3DSEnemyDamageInput
         else{
             unsigned player=in->cached_owner_is_player0?0:1;const SA3DSEnemyDamagePlayer*p=&in->players[player];
             if(p->present&&(p->status&0x100)&&!(p->status&3)&&(p->character==0||p->character==2||p->character==3)){
-                r.bounce_player=(int)player;r.bounce_local_velocity=(SA1Vec3){0,2,0};r.rumble_request=1;
+                r.bounce_player=(int)player;r.bounce_world_velocity=(SA1Vec3){0,2,0};r.rumble_request=1;
             }
             next.enemy_flags&=(uint16_t)~0x400u;
         }
     }
     *s=next;*c=next_cursor;*out=r;return 1;
+}
+
+int sa3ds_enemy_damage_apply_bounce(const SA3DSEnemyDamageResult*r,unsigned index,SA1PlayerState*p){
+    if(!r||!p||index>1||r->bounce_player!=(int)index||!finite3(r->bounce_world_velocity))return 0;
+    p->vel=r->bounce_world_velocity;return 1;
 }

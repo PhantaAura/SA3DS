@@ -29,6 +29,12 @@ typedef struct {
      * establishes it. The broad SA1ActionState remains the control state. */
     uint8_t pc2004_action_state;
     bool pc2004_action_state_valid;
+    /* Frozen supported selector state for49AA48 CCL strength. Capture before
+     * terrain contact can replace action8/ball with the landing state. Force
+     * helpers in these ordinary paths do not write action/ball. Other task
+     * status/player-work flags are not reconstructed by this snapshot. */
+    uint8_t pc2004_ccl_action;
+    bool pc2004_ccl_ball,pc2004_ccl_state_valid;
     uint32_t jump_ticks;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
     int16_t pc2004_air_attack_timer,pc2004_air_attack_age;
@@ -73,4 +79,9 @@ typedef struct {
     bool animation_airborne_request_valid;
 } SA1PlayerState;
 
+static inline void sa1_player_capture_ccl_state(SA1PlayerState*p){
+    p->pc2004_ccl_action=p->pc2004_action_state;
+    p->pc2004_ccl_ball=p->ball_form;
+    p->pc2004_ccl_state_valid=p->pc2004_action_state_valid;
+}
 #endif
