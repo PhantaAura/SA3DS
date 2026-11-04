@@ -1,3 +1,25 @@
+# WCA67 — native completed-player position history
+
+Added original256-slot/byte-cursor position history with preserved cold/stale
+slots and nonadvancing offset setter. Native ordinary EC player tail records
+completed task origin before later world objects. Required cumulative host,
+focused owner6-span/call-order verifier and native build PASS. Pose/import data
+unchanged; unchanged pose matrix not repeated. See
+ docs/PC2004_PLAYER_POSITION_HISTORY.md.
+
+NEW candidate471008B SHA256
+ a0b63f49de98835e97242f821851fe3ef30caf7be1cd8791cc079db5aed6e7b7
+is NOT emulator-verified: current Mac UI is locked; unlock question pending.
+Private rejected lighting profile remains inactive. Do not promote until the
+new build is checked. Desktop preview remains inspected WCA56/78f5506a.
+
+Whale gameplay still lacks native loader/trigger reader/task lifetime/contact/
+effect bindings and exit-root resolution, then pier/camera/natural chase.
+History capture is connected, whale consumption is not. Full CP1–CP9 stays
+active/incomplete; no retail/hardware parity or freeze-fix claim.
+
+---
+
 # WCA66 — whale actor composition and separate skeletal drawing pitch
 
 Connected portable phase/effect/tip/common ordering and original Y/Z/X display

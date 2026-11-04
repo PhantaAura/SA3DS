@@ -23,6 +23,7 @@
 #include "checkpoint_player.h"
 #include "game_over.h"
 #include "course_clock.h"
+#include "player_position_history.h"
 #include "sonic_lighting_gpu.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
@@ -119,6 +120,7 @@ static size_t g_ring_visual_size,g_ring_placement_size;
 static SA3DSECVisual g_ring_visual;
 static SA3DSECGpu g_ring_gpu;
 static SA3DSRings g_rings;
+static SA3DSPlayerPositionHistory g_player_position_history;
 typedef struct SA3DSNativeScatter {
     struct SA3DSNativeScatter *next;SA3DSRingScatter actor;
     SA3DSCCLBody ccl;SA3DSCCLShape shape;uint8_t queued,draw;
@@ -2614,6 +2616,17 @@ int main(void) {
                         g_wca_replay?replay_name:(g_emerald_coast?"EMERALD_COAST_ACT0_PROVISIONAL":(trace_zone?trace_zone->name:"UNKNOWN")),&g_player,&tick_input,
                         g_camera.yaw,&physics_trace,&g_selection)!=0) trace_stop();
                 else { g_trace_frames++; if ((g_trace_frames&63u)==0) fflush(g_trace_file); }
+            }
+            /*49BF7B/49BFAD ->446F10 ->43B960 records completed task position
+             *before subsequent world tasks. Keep history distinct from a
+             *later object's live player position; rotation history is open.*/
+            if(g_emerald_coast&&g_ec_combined){
+                SA1Vec3 origin=sa3ds_ec_task_origin(&physics_done);
+                float position[3]={origin.x,origin.y,origin.z};
+                sa3ds_player_position_history_present(&g_player_position_history,1);
+                if(!sa3ds_player_position_history_record(&g_player_position_history,position)){
+                    fail_screen("Native player position history failed");break;
+                }
             }
             /* List2 spring objects write commands after Sonic's current
              * movement/animation phase; consume them next player tick. */

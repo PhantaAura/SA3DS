@@ -180,3 +180,6 @@ sh tests/run_whale_visual.sh
 
 printf '\n== Original whale actor and draw order ==\n'
 sh tests/run_whale_actor_draw.sh
+
+printf '\n== Original player position history ==\n'
+sh tests/run_player_position_history.sh
