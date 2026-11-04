@@ -168,3 +168,6 @@ sh tests/run_whale_motion_phase.sh
 
 printf '\n== Original whale common movement and interaction tail ==\n'
 sh tests/run_whale_common.sh
+
+printf '\n== Original whale animated collision tip ==\n'
+sh tests/run_whale_tip.sh

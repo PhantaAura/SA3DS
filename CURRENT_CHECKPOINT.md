@@ -1,3 +1,23 @@
+# WCA63 — original animated whale collision tip and owner pitch bank
+
+Added pre-movement collision-tip sampler with original pitch interpolation,
+Y/X rotation, emergence sentinel and exact frame30 behavior. Private464B/5924c8bf
+owner pitch package stays outside Git/shared SD. Required cumulative host,
+exact-owner pose/import gate and native build PASS. Owner four-span/32-word
+oracle and malformed-package checks PASS. See docs/PC2004_WHALE_TIP.md.
+
+Native helper remains unconnected/linker-discarded; binary unchanged
+470768B/013d0577, so no duplicate emulator replay. Its optional lighting already
+FAILED raster acceptance at WCA62; rejected private profile remains inactive.
+Desktop preview remains inspected WCA56/78f5506a. Retail and physical Old3DS
+parity/performance are not proven.
+
+Next: original whale vertex/normal shape import/sampling (238 vertices, distinct
+cycle/exit banks), then native actor/services/camera/pier/trigger execution.
+Full CP1–CP9 goal remains active and incomplete; PHYSICS_1TO1=false.
+
+---
+
 # WCA62 — whale common movement; lighting raster rejected
 
 Added source-derived whale chase-speed, lateral movement and ordered bounce/
