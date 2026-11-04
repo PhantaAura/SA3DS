@@ -35,22 +35,22 @@ static void compare(SA3DSECCollision*s,const char*label){
  SA3DSECCollision old=*s;size_t bytes=(size_t)s->triangle_count*sizeof(*s->triangles);
  old.triangles=malloc(bytes);assert(old.triangles);memcpy(old.triangles,s->triangles,bytes);
  double legacy_ms=0,optimized_ms=0;
- for(unsigned pass=0;pass<3;pass++){
+ for(unsigned pass=0;pass<1;pass++){
   reset_masks(&old);clock_t start=clock();legacy_contact_edges(&old);legacy_ms+=(double)(clock()-start)*1000/CLOCKS_PER_SEC;
   reset_masks(s);start=clock();mark_contact_edges(s);optimized_ms+=(double)(clock()-start)*1000/CLOCKS_PER_SEC;
   assert(!memcmp(old.triangles,s->triangles,bytes));
  }
- printf("Edges %s: exact %u triangles; host legacy %.3f ms -> optimized %.3f ms (mean3; not hardware)\n",label,s->triangle_count,legacy_ms/3,optimized_ms/3);
+ printf("Edges %s: exact %u triangles; host legacy %.3f ms -> optimized %.3f ms (single pass; not hardware)\n",label,s->triangle_count,legacy_ms,optimized_ms);
  free(old.triangles);
 }
 static void thresholds(void){
- SA3DSECCollision s={0};SA3DSECTriangle triangles[48]={0};uint32_t references[48];
- s.triangles=triangles;s.triangle_count=48;s.references=references;s.reference_count=48;
- for(unsigned c=137;c<=256;c++)s.cells[c]=48; /*midpoint cell(8,8)*/
+ SA3DSECCollision s={0};SA3DSECTriangle triangles[128]={0};uint32_t references[128];
+ s.triangles=triangles;s.triangle_count=128;s.references=references;s.reference_count=128;
+ for(unsigned c=137;c<=256;c++)s.cells[c]=128; /*midpoint cell(8,8)*/
  const float ys[]={1,-1,0,.45f,-.45f,.450001f,-.450001f,.449999f};
- const float shifts[]={0,.000999f,.001001f};
- for(unsigned i=0;i<48;i++){
-  references[i]=i;float y=ys[i%8],shift=shifts[(i/8)%3];
+ const float shifts[]={0,.000999f,.001001f,-.000999f,.009999f,.010001f,-.010001f,-.009999f};
+ for(unsigned i=0;i<128;i++){
+  references[i]=i;float y=ys[i%8],shift=shifts[(i/8)%8];
   triangles[i].normal=(SA1Vec3){(i&1?-1:1)*sqrtf(fmaxf(0,1-y*y)),y,0};
   triangles[i].a=(SA1Vec3){shift,0,0};triangles[i].b=(SA1Vec3){.5f+shift,0,0};triangles[i].c=(SA1Vec3){shift,0,.5f};
  }

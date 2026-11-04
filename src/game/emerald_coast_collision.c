@@ -70,7 +70,7 @@ static int inside(const SA3DSECTriangle*t,SA1Vec3 p){
 static int same_point(SA1Vec3 a,SA1Vec3 b){
     SA1Vec3 d=sa1_vec3_sub(a,b);return sa1_vec3_dot(d,d)<1e-6f;
 }
-static void mark_contact_edges(SA3DSECCollision*s){
+static void mark_contact_edges_linear(SA3DSECCollision*s){
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
         int wall=fabsf(t->normal.y)<=0.45f,support=t->normal.y>0.45f;
@@ -97,6 +97,74 @@ static void mark_contact_edges(SA3DSECCollision*s){
             if(support&&neighbor)t->support_edge_mask|=(uint8_t)(1u<<e);
         }
     }
+}
+/*Region loads previously searched an entire64-unit grid bucket for every
+ *edge. Large beach triangles put thousands of unrelated candidates there.
+ *Index endpoints in .01-unit bins, keeping the original .001-unit strict
+ *same_point predicate and grid membership as the final authority.*/
+typedef struct {int32_t x,y,z;uint32_t triangle,next;} EdgeVertex;
+static int edge_key(SA1Vec3 p,int32_t key[3]){
+    if(!finite3(p)||fabsf(p.x)>10000000||fabsf(p.y)>10000000||fabsf(p.z)>10000000)return 0;
+    key[0]=(int32_t)floor((double)p.x*100.0);
+    key[1]=(int32_t)floor((double)p.y*100.0);
+    key[2]=(int32_t)floor((double)p.z*100.0);return 1;
+}
+static uint32_t edge_bucket(int32_t x,int32_t y,int32_t z,uint32_t mask){
+    uint32_t h=(uint32_t)x*73856093u^(uint32_t)y*19349663u^(uint32_t)z*83492791u;
+    h^=h>>16;return h&mask;
+}
+static void mark_contact_edges(SA3DSECCollision*s){
+    uint32_t count=s->triangle_count*3u,buckets=1;
+    if(!count)return;
+    while(buckets<count*2u)buckets*=2u;
+    EdgeVertex*nodes=malloc((size_t)count*sizeof(*nodes));
+    uint32_t*heads=malloc((size_t)buckets*sizeof(*heads));
+    if(!nodes||!heads)goto fallback;
+    for(uint32_t h=0;h<buckets;h++)heads[h]=UINT32_MAX;
+    for(uint32_t i=0;i<s->triangle_count;i++){
+        SA3DSECTriangle*t=&s->triangles[i];SA1Vec3 v[3]={t->a,t->b,t->c};
+        for(unsigned k=0;k<3;k++){
+            int32_t key[3];if(!edge_key(v[k],key))goto fallback;
+            uint32_t n=i*3+k,h=edge_bucket(key[0],key[1],key[2],buckets-1);
+            nodes[n]=(EdgeVertex){key[0],key[1],key[2],i,heads[h]};heads[h]=n;
+        }
+    }
+    for(uint32_t i=0;i<s->triangle_count;i++){
+        SA3DSECTriangle*t=&s->triangles[i];
+        int wall=fabsf(t->normal.y)<=0.45f,support=t->normal.y>0.45f;
+        if(!wall&&!support)continue;
+        SA1Vec3 v[3]={t->a,t->b,t->c};
+        for(unsigned e=0;e<3;e++){
+            SA1Vec3 a=v[e],b=v[(e+1)%3];int32_t key[3];edge_key(a,key);
+            int cx=cell_x(s,(a.x+b.x)*.5f),cz=cell_z(s,(a.z+b.z)*.5f),neighbor=0;
+            /*Adjacent bins include tolerance matches across either side of
+             *zero and bin boundaries. Bins are ten times the point tolerance.*/
+            for(int x=-1;x<=1&&!neighbor;x++)for(int y=-1;y<=1&&!neighbor;y++)for(int z=-1;z<=1&&!neighbor;z++){
+                int32_t qx=key[0]+x,qy=key[1]+y,qz=key[2]+z;
+                for(uint32_t q=heads[edge_bucket(qx,qy,qz,buckets-1)];q!=UINT32_MAX;q=nodes[q].next){
+                    EdgeVertex*nkey=&nodes[q];uint32_t j=nkey->triangle;
+                    if(nkey->x!=qx||nkey->y!=qy||nkey->z!=qz||j==i)continue;
+                    SA3DSECTriangle*n=&s->triangles[j];
+                    if(wall?!(fabsf(n->normal.y)<=0.45f):!(n->normal.y>0.45f))continue;
+                    float ndot=sa1_vec3_dot(t->normal,n->normal);
+                    if(wall?!(fabsf(ndot)>0.92f):!(ndot>0.9f))continue;
+                    /*Retain exactly the old midpoint grid-bucket membership,
+                     *including clamped outer cells and rounded AABB limits.*/
+                    if(cx<cell_x(s,n->min_x)||cx>cell_x(s,n->max_x)||cz<cell_z(s,n->min_z)||cz>cell_z(s,n->max_z))continue;
+                    SA1Vec3 nv[3]={n->a,n->b,n->c};int found_a=0,found_b=0;
+                    for(unsigned k=0;k<3;k++){found_a|=same_point(a,nv[k]);found_b|=same_point(b,nv[k]);}
+                    if(found_a&&found_b){neighbor=1;break;}
+                }
+            }
+            if(wall&&!neighbor)t->wall_edge_mask|=(uint8_t)(1u<<e);
+            if(support&&neighbor)t->support_edge_mask|=(uint8_t)(1u<<e);
+        }
+    }
+    free(nodes);free(heads);return;
+fallback:
+    /*No masks have been touched during index construction. Memory pressure
+     *or coordinates outside the index domain retain the existing scan.*/
+    free(nodes);free(heads);mark_contact_edges_linear(s);
 }
 void sa3ds_ec_collision_destroy(SA3DSECCollision*s){
     if(!s)return;

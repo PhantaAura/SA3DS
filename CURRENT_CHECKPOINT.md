@@ -1,3 +1,22 @@
+# WCA73 — narrower collision edge lookup
+
+Replaced repeated whole grid-bucket edge-neighbor scans with a temporary
+endpoint index. Original tolerance, normal predicates, midpoint bucket
+membership and resulting edge masks remain authoritative. Allocation/domain
+failure falls back to existing scan. Required host and native build PASS;
+owner-data differential checks match complete triangle bytes in both acts.
+See docs/EC_CONTACT_EDGE_INDEX.md.
+
+Candidate473464B/c4d21688 actually booted and rendered in Azahar2126.0
+Old3DS/Vulkan. Ordinary movement caused two region rebuilds (974/1169 triangles,
+45/52ms) and retained rendering/contact. Dense owner region edge pass on host
+fell11.313ms to1.489ms; full native/hardware region cost is different. Physical
+Old3DS freezes remain unproven; GPU submit and other synchronous work remain.
+No pose/import change, so unchanged owner pose/import matrix was not repeated.
+Full CP1–CP9 remains active and incomplete; native whale binding still open.
+
+---
+
 # WCA72 — original whale two-sphere CCL profile
 
 Decoded owner CCI records/category rules into a private external package and
