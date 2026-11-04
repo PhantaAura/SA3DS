@@ -1,4 +1,5 @@
 #include "whale_tip.h"
+#include "whale_draw.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -25,6 +26,7 @@ int main(int argc,char**argv){
   FILE*f=fopen(argv[arg],"rb");assert(f);fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);void*b=malloc(n);assert(b&&fread(b,1,n,f)==(size_t)n);fclose(f);
   if(arg==1){assert(sa3ds_whale_tip_assets_open(&a,b,n));
    for(unsigned k=0;k<32;k++){uint32_t u=(uint32_t)a.pitch[k*4]|((uint32_t)a.pitch[k*4+1]<<8)|((uint32_t)a.pitch[k*4+2]<<16)|((uint32_t)a.pitch[k*4+3]<<24);int32_t value;memcpy(&value,&u,4);printf("KEY %u %d\n",k,value);}
+   for(unsigned tick=0;tick<=256;tick++){int32_t root;assert(sa3ds_whale_cycle_pitch(&a,tick*.125f,&root));printf("ROOT %u %d\n",tick,root);}
    ((unsigned char*)b)[n-1]^=1;assert(!sa3ds_whale_tip_assets_open(&a,b,n)&&!a.pitch);
   }else assert(!sa3ds_whale_tip_assets_open(&a,b,n)&&!a.pitch);
   free(b);

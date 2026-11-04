@@ -177,3 +177,6 @@ sh tests/run_whale_shape.sh
 
 printf '\n== Original whale visual source identity ==\n'
 sh tests/run_whale_visual.sh
+
+printf '\n== Original whale actor and draw order ==\n'
+sh tests/run_whale_actor_draw.sh

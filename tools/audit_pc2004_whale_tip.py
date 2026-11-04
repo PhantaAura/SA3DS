@@ -19,6 +19,12 @@ def audit(exe):
   keys=[int(line.split()[2]) for line in output.splitlines() if line.startswith('KEY ')]
   expected=[struct.unpack('<i',r(0x10ad238+i*16+4,4))[0] for i in range(32)]
   assert keys==expected
- print('Whale tip owner oracle: PASS32 exact signed pitch words,4 source spans,CRC and8 malformed package rejections; native tip execution separate')
+  roots=[int(line.split()[2]) for line in output.splitlines() if line.startswith('ROOT ')]
+  oracle=[]
+  for tick in range(257):
+   frame=(tick*.125)%32;first=int(frame);second=(first+1)%32;weight=frame-first
+   oracle.append(int(expected[first]*(1-weight)+expected[second]*weight))
+  assert roots==oracle
+ print('Whale tip/root owner oracle: PASS32 exact signed pitch words,257 cycle root samples,8 source spans,CRC and8 malformed package rejections; native execution separate')
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);a=ap.parse_args();audit(a.exe)

@@ -1,3 +1,22 @@
+# WCA66 — whale actor composition and separate skeletal drawing pitch
+
+Connected portable phase/effect/tip/common ordering and original Y/Z/X display
+transform/cycle root pitch. Shared prior tip, emergence CCL-enable and dive/far
+deletion distinctions are retained. Required cumulative host, exact-owner pose/
+import gate and native build PASS. Owner32 words/257 root samples/eight spans
+PASS. No owner package changed. See docs/PC2004_WHALE_ACTOR_DRAW.md.
+
+Native gameplay wiring is still missing; helpers are linker-discarded and
+artifact remains470768B/013d0577. No redundant emulator run, retail/hardware
+parity or Old3DS freeze-fix claim. Optional lighting remains rejected/inactive;
+working Desktop preview remains inspected WCA56.
+
+Next: exit root null-channel/bind behavior, then native loader/triggers/shared
+lifetime/history/CCL/phase effects and natural encounter, followed by original
+pier/camera. Full CP1–CP9 stays active and incomplete; PHYSICS_1TO1=false.
+
+---
+
 # WCA65 — original whale visual, UV-seam identity and native update module
 
 Owner Basic geometry/material/OBJ_BEACH texture package now includes explicit
