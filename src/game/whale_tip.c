@@ -11,11 +11,12 @@ int sa3ds_whale_tip_assets_open(SA3DSWhaleTipAssets*out,const void*bytes,size_t 
     sa3dspak_find(&p,"METADATA",&m)!=SA3DSPAK_OK||m.flags||
     sa3dspak_find(&p,"WHALE_TIP",&c)!=SA3DSPAK_OK||c.flags||c.size!=160)return 0;
  const unsigned char*b=c.data;
- if(memcmp(b,"SA3WTIP\0",8)||r32(b+8)!=1||r32(b+12)!=32||r32(b+16)!=32||r32(b+20)!=4||r32(b+24)!=160||r32(b+28))return 0;
+ uint32_t version=r32(b+8),profile=r32(b+28);
+ if(memcmp(b,"SA3WTIP\0",8)||!((version==1&&profile==0)||(version==2&&profile==1))||r32(b+12)!=32||r32(b+16)!=32||r32(b+20)!=4||r32(b+24)!=160)return 0;
  /*Owner source uses signed BAMS keys. Reject unsupported unbounded input
   *rather than converting an out-of-range interpolated double to integer.*/
  for(unsigned k=0;k<32;k++)if(ri(b+32+k*4)<-32768||ri(b+32+k*4)>32767)return 0;
- out->pitch=b+32;return 1;
+ out->pitch=b+32;out->exit_root_bind=version==2;return 1;
 }
 int sa3ds_whale_tip(const SA3DSWhaleMotion*m,const SA3DSWhaleTipAssets*a,
  const SA3DSWhaleMotionServices*s,float out[3],int32_t*sampled_pitch){

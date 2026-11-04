@@ -18,7 +18,7 @@ static void phase(void*v,const SA3DSWhaleMotionResult*r,const float old[3]){Cont
 static void wi(unsigned char*p,int32_t i){uint32_t u;memcpy(&u,&i,4);for(unsigned k=0;k<4;k++)p[k]=(unsigned char)(u>>(k*8));}
 int main(void){
  Context c={0};SA3DSWhaleActorServices s={{NULL,sine},{&c,sine,history,character,bounce,enqueue,random15,wave,display},phase,&c};
- unsigned char keys[128]={0};SA3DSWhaleTipAssets tip={keys};SA3DSWhaleActor a;SA3DSWhaleActorResult r;
+ unsigned char keys[128]={0};SA3DSWhaleTipAssets tip={.pitch=keys};SA3DSWhaleActor a;SA3DSWhaleActorResult r;
  float p[3]={0,0,0},old[3]={5,6,7};assert(sa3ds_whale_actor_init(&a,p,0,old,&s.motion)&&a.collision_disabled&&!memcmp(a.shared_tip,old,12));
  SA3DSWhaleMotionInput input={0};
  for(unsigned tick=0;tick<10;tick++){

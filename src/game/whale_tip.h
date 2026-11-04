@@ -2,7 +2,7 @@
 #define SA3DS_WHALE_TIP_H
 #include "whale_motion_phase.h"
 #include <stddef.h>
-typedef struct {const unsigned char *pitch;} SA3DSWhaleTipAssets;
+typedef struct {const unsigned char *pitch;uint8_t exit_root_bind;} SA3DSWhaleTipAssets;
 /*Borrowed owner package view, valid while package bytes remain alive.*/
 int sa3ds_whale_tip_assets_open(SA3DSWhaleTipAssets *out,const void *bytes,size_t size);
 /*50264A..502754: original pitch interpolation, then Y/X matrix rotations.

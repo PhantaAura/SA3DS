@@ -1,3 +1,21 @@
+# WCA74 — stock initial whale exit-root fallback
+
+Added versioned owner-profile authorization for the original null-channel exit
+motion. PE virtual zero-fill descriptor and404E26 original-object-angle fallback
+are now checked explicitly; ordinary cycle pitch keeps its distinct sampler.
+Required host, full exact-owner pose/import and native build PASS. Private v2
+tip package remains outside Git and uninstalled. See
+ docs/PC2004_WHALE_EXIT_ROOT.md.
+
+This resolves the stock initial exit-root binding; live original-game memory
+mutation/retail motion proof remains separate. New helpers are linker-discarded,
+so native image stays WCA73's473464B/c4d21688, already emulator-inspected.
+No duplicate emulator run. Full CP1–CP9 remains active and incomplete; next is
+SET cold preparation/clearing and actual native whale actor/resource/services/
+CCL/draw binding, then natural encounter/pier/camera. Old3DS freezes unproven.
+
+---
+
 # WCA73 — narrower collision edge lookup
 
 Replaced repeated whole grid-bucket edge-neighbor scans with a temporary

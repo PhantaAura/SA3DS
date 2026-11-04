@@ -12,7 +12,7 @@ def audit(exe):
   root=Path(directory);good=root/'tip.sa3dspak';good.write_bytes(data)
   payload=next(c['data'] for c in sa3dspak.parse(data)['chunks'] if c['type']=='WHALE_TIP')
   invalid=[]
-  for name,offset,value,flags in [('version',8,2,0),('count',12,31,0),('offset',16,28,0),('stride',20,8,0),('size',24,156,0),('reserved',28,1,0),('pitch',32,32768,0),('flags',28,0,1)]:
+  for name,offset,value,flags in [('version',8,3,0),('count',12,31,0),('offset',16,28,0),('stride',20,8,0),('size',24,156,0),('reserved',28,2,0),('pitch',32,32768,0),('flags',28,1,1)]:
    b=bytearray(payload);struct.pack_into('<I',b,offset,value);p=root/(name+'.sa3dspak')
    p.write_bytes(sa3dspak.build([('METADATA',b'{}',0),('WHALE_TIP',bytes(b),flags)]));invalid.append(p)
   output=subprocess.check_output(['sh',str(ROOT/'tests/run_whale_tip.sh'),str(good),*map(str,invalid)],text=True)
@@ -25,6 +25,6 @@ def audit(exe):
    frame=(tick*.125)%32;first=int(frame);second=(first+1)%32;weight=frame-first
    oracle.append(int(expected[first]*(1-weight)+expected[second]*weight))
   assert roots==oracle
- print('Whale tip/root owner oracle: PASS32 exact signed pitch words,257 cycle root samples,8 source spans,CRC and8 malformed package rejections; native execution separate')
+ print('Whale tip/root owner oracle: PASS32 exact signed pitch words,257 cycle root samples,12 source spans,PE zero-fill exit descriptor/bind fallback,CRC and8 malformed package rejections; native/guest execution separate')
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);a=ap.parse_args();audit(a.exe)

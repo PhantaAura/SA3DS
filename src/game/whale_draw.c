@@ -26,6 +26,11 @@ int sa3ds_whale_cycle_pitch(const SA3DSWhaleTipAssets*a,float frame,int32_t*out)
  volatile double left=(double)ri(a->pitch+first*4)*(1-weight),right=(double)ri(a->pitch+second*4)*weight;
  *out=(int32_t)(left+right);return 1;
 }
+int sa3ds_whale_root_pitch(const SA3DSWhaleTipAssets*a,uint8_t action,float frame,int32_t*out){
+ if(action!=2)return sa3ds_whale_cycle_pitch(a,frame,out);
+ if(!a||!a->pitch||!a->exit_root_bind||!out||!isfinite(frame)||frame<0||frame>=4294967296.0)return 0;
+ *out=0;return 1;
+}
 int sa3ds_whale_draw_transform(const SA3DSWhaleMotion*m,int32_t pitch,
  const SA3DSWhaleMotionServices*s,SA3CMatrix*out,unsigned*bank){
  if(!m||!s||!s->sine||!out||!bank||!isfinite(m->draw_y))return 0;

@@ -56,3 +56,8 @@ Next: resolve exit root's null-channel/bind behavior, connect native loader,
 trigger/task lifetime, player history/CCL and phase effects to the real actor,
 then inspect natural spawn/animation and implement original pier/camera. Full
 CP6 and CP1–CP9 remain incomplete; no hardware freeze-fix claim.
+
+WCA74 update: the stock initial exit descriptor and404E26 bind-angle fallback
+are now explicitly supported by a versioned owner profile. See
+[exit root](PC2004_WHALE_EXIT_ROOT.md). Native actor/draw binding and live guest
+mutation evidence remain separate.

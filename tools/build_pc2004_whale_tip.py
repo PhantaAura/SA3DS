@@ -5,6 +5,7 @@ import argparse,hashlib,json,struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools import sa3dspak
 from tools.verify_pc2004_ec_route import verified_reader,PROFILE_SHA256
+from tools.verify_pc2004_collision_work import parse_pe
 SPANS={(0x5022c0,1840):'5f1f0c8dc4185cb9a49208854f1030216d53d5e0e0a1004cc90e37a84ac41cd3',
        (0x404c10,175):'ca12fedc86c0979b83c53e8f077b21e18cd90df8d2488c5c6c1914b5e2bdc5db',
        (0x404dc0,135):'f19b70e44e2fea7ee14e5bf35ee76176f3cdd58fefee7fba364c83cb16c8acf3',
@@ -12,14 +13,28 @@ SPANS={(0x5022c0,1840):'5f1f0c8dc4185cb9a49208854f1030216d53d5e0e0a1004cc90e37a8
        (0x784fb0,192):'c93241a2569559e9fde0f27f0ba6e1dc502a01aa6a9ab282e6bf3d7e91cd9f60',
        (0x784e20,191):'f101608bb9ce1ab9c1e245d7c59304a4becf13d4e774e2974aff6944298e3757',
        (0x784ee0,193):'a3814f3dad96a45e0739766739929ea8c460b92056baa814ff402d444bbcb427',
-       (0x10ad238,512):'ecc608f9cacc42cefb3ad7ae2e1e47f9e9df4096341c8b70d5191a68e1efbae2'}
+       (0x10ad238,512):'ecc608f9cacc42cefb3ad7ae2e1e47f9e9df4096341c8b70d5191a68e1efbae2',
+       (0x106bb4c,52):'68dac2a599648c25d31703c0249e4331e5774ffff3b47dcb6a1f3653906d6231',
+       (0x106bb80,12):'2c2697f3696aa59e05c7be72decd3af252fd97e1304c32491163b570cb100a38',
+       (0x502210,144):'74b7ecfb2df1f7ba7084bee9a8a2023f8b523c42d9b145b263a0654947830345',
+       (0x405260,144):'6eb7fd9dacdfb60b6d716f36a3263e6067f0ba00d0c60afbb45ca6318fdf56c1'}
 def build(exe):
  r=verified_reader(exe)
  for (a,n),sha in SPANS.items():assert hashlib.sha256(r(a,n)).hexdigest()==sha,hex(a)
  rows=list(struct.iter_unpack('<4i',r(0x10ad238,512)))
  assert all(row[0]==i and row[2:]==(0,0) and -32768<=row[1]<=32767 for i,row in enumerate(rows))
- payload=struct.pack('<8s6I32i',b'SA3WTIP\0',1,32,32,4,160,0,*(row[1] for row in rows))
- metadata=json.dumps({'source_exe_sha256':PROFILE_SHA256,'purpose':'original whale collision-tip pitch; not visible body shape animation'},sort_keys=True).encode()
+ #The exit descriptor points into the PE virtual zero-fill, NOT file bytes.
+ #Prove all16 descriptor bytes belong to that tail; never read a guessed file
+ #offset or silently zero an arbitrary unmapped address.
+ pointer,duration,kind,interpolation=struct.unpack('<IIHH',r(0x106bb80,12))
+ assert duration==30 and kind==3 and interpolation==2
+ base,sections=parse_pe(Path(exe).read_bytes());relative=pointer-base
+ assert sum(start+raw<=relative and relative+16<=start+virtual for _,start,virtual,_,raw in sections)==1
+ obj=r(0x106bb4c,52)
+ assert struct.unpack_from('<3i',obj,20)==(0,0,0) and struct.unpack_from('<3f',obj,8)==(0,0,0)
+ assert struct.unpack_from('<3f',obj,32)==(1,1,1) and struct.unpack_from('<2I',obj,44)==(0,0)
+ payload=struct.pack('<8s6I32i',b'SA3WTIP\0',2,32,32,4,160,1,*(row[1] for row in rows))
+ metadata=json.dumps({'source_exe_sha256':PROFILE_SHA256,'purpose':'original whale tip/cycle pitch; stock initial null-channel exit root binds original zero angles; no live guest-state claim'},sort_keys=True).encode()
  return sa3dspak.build([('METADATA',metadata,0),('WHALE_TIP',payload,0)])
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);ap.add_argument('output',type=Path);a=ap.parse_args()
