@@ -1,3 +1,21 @@
+# WCA72 — original whale two-sphere CCL profile
+
+Decoded owner CCI records/category rules into a private external package and
+added constructor/emergence/center-publication component. Tip sphere stays in
+world space; second sphere follows task origin and alone is emergence-disabled.
+Contact tests preserve prior hits, primary damage and category no-push rules.
+Required host, full exact-owner pose/import gate and native build PASS. See
+ docs/PC2004_WHALE_CCL.md.
+
+The unchanged WCA67 native candidate471008B/a0b63f49 now actually ran in
+Azahar2126.0 Old3DS/Vulkan: menu, EC act0, material-only Sonic and bounded
+movement rendered. Rejected lighting profile stayed inactive; this does not
+validate lighting fidelity, complete whale execution or physical hardware.
+Native whale task/queue binding remains absent; new helper is linker-discarded.
+Full CP1–CP9 stays active and incomplete.
+
+---
+
 # WCA71 — owned task scheduler and composed whale trigger runtime
 
 Connected source head insertion/next-link snapshot/constructor scheduling,
