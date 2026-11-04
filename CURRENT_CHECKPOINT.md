@@ -11,7 +11,9 @@ Unlocked Mac allowed actual Azahar Old3DS/Vulkan inspection of combined
 lighting visual acceptance FAILED. No candidate promotion; Desktop preview
 remains inspected WCA56/78f5506a. Driver material consumption/inherited state and
 fallback raster still need resolution. Moonlight now reports PC offline.
-See docs/PC2004_SONIC_LIGHTING_NATIVE.md. Old3DS hardware freezes remain unproven.
+See docs/PC2004_SONIC_LIGHTING_NATIVE.md. Private light profile now has an
+inactive rejected-candidate filename; temporary autoboot marker removed.
+Fallback raster not rerun. Old3DS hardware freezes remain unproven.
 
 Next: original animated whale tip and vertex/normal shape support, native event
 services; resolve lighting with PC evidence when available. Full CP1–CP9 stay

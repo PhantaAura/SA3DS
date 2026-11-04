@@ -9,8 +9,11 @@ The Desktop preview remains the inspected WCA56 binary.
 
 The EC Sonic context optionally reads assets/pc2004_lighting.sa3dspak from SD.
 It uses the WCA55 raw owner profile (592B/198238851d765ba8b736bd27378d722fbde6522abbac30c5367212c2ec3ff309).
-It is installed only in the private emulator SD, not the owner's shared SD or
-source tree. Missing/invalid data or allocation failure retains the WCA56
+It was installed only in the private emulator SD, not the owner's shared SD or
+source tree. After the failed WCA62 raster check it was preserved under the
+inactive name pc2004_lighting.wca58-rejected.sa3dspak; the temporary private
+autoboot marker was removed. This prepares fallback on the next boot; a new
+fallback raster check has not run. Missing/invalid data or allocation failure retains the WCA56
 material-only renderer. Pose Lab and other actors use the preserved renderer.
 The existing CPU texture uploader, owner pair loader and boot diagnostics remain.
 
