@@ -1,3 +1,24 @@
+# WCA71 — owned task scheduler and composed whale trigger runtime
+
+Connected source head insertion/next-link snapshot/constructor scheduling,
+self-free/destructor live links and LIFO identity reuse to a bounded owned list.
+Whale trigger runtime now composes eligibility/range/clip/contact/lifetime and
+summon/kill service timing; activation flags remain caller-provided. Final host,
+owner10-span witness and native build PASS. Actor callbacks in integration
+fixtures are mocks; no native chase claim. See
+ docs/PC2004_OWNED_TASK_SCHEDULING.md.
+
+Native main binding is still missing; modules are linker-discarded. Candidate
+remains WCA67's471008B/a0b63f49 awaiting the existing Mac-unlock screen check.
+Desktop preview stays inspected WCA56; failed lighting inactive. No retail/
+hardware parity or Old3DS freeze-fix claim.
+
+Next: native world/SET activation and clearing, resource loader and real whale
+constructor/CCL/history/effect/draw/exit-root bindings, then encounter/pier/camera.
+Full CP1–CP9 stays active and incomplete.
+
+---
+
 # WCA70 — SET association and shared whale lifetime
 
 Added deferred-free/SET association helpers and original shared AO replacement/

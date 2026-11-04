@@ -192,3 +192,9 @@ sh tests/run_set_object_clip.sh
 
 printf '\n== Original SET and whale task lifetime ==\n'
 sh tests/run_set_whale_lifetime.sh
+
+printf '\n== Original owned task list scheduling ==\n'
+sh tests/run_owned_task_list.sh
+
+printf '\n== Original whale trigger scheduling ==\n'
+sh tests/run_whale_trigger_runtime.sh

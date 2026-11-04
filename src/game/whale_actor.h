@@ -2,6 +2,7 @@
 #define SA3DS_WHALE_ACTOR_H
 #include "whale_common.h"
 #include "whale_tip.h"
+/*collision_disabled tracks the SECOND CCI shape attribute0x10, not all CCL.*/
 typedef struct {SA3DSWhaleMotion motion;float shared_tip[3];uint8_t collision_disabled;} SA3DSWhaleActor;
 typedef struct {
  SA3DSWhaleMotionServices motion;

@@ -2,8 +2,8 @@
 
 `whale_actor.[ch]` connects the recovered constructor state, action phases,
 collision-tip sampler and common tail. Shared tip is supplied explicitly on
-construction because the source stage value survives AO replacement. Collision
-starts disabled; emergence clears it. Phase requests receive the PREVIOUS tip,
+construction because the source stage value survives AO replacement. The second collision shape
+starts disabled by attribute0x10; emergence clears that flag. Phase requests receive the PREVIOUS tip,
 then the new tip is sampled BEFORE horizontal movement. Bounce/collision/wave/
 display retain the WCA62 service order. The caller still executes the actual
 phase effects, deferred deletion and native stage services.
