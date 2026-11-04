@@ -46,3 +46,40 @@ source, generated data and builds stay outside Git. No pose/import changes;
 the unchanged owner pose oracle was not rerun. Per-event synchronous SD logging,
 contact-edge construction and other movement/render costs remain candidates.
 Full physical Old3DS acceptance and full WCA remain open.
+
+## WCA59 — bounded contact-edge scan short circuit
+
+Region edge classification previously continued scanning after an admissible
+neighbor had already fixed the only relevant mask bit. The scan now classifies
+the target surface once, skips downward/nonparticipating targets, rejects
+neighbor normal/type mismatches before endpoint distances, and stops at the
+first admissible neighbor. Endpoint tolerance, midpoint-cell candidates,
+normal thresholds, triangle/grid/reference order and contact equations are
+unchanged. No transformed-geometry cache, extra allocation, asynchronous task
+or boot-log change was introduced.
+
+A preserved pre-WCA59 scan is a differential oracle in the edge test. Current
+production and prior scans produce byte-identical entire triangle records,
+including both edge masks, on tolerance/classification/opposed/overlap cases,
+translated synthetic regions and five original owner regions. The required
+host gate includes this bounded equivalence check.
+
+Same host O2/ffp-contract=off, mean3 isolated edge-pass CPU times:
+
+| Act0 region | Triangles | Prior ms | Current ms |
+|---|---:|---:|---:|
+| (-9,4) | 685 | .520 | .298 |
+| (256,0) | 365 | .235 | .142 |
+| (512,0) | 290 | .170 | .094 |
+| (768,512) | 1051 | .818 | .449 |
+| (1024,512) | 827 | .692 | .360 |
+
+This is approximately40–48% less host edge-pass CPU time; it is not native
+frame time, total rebuild time or hardware freeze evidence. Cumulative host
+and native build PASS. Candidate470768B SHA256
+013d05779a47d8d3171e8e3e9ea737356fa48e60808ea7fdc0dda8d9948be642
+also includes WCA58's optional lighting candidate. Neither candidate has passed
+its new raster check while the Mac is locked; the inspected Desktop preview
+remains WCA56. Source geometry/import/pose data did not change, so the unchanged
+pose matrix was not repeated. Physical Old3DS region buildMs measurements and
+movement-freeze acceptance remain OPEN.

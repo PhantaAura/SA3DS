@@ -1,3 +1,21 @@
+# WCA59 — collision edge-scan cost reduced, exact masks retained
+
+Required host/native build and frozen prior-scan comparison PASS. Five owner
+regions preserve all triangle bytes/edge masks; isolated host edge CPU time
+reduced about40–48%. No physical Old3DS freeze-fix claim. See
+ docs/EC_RESIDENCY_STALLS.md. No boot diagnostics/SD loader/CPU upload changes.
+
+Current combined candidate470768B SHA256
+013d05779a47d8d3171e8e3e9ea737356fa48e60808ea7fdc0dda8d9948be642
+includes WCA58 optional lighting. Mac is still locked; unlock question pending.
+Next MUST inspect this combined candidate raster/fallback and compare with PC.
+WCA58-only binary preserved at /private/tmp/sa3ds-wca58-lighting.3dsx if needed;
+do not repeat unchanged full gates or a second identical lighting replay.
+Desktop preview stays inspected WCA56/78f5506a until visual verification.
+Full CP1–CP9/retail/hardware acceptance remains open; PHYSICS_1TO1=false.
+
+---
+
 # WCA58 — native owner-profile lighting candidate, raster pending
 
 Connected optional EC Sonic directional Gouraud diffuse and post-texture

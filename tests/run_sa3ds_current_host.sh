@@ -56,6 +56,8 @@ sh tests/run_pc2004_half_turn.sh
 
 printf "\n== Emerald Coast bounded collision regions ==\n"
 sh tests/run_emerald_coast_regions.sh
+printf "\n== Collision edge-scan equivalence ==\n"
+sh tests/run_ec_contact_edge_equivalence.sh
 
 printf "\n== Emerald Coast owner route metadata and residency ==\n"
 sh tests/run_emerald_coast_route.sh

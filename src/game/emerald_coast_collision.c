@@ -73,21 +73,28 @@ static int same_point(SA1Vec3 a,SA1Vec3 b){
 static void mark_contact_edges(SA3DSECCollision*s){
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
+        int wall=fabsf(t->normal.y)<=0.45f,support=t->normal.y>0.45f;
+        if(!wall&&!support)continue;
         SA1Vec3 v[3]={t->a,t->b,t->c};
         for(unsigned e=0;e<3;e++){
-            int smooth_wall_neighbor=0,support_neighbor=0;SA1Vec3 a=v[e],b=v[(e+1)%3];
+            int neighbor=0;SA1Vec3 a=v[e],b=v[(e+1)%3];
             unsigned c=(unsigned)cell_z(s,(a.z+b.z)*.5f)*16u+(unsigned)cell_x(s,(a.x+b.x)*.5f);
             for(uint32_t q=s->cells[c];q<s->cells[c+1];q++){
                 uint32_t j=s->references[q];SA3DSECTriangle*n=&s->triangles[j];if(i==j)continue;
+                /*Only one neighbor class can affect this triangle's bits.
+                 *Reject irrelevant normals before endpoint distance checks.*/
+                if(wall?!(fabsf(n->normal.y)<=0.45f):!(n->normal.y>0.45f))continue;
+                float ndot=sa1_vec3_dot(t->normal,n->normal);
+                if(wall?!(fabsf(ndot)>0.92f):!(ndot>0.9f))continue;
                 SA1Vec3 nv[3]={n->a,n->b,n->c};int found_a=0,found_b=0;
                 for(unsigned k=0;k<3;k++){found_a|=same_point(a,nv[k]);found_b|=same_point(b,nv[k]);}
                 if(!found_a||!found_b)continue;
-                float ndot=sa1_vec3_dot(t->normal,n->normal);
-                if(fabsf(t->normal.y)<=0.45f&&fabsf(n->normal.y)<=0.45f&&fabsf(ndot)>0.92f)smooth_wall_neighbor=1;
-                if(t->normal.y>0.45f&&n->normal.y>0.45f&&ndot>0.9f)support_neighbor=1;
+                /*The previous scan only ORed this predicate. Its first true
+                 *result fixes the edge mask; later candidates cannot change it.*/
+                neighbor=1;break;
             }
-            if(fabsf(t->normal.y)<=0.45f&&!smooth_wall_neighbor)t->wall_edge_mask|=(uint8_t)(1u<<e);
-            if(t->normal.y>0.45f&&support_neighbor)t->support_edge_mask|=(uint8_t)(1u<<e);
+            if(wall&&!neighbor)t->wall_edge_mask|=(uint8_t)(1u<<e);
+            if(support&&neighbor)t->support_edge_mask|=(uint8_t)(1u<<e);
         }
     }
 }
