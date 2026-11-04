@@ -8,6 +8,9 @@ from tools.verify_pc2004_ec_route import verified_reader,PROFILE_SHA256
 from tools.importers.pc2004_set import read_set_source
 from tools.build_pc2004_emerald_coast_visual import read_source
 RANGES={
+ (0x7871f0,43):'4eb9860ab520e2ec4fd1fafefd7b97330dd1a9a04adcec057ca24ab916d96376',
+ (0x4419c0,272):'bdf005775ce2d2702f00b6d0cc6ea789f347625036075d724f32f0abfad5ac1d',
+ (0x441ad0,44):'68f8e6dfbf9891b4700cf271b1c539d9cac226d35d1c2a011bf29799eba2e20a',
  (0x5022c0,1840):'5f1f0c8dc4185cb9a49208854f1030216d53d5e0e0a1004cc90e37a84ac41cd3',
  (0x4fbda0,160):'677b45907ddfde950b8a29427f553c97e7bc90847f2323ef1c7af46492e71345',
  (0x4fbe40,32):'c64f0128a805f15495a2ab8fcdf53cfaf39037b8dedc3ca8c01fbcab42ba4615',
@@ -25,6 +28,11 @@ def build(exe,system):
   assert struct.unpack('<BBHfIII',r(0x1036420+kind*20,20))[:6]==(2,3,1,160000.,0,callback)
  assert struct.unpack('<5I',r(0x5029d0,20))==(0x50233b,0x5025e8,0x50236e,0x502439,0x5024a7)
  assert struct.unpack('<f',r(0x7eca14,4))[0]==33.333332061767578125
+ #502754..5029BD common chase/CCL/wave tail, including exact float constants.
+ for a,value in ((0x7debe4,400),(0x7dcb74,200),(0x7df1f0,12),(0x7df1a8,6),
+                 (0x7dd568,.1),(0x7e0074,1.8),(0x7dd53c,1/32768),
+                 (0x7dcc98,.5),(0x7e0b04,250),(0x7ddc48,8)):
+  assert r(a,4)==struct.pack('<f',value),hex(a)
  assert r(0x4fbe20,5)==bytes.fromhex('6800003442') #radius45, not squared
  assert r(0x4fbe2e,3)==bytes.fromhex('83f801') #summon requires player0
  assert r(0x4fbcce,2)==bytes.fromhex('85c0') #kill accepts either player

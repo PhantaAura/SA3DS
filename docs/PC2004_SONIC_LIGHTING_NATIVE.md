@@ -1,8 +1,10 @@
 # WCA58 — owner-profile Sonic lighting candidate
 
 Native implementation is connected, with HOST and NATIVE BUILD evidence.
-Raster acceptance is PENDING: the Mac locked before the candidate could be
-loaded in Azahar. No emulator, retail pixel or hardware result is claimed.
+Raster acceptance FAILED in the WCA62 unlocked-screen inspection: the combined
+WCA59 candidate boots and renders in Azahar2126 Old3DS/Vulkan, but highlights
+turn most of Sonic white. This is emulator execution evidence and a visual
+failure, not retail parity or hardware acceptance.
 The Desktop preview remains the inspected WCA56 binary.
 
 The EC Sonic context optionally reads assets/pc2004_lighting.sa3dspak from SD.
@@ -60,8 +62,16 @@ driver): [diffuse](https://learn.microsoft.com/en-us/windows/win32/direct3d9/dif
 corroborates the API snapshot. Exact source boundaries are recorded in
 [the source contract](PC2004_CHARACTER_LIGHT_STATE.md).
 
-Next: unlock-screen raster check on this exact candidate, inspect several
-camera angles for color/normal/specular faults, check missing-profile fallback,
-and compare with the owner's PC2004/Moonlight reference. Keep the candidate
-separate from the inspected Desktop preview until that check passes. Full
+WCA62 inspected combined binary470768B SHA256
+013d05779a47d8d3171e8e3e9ea737356fa48e60808ea7fdc0dda8d9948be642.
+Boot diagnostic confirms SONIC_LIGHTING active. A300-frame opening-region
+window took21496ms,1194ticks, maxSubmit457ms, minLinear25510656B,
+maxCmd.415649, mean12406 terrain triangles/98draws. This is emulator-only
+performance and does not prove the owner movement-freeze fix.
+
+Next: resolve driver material consumption and inherited state against the PC
+reference before changing brightness constants. Moonlight now reports the PC
+offline; no new PC screenshot comparison is claimed. Missing-profile fallback
+inspection remains open. Keep this visually failed candidate separate from
+the inspected Desktop preview. Full
 CP1–CP9, retail trajectories and physical Old3DS acceptance remain incomplete.

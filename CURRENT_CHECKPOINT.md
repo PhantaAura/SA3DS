@@ -1,3 +1,24 @@
+# WCA62 — whale common movement; lighting raster rejected
+
+Added source-derived whale chase-speed, lateral movement and ordered bounce/
+CCL/wave/display services after WCA61 phases. Required cumulative host and
+native build PASS; owner12-span/10-constant checks PASS, trigger package unchanged.
+Helper is not yet wired to native gameplay. Animated tip/shape art, camera/pier
+and full chase remain open. See docs/PC2004_WHALE_COMMON.md.
+
+Unlocked Mac allowed actual Azahar Old3DS/Vulkan inspection of combined
+470768B/013d0577 candidate. It boots/renders but Sonic becomes mostly white:
+lighting visual acceptance FAILED. No candidate promotion; Desktop preview
+remains inspected WCA56/78f5506a. Driver material consumption/inherited state and
+fallback raster still need resolution. Moonlight now reports PC offline.
+See docs/PC2004_SONIC_LIGHTING_NATIVE.md. Old3DS hardware freezes remain unproven.
+
+Next: original animated whale tip and vertex/normal shape support, native event
+services; resolve lighting with PC evidence when available. Full CP1–CP9 stay
+active and incomplete; PHYSICS_1TO1=false. No retail/hardware parity claim.
+
+---
+
 # WCA61 — original whale constructor and motion phases
 
 Recovered the missing5022C0 dispatcher through a bounded private Ghidra pass.

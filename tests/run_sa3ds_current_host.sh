@@ -165,3 +165,6 @@ sh tests/run_whale_trigger.sh
 
 printf '\n== Original whale motion phases ==\n'
 sh tests/run_whale_motion_phase.sh
+
+printf '\n== Original whale common movement and interaction tail ==\n'
+sh tests/run_whale_common.sh
