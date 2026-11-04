@@ -1,3 +1,23 @@
+# WCA70 — SET association and shared whale lifetime
+
+Added deferred-free/SET association helpers and original shared AO replacement/
+kill/destructor rules. Persistent SET flags/load count survive unload; an old
+whale destructor cannot clear a replacement. Constructor is scheduled, not run
+inline by allocation. Required host, owner11-span witness and native build PASS.
+No owner payload/pose change; unchanged pose matrix not repeated. See
+ docs/PC2004_SET_WHALE_LIFETIME.md.
+
+Native scheduler/services do not consume the helpers yet; candidate remains
+WCA67's471008B/a0b63f49 awaiting the existing Mac-unlock screen check. Desktop
+preview stays inspected WCA56; failed lighting inactive. No retail/hardware
+parity or freeze-fix claim.
+
+Next: owned native task-list/constructor scheduling and resource loader, trigger/
+contact/history/effects/exit root, then natural whale encounter and pier/camera.
+Full CP1–CP9 remains active and incomplete.
+
+---
+
 # WCA69 — original SET clip rules and corrected whale camera input
 
 Added inclusive source range/clip service with stored load+100 unload threshold,

@@ -189,3 +189,6 @@ sh tests/run_whale_trigger_assets.sh
 
 printf '\n== Original SET object clip rules ==\n'
 sh tests/run_set_object_clip.sh
+
+printf '\n== Original SET and whale task lifetime ==\n'
+sh tests/run_set_whale_lifetime.sh
