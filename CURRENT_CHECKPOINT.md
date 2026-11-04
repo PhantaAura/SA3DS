@@ -1,3 +1,21 @@
+# WCA60 — CP6 whale trigger rules and owner data
+
+Ported original AO summon/kill task rules and prepared external four-row trigger
+package. Required host, exact-owner pose/import and native build PASS. Source8
+spans verify player0-only delayed summon versus repeated both-player kill.
+Helpers/data are NOT connected to native whale AI/art/camera/pier yet. Private
+720B/acb1f158 package uninstalled; no owner payload enters Git. See
+ docs/PC2004_WHALE_TRIGGER_TASKS.md. CP6 now SOURCE IN PROGRESS, not accepted.
+
+Native binary is byte-identical WCA59/013d0577 (470768B), lighting raster still
+pending Mac unlock. Desktop preview remains inspected WCA56/78f5506a.
+Next native check is the combined WCA59 artifact, not a redundant WCA60 replay.
+Next CP6 source work: AO5022C0 main/502210 display/action hierarchy and original
+pier/camera/shared-state execution, then connect the triggers to world tasks.
+Full CP1–CP9/retail/Old3DS acceptance remains incomplete; PHYSICS_1TO1=false.
+
+---
+
 # WCA59 — collision edge-scan cost reduced, exact masks retained
 
 Required host/native build and frozen prior-scan comparison PASS. Five owner

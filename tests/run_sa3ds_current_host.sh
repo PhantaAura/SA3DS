@@ -159,3 +159,6 @@ sh tests/run_game_over.sh
 
 printf '\n== Original character lighting API state ==\n'
 sh tests/run_pc2004_lighting.sh
+
+printf '\n== Original whale trigger tasks ==\n'
+sh tests/run_whale_trigger.sh

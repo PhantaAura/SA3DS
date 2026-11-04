@@ -61,3 +61,5 @@ python3 tools/audit_pc2004_checkpoint_assets.py "$SONIC_EXE_PATH" "$(dirname "$S
 python3 tests/test_pc2004_gameover_assets.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")/GAMEOVER_E.PVM"
 
 python3 tools/audit_pc2004_lighting.py "$SONIC_EXE_PATH"
+
+python3 tools/build_pc2004_whale_triggers.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/whale_triggers.sa3dspak"
