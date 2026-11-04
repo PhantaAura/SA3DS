@@ -71,3 +71,5 @@ python3 tools/audit_pc2004_whale_shape.py "$SONIC_EXE_PATH"
 python3 tools/audit_pc2004_whale_visual.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")"
 
 python3 tools/verify_pc2004_player_history.py "$SONIC_EXE_PATH"
+
+python3 tools/audit_pc2004_whale_trigger_assets.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")"

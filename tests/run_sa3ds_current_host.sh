@@ -183,3 +183,6 @@ sh tests/run_whale_actor_draw.sh
 
 printf '\n== Original player position history ==\n'
 sh tests/run_player_position_history.sh
+
+printf '\n== Original whale trigger assets and sphere contact ==\n'
+sh tests/run_whale_trigger_assets.sh

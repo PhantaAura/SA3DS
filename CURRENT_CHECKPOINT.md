@@ -1,3 +1,22 @@
+# WCA68 — whale trigger reader/contact and corrected summon gate
+
+Added strict external trigger reader and original CCL-center sphere contact,
+including source float length-store/strict boundary. Four decoded SET rows and
+14 malformed+CRC variants pass independent owner audit. Removed WCA60's invented
+debug-selection deferral: exact4F88A0 simply returns0. Final required host/native
+build and focused owner14-span audit PASS; full owner pose/import gate passed
+before the task-only correction. See docs/PC2004_WHALE_TRIGGER_ASSETS.md.
+
+Native image remains WCA67's471008B/a0b63f49; its screen check is pending the
+existing Mac-unlock request. Do not promote it as emulator-verified. Desktop
+preview remains inspected WCA56; private failed lighting remains inactive.
+
+Next: exact SET clip/unload behavior46C360/46C010/46B750 and native loader/task
+lifetime/history/contact/effect binding, exit root, then pier/camera/natural chase.
+Full CP1–CP9 remains active/incomplete; no retail/hardware or freeze-fix claim.
+
+---
+
 # WCA67 — native completed-player position history
 
 Added original256-slot/byte-cursor position history with preserved cold/stale

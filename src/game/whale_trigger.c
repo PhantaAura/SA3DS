@@ -10,7 +10,7 @@ int sa3ds_whale_summon_tick(SA3DSWhaleTrigger*s,const SA3DSWhaleTriggerInput*i,S
  if(i->clipped)return 1;
  if(i->debug_mode){out->debug_display=1;return 1;}
  if(s->action==0){if(i->inside_player==1)s->action=1;}
- else if(s->action==1&&!i->debug_selected){out->summon=1;s->action=2;}
+ else if(s->action==1){out->summon=1;s->action=2;}
  return 1;
 }
 int sa3ds_whale_kill_tick(SA3DSWhaleTrigger*s,const SA3DSWhaleTriggerInput*i,SA3DSWhaleTriggerResult*out){

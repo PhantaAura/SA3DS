@@ -14,7 +14,7 @@ strict source length comparison; the portable task consumes that service's
 result instead of inventing an AABB or contact-center approximation.
 
 Summon action0 arms only for ordinal1 (player0) and returns without spawning.
-On a later update, action1 emits one summon unless the task is debug-selected;
+On a later ordinary update, action1 emits one summon;
 it does not retest the sphere. The spawn position is SET position plus raw
 parameters in world axes, with unchanged angleY. It then becomes action2.
 4F88B0 first replaces an existing AO task, clears the shared kill request,
@@ -39,7 +39,7 @@ at /private/tmp/sa3ds-wca60-whale-triggers.sa3dspak is uninstalled and outside G
 ## Verification and next work
 
 Portable checks PASS delayed summon, player0 selection, retained arming after
-leaving the sphere, debug-selection deferral, terminal one-shot, both-player
+leaving the sphere, terminal one-shot, both-player
 kill and repeated request, clipping/debug gates and unrotated parameter sum.
 Eight exact executable spans plus registry/call/immediate witnesses PASS;
 converter checks the exact four slot identities and raw package round trip.
@@ -58,3 +58,9 @@ from these source-rule checks. Full WCA, retail and physical hardware gates open
 WCA61 continues the constructor/action dispatch in
 [whale motion phases](PC2004_WHALE_MOTION_PHASES.md). It does not yet execute
 these trigger requests in a native chase.
+
+WCA68 correction: the earlier debug-selection deferral was unsupported and has
+been removed. The exact callee4F88A0 is33C0C3 (return0), so an armed summon has
+no additional selection/presence gate once the actual clip/debug-mode gates
+allow ordinary work. WCA60's self-authored deferral test did not prove source
+behavior. A new exact stub witness now prevents that mistaken interpretation.

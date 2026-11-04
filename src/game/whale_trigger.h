@@ -5,7 +5,9 @@
  *441840's first-inside-player result using updated player collision centers.
  *The result is0 for none,1 for player0,2 for player1; it is not a bitmask.*/
 typedef struct {uint8_t action;} SA3DSWhaleTrigger;
-typedef struct {uint8_t clipped,debug_mode,debug_selected,inside_player;} SA3DSWhaleTriggerInput;
+/*4F88A0 is a constant-zero stub in this exact executable. It is not an
+ *additional debug-selection or actor-presence gate for armed summons.*/
+typedef struct {uint8_t clipped,debug_mode,inside_player;} SA3DSWhaleTriggerInput;
 typedef struct {uint8_t summon,request_kill,debug_display;} SA3DSWhaleTriggerResult;
 int sa3ds_whale_summon_tick(SA3DSWhaleTrigger *state,const SA3DSWhaleTriggerInput *input,SA3DSWhaleTriggerResult *out);
 int sa3ds_whale_kill_tick(SA3DSWhaleTrigger *state,const SA3DSWhaleTriggerInput *input,SA3DSWhaleTriggerResult *out);

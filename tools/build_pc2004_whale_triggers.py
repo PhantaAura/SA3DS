@@ -8,6 +8,8 @@ from tools.verify_pc2004_ec_route import verified_reader,PROFILE_SHA256
 from tools.importers.pc2004_set import read_set_source
 from tools.build_pc2004_emerald_coast_visual import read_source
 RANGES={
+ (0x4f88a0,3):'4bc724f3b1d0caf4fe369c18cba3102e6c4ea057f63fe1587e3973134a7f755e',
+ (0x787cc0,38):'8394622b2f31ae87570f34c5cd791dfa7338a9a82f7cfec0533069c7bd7a74e0',
  (0x7871f0,43):'4eb9860ab520e2ec4fd1fafefd7b97330dd1a9a04adcec057ca24ab916d96376',
  (0x4419c0,272):'bdf005775ce2d2702f00b6d0cc6ea789f347625036075d724f32f0abfad5ac1d',
  (0x441ad0,44):'68f8e6dfbf9891b4700cf271b1c539d9cac226d35d1c2a011bf29799eba2e20a',
@@ -37,6 +39,7 @@ def build(exe,system):
  assert r(0x4fbe2e,3)==bytes.fromhex('83f801') #summon requires player0
  assert r(0x4fbcce,2)==bytes.fromhex('85c0') #kill accepts either player
  assert r(0x4f88c2,5)==bytes.fromhex('68f0295000') #actual AO constructor
+ assert r(0x4f88a0,3)==bytes.fromhex('33c0c3') #constant0, NOT debug selection
  rows=[];sources=[]
  for act in (0,1):
   s=read_set_source(f'SET010{act}S.BIN',read_source(system,f'SET010{act}S.BIN'))

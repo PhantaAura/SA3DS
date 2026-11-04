@@ -9,10 +9,9 @@ int main(void){
  i.inside_player=1;i.clipped=1;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&!s.action&&!r.summon);
  i.clipped=0;i.debug_mode=1;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&!s.action&&r.debug_display);
  i.debug_mode=0;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&s.action==1&&!r.summon); /*separate source update*/
- i.inside_player=0;i.debug_selected=1;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&s.action==1&&!r.summon);
- i.debug_selected=0;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&s.action==2&&r.summon); /*no second sphere test*/
+ i.inside_player=0;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&s.action==2&&r.summon); /*4F88A0 always0; no second sphere test or extra selection gate*/
  i.inside_player=1;assert(sa3ds_whale_summon_tick(&s,&i,&r)&&s.action==2&&!r.summon);
- s.action=0;i.inside_player=2;i.debug_selected=1;
+ s.action=0;i.inside_player=2;
  for(unsigned n=0;n<3;n++)assert(sa3ds_whale_kill_tick(&s,&i,&r)&&r.request_kill&&s.action==0); /*both players/repeated request*/
  i.clipped=1;assert(sa3ds_whale_kill_tick(&s,&i,&r)&&!r.request_kill);
  i.clipped=0;i.debug_mode=1;assert(sa3ds_whale_kill_tick(&s,&i,&r)&&r.debug_display&&!r.request_kill);
