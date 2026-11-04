@@ -65,3 +65,5 @@ python3 tools/audit_pc2004_lighting.py "$SONIC_EXE_PATH"
 python3 tools/build_pc2004_whale_triggers.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/whale_triggers.sa3dspak"
 
 python3 tools/audit_pc2004_whale_tip.py "$SONIC_EXE_PATH"
+
+python3 tools/audit_pc2004_whale_shape.py "$SONIC_EXE_PATH"

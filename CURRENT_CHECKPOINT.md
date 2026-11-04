@@ -1,3 +1,24 @@
+# WCA64 — original whale visible shape-animation banks
+
+Added external owner-only cycle/exit vertex+normal morph importer and portable
+sampler. Source final-key interval, normal normalization/fallback and float-store
+boundaries retained. Required cumulative host, exact-owner pose/import gate and
+native build PASS. Independent raw-owner32-array/711144-component comparison
+PASS(max numeric error0); malformed/CRC cases PASS. Private86384B/45eadac82
+package stays outside Git/shared SD. See docs/PC2004_WHALE_SHAPE.md.
+
+Native helper is not yet wired and is linker-discarded: artifact unchanged
+470768B/013d0577, no redundant emulator replay. Optional lighting in that artifact
+remains raster-rejected/inactive; working Desktop preview is inspected WCA56.
+No retail/x87-word/hardware parity or Old3DS freeze-fix claim.
+
+Next CP6: Basic geometry/material/texture plus explicit source-index mapping
+through UV seams, dynamic native shape renderer and original root transforms;
+then world task/events/pier/camera execution. Full CP1–CP9 stays active and
+incomplete; PHYSICS_1TO1=false.
+
+---
+
 # WCA63 — original animated whale collision tip and owner pitch bank
 
 Added pre-movement collision-tip sampler with original pitch interpolation,

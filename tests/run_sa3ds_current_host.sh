@@ -171,3 +171,6 @@ sh tests/run_whale_common.sh
 
 printf '\n== Original whale animated collision tip ==\n'
 sh tests/run_whale_tip.sh
+
+printf '\n== Original whale vertex and normal shape animation ==\n'
+sh tests/run_whale_shape.sh
