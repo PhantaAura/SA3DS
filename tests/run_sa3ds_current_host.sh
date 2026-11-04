@@ -174,3 +174,6 @@ sh tests/run_whale_tip.sh
 
 printf '\n== Original whale vertex and normal shape animation ==\n'
 sh tests/run_whale_shape.sh
+
+printf '\n== Original whale visual source identity ==\n'
+sh tests/run_whale_visual.sh

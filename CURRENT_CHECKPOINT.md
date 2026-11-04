@@ -1,3 +1,24 @@
+# WCA65 — original whale visual, UV-seam identity and native update module
+
+Owner Basic geometry/material/OBJ_BEACH texture package now includes explicit
+source-vertex identity and both shape banks. Portable sampling preserves seams
+and UVs; native GPU update module compiles with existing CPU texture uploader.
+Required cumulative host, exact-owner pose/import gate and native build PASS.
+Independent owner audit verifies281 vertices/1380 ordered corners/25 seam
+identities,5 materials/4 source texture references and both-bank runtime scatter.
+See docs/PC2004_WHALE_VISUAL.md. Private154160B/65c72deb asset stays outside Git/SD.
+
+Native renderer is NOT yet wired to gameplay and is linker-discarded; artifact
+unchanged470768B/013d0577, no redundant emulator run. Optional lighting remains
+raster-rejected/inactive; working Desktop preview remains inspected WCA56.
+No retail/hardware parity or Old3DS movement-freeze-fix claim.
+
+Next CP6: original actor/root transforms and phase-effect ordering; native
+shared lifetime/triggers/history/CCL, followed by pier/camera and natural chase.
+Full CP1–CP9 goal remains active and incomplete; PHYSICS_1TO1=false.
+
+---
+
 # WCA64 — original whale visible shape-animation banks
 
 Added external owner-only cycle/exit vertex+normal morph importer and portable

@@ -113,7 +113,8 @@ def parse_material_chunk(blob: bytes) -> dict:
     return {"count": count, "record_size": stride, "bytes": size}
 
 
-def build_visual_chunk(dec: PC2004StageDecoder, act: int, texture_count: int):
+def build_visual_chunk(dec: PC2004StageDecoder, act: int, texture_count: int,
+                       source_vertex_map: list[tuple[int, int]] | None = None):
     table = dec.landtable(EMERALD_COAST_LEVEL_ID, act)
     rows = dec.collisions(table)
     objects = [(r, dec.object(r.object_va)) for r in rows]
@@ -198,6 +199,8 @@ def build_visual_chunk(dec: PC2004StageDecoder, act: int, texture_count: int):
                             uv_max[1] = raw_v if uv_max[1] is None else max(uv_max[1], raw_v)
                         vmap[key] = len(vertices)
                         vertices.append((*pos, *nrm, u, v))
+                        if source_vertex_map is not None:
+                            source_vertex_map.append((model.va, source_index))
                     corner_vertices.append(vmap[key])
                 if mesh.primitive_class == 0xC000:
                     indices.extend(triangulate_strip(corner_vertices, reverse))
