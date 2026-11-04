@@ -106,5 +106,5 @@
   "white_zone_sim_60hz_scheduler": "HOST VERIFIED integer-phase 60Hz tick schedule and input edge latch; 0G native source integration PASS; Old 3DS measured pacing PENDING",
   "zone_reset_pose_refresh": "SOURCE CONTRACT PASS; Old 3DS hardware pending",
   "lighting_native_candidate": "WCA59 combined470768B SHA256 013d05779a47d8d3171e8e3e9ea737356fa48e60808ea7fdc0dda8d9948be642 includes WCA58 lighting; native-built, NOT emulator verified. Private profile installed only; shared owner SD unchanged. Desktop preview stays inspected WCA56.",
-  "emerald_coast_whale_events": "WCA60 SOURCE/HOST/OWNER trigger boundary: AO summon player0-only delayed one-shot,kill both players/repeated request,clip/debug and world-axis offsets;8 owner spans/4 raw SET rows. Host/owner pose-import/native build PASS,helper linker-discarded/WCA59 binary unchanged. Private720B/acb1f158 package uninstalled. Native AO AI/art/camera/pier/chase absent; full CP6 OPEN."
+  "emerald_coast_whale_events": "WCA61 SOURCE/HOST/OWNER constructor and action phases added to WCA60 trigger rules. Bounded private Ghidra recovery; source truncation/phase-specific float stores/delayed kill/dive/far boundary checked. Host/native build and9 owner spans PASS. Helpers linker-discarded/WCA59 binary unchanged. Common tracking/tip/CCL,vertex-normal shape art,camera/pier and native chase absent; full CP6 OPEN."
 }

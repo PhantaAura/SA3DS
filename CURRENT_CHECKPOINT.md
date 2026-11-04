@@ -1,3 +1,24 @@
+# WCA61 — original whale constructor and motion phases
+
+Recovered the missing5022C0 dispatcher through a bounded private Ghidra pass.
+Portable constructor/emergence/jump/cycle/dive phases now preserve source
+truncation, update boundaries and phase-specific float stores. Focused phase,
+required cumulative host, owner9-span and native build checks PASS. Original
+common tracking/tip/CCL/display and native whale remain missing. See
+ docs/PC2004_WHALE_MOTION_PHASES.md; these are source rules, not retail runtime parity.
+
+No importer/pose data changes; unchanged pose matrix not repeated. Helpers are
+unreferenced/linker-discarded: candidate stays byte-identical WCA59,470768B
+013d05779a47d8d3171e8e3e9ea737356fa48e60808ea7fdc0dda8d9948be642.
+Mac is still locked; pending unlock question applies to the native lighting
+raster. Inspected Desktop preview remains WCA56/78f5506a.
+
+Next CP6 work: common tracking/tip/CCL ordering and owner vertex/normal shape
+motion support, then native executor/triggers/camera/pier. Do not substitute a
+rigid or ambient dolphin model. Full CP1–CP9/retail/Old3DS gates remain open.
+
+---
+
 # WCA60 — CP6 whale trigger rules and owner data
 
 Ported original AO summon/kill task rules and prepared external four-row trigger

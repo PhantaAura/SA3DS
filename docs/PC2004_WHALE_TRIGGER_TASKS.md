@@ -54,3 +54,7 @@ shared request/path state and camera/pier ordering; implement that executor and
 its owner package consumer, then connect original trigger results to ordinary
 world tasks. Do not spawn a decorative stand-in or mark native chase accepted
 from these source-rule checks. Full WCA, retail and physical hardware gates open.
+
+WCA61 continues the constructor/action dispatch in
+[whale motion phases](PC2004_WHALE_MOTION_PHASES.md). It does not yet execute
+these trigger requests in a native chase.

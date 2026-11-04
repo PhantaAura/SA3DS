@@ -162,3 +162,6 @@ sh tests/run_pc2004_lighting.sh
 
 printf '\n== Original whale trigger tasks ==\n'
 sh tests/run_whale_trigger.sh
+
+printf '\n== Original whale motion phases ==\n'
+sh tests/run_whale_motion_phase.sh

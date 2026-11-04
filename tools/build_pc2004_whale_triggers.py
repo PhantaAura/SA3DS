@@ -8,6 +8,7 @@ from tools.verify_pc2004_ec_route import verified_reader,PROFILE_SHA256
 from tools.importers.pc2004_set import read_set_source
 from tools.build_pc2004_emerald_coast_visual import read_source
 RANGES={
+ (0x5022c0,1840):'5f1f0c8dc4185cb9a49208854f1030216d53d5e0e0a1004cc90e37a84ac41cd3',
  (0x4fbda0,160):'677b45907ddfde950b8a29427f553c97e7bc90847f2323ef1c7af46492e71345',
  (0x4fbe40,32):'c64f0128a805f15495a2ab8fcdf53cfaf39037b8dedc3ca8c01fbcab42ba4615',
  (0x4fbc90,80):'e064264bae796f27e402e0704234ff8c469ddfa4012fba50f976e4718bf152da',
@@ -22,6 +23,8 @@ def build(exe,system):
  for (a,n),digest in RANGES.items():assert hashlib.sha256(r(a,n)).hexdigest()==digest,hex(a)
  for kind,callback in ((67,0x4fbe40),(68,0x4fbce0)):
   assert struct.unpack('<BBHfIII',r(0x1036420+kind*20,20))[:6]==(2,3,1,160000.,0,callback)
+ assert struct.unpack('<5I',r(0x5029d0,20))==(0x50233b,0x5025e8,0x50236e,0x502439,0x5024a7)
+ assert struct.unpack('<f',r(0x7eca14,4))[0]==33.333332061767578125
  assert r(0x4fbe20,5)==bytes.fromhex('6800003442') #radius45, not squared
  assert r(0x4fbe2e,3)==bytes.fromhex('83f801') #summon requires player0
  assert r(0x4fbcce,2)==bytes.fromhex('85c0') #kill accepts either player
@@ -42,7 +45,7 @@ def build(exe,system):
  metadata=json.dumps({'source_exe_sha256':PROFILE_SHA256,'sources':sources,'status':'trigger-data-only; whale AI/art/camera/pier/native pending'},sort_keys=True).encode()
  package=sa3dspak.build([('METADATA',metadata,0),('WHALE_TRIG',bytes(data),0)])
  parsed=sa3dspak.parse(package);assert next(c['data'] for c in parsed['chunks'] if c['type']=='WHALE_TRIG')==bytes(data)
- print('Whale trigger owner witnesses: PASS8 exact spans,source registry/player distinction,4 raw SET rows; native chase absent')
+ print(f'Whale owner witnesses: PASS{len(RANGES)} exact spans,source phase jump-table/truncation,registry/player distinction,4 raw SET rows; native chase absent')
  return package
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);ap.add_argument('system',type=Path);ap.add_argument('output',type=Path);a=ap.parse_args()
