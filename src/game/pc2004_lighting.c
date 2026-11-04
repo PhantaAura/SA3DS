@@ -41,3 +41,56 @@ int sa3ds_pc2004_basic_material8(uint32_t diffuse,uint32_t specular,float power,
  if(!out||!isfinite(power))return 0;
  memset(out,0,sizeof(*out));unpack(diffuse,out->diffuse);memcpy(out->ambient,out->diffuse,sizeof(out->ambient));unpack(specular,out->specular);out->power=power;return 1;
 }
+
+static float dot3(const float*a,const float*b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+static int unit3(float*v){float q=dot3(v,v);if(!isfinite(q)||q<=0)return 0;float k=1/sqrtf(q);for(unsigned i=0;i<3;i++)v[i]*=k;return 1;}
+static float saturate(float x){return fminf(1,fmaxf(0,x));}
+int sa3ds_pc2004_light_vertex(const SA3DSLight8 lights[4],uint8_t mask,
+    const SA3DSMaterial8*m,const float color[4],const float ambient[3],
+    const float normal[3],const float position[3],const float eye[3],int normalize_normal,
+    float diffuse[4],float specular[4]){
+ if(!lights||!m||!color||!ambient||!normal||!position||!eye||!diffuse||!specular||
+    !isfinite(color[3])||!isfinite(m->power)||m->power<0||(mask&~15u))return 0;
+ float n[3],view[3];
+ for(unsigned k=0;k<3;k++){
+  if(!isfinite(normal[k])||!isfinite(position[k])||!isfinite(eye[k])||!isfinite(ambient[k])||
+     !isfinite(color[k])||!isfinite(m->specular[k]))return 0;
+  n[k]=normal[k];view[k]=eye[k]-position[k];
+  diffuse[k]=color[k]*ambient[k];specular[k]=0;
+ }
+ if(normalize_normal)unit3(n);
+ int valid_view=unit3(view);
+ for(unsigned i=0;i<4;i++)if(mask&(1u<<i)){
+  const SA3DSLight8*l=&lights[i];if(l->type!=3)return 0;
+  float toward[3],half[3];
+  for(unsigned k=0;k<3;k++){
+   if(!isfinite(l->direction[k])||!isfinite(l->diffuse[k])||!isfinite(l->ambient[k])||!isfinite(l->specular[k]))return 0;
+   toward[k]=-l->direction[k];
+  }
+  int valid_light=unit3(toward);
+  float facing=valid_light?fmaxf(0,dot3(n,toward)):0;
+  float highlight=0;
+  if(facing>0&&valid_view){
+   for(unsigned k=0;k<3;k++)half[k]=toward[k]+view[k];
+   if(unit3(half))highlight=powf(fmaxf(0,dot3(n,half)),m->power);
+  }
+  for(unsigned k=0;k<3;k++){
+   diffuse[k]+=color[k]*(l->ambient[k]+l->diffuse[k]*facing);
+   specular[k]+=m->specular[k]*l->specular[k]*highlight;
+  }
+ }
+ for(unsigned k=0;k<3;k++){diffuse[k]=saturate(diffuse[k]);specular[k]=saturate(specular[k]);}
+ diffuse[3]=saturate(color[3]);specular[3]=0;return 1;
+}
+
+int sa3ds_pc2004_normal_matrix(const float a[16],const float b[16],float out[9]){
+ if(!a||!b||!out)return 0;
+ float m[9];for(unsigned col=0;col<3;col++)for(unsigned row=0;row<3;row++)
+  m[col*3+row]=a[row]*b[col*4]+a[4+row]*b[col*4+1]+a[8+row]*b[col*4+2];
+ float cof[9]={m[4]*m[8]-m[5]*m[7],m[5]*m[6]-m[3]*m[8],m[3]*m[7]-m[4]*m[6],
+  m[7]*m[2]-m[8]*m[1],m[8]*m[0]-m[6]*m[2],m[6]*m[1]-m[7]*m[0],
+  m[1]*m[5]-m[2]*m[4],m[2]*m[3]-m[0]*m[5],m[0]*m[4]-m[1]*m[3]};
+ float det=m[0]*cof[0]+m[1]*cof[1]+m[2]*cof[2];if(!isfinite(det)||det==0)return 0;
+ for(unsigned i=0;i<9;i++)out[i]=cof[i]/det;
+ return 1;
+}

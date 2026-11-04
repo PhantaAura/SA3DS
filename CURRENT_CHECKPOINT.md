@@ -1,3 +1,21 @@
+# WCA58 — native owner-profile lighting candidate, raster pending
+
+Connected optional EC Sonic directional Gouraud diffuse and post-texture
+specular rendering. Required host/native build, owner API26-span and raw
+4525 position/normal-pair checks PASS. Candidate470776B/d16e5079 is built,
+not yet run in Azahar: Mac locked, unlock question pending. No emulator or
+retail/hardware claim. Desktop preview remains inspected WCA56/78f5506a.
+See docs/PC2004_SONIC_LIGHTING_NATIVE.md for explicit inherited-state assumptions.
+
+Next MUST inspect the actual candidate raster, then fallback and PC reference.
+Private emulator SD has owner pc2004_lighting.sa3dspak and temporary autoboot E;
+shared owner SD does not have the light profile. Remove temporary marker after
+inspection. Do not blindly repeat the full host/owner pose matrix or recreate
+an emulator profile; existing app/profile is waiting for UI access.
+Full CP1–CP9/retail/physical Old3DS gates remain open; PHYSICS_1TO1=false.
+
+---
+
 # WCA57 — corrected light fields and verified Basic vertex contract
 
 Corrected WCA55's shared builder/oracle ambient/specular offset error. Exact

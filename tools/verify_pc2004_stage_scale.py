@@ -15,16 +15,19 @@ from tools import sa3dspak
 def u32(b,o=0):return struct.unpack_from('<I',b,o)[0]
 def vector(b,o):return struct.unpack_from('<fff',b,o)
 
-def verify_vertices(read,models,package,model_offset,model_stride,vertex_offset,vertex_stride,first_field):
+def verify_vertices(read,models,package,model_offset,model_stride,vertex_offset,vertex_stride,first_field,normals=False):
     checked=0
     for index,va in models.items():
         raw=read(va,44);points=u32(raw);count=u32(raw,8)
         stock=read(points,count*12)
         triples={stock[i*12:(i+1)*12] for i in range(count)}
+        if normals:
+            source_normals=read(u32(raw,4),count*12)
+            triples={stock[i*12:(i+1)*12]+source_normals[i*12:(i+1)*12] for i in range(count)}
         row=model_offset+index*model_stride
         first,n=struct.unpack_from('<II',package,row+first_field)
         for vi in range(first,first+n):
-            p=package[vertex_offset+vi*vertex_stride:vertex_offset+vi*vertex_stride+12]
+            p=package[vertex_offset+vi*vertex_stride:vertex_offset+vi*vertex_stride+(24 if normals else 12)]
             if p not in triples:raise ValueError(f'rescaled/non-source vertex in model {index}')
             checked+=1
     return checked
@@ -83,8 +86,8 @@ def audit(exe,chrmodels,sonic,stage):
         mid=struct.unpack_from('<H',data,row)[0]
         if mid!=65535:
             source=u32(stock,4);assert models.setdefault(mid,source)==source
-    n=verify_vertices(pe.read_va,models,data,ss[b'MODL'][1],ss[b'MODL'][2],ss[b'VRTX'][1],ss[b'VRTX'][2],8)
-    print(f'Sonic original NODE position/scale + {n} converted vertex positions: EXACT FLOAT-BYTE MATCH')
+    n=verify_vertices(pe.read_va,models,data,ss[b'MODL'][1],ss[b'MODL'][2],ss[b'VRTX'][1],ss[b'VRTX'][2],8,True)
+    print(f'Sonic original NODE position/scale + {n} converted position/normal pairs: EXACT FLOAT-BYTE MATCH')
     pak=sa3dspak.parse(stage.read_bytes());g=next(c['data'] for c in pak['chunks'] if c['type']=='GEOMETRY')
     nm,_,ni,nv=struct.unpack_from('<IIII',g,12)
     mo,_,io,vo=struct.unpack_from('<IIII',g,32)

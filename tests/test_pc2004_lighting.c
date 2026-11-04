@@ -30,6 +30,33 @@ int main(int argc,char**argv){
   for(unsigned k=0;k<4;k++)assert(m.diffuse[k]==v&&m.ambient[k]==v&&m.emissive[k]==0);
   assert(m.specular[0]==0&&m.specular[1]==0&&m.specular[2]==177&&m.specular[3]==255&&m.power==11);
  }
+ /*Hand-computed directional/Gouraud cases, separate from the owner table.*/
+ SA3DSLight8 single[4]={0};single[0].type=3;single[0].direction[1]=-2;
+ for(unsigned k=0;k<3;k++){single[0].ambient[k]=.1f;single[0].diffuse[k]=.4f;single[0].specular[k]=.8f;m.specular[k]=.5f;}
+ m.power=2;float color[4]={1,.5f,.25f,.75f},ambient[3]={0,0,0};
+ float normal[3]={0,1,0},position[3]={0,0,0},eye[3]={0,2,0},diffuse[4],specular[4];
+ assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,0,diffuse,specular));
+ assert(fabsf(diffuse[0]-.5f)<1e-6f&&fabsf(diffuse[1]-.25f)<1e-6f&&fabsf(diffuse[2]-.125f)<1e-6f&&diffuse[3]==.75f);
+ assert(fabsf(specular[0]-.4f)<1e-6f&&specular[3]==0);
+ eye[0]=2;eye[1]=0;
+ assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,0,diffuse,specular));
+ assert(fabsf(specular[0]-.2f)<1e-6f); /*Halfway vector, not reflection-vector Phong.*/
+ normal[1]=-1;assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,0,diffuse,specular));
+ assert(fabsf(diffuse[0]-.1f)<1e-6f&&specular[0]==0);
+ normal[1]=2;eye[0]=0;eye[1]=2;
+ assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,0,diffuse,specular)&&fabsf(diffuse[0]-.9f)<1e-6f);
+ assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,1,diffuse,specular)&&fabsf(diffuse[0]-.5f)<1e-6f);
+ m.specular[0]=255;assert(sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,1,diffuse,specular)&&specular[0]==1);
+ m.power=-1;assert(!sa3ds_pc2004_light_vertex(single,1,&m,color,ambient,normal,position,eye,1,diffuse,specular));
+ float identity[16]={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
+ float transformed[16]={0,2,0,0,-3,0,0,0,0,0,4,0,17,23,29,1},nm[9];
+ assert(sa3ds_pc2004_normal_matrix(identity,transformed,nm));
+ assert(fabsf(nm[1]-.5f)<1e-6f&&fabsf(nm[3]+1.f/3)<1e-6f&&fabsf(nm[8]-.25f)<1e-6f&&nm[0]==0);
+ float scale[16]={2,0,0,0,0,3,0,0,0,0,4,0,0,0,0,1};
+ float rotate[16]={0,1,0,0,-1,0,0,0,0,0,1,0,0,0,0,1};
+ assert(sa3ds_pc2004_normal_matrix(rotate,scale,nm));
+ assert(fabsf(nm[1]-.5f)<1e-6f&&fabsf(nm[3]+1.f/3)<1e-6f);
+ transformed[10]=0;assert(!sa3ds_pc2004_normal_matrix(identity,transformed,nm));
  if(argc>1){
   FILE*f=fopen(argv[1],"rb");assert(f);fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);void*b=malloc(n);assert(b&&fread(b,1,n,f)==(size_t)n);fclose(f);
   assert(sa3ds_lighting_assets_open(&a,b,n));
@@ -44,5 +71,5 @@ int main(int argc,char**argv){
    assert(!sa3ds_lighting_assets_open(&a,b,n)&&!a.stage);free(b);
   }
  }
- puts("Lighting state: PASS source API layout,own/stage/reverse/back lights,all byte material channels without normalization and act bounds; native shading separate");
+ puts("Lighting state: PASS source API layout,own/stage/reverse/back lights,raw material channels,act bounds,directional diffuse/specular and inverse-transpose transforms; native raster separate");
 }

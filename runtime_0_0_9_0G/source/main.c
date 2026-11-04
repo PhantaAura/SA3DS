@@ -23,6 +23,7 @@
 #include "checkpoint_player.h"
 #include "game_over.h"
 #include "course_clock.h"
+#include "sonic_lighting_gpu.h"
 #include "pc2004_homing.h"
 #include <3ds.h>
 #include <citro3d.h>
@@ -82,6 +83,8 @@ static SA3CTransform *g_transition_local;
 static SA3CMatrix *g_world;
 static size_t g_node_count;
 static SA3DSSonicGpu g_sonic_gpu;
+static SA3DSSonicLightingGpu *g_sonic_lighting;
+static uint8_t *g_lighting_bytes;static size_t g_lighting_size;
 static SA3DSVisualReport g_visual_report;
 static SA3DSGeometryReport g_geometry_report;
 static SA3DSActionPreflightReport g_action_report;
@@ -2041,7 +2044,13 @@ static int init_scene(void) {
                 &g_character,&g_texture_archive,log_texture_stage,NULL)) return 0;
         if(g_ec_combined){
             g_sonic_gpu.constant_diffuse_argb=0xffffffffu;g_sonic_gpu.constant_diffuse_enabled=1;
-            boot_log("SONIC_MATERIAL","Original4948C0 constant-white diffuse bound; directional/specular lighting still pending");
+            boot_log("SONIC_MATERIAL","Original4948C0 constant-white diffuse bound; optional owner lighting follows");
+            SA3DSLightingAssets light_assets;
+            if(sa3ds_read_file("sdmc:/3ds/SA3DS/assets/pc2004_lighting.sa3dspak",&g_lighting_bytes,&g_lighting_size)&&
+               sa3ds_lighting_assets_open(&light_assets,g_lighting_bytes,g_lighting_size))
+                g_sonic_lighting=sa3ds_sonic_lighting_gpu_create(&g_sonic_gpu,&light_assets);
+            if(!g_sonic_lighting){sa3ds_free_file(g_lighting_bytes);g_lighting_bytes=NULL;}
+            boot_log("SONIC_LIGHTING",g_sonic_lighting?"Owner directional Gouraud + post-texture specular candidate ready; inherited state/retail driver parity pending":"Profile unavailable; material-only Sonic retained");
         }
         load_rings();
         load_background();
@@ -2173,7 +2182,17 @@ static int sample_pose(void) {
         case 2: C3D_CullFace(GPU_CULL_FRONT_CCW); break;
     }
     if(g_pose_lab||sa3ds_player_damage_visible(g_player.pc2004_hurt_timer)){
-        if(!sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats))return 0;
+        if(g_sonic_lighting&&g_ec_combined&&!g_pose_lab){
+            SA3CMatrix actor;sa3ds_ec_model_transform(&g_player,&actor);
+            float eye[3]={g_player.pos.x-sinf(g_camera.yaw)*40.0f,g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f};
+            int ok=sa3ds_sonic_lighting_gpu_draw(g_sonic_lighting,&g_sonic_gpu,g_ec_act_index,
+                &g_projection,&g_ec_view,&actor,eye,root,g_world,g_node_count,&g_stats);
+            C3D_BindProgram(&g_program);
+            C3D_AttrInfo*attr=C3D_GetAttrInfo();AttrInfo_Init(attr);AttrInfo_AddLoader(attr,0,GPU_FLOAT,3);AttrInfo_AddLoader(attr,1,GPU_FLOAT,2);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
+            if(!ok)return 0;
+        }else if(!sa3ds_sonic_gpu_draw(&g_sonic_gpu,root,g_world,g_node_count,&g_stats))return 0;
     }else{
         sa3ds_sonic_gpu_begin_frame(&g_sonic_gpu);memset(&g_stats,0,sizeof(g_stats));
         if(g_hurt_probe&&!g_paused)g_hurt_blinks++;
@@ -2187,6 +2206,8 @@ static int sample_pose(void) {
 }
 
 static void cleanup(void) {
+    if(g_sonic_lighting){C3D_FrameSync();sa3ds_sonic_lighting_gpu_destroy(g_sonic_lighting);g_sonic_lighting=NULL;}
+    sa3ds_free_file(g_lighting_bytes);g_lighting_bytes=NULL;
     destroy_checkpoints();
     if(g_game_over_loaded)C3D_FrameSync();
     destroy_game_over_art();clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;

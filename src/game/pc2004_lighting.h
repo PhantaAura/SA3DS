@@ -15,4 +15,12 @@ int sa3ds_ec_character_lights(const SA3DSLightingAssets*assets,unsigned act,
 typedef struct {float diffuse[4],ambient[4],specular[4],emissive[4],power;} SA3DSMaterial8;
 int sa3ds_pc2004_basic_material8(uint32_t resolved_diffuse,uint32_t specular,
     float power,SA3DSMaterial8*out);
+int sa3ds_pc2004_normal_matrix(const float actor[16],const float node[16],float out[9]);
+/*Directional fixed-function candidate. Normal is already inverse-transpose
+ * transformed; normalization and inherited global ambient are explicit inputs.
+ * EC Basic uses COLOR1 for diffuse/ambient, MATERIAL for specular.*/
+int sa3ds_pc2004_light_vertex(const SA3DSLight8 lights[4],uint8_t enabled_mask,
+    const SA3DSMaterial8 *material,const float color1[4],const float global_ambient[3],
+    const float normal[3],const float position[3],const float eye[3],int normalize_normal,
+    float diffuse[4],float specular[4]);
 #endif
