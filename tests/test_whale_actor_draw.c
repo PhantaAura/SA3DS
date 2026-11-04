@@ -22,17 +22,17 @@ int main(void){
  float p[3]={0,0,0},old[3]={5,6,7};assert(sa3ds_whale_actor_init(&a,p,0,old,&s.motion)&&a.collision_disabled&&!memcmp(a.shared_tip,old,12));
  SA3DSWhaleMotionInput input={0};
  for(unsigned tick=0;tick<10;tick++){
-  memset(&c,0,sizeof(c));memcpy(input.player_position,a.motion.position,12);
+  memset(&c,0,sizeof(c));memcpy(input.camera_position,a.motion.position,12);
   assert(sa3ds_whale_actor_tick(&a,&tip,&input,0,&s,&r));
   if(tick<9)assert(a.motion.action==1&&a.collision_disabled&&c.center[1]==-100000);
   else assert(a.motion.action==4&&!a.collision_disabled&&c.phase.clear_collision_disable&&c.previous[1]==-100000&&c.center[1]!=-100000&&c.order[0]=='P');
   if(!tick)assert(!strcmp(c.order,"HERRWD")&&a.motion.counter==0);
  }
- memset(&c,0,sizeof(c));a.motion.action=3;a.motion.frame=7.9f;a.motion.frame_step=.2f;memcpy(a.shared_tip,old,12);memcpy(input.player_position,a.motion.position,12);
+ memset(&c,0,sizeof(c));a.motion.action=3;a.motion.frame=7.9f;a.motion.frame_step=.2f;memcpy(a.shared_tip,old,12);memcpy(input.camera_position,a.motion.position,12);
  assert(sa3ds_whale_actor_tick(&a,&tip,&input,0,&s,&r)&&c.phase.surface_splash&&c.phase.rumble&&!memcmp(c.previous,old,12)&&c.order[0]=='P');
- memset(&c,0,sizeof(c));a.motion.action=2;a.motion.draw_y=-349;a.motion.dive_velocity[1]=-2.5f;a.motion.counter=0;memcpy(input.player_position,a.motion.position,12);
+ memset(&c,0,sizeof(c));a.motion.action=2;a.motion.draw_y=-349;a.motion.dive_velocity[1]=-2.5f;a.motion.counter=0;memcpy(input.camera_position,a.motion.position,12);
  assert(sa3ds_whale_actor_tick(&a,&tip,&input,0,&s,&r)&&r.phase.destroy&&!r.phase.stop_common_tail&&!strcmp(c.order,"PHED"));
- memset(&c,0,sizeof(c));input.player_position[0]+=2000;
+ memset(&c,0,sizeof(c));input.camera_position[0]+=2000;
  assert(sa3ds_whale_actor_tick(&a,&tip,&input,0,&s,&r)&&r.phase.destroy&&r.phase.stop_common_tail&&!strcmp(c.order,"P"));
  wi(keys,20);wi(keys+29*4,100);wi(keys+30*4,200);wi(keys+31*4,300);int32_t angle;
  assert(sa3ds_whale_cycle_pitch(&tip,29.5f,&angle)&&angle==150);

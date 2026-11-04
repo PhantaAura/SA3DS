@@ -61,3 +61,7 @@ and native executor, then connect WCA60 triggers and camera/pier behavior.
 
 Required host and native build verification is recorded in CURRENT_CHECKPOINT.
 Full CP6, lighting raster, retail/full-route and physical Old3DS gates remain open.
+
+WCA69 correction: the far-distance input is Camera_Data1(03B2CBB0), not
+player task origin. The field is renamed camera_position. Buffered player
+tracking remains a distinct common-tail service; see PC2004_SET_OBJECT_CLIP.md.

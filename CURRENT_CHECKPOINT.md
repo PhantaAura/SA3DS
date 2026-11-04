@@ -1,3 +1,23 @@
+# WCA69 — original SET clip rules and corrected whale camera input
+
+Added inclusive source range/clip service with stored load+100 unload threshold,
+camera/player0 retention, Sonic-only player1 fixed40-unit exception, flag8/zero
+bypass and deferred40B570 request. Corrected WCA61's misnamed far-deletion input:
+Camera_Data1, not player position. Required host, exact-owner six-span witness
+and native build PASS. No pose/import payload changed; unchanged pose matrix
+not repeated. See docs/PC2004_SET_OBJECT_CLIP.md.
+
+Helpers are not yet consumed by native whale tasks; image remains WCA67's
+471008B/a0b63f49, whose emulator check awaits the existing unlock request.
+Desktop preview stays inspected WCA56, failed lighting inactive. No retail/
+hardware parity or Old3DS freeze-fix claim.
+
+Next: SET allocation/deferred-free lifetime and native whale loader/triggers/
+contact/history/effects, exit root, then natural encounter/pier/camera.
+Full CP1–CP9 remains active and incomplete.
+
+---
+
 # WCA68 — whale trigger reader/contact and corrected summon gate
 
 Added strict external trigger reader and original CCL-center sphere contact,

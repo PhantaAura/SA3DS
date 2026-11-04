@@ -11,7 +11,9 @@ typedef struct {
 } SA3DSWhaleMotion;
 typedef double (*SA3DSWhaleSine)(void *context,uint16_t bams);
 typedef struct {void *context;SA3DSWhaleSine sine;} SA3DSWhaleMotionServices;
-typedef struct {float player_position[3];uint32_t kill_request;} SA3DSWhaleMotionInput;
+/*5022C0's far deletion reads Camera_Data1 at03B2CBB0, independently of
+ *the buffered player position used later for chase-speed control.*/
+typedef struct {float camera_position[3];uint32_t kill_request;} SA3DSWhaleMotionInput;
 typedef struct {
  uint8_t destroy,stop_common_tail,clear_collision_disable,allow_free_camera;
  uint8_t surface_splash,cycle_splash,rumble,sound2f;

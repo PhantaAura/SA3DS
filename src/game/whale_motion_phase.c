@@ -27,8 +27,8 @@ int sa3ds_whale_motion_phase(SA3DSWhaleMotion*m,const SA3DSWhaleMotionInput*i,
  if(!m||!i||!s||!s->sine||!out)return 0;
  memset(out,0,sizeof(*out));
  double delta[3];for(unsigned k=0;k<3;k++){
-  if(!isfinite(i->player_position[k])||!isfinite(m->position[k]))return 0;
-  delta[k]=(double)i->player_position[k]-m->position[k];
+  if(!isfinite(i->camera_position[k])||!isfinite(m->position[k]))return 0;
+  delta[k]=(double)i->camera_position[k]-m->position[k];
  }
  if(delta[2]*delta[2]+delta[1]*delta[1]+delta[0]*delta[0]>1000000.0){out->destroy=out->stop_common_tail=1;return 1;}
  switch(m->action){

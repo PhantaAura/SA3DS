@@ -186,3 +186,6 @@ sh tests/run_player_position_history.sh
 
 printf '\n== Original whale trigger assets and sphere contact ==\n'
 sh tests/run_whale_trigger_assets.sh
+
+printf '\n== Original SET object clip rules ==\n'
+sh tests/run_set_object_clip.sh

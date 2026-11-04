@@ -33,9 +33,9 @@ int main(void){
  i.kill_request=0;a=(SA3DSWhaleMotion){.action=2,.frame=29.6f,.draw_y=-347.5f,.dive_velocity={0,-2.5f,0}};
  assert(sa3ds_whale_motion_phase(&a,&i,&services,&r)&&a.frame>0&&a.frame<.000001f&&a.draw_y==-350);
  assert(r.destroy&&r.allow_free_camera&&!r.stop_common_tail); /*mark-delete still permits source common tail*/
- a=(SA3DSWhaleMotion){.action=1,.draw_y=-100,.dive_velocity={0,10,0}};i.player_position[0]=1000;
+ a=(SA3DSWhaleMotion){.action=1,.draw_y=-100,.dive_velocity={0,10,0}};i.camera_position[0]=1000;
  assert(sa3ds_whale_motion_phase(&a,&i,&services,&r)&&!r.destroy&&a.draw_y==-90); /*strict far bound*/
- i.player_position[0]=1000.01f;SA3DSWhaleMotion before=a;
+ i.camera_position[0]=1000.01f;SA3DSWhaleMotion before=a;
  assert(sa3ds_whale_motion_phase(&a,&i,&services,&r)&&r.destroy&&r.stop_common_tail&&!memcmp(&a,&before,sizeof(a)));
  puts("Whale motion phases: PASS source constructor/truncation,emergence,phase-specific float stores,cycle/kill timing,dive deletion/far boundary; common tail/native chase pending");
 }
