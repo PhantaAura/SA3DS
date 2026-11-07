@@ -25,4 +25,12 @@ int sa3ds_pc2004_sweep_triangle(const SA3DSSweepTriangle *triangle,const float s
  *the smallest end height (strict <, first wins). Returns the hit count.*/
 int sa3ds_pc2004_sweep(const SA3DSSweepTriangle *triangles,size_t count,const float start[3],const float delta[3],
  float radius,SA3DSSweepHit *chosen,int *chosen_index);
+/*439620 camera/object ray over collision objects (triangles tagged with an
+ *object id, contiguous per object): each object's hits average their plane
+ *and corrected points (453820 param+0x15..0x1A); the object whose averaged
+ *corrected point is nearest the start wins (strict <). On a hit, start
+ *becomes that corrected point and delta becomes the chosen hit's plane-
+ *parallel part. Returns1 on any hit. Moving-object motion is not modeled.*/
+int sa3ds_pc2004_camera_ray(const SA3DSSweepTriangle *triangles,const uint32_t *object_ids,size_t count,
+ float start[3],float delta[3],float radius);
 #endif

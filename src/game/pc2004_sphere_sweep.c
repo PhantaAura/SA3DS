@@ -101,3 +101,26 @@ int sa3ds_pc2004_sweep(const SA3DSSweepTriangle*t,size_t count,const float s[3],
  if(index)*index=best;
  return hits;
 }
+int sa3ds_pc2004_camera_ray(const SA3DSSweepTriangle*t,const uint32_t*ids,size_t count,float s[3],float d[3],float r){
+ if(!t||!ids||!s||!d)return 0;
+ float best_corr[3]={0},best_delta[3]={0},best_dist=0;int any=0;
+ for(size_t i=0;i<count;){
+  size_t j=i;while(j<count&&ids[j]==ids[i])j++;
+  int hits=0;SA3DSSweepHit h,chosen;memset(&chosen,0,sizeof(chosen));double sum[3]={0,0,0};
+  for(size_t k=i;k<j&&hits<16;k++){
+   if(!sa3ds_pc2004_sweep_triangle(&t[k],s,d,r,&h))continue;
+   if(!hits||h.end_height<chosen.end_height)chosen=h;
+   for(unsigned a=0;a<3;a++)sum[a]+=h.corrected[a];
+   hits++;
+  }
+  if(hits){
+   float inv=1.f/(float)hits,corr[3];
+   for(unsigned a=0;a<3;a++)corr[a]=hits==1?chosen.corrected[a]:(float)(sum[a]*inv);
+   float v[3]={corr[0]-s[0],corr[1]-s[1],corr[2]-s[2]},dist=sqrtf(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+   if(!any||dist<best_dist){best_dist=dist;memcpy(best_corr,corr,12);memcpy(best_delta,chosen.delta_xz,12);any=1;}
+  }
+  i=j;
+ }
+ if(any){memcpy(s,best_corr,12);memcpy(d,best_delta,12);}
+ return any;
+}

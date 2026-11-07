@@ -31,5 +31,10 @@ int main(void){
  /*List: chosen hit has the smallest end height.*/
  SA3DSSweepTriangle two[2]={floor,{{{-50,-3,-50},{50,-3,-50},{0,-3,50}},0}};
  int idx;assert(sa3ds_pc2004_sweep(two,2,s,d,4,&h,&idx)==2);
- puts("PC2004 sphere sweep: PASS 4B8E80 poles/axes, floor/wall hits with corrected point, slab/XZ misses, r*.5 sampling, radius gate, smallest end-height selection");
+ /*Camera ray: wall clips start to radius in front, delta keeps the slide part.*/
+ SA3DSSweepTriangle objs[2]={wall,floor};uint32_t ids[2]={7,9};
+ float cs[3]={20,10,3},cd[3]={-30,0,4};
+ assert(sa3ds_pc2004_camera_ray(objs,ids,2,cs,cd,5)&&near(fabsf(cs[0]),5,1e-3f)&&near(cd[0],0,1e-4f)&&near(cd[2],4,1e-4f));
+ float ms[3]={20,30,3},md[3]={1,0,0};assert(!sa3ds_pc2004_camera_ray(objs,ids,2,ms,md,5)&&ms[0]==20&&md[0]==1);
+ puts("PC2004 sphere sweep: PASS camera ray clip/slide/miss, 4B8E80 poles/axes, floor/wall hits with corrected point, slab/XZ misses, r*.5 sampling, radius gate, smallest end-height selection");
 }
