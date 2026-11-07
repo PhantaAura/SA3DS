@@ -68,5 +68,25 @@ First update (param counter +0x20 == 0): parameter-block target(+18..+20) =
 Sonic task position. Every update: goal = task position + (0, CharObj2+0x118,
 0) + motionwk world velocity(+4..+C) * 8.0 (7DDC48); target +=
 (goal - target) * 0.1 (7DD568), per axis with float stores. It then branches
-on 4365A0 (camera state 8..11) and 436540 (<5); the remaining ~330
-instructions and helpers 466B60..468790 are not yet decoded or ported.
+on 4365A0 (current mode index; 8..11 only) and 436540 (frames since mode
+set): modes 8-11 place the eye at Sonic + (0,0,-47.5) rotated by pitch F1C8 /
+yaw 4000-SonicYaw (465F00) for 5 frames, then sidestep 0.2 on the camera yaw
+circle. Default mode4 skips that. Shared body (parameter block +0C..+14 = eye):
+
+- pitch: if |camRotX - F1C8| > 71C, approach by B6 (438350) and lift eye.
+- manual L/R analog (03B0E808/80A > 0x80 after <<8): eye moves 2 units on the
+  yaw circle, then 466B60; skipped for level9 act3.
+- distance d=|Sonic-eye|, unit dir: d>60 -> (d-60)*.9+60, if >90 a camera ray
+  test 4370C0 (43A060, flags400002, radius4) picks 20 when the hit is within3
+  else 90; 35<=d<=60 kept; d<35 -> d*1.06 with minimum20. eye = Sonic-dir*d.
+- if eye above Sonic and horizontal distance^2 < 900: push horizontally to30.
+- 437E90/437F20: priority-4 (mode61) CAM regions push the eye: sphere 4367B0
+  (inside +1C -> radius +14), box 436AD0 (to least-penetration face), gate
+  436850 (crossing keeps the previous eye, 436560(0)).
+- 462B40: accept the new eye unless the ray test from the old eye (radius4 or
+  8 by which is nearer Sonic) hits; on hit use the clipped delta, or with
+  manual input move only 10%. 4625E0 only acts in level6 act2.
+
+Constants: 60 (7E09A8), .9, 90, 35, 1.06, 20, 3, 900, 30, .2, 2, .1, 8.
+Remaining before a faithful port: the camera ray test 43A060, 466B60, the
+view build 437A20/435600 and the adjust table functions (467D80...).

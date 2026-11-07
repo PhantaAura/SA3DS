@@ -7,7 +7,9 @@ record trigger tests (sphere4357F0, gate435840, box435AA0) ported to
 docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Host test PASS (incl. Ninja T*Rx*Ry
 frame); owner EC CAM files consistent. Mode table decoded: stage init selects
 mode4 (469590) as the default follow camera; its target look-ahead/easing
-opening is decoded. Rest of mode4, its helpers and native use remain.
+opening, distance rules, pitch/manual turn, mode61 region pushes and final
+smoothing are decoded (docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Next: the camera
+ray test 43A060, 466B60, view build 437A20/435600, adjust table, then port.
 
 ---
 
