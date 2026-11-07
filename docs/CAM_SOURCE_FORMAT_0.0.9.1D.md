@@ -103,3 +103,18 @@ is nonzero on any hit. 453820 (about394 decompiled lines, helpers 450810,
 450920, 4509D0) is the original polygon sphere-sweep, the same solver the
 player collision notes record as missing. Porting it is the next step for
 both the mode4 camera and retail terrain contact.
+
+### 453820 port (WCA82)
+
+`src/game/pc2004_sphere_sweep.[ch]` ports the per-polygon sweep: 1.04 inflation
+about the centroid, 450810 normal with 4509D0 zero->(0,1,0), 4B8E80 angles
+(asin(z), atan2(x,y)*-1/2pi, with +-0.99996 pole and +-0.002 tiny-XY cases),
+rotX(-ax) then rotZ(-az), samples every radius*.5 with the final sample at
+start+delta, +-radius slab and XZ cross-sign containment, 0x800000 double
+sided flip, and the smallest-end-height choice over up to16 hits. Hit outputs:
+plane point, corrected start (signed radius above the plane), delta split.
+Not ported: the hit record's 645270/645034 slope angles and the 450C10 broad
+phase over the original z-sorted polygon lists (the native grid supplies a
+superset instead). On owner EC terrain, 76/84 downward sweeps land within0.6
+of the native vertical floor (normal projection and inflation explain the
+rest). Next: 439620's clipped position/delta write-back for the camera.

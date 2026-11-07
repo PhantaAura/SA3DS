@@ -213,3 +213,6 @@ sh tests/run_ccl_box_push.sh
 
 printf '\n== Original CAM trigger volumes ==\n'
 sh tests/run_cam_trigger.sh
+
+printf '\n== Original PC2004 polygon sphere sweep ==\n'
+sh tests/run_pc2004_sphere_sweep.sh
