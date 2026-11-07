@@ -8,8 +8,9 @@ docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Host test PASS (incl. Ninja T*Rx*Ry
 frame); owner EC CAM files consistent. Mode table decoded: stage init selects
 mode4 (469590) as the default follow camera; its target look-ahead/easing
 opening, distance rules, pitch/manual turn, mode61 region pushes and final
-smoothing are decoded (docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Next: the camera
-ray test 43A060, 466B60, view build 437A20/435600, adjust table, then port.
+smoothing are decoded (docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Camera ray test
+traced to the original polygon sphere-sweep 453820 (shared with retail
+terrain contact); porting it is next, then 466B60, view build, adjust table.
 
 ---
 

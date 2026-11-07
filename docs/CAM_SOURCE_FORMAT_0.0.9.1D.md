@@ -90,3 +90,16 @@ circle. Default mode4 skips that. Shared body (parameter block +0C..+14 = eye):
 Constants: 60 (7E09A8), .9, 90, 35, 1.06, 20, 3, 900, 30, .2, 2, .1, 8.
 Remaining before a faithful port: the camera ray test 43A060, 466B60, the
 view build 437A20/435600 and the adjust table functions (467D80...).
+
+### Camera ray test chain
+
+4370C0 -> 43A060 -> 439620(start, delta in/out, result, mask400002, radius).
+450C10 builds the sweep work (start, delta, radius); then for each entry of
+the active collision list 03B2F720 (12-byte {flags, object, task}, count
+03B32724) whose flags miss the mask, 453820 sweeps the sphere against that
+object; moving objects add their motion. The nearest hit (by distance from the
+start) wins and is written back as clipped position/delta; the return value
+is nonzero on any hit. 453820 (about394 decompiled lines, helpers 450810,
+450920, 4509D0) is the original polygon sphere-sweep, the same solver the
+player collision notes record as missing. Porting it is the next step for
+both the mode4 camera and retail terrain contact.
