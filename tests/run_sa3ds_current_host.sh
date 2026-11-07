@@ -216,3 +216,6 @@ sh tests/run_cam_trigger.sh
 
 printf '\n== Original PC2004 polygon sphere sweep ==\n'
 sh tests/run_pc2004_sphere_sweep.sh
+
+printf '\n== Original camera mode4 follow + apply ==\n'
+sh tests/run_cam_mode4.sh

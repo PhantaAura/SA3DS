@@ -1,3 +1,18 @@
+# WCA83 — default follow camera mode4 ported
+
+`cam_mode4.[ch]` ports mode4 (469590) on the parameter block plus the 435C70
+apply: target seed on reset, look-ahead (player+eyes height+velocity*8) eased
+.1, pitch approach F1C8 by B6, manual L/R 2-unit yaw-circle turn, distance
+bands (>60 compressed .9 and capped 90 with a 4370C0 probe dropping to 20;
+<35 grows x1.06, floor 20), above-player 30-unit horizontal push, 462B40
+final ray (radius 4/8, clipped delta or 10% while turning), then position =
+eye with yaw/pitch atan2 in BAMS and roll from +2C. Ray and mode61 region
+pushes are services (`sa3ds_pc2004_camera_ray` is the intended ray); the
+region push bodies (4367B0/436AD0/436850), modes 8-11 sidestep, adjust table
+and native wiring are not done. Host test PASS only; no emulator/hardware run.
+
+---
+
 # WCA81 — CAM trigger volumes decoded
 
 First original-camera slice: 438090's per-frame calls are mapped and the CAM

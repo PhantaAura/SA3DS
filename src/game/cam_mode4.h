@@ -1,0 +1,35 @@
+#ifndef SA3DS_CAM_MODE4_H
+#define SA3DS_CAM_MODE4_H
+#include <stdint.h>
+/*PC2004 default follow camera: mode4 (469590) on the parameter block, then
+ *435C70 apply (camera position = eye, yaw/pitch from eye->target). Modes8-11
+ *share 469590 but their placement/sidestep branch is not ported here.*/
+typedef struct {
+ float eye[3],target[3];      /*parameter block +0C..+14, +18..+20*/
+ int32_t roll;                /*+2C, written by apply as camera rotZ*/
+} SA3DSCamParam;
+typedef struct {
+ SA3DSCamParam param;
+ float position[3];           /*Camera_Data1 +20..+28*/
+ int32_t rot_x,rot_y,rot_z;   /*Camera_Data1 +14/+18/+1C*/
+} SA3DSCamera;
+typedef struct {
+ float player[3],velocity[3]; /*task position, motionwk world velocity*/
+ float eyes_height;           /*CharObj2+0x118 (physics eyes_height)*/
+ uint32_t frames_since_reset; /*03B2CAEC: 0 re-seeds the target*/
+ uint8_t turn_left,turn_right;/*03B0E808/80A analog above0x80*/
+ uint8_t manual_disabled;     /*level9 act3*/
+} SA3DSCamInput;
+typedef struct {
+ void *context;
+ double (*sine)(void *context,uint16_t bams);
+ /*4370C0/43A060: sweep radius sphere from start by delta; on hit modify both
+  *(clipped start, sliding delta) and return1.*/
+ int (*ray)(void *context,float start[3],float delta[3],float radius);
+ /*437E90/437F20 priority-4 CAM region pushes on the eye (may be NULL).*/
+ void (*regions)(void *context,float eye[3],const float previous[3]);
+} SA3DSCamServices;
+int sa3ds_cam_mode4_update(SA3DSCamera *camera,const SA3DSCamInput *input,const SA3DSCamServices *services);
+/*435C70: position=eye, rot_y=atan2(eye-target XZ), rot_x=atan2(dy,horizontal).*/
+void sa3ds_cam_apply_look(SA3DSCamera *camera);
+#endif
