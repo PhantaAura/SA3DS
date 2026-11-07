@@ -81,3 +81,17 @@ python3 tools/verify_pc2004_set_whale_lifetime.py "$SONIC_EXE_PATH"
 python3 tools/verify_pc2004_owned_tasks.py "$SONIC_EXE_PATH"
 
 python3 tools/audit_pc2004_whale_ccl.py "$SONIC_EXE_PATH"
+
+python3 tools/verify_pc2004_set_preparation.py "$SONIC_EXE_PATH"
+
+python3 tools/build_pc2004_whale_tip.py "$SONIC_EXE_PATH" "$tmp/whale_tip.sa3dspak"
+python3 tools/build_pc2004_whale_ccl.py "$SONIC_EXE_PATH" "$tmp/whale_ccl.sa3dspak"
+python3 tools/build_pc2004_whale_visual.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/whale_visual.sa3dspak"
+WHALE_PACKAGE_DIR="$tmp" sh tests/run_whale_owner_runtime.sh
+
+python3 tools/build_pc2004_ec_pier.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_pier.sa3dspak"
+python3 tools/build_pc2004_emerald_coast_collision.py "$SONIC_EXE_PATH" "$tmp/emerald_coast_collision.sa3dspak" >/dev/null
+PIER_PACKAGE="$tmp/ec_pier.sa3dspak" EC_COLLISION_PACKAGE="$tmp/emerald_coast_collision.sa3dspak" sh tests/run_ec_pier_owner.sh
+
+python3 tools/build_pc2004_ec_ccube.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_ccube.sa3dspak"
+CCUBE_PACKAGE="$tmp/ec_ccube.sa3dspak" sh tests/run_ec_ccube_owner.sh

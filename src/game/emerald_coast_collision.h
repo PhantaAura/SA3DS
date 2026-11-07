@@ -47,7 +47,48 @@ typedef struct {
     uint32_t act_index;
     float center_x,center_z;
     float min_x,max_x,min_z,max_z;
+    /* Static landtable triangles occupy [0,static_triangle_count); applied
+     * DynamicCOL triangles follow. The set itself is caller-owned and carried
+     * across residency rebuilds. */
+    uint32_t static_triangle_count;
+    const struct SA3DSECDynamicSet *dynamic;
 } SA3DSECCollision;
+
+/* 43B2E0 DynamicCOL projection: world-space triangles per owner task, copied
+ * when added. Source source_instance is 0x80000000|owner, source_triangle the
+ * owner-local index. Edge masks are derived within one owner's triangles. */
+#define SA3DS_EC_DYNAMIC_MAX_TRIANGLES 512u
+#define SA3DS_EC_DYNAMIC_MAX_OWNERS 128u
+#define SA3DS_EC_DYNAMIC_SOURCE 0x80000000u
+typedef struct {uint32_t owner,first,count;} SA3DSECDynamicOwner;
+/* 419C90 top contact -> status0x20 -> 49A9B0 ground bit2 on the next update.
+ * One-update object support: a yaw rectangle (already expanded by the foot
+ * radius, 4199D0 corners) whose top plane is top-.01. Cleared by the caller
+ * at each CCL phase, exactly like the source per-frame status clear. */
+#define SA3DS_EC_OBJECT_SUPPORT_MAX 8u
+/* normal: up axis of the hit object's rotX/Z, which49A9B0 copies to Sonic. */
+typedef struct {float center_x,center_z,half_x,half_z,sin_yaw,cos_yaw,top_y;uint32_t owner;SA1Vec3 normal;} SA3DSECObjectSupport;
+typedef struct SA3DSECDynamicSet {
+    SA3DSECTriangle triangles[SA3DS_EC_DYNAMIC_MAX_TRIANGLES];
+    SA3DSECDynamicOwner owners[SA3DS_EC_DYNAMIC_MAX_OWNERS];
+    uint32_t triangle_count,owner_count,changes;
+    SA3DSECObjectSupport supports[SA3DS_EC_OBJECT_SUPPORT_MAX];uint32_t support_count;
+} SA3DSECDynamicSet;
+void sa3ds_ec_dynamic_clear(SA3DSECDynamicSet *set);
+/* Transform local points by the object's matrix; degenerate triangles skip.
+ * An owner may be registered once; capacity exhaustion fails atomically. */
+int sa3ds_ec_dynamic_add(SA3DSECDynamicSet *set,uint32_t owner,uint32_t flags,
+    const float (*points)[3],uint32_t point_count,const uint16_t *indices,uint32_t index_count,
+    const SA3CMatrix *transform);
+/* 43B380: returns whether the owner had an entry. */
+int sa3ds_ec_dynamic_remove(SA3DSECDynamicSet *set,uint32_t owner);
+int sa3ds_ec_object_support_add(SA3DSECDynamicSet *set,const SA3DSECObjectSupport *support);
+void sa3ds_ec_object_support_clear(SA3DSECDynamicSet *set);
+/* Strict 4550A0-style test of an object support rectangle at (x,z). */
+int sa3ds_ec_object_support_inside(const SA3DSECObjectSupport *support,float x,float z);
+/* Rebuild the dynamic tail and spatial index from the attached set. A player
+ * standing on a dynamic triangle keeps it by source identity. */
+int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision *stage,SA1PlayerState *player);
 
 /* Default opening region: act0, center(0,0), instance radius500 and grid
  * +/-512. Region selection does not spawn/reset or move the player. */

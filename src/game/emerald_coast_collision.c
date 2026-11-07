@@ -166,6 +166,135 @@ fallback:
      *or coordinates outside the index domain retain the existing scan.*/
     free(nodes);free(heads);mark_contact_edges_linear(s);
 }
+static SA1Vec3 edge_point(const SA3DSECTriangle*t,unsigned e);
+/* Uniform-grid references for every resident triangle (static + dynamic). */
+static int build_index(SA3DSECCollision*s){
+    uint32_t*references=NULL,*visited=NULL;
+    memset(s->cells,0,sizeof(s->cells));
+    for(uint32_t i=0;i<s->triangle_count;i++){
+        SA3DSECTriangle*t=&s->triangles[i];
+        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)s->cells[z*16+x+1]++;
+    }
+    for(unsigned i=1;i<=256;i++)s->cells[i]+=s->cells[i-1];
+    if(s->cells[256]>MAX_REFERENCES)return 0;
+    references=malloc((size_t)(s->cells[256]?s->cells[256]:1)*sizeof(*references));
+    visited=calloc(s->triangle_count?s->triangle_count:1,sizeof(*visited));
+    if(!references||!visited){free(references);free(visited);return 0;}
+    uint32_t cursor[256];memcpy(cursor,s->cells,sizeof(cursor));
+    for(uint32_t i=0;i<s->triangle_count;i++){
+        SA3DSECTriangle*t=&s->triangles[i];
+        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)references[cursor[z*16+x]++]=i;
+    }
+    free(s->references);free(s->visited);
+    s->references=references;s->visited=visited;s->reference_count=s->cells[256];s->query_serial=0;
+    return 1;
+}
+void sa3ds_ec_dynamic_clear(SA3DSECDynamicSet*set){if(set){set->triangle_count=set->owner_count=0;set->changes++;}}
+int sa3ds_ec_dynamic_add(SA3DSECDynamicSet*set,uint32_t owner,uint32_t flags,const float(*points)[3],
+    uint32_t point_count,const uint16_t*indices,uint32_t index_count,const SA3CMatrix*m){
+    if(!set||!points||!indices||!m||index_count%3||set->owner_count>=SA3DS_EC_DYNAMIC_MAX_OWNERS)return 0;
+    for(uint32_t i=0;i<set->owner_count;i++)if(set->owners[i].owner==owner)return 0;
+    uint32_t first=set->triangle_count,count=0;
+    for(uint32_t j=0;j<index_count;j+=3){
+        SA3DSECTriangle t={0};SA1Vec3*corner[]={&t.a,&t.b,&t.c};
+        for(unsigned k=0;k<3;k++){
+            if(indices[j+k]>=point_count)return 0;
+            const float*p=points[indices[j+k]];*corner[k]=xform(m,(SA1Vec3){p[0],p[1],p[2]});
+            if(!finite3(*corner[k]))return 0;
+        }
+        SA1Vec3 cross=sa1_vec3_cross(sa1_vec3_sub(t.b,t.a),sa1_vec3_sub(t.c,t.a));
+        if(sa1_vec3_length(cross)<0.00001f)continue;
+        if(first+count>=SA3DS_EC_DYNAMIC_MAX_TRIANGLES)return 0; /*nothing committed yet*/
+        t.normal=sa1_vec3_normalize(cross);
+        t.min_x=fminf(t.a.x,fminf(t.b.x,t.c.x));t.max_x=fmaxf(t.a.x,fmaxf(t.b.x,t.c.x));
+        t.min_z=fminf(t.a.z,fminf(t.b.z,t.c.z));t.max_z=fmaxf(t.a.z,fmaxf(t.b.z,t.c.z));
+        t.source_instance=SA3DS_EC_DYNAMIC_SOURCE|owner;t.source_triangle=j/3;t.flags=flags;
+        set->triangles[first+count++]=t;
+    }
+    /*Owner-local edges: a shared, near-coplanar edge supports and is not a
+     *wall; every other edge is a boundary ledge (static landtable rules).*/
+    for(uint32_t a=first;a<first+count;a++){
+        SA3DSECTriangle*t=&set->triangles[a];t->wall_edge_mask=7;t->support_edge_mask=0;
+        for(unsigned e=0;e<3;e++){
+            SA1Vec3 p0=edge_point(t,e),p1=edge_point(t,(e+1)%3);
+            for(uint32_t b=first;b<first+count;b++){
+                if(b==a)continue;
+                const SA3DSECTriangle*u=&set->triangles[b];
+                for(unsigned f=0;f<3;f++){
+                    SA1Vec3 q0=edge_point(u,f),q1=edge_point(u,(f+1)%3);
+                    if(!((same_point(p0,q1)&&same_point(p1,q0))||(same_point(p0,q0)&&same_point(p1,q1))))continue;
+                    if(sa1_vec3_dot(t->normal,u->normal)>0.999f){
+                        t->wall_edge_mask&=(uint8_t)~(1u<<e);
+                        if(t->normal.y>0.45f)t->support_edge_mask|=(uint8_t)(1u<<e);
+                    }
+                }
+            }
+        }
+    }
+    set->owners[set->owner_count++]=(SA3DSECDynamicOwner){owner,first,count};
+    set->triangle_count=first+count;set->changes++;return 1;
+}
+int sa3ds_ec_dynamic_remove(SA3DSECDynamicSet*set,uint32_t owner){
+    if(!set)return 0;
+    for(uint32_t i=0;i<set->owner_count;i++){
+        SA3DSECDynamicOwner o=set->owners[i];if(o.owner!=owner)continue;
+        memmove(&set->triangles[o.first],&set->triangles[o.first+o.count],
+            (size_t)(set->triangle_count-o.first-o.count)*sizeof(*set->triangles));
+        set->triangle_count-=o.count;
+        memmove(&set->owners[i],&set->owners[i+1],(size_t)(set->owner_count-i-1)*sizeof(*set->owners));
+        set->owner_count--;
+        for(uint32_t k=i;k<set->owner_count;k++)set->owners[k].first-=o.count;
+        set->changes++;return 1;
+    }
+    return 0;
+}
+int sa3ds_ec_object_support_add(SA3DSECDynamicSet*set,const SA3DSECObjectSupport*o){
+    if(!set||!o||set->support_count>=SA3DS_EC_OBJECT_SUPPORT_MAX||!isfinite(o->top_y)||!isfinite(o->center_x)||!isfinite(o->center_z)||
+       !finite3(o->normal)||!(o->normal.y>0))return 0;
+    set->supports[set->support_count++]=*o;return 1;
+}
+void sa3ds_ec_object_support_clear(SA3DSECDynamicSet*set){if(set)set->support_count=0;}
+int sa3ds_ec_object_support_inside(const SA3DSECObjectSupport*o,float px,float pz){
+    if(!o)return 0;
+    float a=o->half_x,b=o->half_z,sn=o->sin_yaw,cs=o->cos_yaw;
+    const float x[4]={a,a,-a,-a},z[4]={b,-b,-b,b};float cx[4],cz[4];
+    for(unsigned i=0;i<4;i++){
+        cx[i]=(float)((double)o->center_x+(float)((double)x[i]*cs+(double)z[i]*sn));
+        cz[i]=(float)((double)o->center_z+(float)((double)z[i]*cs-(double)x[i]*sn));
+    }
+    for(unsigned i=0;i<4;i++){
+        unsigned j=(i+1)&3;
+        float ax=(float)((double)cx[i]-px),az=(float)((double)cz[i]-pz),bx=(float)((double)cx[j]-px),bz=(float)((double)cz[j]-pz);
+        if(!((float)((double)az*bx-(double)ax*bz)>0))return 0;
+    }
+    return 1;
+}
+int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
+    if(!s||!s->triangles||!s->static_triangle_count)return 0;
+    uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
+    if(p&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
+        instance=s->triangles[p->surface_id].source_instance;triangle=s->triangles[p->surface_id].source_triangle;
+    }
+    const SA3DSECDynamicSet*set=s->dynamic;uint32_t extra=0;
+    if(set)for(uint32_t i=0;i<set->triangle_count;i++){
+        const SA3DSECTriangle*t=&set->triangles[i];
+        if(!(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z))extra++;
+    }
+    SA3DSECTriangle*grown=realloc(s->triangles,(size_t)(s->static_triangle_count+extra)*sizeof(*grown));
+    if(!grown)return 0;
+    s->triangles=grown;s->triangle_count=s->static_triangle_count;
+    if(set)for(uint32_t i=0;i<set->triangle_count;i++){
+        const SA3DSECTriangle*t=&set->triangles[i];
+        if(!(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z))s->triangles[s->triangle_count++]=*t;
+    }
+    if(!build_index(s))return 0;
+    if(p&&instance!=UINT32_MAX){
+        p->surface_id=-1;
+        for(uint32_t i=0;i<s->triangle_count;i++)
+            if(s->triangles[i].source_instance==instance&&s->triangles[i].source_triangle==triangle){p->surface_id=(int32_t)i;break;}
+    }
+    return 1;
+}
 void sa3ds_ec_collision_destroy(SA3DSECCollision*s){
     if(!s)return;
     free(s->triangles);free(s->references);free(s->visited);memset(s,0,sizeof(*s));
@@ -271,20 +400,8 @@ int sa3ds_ec_collision_open_archive_region(SA3DSECCollision*s,
     if(!s->triangle_count)goto fail;
     SA3DSECTriangle *compact=realloc(s->triangles,(size_t)s->triangle_count*sizeof(*s->triangles));
     if(compact)s->triangles=compact;
-    for(uint32_t i=0;i<s->triangle_count;i++){
-        SA3DSECTriangle*t=&s->triangles[i];
-        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)s->cells[z*16+x+1]++;
-    }
-    for(unsigned i=1;i<=256;i++)s->cells[i]+=s->cells[i-1];
-    s->reference_count=s->cells[256];if(s->reference_count>MAX_REFERENCES)goto fail;
-    s->references=malloc((size_t)s->reference_count*sizeof(*s->references));
-    s->visited=calloc(s->triangle_count,sizeof(*s->visited));
-    if(!s->references||!s->visited)goto fail;
-    uint32_t cursor[256];memcpy(cursor,s->cells,sizeof(cursor));
-    for(uint32_t i=0;i<s->triangle_count;i++){
-        SA3DSECTriangle*t=&s->triangles[i];
-        for(int z=cell_z(s,t->min_z);z<=cell_z(s,t->max_z);z++)for(int x=cell_x(s,t->min_x);x<=cell_x(s,t->max_x);x++)s->references[cursor[z*16+x]++]=i;
-    }
+    s->static_triangle_count=s->triangle_count;
+    if(!build_index(s))goto fail;
     mark_contact_edges(s);
     s->world=(SA1PhysicsWorld){.query_surface=sa3ds_ec_collision_surface,
         .query_contact=sa3ds_ec_collision_contact,.context=s,
@@ -326,6 +443,15 @@ SA1Surface sa3ds_ec_collision_surface(void*ctx,float x,float z){
             .grad_z=-t->normal.z/t->normal.y,.normal=t->normal,
             .slope_radians=sa1_surface_slope_radians(t->normal),.surface_id=(int32_t)s->references[j],.valid=true};
     }
+    /* Object supports (status0x20 ground) join the same reference selection;
+     * they are flat planes with no landtable triangle id. */
+    for(uint32_t i=0;s->dynamic&&i<s->dynamic->support_count;i++){
+        const SA3DSECObjectSupport*o=&s->dynamic->supports[i];float y=o->top_y;
+        float score=fabsf(s->reference_y-1.0f-y);
+        if(y>s->reference_y+2.35f||score>=best||!sa3ds_ec_object_support_inside(o,x,z))continue;
+        best=score;result=(SA1Surface){.ground_y=y,.grad_x=-o->normal.x/o->normal.y,.grad_z=-o->normal.z/o->normal.y,.normal=o->normal,
+            .slope_radians=sa1_surface_slope_radians(o->normal),.surface_id=-1,.valid=true};
+    }
     return result;
 }
 SA1Contact sa3ds_ec_collision_contact(void*ctx,SA1Vec3 p,SA1Vec3 probe,float range){
@@ -365,6 +491,14 @@ SA1Contact sa3ds_ec_collision_contact(void*ctx,SA1Vec3 p,SA1Vec3 probe,float ran
                 .surface_flags=t->flags,.valid=true};
         }
       }
+    }
+    for(uint32_t i=0;s->dynamic&&i<s->dynamic->support_count;i++){
+        const SA3DSECObjectSupport*o=&s->dynamic->supports[i];
+        float d=p.y-o->top_y;
+        if(d< -0.35f||d>range||probe.y>-0.15f||!sa3ds_ec_object_support_inside(o,p.x,p.z))continue;
+        float score=fabsf(d-1.0f);if(score>=best)continue;
+        best=score;result=(SA1Contact){.point={p.x,o->top_y,p.z},.normal=o->normal,.signed_distance=d,.distance=fabsf(d),
+            .surface_id=-1,.surface_flags=1,.valid=true};
     }
     return result;
 }

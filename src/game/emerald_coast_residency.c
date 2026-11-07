@@ -16,6 +16,10 @@ int sa3ds_ec_residency_recenter(SA3DSECCollision*s,const void*data,size_t size,
         sa3ds_ec_collision_open_archive_region(&next,&s->archive,s->act_index,x,z):
         sa3ds_ec_collision_open_region(&next,data,size,s->act_index,x,z);
     if(!loaded)return 0;
+    /* DynamicCOL survives the window move; apply it before remapping so a
+     * player standing on a dynamic object keeps that support. */
+    next.dynamic=s->dynamic;
+    if(next.dynamic&&!sa3ds_ec_collision_apply_dynamic(&next,NULL)){sa3ds_ec_collision_destroy(&next);return 0;}
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;

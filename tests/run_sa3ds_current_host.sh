@@ -201,3 +201,15 @@ sh tests/run_whale_trigger_runtime.sh
 
 printf '\n== Original whale two-sphere CCL profile ==\n'
 sh tests/run_whale_ccl.sh
+
+printf '\n== Original SET cold preparation and act clearing ==\n'
+sh tests/run_set_preparation.sh
+
+printf '\n== Original whale AO task executor ==\n'
+sh tests/run_whale_task.sh
+
+printf '\n== Original CCL box push responses ==\n'
+sh tests/run_ccl_box_push.sh
+
+printf '\n== Original CAM trigger volumes ==\n'
+sh tests/run_cam_trigger.sh

@@ -26,8 +26,17 @@
 #include "player_position_history.h"
 #include "sonic_lighting_gpu.h"
 #include "pc2004_homing.h"
+#include "set_preparation.h"
+#include "whale_task.h"
+#include "whale_trigger_runtime.h"
+#include "whale_visual.h"
+#include "whale_gpu.h"
+#include "ec_pier.h"
+#include "ccl_box_push.h"
+#include "ec_ccube.h"
 #include <3ds.h>
 #include <citro3d.h>
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -218,6 +227,48 @@ static void reset_checkpoints(int preserve);
 static void checkpoint_fresh(void);
 static void checkpoint_seed_record(void);
 static int checkpoint_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous);
+/* Native AO whale: owner trigger/tip/CCL/visual packages on one shared list3
+ * scheduler. Camera_Data1 uses the bounded follow eye until the retail camera
+ * exists; pier, scripted camera, audio, waves and splashes stay counted
+ * requests, never substitute effects. */
+#define WHALE_TRIGGER_CAPACITY 64u
+#define WHALE_CCL_ID_BASE 0x30000u
+static uint8_t*g_whale_trigger_bytes,*g_whale_tip_bytes,*g_whale_ccl_bytes,*g_whale_visual_bytes;
+static size_t g_whale_trigger_size,g_whale_tip_size,g_whale_ccl_size,g_whale_visual_size;
+static SA3DSWhaleTriggerAssets g_whale_trigger_assets;
+static SA3DSWhaleTipAssets g_whale_tip;
+static SA3DSWhaleCCLAssets g_whale_ccl_assets;
+static SA3DSWhaleVisual g_whale_visual;
+static SA3DSWhaleGpu g_whale_gpu;
+static SA3DSOwnedTask g_world_task_slots[192];
+static SA3DSOwnedTaskList g_world_tasks;
+static SA3DSWhaleTriggerRuntime g_whale_triggers;
+static SA3DSWhaleTriggerEntry g_whale_trigger_entries[WHALE_TRIGGER_CAPACITY];
+static SA3DSWhaleTaskRuntime g_whales;
+static SA3DSWhaleTriggerFrame g_whale_frame;
+static int g_whale_ready,g_whale_gpu_ready,g_whale_error;
+static unsigned g_whale_bounces,g_whale_waves,g_whale_splashes,g_whale_rumbles,g_whale_sounds;
+static unsigned g_whale_free_camera,g_whale_camera_disables,g_whale_contacts,g_whale_draws;
+static void world_prepare(int restart);
+static int whale_ccl_pass(const SA1PlayerState*player,int contacts);
+static int pier_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous);
+static int cube_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous);
+/* O PIER (registry59) on the same list3, with DynamicCOL applied to the
+ * resident collision region. Pieces, throw, sound and railing boxes pending. */
+#define PIER_CAPACITY 64u
+static uint8_t*g_pier_bytes;static size_t g_pier_size;
+static SA3DSPierAssets g_pier_assets;
+static SA3DSECVisual g_pier_visual[2];static SA3DSECGpu g_pier_gpu[2];
+static SA3DSECVisual g_piece_visual[SA3DS_PIER_MAX_PIECES];static SA3DSECGpu g_piece_gpu[SA3DS_PIER_MAX_PIECES];static int g_piece_gpu_count;static unsigned g_piece_draws;
+static SA3DSPierRuntime g_piers;static SA3DSPierEntry g_pier_entries[PIER_CAPACITY];
+static SA3DSECDynamicSet g_ec_dynamic;static uint32_t g_ec_dynamic_applied;
+static int g_piers_ready,g_pier_gpu_count;
+static unsigned g_pier_break_requests,g_pier_draws;
+#define CUBE_CAPACITY 256u
+static uint8_t*g_cube_bytes;static size_t g_cube_size;static SA3DSCubeAssets g_cube_assets;
+static SA3DSCubeRuntime g_cubes;static SA3DSCubeEntry g_cube_entries[CUBE_CAPACITY];static int g_cubes_ready;
+static SA3DSCubeFrame g_cube_frame;
+
 
 static SA3DSLabVertex*g_stage_fade_quad;
 static uint32_t g_source_frame;
@@ -442,7 +493,7 @@ static void reset_selected_zone(void) {
         else sa1_player_reset(&g_player,&g_ec_collision.world);
         g_ec_collision.reference_y=g_player.pos.y;
         if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
-        reset_springs();
+        reset_springs();world_prepare(0);
     } else (void)sa3ds_parity_lab_reset_player(&g_player,g_selected_zone);
     memset(&g_anim_sync,0,sizeof(g_anim_sync));
     memset(&g_anim_runtime,0,sizeof(g_anim_runtime));
@@ -1358,7 +1409,11 @@ static void unlink_saru(SA3DSNativeSaru*s){
  * NPC tasks above;418B60 clear and new pair reports happen only afterwards.
  * Other CCL categories/players/forms and their task queue remain incomplete. */
 static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_task){
-    if(!g_saru_ready&&!g_checkpoints_ready)return 1;
+    /*418B60-phase clear of last update's object-top/underside status.*/
+    sa3ds_ec_object_support_clear(&g_ec_dynamic);g_player.pc2004_status_flags&=(uint16_t)~0x30u;
+    /*Player colliders come from the Saru/checkpoint owner profiles; without
+     *them the whale's prior hits are still cleared at this CCL phase.*/
+    if(!g_saru_ready&&!g_checkpoints_ready)return whale_ccl_pass(queued_player,0);
     sa1_pc2004_homing_reset(&g_homing_list);
     SA3CMatrix model;sa3ds_ec_model_transform(queued_player,&model);
     SA1Vec3 center={model.m[12],model.m[13],model.m[14]};
@@ -1395,6 +1450,7 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_tas
         }
     }
     if(!scatter_ccl_pass()||!checkpoint_ccl_pass(queued_player,previous_task))return 0;
+    if(!whale_ccl_pass(queued_player,1)||!pier_ccl_pass(queued_player,previous_task)||!cube_ccl_pass(queued_player,previous_task))return 0;
     if(g_player_enemy_ccl.status&4)g_saru_player_hurt_contacts++;
     return 1;
 }
@@ -1756,6 +1812,396 @@ static int draw_scatter(void){
     return 1;
 }
 
+static void whale_camera_eye(float out[3]){
+    out[0]=g_player.pos.x-sinf(g_camera.yaw)*40.f;out[1]=g_player.pos.y+18.f;out[2]=g_player.pos.z-cosf(g_camera.yaw)*40.f;
+}
+static int whale_read_frame(void*context,SA3DSWhaleTriggerFrame*f){(void)context;*f=g_whale_frame;return 1;}
+static int whale_summon(void*context,const float p[3],int32_t yaw){(void)context;return sa3ds_whale_tasks_summon(&g_whales,p,yaw);}
+static void whale_kill(void*context){(void)context;(void)sa3ds_whale_tasks_kill(&g_whales);}
+static double whale_sine(void*context,uint16_t angle){(void)context;return spring_source_sin(&g_rings,angle);}
+static int whale_camera(void*context,float p[3]){(void)context;whale_camera_eye(p);return 1;}
+static int whale_history(void*context,float p[3]){(void)context;return sa3ds_player_position_history_read(&g_player_position_history,0,p);}
+/*441AD0 maps the cached partner back to a player's character byte.*/
+static int32_t whale_character(void*context,uint32_t other){(void)context;return other&&other==g_player_enemy_ccl.hits.actor_id?0:-1;}
+/*441280(player0,v): world velocity, then player-local Speed with |x|,|z| in
+ *[-0.001,0.001) zeroed. The native flat yaw frame stands in for43EC00 here;
+ *slope-frame conversion of these tiny components remains unverified.*/
+static void whale_bounce(void*context,const float v[3]){
+    (void)context;float sy=sinf(g_player.yaw),cy=cosf(g_player.yaw);
+    float forward=v[0]*sy+v[2]*cy,side=v[0]*cy-v[2]*sy;
+    if(forward<.001f&&forward>=-.001f)forward=0;
+    if(side<.001f&&side>=-.001f)side=0;
+    g_player.vel=(SA1Vec3){sy*forward+cy*side,v[1],cy*forward-sy*side};g_whale_bounces++;
+}
+static uint16_t whale_random(void*context){return saru_random(context);} /*shared CRT rand state*/
+static void whale_wave(void*context,float x,float z,float zero,float scale,float size){
+    (void)context;(void)x;(void)z;(void)zero;(void)scale;(void)size;g_whale_waves++; /*4F89D0 executor pending*/
+}
+static void whale_effects(void*context,const SA3DSWhaleMotionResult*r,const float previous_tip[3]){
+    (void)context;(void)previous_tip;
+    g_whale_splashes+=r->surface_splash+r->cycle_splash;g_whale_rumbles+=r->rumble;
+    g_whale_sounds+=r->sound2f;g_whale_free_camera+=r->allow_free_camera;
+}
+static void whale_camera_disable(void*context){(void)context;g_whale_camera_disables++;}
+static void whale_rumble_stop(void*context){(void)context;} /*RumbleA(0,0): no 3DS rumble device*/
+static const SA3DSWhaleTaskServices g_whale_task_services={NULL,whale_sine,whale_camera,whale_history,
+    whale_character,whale_bounce,whale_random,whale_wave,whale_effects,whale_camera_disable,whale_rumble_stop};
+static const SA3DSWhaleTriggerServices g_whale_trigger_services={NULL,whale_read_frame,whale_summon,whale_kill,NULL};
+static void whale_world_clear(void){
+    while(g_world_tasks.slots&&g_world_tasks.head)
+        if(!sa3ds_owned_task_release(&g_world_tasks,g_world_tasks.head,NULL)){g_whale_error=1;return;}
+}
+static int world_prepare_cubes(int restart);
+static int world_tasks_ensure(void){
+    return g_world_tasks.slots||sa3ds_owned_tasks_init(&g_world_tasks,g_world_task_slots,sizeof(g_world_task_slots)/sizeof(g_world_task_slots[0]));
+}
+/*46C1D0+46BD20 for fresh stage/act, 46BF20 for restart; only rows of the
+ *current act are appended. Returns the SET flags each owner runtime loads.*/
+static int world_set_flags(int restart,uint32_t count,const uint16_t*types,const uint8_t*current,
+    const SA3DSSetTaskLifetime*previous,size_t stride,SA3DSSetTaskLifetime*set,uint16_t*flags){
+    for(uint32_t i=0;i<count;i++){
+        set[i]=*(const SA3DSSetTaskLifetime*)((const uint8_t*)previous+i*stride);set[i].task=0;set[i].free_main=0;
+    }
+    if(restart?!sa3ds_set_restart_reset(set,count):!sa3ds_set_cold_prepare(set,types,count,1,(uint8_t)g_ec_act_index,0))return 0;
+    for(uint32_t i=0;i<count;i++){if(!current[i])set[i].flags=0,set[i].loads=0;flags[i]=set[i].flags;}
+    return 1;
+}
+static void world_apply_dynamic(void){
+    if(!g_ec_collision.triangles||g_ec_dynamic_applied==g_ec_dynamic.changes)return;
+    g_ec_collision.dynamic=&g_ec_dynamic;
+    if(!sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player)){g_whale_error=1;return;}
+    g_ec_dynamic_applied=g_ec_dynamic.changes;
+}
+static int pier_read_frame(void*context,SA3DSPierFrame*f);
+static int pier_dynamic_add(void*context,uint32_t task,const SA3DSPierPlacement*p);
+static void pier_dynamic_remove(void*context,uint32_t task);
+static void pier_broken(void*context,uint32_t task,const SA3DSPierPlacement*p);
+static int pier_standing(void*context,uint32_t task);
+static void pier_throw(void*context,const float v[3]);
+static double whale_sine(void*context,uint16_t angle);
+static uint16_t whale_random(void*context);
+static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynamic_add,pier_dynamic_remove,pier_broken,pier_standing,pier_throw,whale_sine,whale_random};
+/*The task tree is destroyed first, so SET associations are dropped as the
+ *loader would overwrite them.*/
+static void world_prepare(int restart){
+    if(!g_world_tasks.slots)return;
+    whale_world_clear();sa3ds_ec_dynamic_clear(&g_ec_dynamic);
+    if(g_whale_ready){
+        uint32_t count=g_whale_trigger_assets.count;SA3DSSetTaskLifetime set[WHALE_TRIGGER_CAPACITY];
+        uint16_t types[WHALE_TRIGGER_CAPACITY],flags[WHALE_TRIGGER_CAPACITY];uint8_t current[WHALE_TRIGGER_CAPACITY];
+        for(uint32_t i=0;i<count;i++){
+            SA3DSWhalePlacement p;if(!sa3ds_whale_trigger_placement(&g_whale_trigger_assets,i,&p)){g_whale_error=1;return;}
+            types[i]=p.type;current[i]=p.act==g_ec_act_index;
+        }
+        if(!world_set_flags(restart,count,types,current,&g_whale_trigger_entries[0].lifetime,sizeof(g_whale_trigger_entries[0]),set,flags)||
+           !sa3ds_whale_tasks_init(&g_whales,&g_world_tasks,&g_whale_tip,&g_whale_ccl_assets,&g_whale_task_services)||
+           !sa3ds_whale_triggers_init(&g_whale_triggers,&g_whale_trigger_assets,&g_world_tasks,g_whale_trigger_entries,flags,WHALE_TRIGGER_CAPACITY,&g_whale_trigger_services)){g_whale_error=1;return;}
+        g_whales.ccl_id_base=WHALE_CCL_ID_BASE;
+        for(uint32_t i=0;i<count;i++)g_whale_trigger_entries[i].lifetime.loads=set[i].loads;
+    }
+    if(g_piers_ready){
+        uint32_t count=g_pier_assets.count;SA3DSSetTaskLifetime set[PIER_CAPACITY];
+        uint16_t types[PIER_CAPACITY],flags[PIER_CAPACITY];uint8_t current[PIER_CAPACITY];
+        for(uint32_t i=0;i<count;i++){
+            SA3DSPierPlacement p;if(!sa3ds_pier_placement(&g_pier_assets,i,&p)){g_whale_error=1;return;}
+            types[i]=p.type;current[i]=p.act==g_ec_act_index;
+        }
+        if(!world_set_flags(restart,count,types,current,&g_pier_entries[0].lifetime,sizeof(g_pier_entries[0]),set,flags)||
+           !sa3ds_piers_init(&g_piers,&g_pier_assets,&g_world_tasks,g_pier_entries,flags,PIER_CAPACITY,&g_pier_services)){g_whale_error=1;return;}
+        for(uint32_t i=0;i<count;i++)g_pier_entries[i].lifetime.loads=set[i].loads;
+    }
+    if(!world_prepare_cubes(restart)){g_whale_error=1;return;}
+    g_ec_dynamic_applied=g_ec_dynamic.changes-1u;world_apply_dynamic();
+}
+static void destroy_whale(void){
+    if(g_whale_gpu_ready){C3D_FrameSync();sa3ds_whale_gpu_destroy(&g_whale_gpu);}
+    sa3ds_free_file(g_whale_trigger_bytes);sa3ds_free_file(g_whale_tip_bytes);sa3ds_free_file(g_whale_ccl_bytes);sa3ds_free_file(g_whale_visual_bytes);
+    g_whale_trigger_bytes=g_whale_tip_bytes=g_whale_ccl_bytes=g_whale_visual_bytes=NULL;
+    memset(&g_whale_trigger_assets,0,sizeof(g_whale_trigger_assets));memset(&g_whale_tip,0,sizeof(g_whale_tip));
+    memset(&g_whale_visual,0,sizeof(g_whale_visual));
+    g_whale_ready=g_whale_gpu_ready=g_whale_error=0;
+}
+static void load_whale(void){
+    if(!g_ec_combined||!g_rings_ready||!g_rings.quarter_lut)goto fail;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/whale_triggers.sa3dspak",&g_whale_trigger_bytes,&g_whale_trigger_size)||
+       !sa3ds_whale_trigger_assets_open(&g_whale_trigger_assets,g_whale_trigger_bytes,g_whale_trigger_size)||
+       g_whale_trigger_assets.count>WHALE_TRIGGER_CAPACITY||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/whale_tip.sa3dspak",&g_whale_tip_bytes,&g_whale_tip_size)||
+       !sa3ds_whale_tip_assets_open(&g_whale_tip,g_whale_tip_bytes,g_whale_tip_size)||
+       !g_whale_tip.exit_root_bind|| /*v2 profile: action2 root needs404E26 authorization*/
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/whale_ccl.sa3dspak",&g_whale_ccl_bytes,&g_whale_ccl_size)||
+       !sa3ds_whale_ccl_assets_open(&g_whale_ccl_assets,g_whale_ccl_bytes,g_whale_ccl_size)||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/whale_visual.sa3dspak",&g_whale_visual_bytes,&g_whale_visual_size)||
+       !sa3ds_whale_visual_open(&g_whale_visual,g_whale_visual_bytes,g_whale_visual_size)||!world_tasks_ensure())goto fail;
+    if(!sa3ds_whale_gpu_init(&g_whale_gpu,&g_whale_visual,log_texture_stage,NULL))goto fail;
+    g_whale_gpu_ready=1;g_whale_ready=1;world_prepare(0);if(g_whale_error)goto fail;
+    char note[160];snprintf(note,sizeof(note),"Owner AO triggers=%lu, tip v2, two-sphere CCL and visual loaded; native summon/kill/actor/CCL/draw connected; pier/camera/effects pending",
+        (unsigned long)g_whale_trigger_assets.count);boot_log("WHALE",note);return;
+fail:destroy_whale();boot_log("WHALE","Owner whale packages unavailable or invalid; native AO whale absent (no stand-in)");
+}
+static void world_clip_frame(const SA1PlayerState*done,SA3DSSetClipInput*clip,float center[3]){
+    SA1Vec3 origin=sa3ds_ec_task_origin(done);SA3CMatrix model;sa3ds_ec_model_transform(done,&model);
+    memset(clip,0,sizeof(*clip));whale_camera_eye(clip->camera.position);clip->camera.present=1;
+    clip->player0=(SA3DSSetClipReference){{origin.x,origin.y,origin.z},1};
+    center[0]=model.m[12];center[1]=model.m[13];center[2]=model.m[14];
+}
+static SA3DSPierFrame g_pier_frame;
+static int pier_read_frame(void*context,SA3DSPierFrame*f){(void)context;*f=g_pier_frame;return 1;}
+static int pier_dynamic_add(void*context,uint32_t task,const SA3DSPierPlacement*p){
+    (void)context;SA3CMatrix m; /*4FF0C2..: scale1, angX0, angY=SET, angZ0, SET position*/
+    sa3c_matrix_build_object(&m,(SA3CVec3){p->position[0],p->position[1],p->position[2]},
+        (SA3CVec3){0,(float)p->angles[1]*(2.f*PI/65536.f),0},(SA3CVec3){1,1,1},0);
+    return sa3ds_ec_dynamic_add(&g_ec_dynamic,task,g_pier_assets.surface_flags,(const float(*)[3])g_pier_assets.points,
+        g_pier_assets.point_count,g_pier_assets.indices,g_pier_assets.index_count,&m);
+}
+static void pier_dynamic_remove(void*context,uint32_t task){(void)context;if(!sa3ds_ec_dynamic_remove(&g_ec_dynamic,task))g_whale_error=1;}
+static void pier_broken(void*context,uint32_t task,const SA3DSPierPlacement*p){(void)context;(void)task;(void)p;g_pier_break_requests++;}
+/*441C30: player0 ground bit and its standing DynamicCOL task (+6C) match.*/
+static int pier_standing(void*context,uint32_t task){
+    (void)context;int32_t id=g_player.surface_id;
+    return g_player.grounded&&id>=0&&(uint32_t)id<g_ec_collision.triangle_count&&
+        g_ec_collision.triangles[id].source_instance==(SA3DS_EC_DYNAMIC_SOURCE|task);
+}
+static unsigned g_pier_throws;
+static void pier_throw(void*context,const float v[3]){whale_bounce(context,v);g_pier_throws++;} /*same441280 port*/
+/*SET loading phase for list3 owners, then one shared traversal (AO triggers,
+ *AO task, O PIER). DynamicCOL changes reach the next player tick.*/
+static int tick_world(const SA1PlayerState*done){
+    if(!g_world_tasks.slots||(!g_whale_ready&&!g_piers_ready&&!g_cubes_ready))return 1;
+    SA3DSSetClipInput clip;float center[3];world_clip_frame(done,&clip,center);
+    if(g_whale_ready){
+        SA3DSWhaleTriggerFrame*f=&g_whale_frame;memset(f,0,sizeof(*f));
+        f->act=g_ec_act_index;f->clip_level=g_rings.clip_level;f->clip=clip;
+        /*441840 tests the player's updated CCL center, queued in Sonic's phase.*/
+        f->players[0]=(SA3DSWhaleContactPlayer){{center[0],center[1],center[2]},1,done->pc2004_ccl_state_valid?1:0};
+        if(!sa3ds_whale_triggers_load(&g_whale_triggers))return 0;
+    }
+    if(g_piers_ready){
+        memset(&g_pier_frame,0,sizeof(g_pier_frame));
+        g_pier_frame.act=g_ec_act_index;g_pier_frame.clip_level=g_rings.clip_level;g_pier_frame.clip=clip;
+        if(g_whale_ready){memcpy(g_pier_frame.whale_tip,g_whales.shared.tip,sizeof(g_pier_frame.whale_tip));memcpy(g_pier_frame.whale_movement,g_whales.movement,sizeof(g_pier_frame.whale_movement));}
+        if(!sa3ds_piers_load(&g_piers))return 0;
+    }
+    if(g_cubes_ready){
+        memset(&g_cube_frame,0,sizeof(g_cube_frame));
+        g_cube_frame.act=g_ec_act_index;g_cube_frame.clip_level=g_rings.clip_level;g_cube_frame.clip=clip;
+        if(!sa3ds_cubes_load(&g_cubes))return 0;
+    }
+    if(!sa3ds_owned_tasks_run(&g_world_tasks,NULL)||g_whale_error)return 0;
+    world_apply_dynamic();return !g_whale_error;
+}
+/*418B60 clear for every live whale body, then player-vs-whale sphere pairs.
+ *Category2 against Sonic has no push; first-sphere damage feeds status4.*/
+static int whale_ccl_pass(const SA1PlayerState*player,int contacts){
+    if(!g_whale_ready)return 1;
+    for(unsigned i=0;i<SA3DS_WHALE_TASK_SLOTS;i++){
+        SA3DSWhaleTaskSlot*s=sa3ds_whale_tasks_slot(&g_whales,i);if(!s)continue;
+        sa3ds_ccl_body_clear(&s->ccl.body,s->ccl.shapes,2);
+        if(!contacts||!s->ccl_queued||!player->pc2004_ccl_state_valid)continue;
+        for(unsigned a=0;a<2;a++)for(unsigned b=0;b<2;b++){
+            SA3DSCCLContactResult contact;
+            if(!sa3ds_ccl_sphere_contact(&g_player_enemy_ccl,&g_player_enemy_shapes[a],a,&s->ccl.body,&s->ccl.shapes[b],b,&contact))return 0;
+            if(contact.eligible&&contact.broad_overlap&&!contact.supported)return 0;
+            if(contact.overlap)g_whale_contacts++;
+            if(contact.pushed_first||contact.pushed_second)return 0;
+        }
+    }
+    return 1;
+}
+/*One sampled mesh: prefer the current AO task; a replaced task finishing its
+ *dive tail is not drawn twice. SYNCDRAW already retired last frame's use.*/
+static int draw_whale(void){
+    if(!g_whale_gpu_ready)return 1;
+    SA3DSWhaleTaskSlot*draw=NULL;
+    for(unsigned i=0;i<SA3DS_WHALE_TASK_SLOTS;i++){
+        SA3DSWhaleTaskSlot*s=sa3ds_whale_tasks_slot(&g_whales,i);
+        if(s&&s->displayed&&(!draw||s->task==g_whales.shared.current_task))draw=s;
+    }
+    if(!draw)return 1;
+    if(!sa3ds_whale_gpu_update(&g_whale_gpu,draw->bank,draw->frame))return 0;
+    C3D_Mtx model,mv;
+    for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(draw->draw.m[row],draw->draw.m[4+row],draw->draw.m[8+row],draw->draw.m[12+row]);
+    Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+    int ok=sa3ds_whale_gpu_draw(&g_whale_gpu);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
+    if(ok)g_whale_draws++;
+    return ok;
+}
+
+static void destroy_piers(void){
+    if(g_pier_gpu_count||g_piece_gpu_count){C3D_FrameSync();for(int i=0;i<g_pier_gpu_count;i++)sa3ds_ec_gpu_destroy(&g_pier_gpu[i]);
+        for(int i=0;i<g_piece_gpu_count;i++)sa3ds_ec_gpu_destroy(&g_piece_gpu[i]);}
+    memset(g_piece_visual,0,sizeof(g_piece_visual));g_piece_gpu_count=0;
+    sa3ds_free_file(g_pier_bytes);g_pier_bytes=NULL;memset(&g_pier_assets,0,sizeof(g_pier_assets));
+    memset(g_pier_visual,0,sizeof(g_pier_visual));g_pier_gpu_count=0;g_piers_ready=0;
+}
+static void load_piers(void){
+    SA3DSPak pak;SA3DSPakChunk c;
+    if(!g_ec_combined||!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_pier.sa3dspak",&g_pier_bytes,&g_pier_size)||
+       !sa3ds_pier_assets_open(&g_pier_assets,g_pier_bytes,g_pier_size)||g_pier_assets.count>PIER_CAPACITY||
+       sa3dspak_open(&pak,g_pier_bytes,g_pier_size)!=SA3DSPAK_OK||!world_tasks_ensure())goto fail;
+    for(unsigned i=0;i<2;i++){
+        char key[16];snprintf(key,sizeof(key),"VISUAL%u",i);
+        if(sa3dspak_find(&pak,key,&c)!=SA3DSPAK_OK||c.flags||
+           sa3ds_ec_visual_open(&g_pier_visual[i],c.data,(size_t)c.size)!=SA3DS_EC_VISUAL_OK||
+           !sa3ds_ec_gpu_init(&g_pier_gpu[i],&g_pier_visual[i],FLT_MAX,log_texture_stage,NULL))goto fail;
+        g_pier_gpu_count++;
+    }
+    for(unsigned i=0;i<g_pier_assets.piece_count;i++){
+        char key[16];snprintf(key,sizeof(key),"PIECE%02u",i);
+        if(sa3dspak_find(&pak,key,&c)!=SA3DSPAK_OK||c.flags||
+           sa3ds_ec_visual_open(&g_piece_visual[i],c.data,(size_t)c.size)!=SA3DS_EC_VISUAL_OK||
+           !sa3ds_ec_gpu_init(&g_piece_gpu[i],&g_piece_visual[i],FLT_MAX,log_texture_stage,NULL))goto fail;
+        g_piece_gpu_count++;
+    }
+    g_piers_ready=1;world_prepare(0);if(g_whale_error)goto fail;
+    char note[180];snprintf(note,sizeof(note),"Owner O PIER rows=%lu, DynamicCOL quad, railings, intact visuals and %lu break pieces loaded; break sound pending",
+        (unsigned long)g_pier_assets.count,(unsigned long)g_pier_assets.piece_count);boot_log("PIER",note);return;
+fail:destroy_piers();boot_log("PIER","Owner pier package unavailable or invalid; pier route ground absent");
+}
+/*4FF10C railing boxes (category4, form3, push77), enqueued only while intact
+ *(action0). Primary form7 -> 41FD00 -> 419C90 sweep; when 418D80 lets Sonic
+ *receive the push, 419B50 side responses move his task XZ. Top/underside
+ *responses need object-support physics and are counted, not applied.*/
+static unsigned g_box_side_pushes,g_box_top_hits,g_box_under_hits,g_box_raw_hits,g_box_no_push,g_box_broad;static int g_box_probe;
+/*One primary-form7 vs form3 box pair: broad superset, 419C90 sweep, 418D80,
+ *contact record and the side response (top/underside counted).*/
+static int box_contact(const SA1PlayerState*player,SA1Vec3 previous,SA3DSCCLBody*body,SA3DSCCLShape*box,unsigned k,
+    SA1Vec3 center,float bx,float by,float bz,uint16_t yaw,int16_t object_rot_x,int16_t object_rot_z){
+    const uint8_t*pr=g_checkpoint_assets.player_colliders;SA3DSCCLShape*primary=&g_player_enemy_shapes[0];
+    if((box->attributes&0x10)||(g_player_enemy_ccl.rules.excluded_attributes&box->attributes)||(body->rules.excluded_attributes&primary->attributes))return 1;
+    SA1Vec3 d=sa1_vec3_sub(sa3ds_ec_task_origin(player),center);
+    float reach=g_player_enemy_ccl.broad_radius+sqrtf(bx*bx+by*by+bz*bz); /*superset; exact test below*/
+    if(sa1_vec3_dot(d,d)>=reach*reach)return 1;
+    g_box_broad++;
+    SA3DSCheckpointSweep sweep={.previous_task=previous,.current_task=sa3ds_ec_task_origin(player),.box_center=center,
+        .player_radius=checkpoint_float(pr+20),.player_half_height=checkpoint_float(pr+24),.player_foot_radius=checkpoint_float(pr+28),
+        .box_x=bx,.box_y=by,.box_z=bz,.box_yaw=yaw,.sine=checkpoint_sine};
+    SA3DSCheckpointContact hit;if(!sa3ds_checkpoint_sweep(&sweep,&hit))return 0;
+    if(!hit.kind)return 1;
+    g_box_raw_hits++;
+    if(!sa3ds_ccl_box_push_enabled(&g_player_enemy_ccl,primary,body,box)){g_box_no_push++;return 1;}
+    if(!sa3ds_ccl_record_contact(&g_player_enemy_ccl,primary,0,body,box,k))return 0;
+    SA3DSBoxPushResult r;SA1Vec3 origin=sa3ds_ec_task_origin(player);
+    if(!sa3ds_ccl_box_push(&sweep,&hit,origin,&r))return 0;
+    if(hit.kind==1||hit.kind==3){
+        /*419FA1/41A008: task Y snap and status(&~8)|0x20 top /|0x10 underside.
+         *A top also grounds Sonic next update (49A9B0 bit2), modeled as a
+         *one-update object support with the foot-radius rectangle.*/
+        g_player.pos.y+=r.position.y-origin.y;
+        g_player.pc2004_status_flags=(uint16_t)((g_player.pc2004_status_flags&~r.status_clear)|r.status_set);
+        if(hit.kind==1){
+            float foot=sweep.player_foot_radius;
+            SA3CMatrix tilt;sa3c_matrix_build_object(&tilt,(SA3CVec3){0,0,0},(SA3CVec3){(float)object_rot_x*(2.f*PI/65536.f),0,
+                (float)object_rot_z*(2.f*PI/65536.f)},(SA3CVec3){1,1,1},0); /*49AA00/49AA0F copy rotX/Z*/
+            SA3DSECObjectSupport o={center.x,center.z,(float)((double)bx+foot),(float)((double)bz+foot),
+                (float)checkpoint_sine(NULL,yaw),(float)checkpoint_sine(NULL,(uint16_t)(yaw+16384)),r.position.y,body->hits.actor_id,
+                sa1_vec3_normalize((SA1Vec3){tilt.m[4],tilt.m[5],tilt.m[6]})};
+            if(!sa3ds_ec_object_support_add(&g_ec_dynamic,&o))return 0;
+            g_box_top_hits++;
+        }else g_box_under_hits++;
+        float h[3]={r.position.x,r.position.y,r.position.z};(void)sa3ds_player_position_history_write(&g_player_position_history,0,h);
+        return 1;
+    }
+    g_player.pos.x+=r.position.x-origin.x;g_player.pos.z+=r.position.z-origin.z;
+    float h[3]={r.position.x,r.position.y,r.position.z}; /*441A40(player,0,task)*/
+    (void)sa3ds_player_position_history_write(&g_player_position_history,0,h);
+    g_box_side_pushes++;return 1;
+}
+static int pier_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
+    if(!g_piers_ready||!g_checkpoints_ready||!player->pc2004_ccl_state_valid)return 1;
+    if(g_player_enemy_shapes[0].attributes&0x10)return 1;
+    for(uint32_t i=0;i<g_pier_assets.count;i++){
+        const SA3DSPierEntry*e=&g_pier_entries[i];SA3DSPierPlacement p;
+        if(!e->lifetime.task||e->action!=0||!sa3ds_pier_placement(&g_pier_assets,i,&p))continue;
+        SA3DSCCLBody body;sa3ds_ccl_body_init(&body,0x40000u+i);body.rules=g_checkpoint_assets.rules[1];
+        body.task_position=(SA1Vec3){p.position[0],p.position[1],p.position[2]};
+        SA3CMatrix m;sa3c_matrix_build_object(&m,(SA3CVec3){p.position[0],p.position[1],p.position[2]},
+            (SA3CVec3){0,(float)p.angles[1]*(2.f*PI/65536.f),0},(SA3CVec3){1,1,1},0);
+        for(unsigned k=0;k<2;k++){
+            const uint8_t*raw=g_pier_assets.ccl+(p.variant*2+k)*48;
+            SA3CVec3 local={checkpoint_float(raw+8),checkpoint_float(raw+12),checkpoint_float(raw+16)};
+            SA1Vec3 center={m.m[0]*local.x+m.m[4]*local.y+m.m[8]*local.z+m.m[12],
+                m.m[1]*local.x+m.m[5]*local.y+m.m[9]*local.z+m.m[13],m.m[2]*local.x+m.m[6]*local.y+m.m[10]*local.z+m.m[14]};
+            SA3DSCCLShape box;if(!sa3ds_ccl_shape_decode(&box,raw,center))return 0;
+            if(!box_contact(player,previous,&body,&box,k,center,checkpoint_float(raw+20),checkpoint_float(raw+24),checkpoint_float(raw+28),
+                (uint16_t)(p.angles[1]+((uint16_t)raw[40]|((uint16_t)raw[41]<<8))),p.angles[0],p.angles[2]))return 0;
+        }
+    }
+    return 1;
+}
+
+/*C CUBE (registry24) on the shared list; queued boxes join the CCL pass.*/
+static int cube_read_frame(void*context,SA3DSCubeFrame*f){(void)context;*f=g_cube_frame;return 1;}
+static const SA3DSCubeServices g_cube_services={NULL,cube_read_frame};
+static int cube_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
+    if(!g_cubes_ready||!g_checkpoints_ready||!player->pc2004_ccl_state_valid||(g_player_enemy_shapes[0].attributes&0x10))return 1;
+    for(uint32_t i=0;i<g_cube_assets.count;i++){
+        const SA3DSCubeEntry*e=&g_cube_entries[i];SA3DSCubePlacement p;
+        if(!e->lifetime.task||!e->queued||!sa3ds_cube_placement(&g_cube_assets,i,&p))continue;
+        SA3DSCCLBody body;sa3ds_ccl_body_init(&body,0x50000u+i);body.rules=g_checkpoint_assets.rules[1];
+        SA1Vec3 center={p.position[0],p.position[1],p.position[2]}; /*CCI local center0*/
+        body.task_position=center;float dims[3];sa3ds_cube_dimensions(&p,dims);
+        SA3DSCCLShape box;if(!sa3ds_ccl_shape_decode(&box,g_cube_assets.cci,center))return 0;
+        const uint8_t*raw=g_cube_assets.cci;
+        if(!box_contact(player,previous,&body,&box,0,center,dims[0],dims[1],dims[2],
+            (uint16_t)(p.angles[1]+((uint16_t)raw[40]|((uint16_t)raw[41]<<8))),p.angles[0],p.angles[2]))return 0;
+    }
+    return 1;
+}
+static void destroy_cubes(void){sa3ds_free_file(g_cube_bytes);g_cube_bytes=NULL;memset(&g_cube_assets,0,sizeof(g_cube_assets));g_cubes_ready=0;}
+static void load_cubes(void){
+    if(!g_ec_combined||!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_ccube.sa3dspak",&g_cube_bytes,&g_cube_size)||
+       !sa3ds_cube_assets_open(&g_cube_assets,g_cube_bytes,g_cube_size)||g_cube_assets.count>CUBE_CAPACITY||!world_tasks_ensure())goto fail;
+    g_cubes_ready=1;world_prepare(0);if(g_whale_error)goto fail;
+    char note[120];snprintf(note,sizeof(note),"Owner C CUBE rows=%lu loaded; form3 side push native, top/underside counted",(unsigned long)g_cube_assets.count);
+    boot_log("CCUBE",note);return;
+fail:destroy_cubes();boot_log("CCUBE","Owner C CUBE package unavailable or invalid; invisible boxes absent");
+}
+static int world_prepare_cubes(int restart){
+    if(!g_cubes_ready)return 1;
+    uint32_t count=g_cube_assets.count;SA3DSSetTaskLifetime set[CUBE_CAPACITY];
+    uint16_t types[CUBE_CAPACITY],flags[CUBE_CAPACITY];uint8_t current[CUBE_CAPACITY];
+    for(uint32_t i=0;i<count;i++){
+        SA3DSCubePlacement p;if(!sa3ds_cube_placement(&g_cube_assets,i,&p))return 0;
+        types[i]=p.type;current[i]=p.act==g_ec_act_index;
+    }
+    if(!world_set_flags(restart,count,types,current,&g_cube_entries[0].lifetime,sizeof(g_cube_entries[0]),set,flags)||
+       !sa3ds_cubes_init(&g_cubes,&g_cube_assets,&g_world_tasks,g_cube_entries,flags,CUBE_CAPACITY,&g_cube_services))return 0;
+    for(uint32_t i=0;i<count;i++)g_cube_entries[i].lifetime.loads=set[i].loads;
+    return 1;
+}
+/*4FE8E0: T*Rz*Rx*Ry (only yaw in the owner rows), intact object0 at identity.*/
+static int draw_piers(void){
+    if(!g_piers_ready)return 1;
+    for(uint32_t i=0;i<g_pier_assets.count;i++){
+        const SA3DSPierEntry*e=&g_pier_entries[i];SA3DSPierPlacement p;
+        if(!e->lifetime.task||!e->displayed||!sa3ds_pier_placement(&g_pier_assets,i,&p))continue;
+        if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,p.position,80.f))continue;
+        SA3CMatrix actor;C3D_Mtx model,mv;
+        sa3c_matrix_build_object(&actor,(SA3CVec3){p.position[0],p.position[1],p.position[2]},
+            (SA3CVec3){0,(float)p.angles[1]*(2.f*PI/65536.f),0},(SA3CVec3){1,1,1},0);
+        for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(actor.m[row],actor.m[4+row],actor.m[8+row],actor.m[12+row]);
+        Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+        if(!sa3ds_ec_gpu_draw(&g_pier_gpu[p.variant],0))return 0;
+        g_pier_draws++;
+    }
+    /*4FB2A0 for each live piece: T(pos)*Rx*Ry, then only the piece model.*/
+    for(uint32_t i=0;i<g_pier_assets.count;i++){
+        const SA3DSPierEntry*e=&g_pier_entries[i];if(!e->lifetime.task||e->action!=1)continue;
+        for(uint32_t k=0;k<e->piece_count&&k<(uint32_t)g_piece_gpu_count;k++){
+            const SA3DSPierPiece*q=&e->pieces[k];if(!q->constructed||!q->displayed)continue;
+            if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,q->position,30.f))continue;
+            C3D_Mtx model,mv;Mtx_Identity(&model);Mtx_Translate(&model,q->position[0],q->position[1],q->position[2],true);
+            Mtx_RotateX(&model,(uint16_t)q->rot_x*(2.f*PI/65536.f),true);Mtx_RotateY(&model,(uint16_t)q->rot_y*(2.f*PI/65536.f),true);
+            Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_piece_gpu[k],0))return 0;
+            g_piece_draws++;
+        }
+    }
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);return 1;
+}
+
 static void clear_native_protection(void){
     while(g_protection_head){SA3DSNativeProtection*n=g_protection_head;g_protection_head=n->next;free(n);}
     g_player.pc2004_player_flags6&=(uint16_t)~0x8000u;
@@ -1818,7 +2264,7 @@ static int native_stage_reload(void){
         memcpy(g_checkpoint_probe_reload_clock,g_course_clock.time,3);
     }
     if(!saved)checkpoint_seed_record();
-    g_rings.rings=0;reset_checkpoints(1);
+    g_rings.rings=0;reset_checkpoints(1);world_prepare(1);
     if(saved&&!spawn_native_protection())return 0;
     if(g_rings_ready)sa3ds_rings_reset_act(&g_rings,g_ec_act_index);
     reset_springs();clear_native_death();g_player_damage_blocked=0;
@@ -1934,7 +2380,7 @@ static int native_stage_begin(SA3DSStageRestartResult*out){
     if(g_stage_restart.state==18||g_stage_restart.state==19||g_game_over_exit)return native_game_over_tick(out);
     uint8_t previous=g_stage_restart.state;
     if(!sa3ds_stage_restart_begin(&g_stage_restart,1,out))return 0;
-    if(out->clear_world&&!out->run_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);}
+    if(out->clear_world&&!out->run_world){clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);world_prepare(1);}
     if(out->clear_rings&&!out->run_world)g_rings.rings=0;
     if(out->reload_stage&&!native_stage_reload())return 0;
     if(previous==8&&out->run_world)g_gameover_world_ticks++;
@@ -2013,6 +2459,143 @@ static void begin_saru_probe(void){
 fail:boot_log("SARU_PROBE","FAIL: missing original resource/placement/support");g_paused=1;
 }
 
+static int g_whale_probe;
+static unsigned g_whale_probe_ticks,g_whale_probe_emerged,g_whale_probe_destructs;
+static unsigned long g_whale_probe_spawns,g_whale_probe_constructs,g_whale_probe_breaks;
+static SA1Vec3 g_whale_probe_hold,g_whale_probe_ground;static SA1Surface g_whale_probe_floor;
+/*Explicit fixture: Sonic stands at the first act summon row. Natural course
+ *arrival, pier, camera and effects are not exercised.*/
+static void begin_whale_probe(void){
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_whale_probe.flag","rb");if(!f)return;fclose(f);
+    const char*reason="packages/full route";
+    if(!g_whale_ready||!g_ec_full_route)goto fail;
+    SA3DSWhalePlacement target;int found=0;
+    for(uint32_t i=0;i<g_whale_trigger_assets.count&&!found;i++)
+        if(sa3ds_whale_trigger_placement(&g_whale_trigger_assets,i,&target)&&target.act==g_ec_act_index&&(target.type&4095)==67)found=1;
+    reason="summon row";if(!found)goto fail;
+    float x=target.position[0],z=target.position[2];
+    reason="region recenter";
+    if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player))goto fail;
+    g_ec_collision.reference_y=target.position[1]+8;
+    /*The trigger stands over O PIER row661 (DynamicCOL deck y+1.5). Hold
+     *Sonic just above the trigger until a pier owns support, then release.*/
+    reason="pier package";if(!g_piers_ready)goto fail;
+    SA1Surface floor={0};
+    g_whale_probe_hold=(SA1Vec3){target.position[0],target.position[1]+3.f,target.position[2]};
+    g_whale_probe_ground=g_whale_probe_hold;g_whale_probe_floor=floor;
+    g_player.pos=g_whale_probe_hold;g_player.vel=(SA1Vec3){0};g_player.grounded=false;
+    g_player.surface_frame_active=false;g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
+    reason="whale prepare";reset_springs();world_prepare(0);if(g_whale_error)goto fail;g_camera.yaw=0;
+    g_whale_bounces=g_whale_waves=g_whale_splashes=g_whale_rumbles=g_whale_sounds=0;
+    g_whale_free_camera=g_whale_camera_disables=g_whale_contacts=g_whale_draws=0;
+    g_whale_probe=1;g_whale_probe_ticks=g_whale_probe_emerged=g_whale_probe_destructs=0;g_whale_probe_spawns=g_whale_probe_constructs=g_whale_probe_breaks=0;
+    char note[200];snprintf(note,sizeof(note),"BEGIN: row=%lu trigger=%.1f,%.1f,%.1f; hold above trigger until pier DynamicCOL, then natural standing",
+        (unsigned long)target.source_row,target.position[0],target.position[1],target.position[2]);(void)x;(void)z;(void)floor;
+    boot_log("WHALE_PROBE",note);return;
+fail:{char why[96];snprintf(why,sizeof(why),"FAIL: %s",reason);boot_log("WHALE_PROBE",why);}g_paused=1;
+}
+static void tick_whale_probe(void){
+    if(!g_whale_probe)return;
+    if(g_whale_probe_hold.y!=-1e9f){
+        if(!g_piers.constructs||g_ec_dynamic_applied!=g_ec_dynamic.changes){g_player.pos=g_whale_probe_hold;g_player.vel=(SA1Vec3){0};g_player.grounded=false;}
+        else{g_whale_probe_hold.y=-1e9f;char note[96];snprintf(note,sizeof(note),"released over pier at tick %u piers=%lu dynTris=%lu",
+            g_whale_probe_ticks,(unsigned long)g_piers.constructs,(unsigned long)g_ec_dynamic.triangle_count);boot_log("WHALE_PROBE",note);}
+    }
+    if(g_whales.spawns&&!g_whale_probe_destructs){g_whale_probe_destructs=g_whale_probe_ticks+1;
+        char note[120];snprintf(note,sizeof(note),"natural summon at tick %u grounded=%d y=%.2f",g_whale_probe_ticks,g_player.grounded,g_player.pos.y);boot_log("WHALE_PROBE",note);}
+    for(unsigned i=0;i<SA3DS_WHALE_TASK_SLOTS;i++){
+        const SA3DSWhaleTaskSlot*s=sa3ds_whale_tasks_slot(&g_whales,i);
+        if(s&&!g_whale_probe_emerged&&!(s->ccl.shapes[1].attributes&0x10))g_whale_probe_emerged=g_whale_probe_ticks+1;
+    }
+    /*Death reload re-initializes the runtimes; keep observed peaks.*/
+    if(g_whales.spawns>g_whale_probe_spawns)g_whale_probe_spawns=g_whales.spawns;
+    if(g_whales.constructs>g_whale_probe_constructs)g_whale_probe_constructs=g_whales.constructs;
+    if(g_piers.breaks>g_whale_probe_breaks)g_whale_probe_breaks=g_piers.breaks;
+    if(++g_whale_probe_ticks<600)return;
+    char note[420];snprintf(note,sizeof(note),"%s ticks=%u spawns=%lu constructs=%lu emergedTick=%u draws=%u destructs=%lu contacts=%u bounces=%u waves=%u splashes=%u rumbles=%u sounds=%u cameraDisable=%u freeCamera=%u pierBreaks=%lu pierDraws=%u boxSide=%u boxTop=%u boxUnder=%u pierThrows=%u pieceDraws=%u; camera/sound/effects pending",
+        g_whale_probe_spawns>=1&&g_whale_probe_constructs>=1&&g_whale_probe_emerged&&g_whale_draws&&!g_whale_error?"PASS":"FAIL",
+        g_whale_probe_ticks,g_whale_probe_spawns,g_whale_probe_constructs,g_whale_probe_emerged,g_whale_draws,
+        (unsigned long)g_whales.destructs,g_whale_contacts,g_whale_bounces,g_whale_waves,g_whale_splashes,g_whale_rumbles,g_whale_sounds,
+        g_whale_camera_disables,g_whale_free_camera,g_whale_probe_breaks,g_pier_draws,g_box_side_pushes,g_box_top_hits,g_box_under_hits,g_pier_throws,g_piece_draws);
+    boot_log("WHALE_PROBE",note);g_whale_probe=0;g_paused=1;
+}
+
+/*Explicit railing fixture: Sonic on pier724 (outside the AO summon sphere), driven toward +X each tick.
+ *Velocity injection stands in for input; only the CCL response is tested.*/
+static unsigned g_box_probe_ticks;static float g_box_probe_max_x,g_box_probe_limit;
+static int g_box_probe_cube;static SA1Vec3 g_box_probe_center,g_box_probe_dir;static float g_box_probe_extent,g_box_probe_pen;static uint16_t g_box_probe_yaw;
+static void begin_box_probe(void){
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_box_probe.flag","rb");if(!f)return;int mode=fgetc(f);unsigned cube_row=642;
+    if((mode=='C'||mode=='T')&&fscanf(f,"%u",&cube_row)!=1)cube_row=642;
+    fclose(f);
+    if(mode=='T'){ /*Top fixture: drop onto the cube's top and stand still.*/
+        SA3DSCubePlacement c;int ok=0;
+        for(uint32_t i=0;g_cubes_ready&&i<g_cube_assets.count&&!ok;i++)if(sa3ds_cube_placement(&g_cube_assets,i,&c)&&c.act==0&&c.source_row==cube_row)ok=1;
+        float d[3];if(ok)sa3ds_cube_dimensions(&c,d);
+        if(!ok||!g_checkpoints_ready||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,c.position[0],c.position[2],&g_player)){
+            boot_log("BOX_PROBE","FAIL: top cube row/player colliders/region");g_paused=1;return;}
+        g_player.pos=(SA1Vec3){c.position[0],c.position[1]+d[1]+10.f,c.position[2]};g_player.vel=(SA1Vec3){0};g_player.grounded=false;
+        reset_springs();world_prepare(0);g_camera.yaw=0;
+        g_box_probe_cube=2;g_box_probe_center=(SA1Vec3){c.position[0],c.position[1]+d[1],c.position[2]};g_box_probe_pen=1e9f;g_box_probe_max_x=-1e9f;
+        g_box_side_pushes=g_box_top_hits=g_box_under_hits=g_box_raw_hits=g_box_no_push=g_box_broad=0;g_box_probe=1;g_box_probe_ticks=0;
+        char bn[96];snprintf(bn,sizeof(bn),"BEGIN: C CUBE row%u top drop, top=%.3f",cube_row,c.position[1]+d[1]);boot_log("BOX_PROBE",bn);return;
+    }
+    if(mode=='C'){ /*C CUBE row (default642): drive +X into the box from the -X side.*/
+        SA3DSCubePlacement c;int ok=0;
+        for(uint32_t i=0;g_cubes_ready&&i<g_cube_assets.count&&!ok;i++)if(sa3ds_cube_placement(&g_cube_assets,i,&c)&&c.act==0&&c.source_row==cube_row)ok=1;
+        float d[3];if(ok)sa3ds_cube_dimensions(&c,d);
+        float sn=(float)checkpoint_sine(NULL,(uint16_t)c.angles[1]),cs=(float)checkpoint_sine(NULL,(uint16_t)(c.angles[1]+16384));
+        /*local -X face outward direction in world, from4199D0's corner frame*/
+        (void)sn;(void)cs;float x=ok?c.position[0]-(d[0]+12.f):0,z=ok?c.position[2]:0; /*host-verified ground (floor y6)*/
+        if(!ok||!g_checkpoints_ready||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player)){
+            boot_log("BOX_PROBE","FAIL: cube row/player colliders/region");g_paused=1;return;}
+        g_player.pos=(SA1Vec3){x,c.position[1]+6.f,z};g_player.vel=(SA1Vec3){0};g_player.grounded=false;
+        reset_springs();world_prepare(0);g_camera.yaw=0;
+        g_box_probe_cube=1;g_box_probe_center=(SA1Vec3){c.position[0],c.position[1],c.position[2]};g_box_probe_dir=(SA1Vec3){1,0,0};
+        g_box_probe_extent=d[0];g_box_probe_limit=d[2]; /*limit reused as half-z*/g_box_probe_yaw=(uint16_t)c.angles[1];g_box_probe_pen=-1e9f;
+        g_box_side_pushes=g_box_top_hits=g_box_under_hits=g_box_raw_hits=g_box_no_push=g_box_broad=0;g_box_probe=1;g_box_probe_ticks=0;
+        char bn[96];snprintf(bn,sizeof(bn),"BEGIN: C CUBE row%u, drive +X from host-checked ground",cube_row);boot_log("BOX_PROBE",bn);return;
+    }
+    g_box_probe_cube=0;
+    SA3DSPierPlacement p;int found=0;
+    for(uint32_t i=0;g_piers_ready&&i<g_pier_assets.count&&!found;i++)
+        if(sa3ds_pier_placement(&g_pier_assets,i,&p)&&p.source_row==724)found=1;
+    if(!found||!g_checkpoints_ready||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,p.position[0],p.position[2],&g_player)){
+        boot_log("BOX_PROBE","FAIL: pier724/checkpoint player colliders/region");g_paused=1;return;}
+    g_player.pos=(SA1Vec3){p.position[0],p.position[1]+4.f,p.position[2]};g_player.vel=(SA1Vec3){0};g_player.grounded=false;
+    reset_springs();world_prepare(0);g_camera.yaw=0;
+    /*Railing at local x=+-23.5, half-x1; pier yaw ~0x7FAA puts one near world +X.*/
+    g_box_probe_limit=p.position[0]+23.5f-1.f;g_box_probe_max_x=-1e9f;
+    g_box_side_pushes=g_box_top_hits=g_box_under_hits=g_box_raw_hits=g_box_no_push=g_box_broad=0;g_box_probe=1;g_box_probe_ticks=0;
+    boot_log("BOX_PROBE","BEGIN: pier724 deck (outside AO summon sphere), +X drive into railing");
+}
+static void tick_box_probe(void){
+    if(!g_box_probe)return;
+    SA1Vec3 o=sa3ds_ec_task_origin(&g_player);if(g_box_probe_cube!=2&&o.x>g_box_probe_max_x)g_box_probe_max_x=o.x;
+    if(g_box_probe_cube==2){
+        /*Track lowest task Y after landing (pen) and highest (max_x) over the last 120 ticks.*/
+        if(g_box_probe_ticks>=120){if(o.y<g_box_probe_pen)g_box_probe_pen=o.y;if(o.y>g_box_probe_max_x)g_box_probe_max_x=o.y;}
+    }else if(g_box_probe_cube){
+        float sn=(float)checkpoint_sine(NULL,g_box_probe_yaw),cs=(float)checkpoint_sine(NULL,(uint16_t)(g_box_probe_yaw+16384));
+        float dx=o.x-g_box_probe_center.x,dz=o.z-g_box_probe_center.z,lx=dx*cs-dz*sn,lz=dx*sn+dz*cs;
+        float px=(g_box_probe_extent+4.f)-fabsf(lx),pz=(g_box_probe_limit+4.f)-fabsf(lz);
+        float pen=px<pz?px:pz; /*positive: inside the expanded rectangle*/
+        if(pen>g_box_probe_pen)g_box_probe_pen=pen;
+        if(g_player.grounded){g_player.vel.x=g_box_probe_dir.x*2.f;g_player.vel.z=g_box_probe_dir.z*2.f;}
+    }else if(g_player.grounded){g_player.vel.x=2.f;g_player.vel.z=0;}
+    if(++g_box_probe_ticks<240)return;
+    float top=g_box_probe_center.y-.01f;
+    int pass=g_box_probe_cube==2?(g_box_top_hits&&g_player.grounded&&fabsf(g_box_probe_pen-top)<.05f&&fabsf(g_box_probe_max_x-top)<.05f):
+        g_box_probe_cube?(g_box_side_pushes&&g_box_probe_pen<2.5f):(g_box_side_pushes&&g_box_probe_max_x<g_box_probe_limit);
+    if(g_box_probe_cube==2){char tn[220];snprintf(tn,sizeof(tn),"top: grounded=%d taskY range=%.3f..%.3f expected=%.3f normal=%.5f,%.5f,%.5f",g_player.grounded,g_box_probe_pen,g_box_probe_max_x,top,
+        g_player.ground_normal.x,g_player.ground_normal.y,g_player.ground_normal.z);boot_log("BOX_PROBE",tn);}
+    if(g_box_probe_cube==1){char cn[200];snprintf(cn,sizeof(cn),"cube maxPenetration=%.3f (one tick of travel is2)",g_box_probe_pen);boot_log("BOX_PROBE",cn);}
+    char note[260];snprintf(note,sizeof(note),"%s ticks=%u sidePush=%u top=%u under=%u broad=%u rawHits=%u noPush=%u recv=%02x boxInhibit=%02x maxX=%.3f railingInner=%.3f",
+        pass?"PASS":"FAIL",g_box_probe_ticks,g_box_side_pushes,g_box_top_hits,g_box_under_hits,
+        g_box_broad,g_box_raw_hits,g_box_no_push,g_player_enemy_ccl.rules.push_receive,g_checkpoint_assets.rules[1].push_inhibit,g_box_probe_max_x,g_box_probe_limit);
+    boot_log("BOX_PROBE",note);g_box_probe=0;g_paused=1;
+}
+
 static int init_scene(void) {
     sa3ds_stage_restart_init(&g_stage_restart);
     if(!init_stage_fade())return 0;
@@ -2060,6 +2643,9 @@ static int init_scene(void) {
         load_panels();
         load_saru();
         load_checkpoints();
+        load_whale();
+        load_piers();
+        load_cubes();
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_scatter.sa3dspak",&g_scatter_bytes,&g_scatter_size)||
            !sa3ds_ring_scatter_assets_open(&g_scatter_assets,g_scatter_bytes,g_scatter_size)){
             sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;memset(&g_scatter_assets,0,sizeof(g_scatter_assets));
@@ -2112,7 +2698,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_whale())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -2215,6 +2801,8 @@ static void cleanup(void) {
     destroy_game_over_art();clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
+    whale_world_clear();memset(&g_world_tasks,0,sizeof(g_world_tasks));
+    destroy_cubes();destroy_piers();destroy_whale();
     destroy_saru();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
@@ -2340,7 +2928,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -2635,6 +3223,8 @@ int main(void) {
             tick_panels(&physics_done);
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
+            if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
+            tick_whale_probe();tick_box_probe();
             if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
             g_course_clock.enabled=stage_phase.controls_enabled;sa3ds_course_clock_tick(&g_course_clock);
             if(g_checkpoint_probe){
@@ -2701,7 +3291,7 @@ int main(void) {
                 if(g_rings.extra_lives>=previous_extra_lives)for(uint32_t n=previous_extra_lives;n<g_rings.extra_lives;n++)
                     sa3ds_stage_restart_add_lives(&g_stage_restart,1);
                 if(stage_phase.clear_world&&stage_phase.run_world){
-                    clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);clear_scatter();
+                    clear_native_protection();clear_native_death();reset_springs();reset_checkpoints(1);world_prepare(1);clear_scatter();
                     if(stage_phase.clear_rings)g_rings.rings=0;
                 }
                 uint8_t previous_stage=g_stage_restart.state;

@@ -27,7 +27,7 @@ int sa3ds_checkpoint_sweep(const SA3DSCheckpointSweep*s,SA3DSCheckpointContact*o
     if(!s||!s->sine||!finite3(s->previous_task)||!finite3(s->current_task)||!finite3(s->box_center)||
        !isfinite(s->player_radius)||!isfinite(s->player_half_height)||!isfinite(s->player_foot_radius)||
        !isfinite(s->box_x)||!isfinite(s->box_y)||!isfinite(s->box_z)||
-       s->player_radius<0||s->player_half_height<0||s->player_foot_radius<0||s->box_x<0||s->box_y<0||s->box_z<0)return 0;
+       s->player_radius<0||s->player_half_height<0||s->player_foot_radius<0)return 0; /*box dims stay raw: C CUBE scale+10 may be negative*/
     double dx=(float)((double)s->current_task.x-s->previous_task.x);
     double dy=(float)((double)s->current_task.y-s->previous_task.y);
     double dz=(float)((double)s->current_task.z-s->previous_task.z);

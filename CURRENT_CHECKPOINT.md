@@ -1,3 +1,123 @@
+# WCA81 — CAM trigger volumes decoded
+
+First original-camera slice: 438090's per-frame calls are mapped and the CAM
+record trigger tests (sphere4357F0, gate435840, box435AA0) ported to
+`cam_trigger.[ch]`; record fields +0 mode, +1 sub-priority, +2 adjust,
++3 shape, +4/+6 rotX/Y, center/extents now have source meaning (see
+docs/CAM_SOURCE_FORMAT_0.0.9.1D.md). Host test PASS (incl. Ninja T*Rx*Ry
+frame); owner EC CAM files consistent. Mode table decoded: stage init selects
+mode4 (469590) as the default follow camera; its target look-ahead/easing
+opening is decoded. Rest of mode4, its helpers and native use remain.
+
+---
+
+# WCA80 — standing on CCL box tops
+
+The original consumer of 419C90's top status: Sonic main49A9B0 (before the
+496F50 action dispatch) ORs ground bit2 when status has0x20 and world
+velocityY<=0, copying the hit object's rotX/Z; otherwise it clears bit2. The
+player physics then treats status&3 as ground; the CCL phase clears and the
+next top contact re-sets0x20 each frame. Native port within the existing
+static-floor adapter: the CCL pass applies the source top/underside task-Y
+snaps and status bits, and a top hit registers a one-update object support
+(foot-radius yaw rectangle, plane top-.01) that surface/contact queries use on
+the next tick; each CCL pass clears it. Follow-up: supports now carry the
+up axis of the hit object's rotX/Z (49AA00/49AA0F copy them to Sonic), so a
+tilted C CUBE gives a tilted ground normal; height snap stays top-.01. For
+row732 (rot515,2014) the expected normal is(-0.19166,0.98022,0.04935); host
+and native build PASS, Azahar check pending (emulator did not boot while the
+Mac was locked/asleep). Earlier flat result: Azahar image 522728B/0d4d723c `T491`: dropped onto C CUBE row491, Sonic stays
+grounded at task Y exactly 390.990 (top-.01) with225 top hits. Row644 is
+buried under landtable geometry. Side-push C644 and whale regressions PASS.
+
+---
+
+# WCA79 — pier break pieces
+
+4FEBC0/4FE9B0 ported: at the break, spread = 2.9*unit perpendicular of whale
+movement (pier side) + 1.2*unit tip->pier (418AC0); 25 variant0 children start
+at pier pos + unrotated object offset with parent yaw. Each constructs on the
+next update from six shared rand() calls (delay .6/.75/.95 thresholds, vel
+spread*1.8 / 1.5r+2.5, spin trunc(+-900/+-1500)), then rises, falls to y<=-1.5
+(vy=-.7), drifts with .93 damping for120 ticks and hides; parent deletes them
+at300. Package adds offsets plus 25 piece Basic visuals (2.0MB; per-piece
+texture copies not yet deduplicated). Owner pier test PASS (construct, fly,
+all splash, some hide). Azahar: 1222 piece draws over the chase, chase result
+unchanged; piece raster appearance and Rx/Ry sign not visually inspected.
+
+---
+
+# WCA78 — pier-break player throw
+
+Disassembly of4FEF3C..4FEFAF: when441C30 finds player0 grounded on the
+breaking pier's DynamicCOL, the pier calls441280(0,sin*8,2,cos*8) of its yaw
+(788290 sin,7883C0 cos), negating both when whale movement(03C5E3D8/E0)
+points against that axis. The whale task now exports that shared movement;
+`ec_pier` applies the throw; native standing uses the DynamicCOL source id.
+Owner pier test checks one throw of speed8/up2 aligned with whale travel.
+Azahar (whale probe): 3 throws carry Sonic grounded from z480 to 1467 along
+the deck, 21 pier breaks, whale reaches the kill trigger and dives (destruct
+1), no damage. Host and native build PASS. Pieces, sound and camera remain.
+
+---
+
+# WCA77 — original CCL box push and pier railings
+
+`ccl_box_push.[ch]` ports the419C90 responses after the418D80 push predicate:
+top (taskY=top-.01, status|0x20), underside (status|0x10) and 419B50 side push
+(box-yaw local XZ clamp with float .999 and the asymmetric +X radius*.999+halfX
+face), followed by441A40 history writeback. WALL's CCI is form9, which neither
+41FD00 nor41FDA0 dispatches, so WALL never contacts Sonic. Pier package now
+carries both raw railing CCIs (form3, push77, category4); native pier pass
+sweeps Sonic's primary form7 shape and applies side pushes. Top/underside are
+counted, not applied: native physics has no object-support state yet.
+Host suite, owner pier test and native build PASS. Azahar image 511948B/
+a9b3261e: explicit `emerald_coast_box_probe.flag` drives Sonic into pier724's
+railing: 220 side pushes in240 ticks, max taskX4322.8, never through.
+C CUBE now added: owner builder (2 spans, 123 rows acts0/1, form3/category4
+CCI), `ec_ccube.[ch]` SET runtime (load360000, 46C360 clip, action0 init then
+per-update enqueue) and native CCL pass sharing the box helper. Negative
+scale+10 dims are kept raw as in the source. Host, full owner gate (incl. new
+pier/C CUBE owner tests) and native build PASS. Azahar image 516948B/eee6bb36:
+`emerald_coast_box_probe.flag` = `C644` drives into cube row644: 226 side
+pushes, max penetration -0.33 (never inside); whale/pier regression PASS with
+all 123 cubes loaded. Row642 overlaps static landtable walls (blocked first).
+
+---
+
+# WCA76 (in progress) — O PIER and DynamicCOL
+
+New owner builder `tools/build_pc2004_ec_pier.py` (6 exact spans, 62 act0
+rows, 25x25 quad at local y1.5, intact visuals). Collision regions now carry a
+caller-owned DynamicCOL set across residency rebuilds. `ec_pier.[ch]` ports the
+intact/break/broken lifetime (tip<75 break, 302-tick removal); native main
+loads `ec_pier.sa3dspak`, shares list3 with the whale and draws intact piers.
+Host suite, native build and owner pier test PASS. Azahar 2126.0 isolated
+Old3DS, image 508052B/1a0e7438 with locally generated owner packages: the
+whale probe now holds Sonic above trigger row435 only until O PIER DynamicCOL
+exists (18 piers, 36 triangles), then releases him onto pier661. Natural
+summon at tick2, emergence tick14, 237 whale draws, 6 contacts/bounces (Sonic
+thrown forward along the deck), 16 pier breaks; a later contact hurt Sonic at
+0 rings and the death reload ran. WHALE_PROBE PASS. Not retail-verified. Still open:
+scripted camera, pier pieces, throw from a breaking pier, sound, railing box CCLs and C CUBE/WALL box CCL.
+
+---
+
+# WCA75 — SET preparation and native AO whale binding
+
+SET cold preparation/act clear/compaction/restart reset are reconstructed and
+owner-witnessed. New AO task executor connects summon/kill triggers, delayed
+constructor, actor/tip/common tail, two-sphere CCL, guarded destructor and the
+display transform; native main now loads the four owner whale packages, runs
+them on a shared list3 and draws the current whale. Host, owner gate (incl.
+owner-package runtime) and native build PASS; image 498888B links the whale.
+Azahar: packages load; the summon fixture FAILS honestly because the route is
+`O PIER`/`C CUBE`/`WALL` SET objects with no native implementation. See
+ docs/PC2004_WHALE_NATIVE_BINDING.md. Next: those objects, natural summon,
+pier destruction and camera. CP6 and CP1–CP9 remain open; no hardware claim.
+
+---
+
 # WCA74 — stock initial whale exit-root fallback
 
 Added versioned owner-profile authorization for the original null-channel exit
