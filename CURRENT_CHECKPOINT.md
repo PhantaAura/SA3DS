@@ -1,3 +1,28 @@
+# WCA91 — stage music: owner ADX streamed through ndsp
+
+`src/game/adx.[ch]` decodes CRI ADX encoding 3 (published format with
+vgmstream's conventions: block scale+1, floor coefficients, high nibble
+first, loop history saved at the loop start; not compared against a
+reference decoder). `runtime_0_0_9_0G/source/bgm_player.c` streams
+`sdmc:/3ds/SA3DS/assets/bgm/ecoast<act+1>.adx` with three 4096-sample ndsp
+buffers, looping at the header loop points; it restarts on act change and
+stays silent when ndsp/DSP component or the file is missing.
+`tools/stage_pc2004_bgm.py` checks the exe music table (0x910298: ids 28-30
+= ecoast1-3, looping; 425421 indexes it) and copies the owner files
+unchanged to an SD folder. The act->track pairing follows those names; the
+stage code that selects the track was not traced (the 424C80 level switch
+is SE banks).
+Checks: host suite PASS (decoder cases), owner gate PASS (all three tracks
+decode to their loop ends; loop byte offsets match headers; 0-6444 clipped
+samples), native build PASS. Azahar: without sdmc:/3ds/dspfirm.cdc ndsp is
+unavailable and the game logs it and runs silent; with a test-only
+placeholder component in the isolated emulator profile (HLE audio) the stream
+ran: 950272 samples by frame 600, 0 underruns. Audible output and hardware
+playback (needs the owner's dumped DSP component) were not checked. SE banks
+and voices are not ported.
+
+---
+
 # WCA90 — camera transition blends (adjust 469D10)
 
 `cam_adjust.[ch]` ports adjusts 6..26 (469D10), run after the mode and

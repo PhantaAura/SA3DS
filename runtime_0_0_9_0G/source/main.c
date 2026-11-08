@@ -72,6 +72,7 @@
 #include "../../src/game/cam_trigger.h"
 #include "../../src/game/cam_select.h"
 #include "../../src/game/cam_adjust.h"
+#include "bgm_player.h"
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
@@ -921,6 +922,7 @@ static void ec_toggle_texture_override(void){
     g_last_frame_ms=osGetTime();
 }
 
+static int g_bgm_started;static void start_stage_bgm(void);
 static int ec_change_act(uint32_t act){
     uint64_t load_start=osGetTime();
     const SA3DSECStart *start=sa3ds_ec_route_start(&g_ec_route,act);
@@ -943,6 +945,7 @@ static int ec_change_act(uint32_t act){
     g_ec_gpu.visual=&g_ec_visual;
     g_ec_collision=collision;g_ec_collision.world.context=&g_ec_collision;
     g_ec_act_index=act;g_ec_failed_region_valid=0;
+    if(g_bgm_started)start_stage_bgm();
     ec_apply_texture_override();
     memset(&g_ec_perf,0,sizeof(g_ec_perf));
     SA3DSCourseClock course_before=g_course_clock;
@@ -2543,6 +2546,17 @@ static SA3DSCamSelect g_cam_select;static unsigned g_cam_select_changes,g_cam_se
 static uint8_t g_cam_adjust_reset,g_cam_manual,g_cam_fixed_now,g_cam_stick_active,g_cam_buttons_active;static float g_cam_still_pos[3];
 static SA3DSCamModeState g_cam_mode_state;static SA3DSCamAdjust g_cam_adjust;static unsigned g_cam_total_frames,g_cam_adjust_frames,g_cam_adjust_unported;static unsigned g_cam_mode31_frames,g_cam_mode39_frames;
 static int g_cam_regions_ready;static unsigned g_cam_region_pushes,g_cam_gate_reverts;
+/*Stage BGM: owner ecoast<act+1>.adx copied to SD by tools/stage_pc2004_bgm.py.
+ *The act->track pairing follows the music table names (ids 28-30), not a
+ *traced stage-music call.*/
+static int g_bgm_started;
+static void start_stage_bgm(void){
+    if(!g_ec_combined)return;
+    if(!sa3ds_bgm_init()){if(!g_bgm_started)boot_log("BGM","ndsp unavailable (no DSP component); silent");g_bgm_started=1;return;}
+    char path[96];snprintf(path,sizeof(path),"sdmc:/3ds/SA3DS/assets/bgm/ecoast%lu.adx",(unsigned long)g_ec_act_index+1);
+    int ok=sa3ds_bgm_play(path);g_bgm_started=1;
+    char note[140];snprintf(note,sizeof(note),"%s %s",ok?"Streaming owner ADX":"Owner ADX missing/invalid, silent:",path);boot_log("BGM",note);
+}
 static void load_camera_regions(void){
     uint8_t*bytes=NULL;size_t size=0;SA3DSPak pak;SA3DSPakChunk c;g_cam_regions_ready=0;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_camera.sa3dspak",&bytes,&size)||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||
@@ -2828,6 +2842,7 @@ static int init_scene(void) {
         load_piers();
         load_cubes();
         load_camera_regions();
+        start_stage_bgm();
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_scatter.sa3dspak",&g_scatter_bytes,&g_scatter_size)||
            !sa3ds_ring_scatter_assets_open(&g_scatter_assets,g_scatter_bytes,g_scatter_size)){
             sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;memset(&g_scatter_assets,0,sizeof(g_scatter_assets));
@@ -3553,6 +3568,10 @@ int main(void) {
         C3D_FrameEnd(0);
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;
+        sa3ds_bgm_update();
+        if(g_rendered_frames==600&&g_bgm_started){SA3DSBgmStats b;sa3ds_bgm_stats(&b);char note[140];
+            snprintf(note,sizeof(note),"600 frames: ready=%d playing=%d adxFrames=%lu sample=%lu loops=%lu underruns=%lu",b.ready,b.playing,
+                (unsigned long)b.frames,(unsigned long)b.sample,(unsigned long)b.loops,(unsigned long)b.underruns);boot_log("BGM",note);}
         if (g_boottrace_first_frame) {
             boot_log("OK","First frame rendered/submitted");
             g_boottrace_first_frame=0;
@@ -3606,6 +3625,7 @@ int main(void) {
     }
 
     cleanup();
+    sa3ds_bgm_exit();
     C3D_Fini(); romfsExit(); gfxExit();
     return g_ec_transition_failed?1:0;
 }

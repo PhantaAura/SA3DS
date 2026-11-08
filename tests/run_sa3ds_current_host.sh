@@ -225,3 +225,6 @@ sh tests/run_cam_select.sh
 
 printf '\n== Original camera adjust blend ==\n'
 sh tests/run_cam_adjust.sh
+
+printf '\n== CRI ADX decoder ==\n'
+sh tests/run_adx.sh

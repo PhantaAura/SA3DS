@@ -98,3 +98,7 @@ CCUBE_PACKAGE="$tmp/ec_ccube.sa3dspak" sh tests/run_ec_ccube_owner.sh
 
 python3 tools/build_pc2004_ec_camera.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_camera.sa3dspak"
 CAMERA_PACKAGE="$tmp/ec_camera.sa3dspak" sh tests/run_ec_camera_owner.sh
+
+game_root="$(dirname "$(dirname "$SONIC_PVM_PATH")")"
+python3 tools/stage_pc2004_bgm.py "$SONIC_EXE_PATH" "$game_root" "$tmp/bgm"
+BGM_DIR="$tmp/bgm" sh tests/run_adx_owner.sh
