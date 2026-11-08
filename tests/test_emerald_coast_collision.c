@@ -218,8 +218,20 @@ static void npc_floor_cases(void){
     h=123;assert(!sa3ds_ec_collision_floor_below(&s,491,40,0,&h)&&h==123);
     puts("Static NPC floor adapter: PASS highest-below/attribute exclusion/no-floor/residency cases; not retail polygon parity");
 }
+static void camera_ray_cases(void){
+    SA3DSECTriangle t[2]={0};uint32_t refs[2]={0,1},visited[2]={0};
+    SA3DSECCollision s={.triangles=t,.triangle_count=2,.references=refs,.visited=visited,.min_x=-500,.max_x=500,.min_z=-500,.max_z=500};
+    t[0]=(SA3DSECTriangle){.a={-3,0,-3},.b={0,0,3},.c={3,0,-3},.normal={0,1,0},.min_x=-3,.max_x=3,.min_z=-3,.max_z=3,.flags=1,.source_instance=7};
+    t[1]=t[0];t[1].a.y=t[1].b.y=t[1].c.y=-50;t[1].flags=3;t[1].source_instance=2; /*water: skipped*/
+    unsigned cell=8*16+8;for(unsigned i=cell+1;i<=256;i++)s.cells[i]=2;
+    float a[3]={0,10,0},d[3]={0,-20,0};
+    assert(sa3ds_ec_collision_camera_ray(&s,a,d,4)&&fabsf(a[1]-4)<1e-4f&&fabsf(d[1])<1e-4f);
+    float b[3]={0,10,0},e[3]={1,0,0};assert(!sa3ds_ec_collision_camera_ray(&s,b,e,4)&&b[1]==10&&e[0]==1);
+    float c[3]={0,-40,0},f[3]={0,-20,0};assert(!sa3ds_ec_collision_camera_ray(&s,c,f,4));
+    puts("Stage camera ray (4370C0 -> 439620 port): PASS floor clip, miss leaves ray, water flag skipped");
+}
 int main(int argc,char**argv){
-    npc_floor_cases();
+    npc_floor_cases();camera_ray_cases();
     assert(argc>=2);size_t n;unsigned char*b=load(argv[1],&n);SA3DSECCollision s;
     if(argc>2&&argv[2][0]=='r'){
         assert(!sa3ds_ec_collision_open(&s,b,n));free(b);puts("Malformed collision package rejected: PASS");return 0;

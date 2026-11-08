@@ -115,6 +115,12 @@ SA1Contact sa3ds_ec_collision_contact(void *context,SA1Vec3 position,
     SA1Vec3 probe,float range);
 /* Select a support triangle near the stated height; never invent retail spawn. */
 int sa3ds_ec_collision_spawn(SA3DSECCollision *stage,float x,float z,float hint_y);
+/* 4370C0/43A060 camera ray projection: resident triangles whose AABB meets the
+ * swept sphere are handed, grouped per source instance, to the 439620 port
+ * (sa3ds_pc2004_camera_ray). Water/no-floor flags 0x400002 are skipped like
+ * the floor query (450C10's own filter is not decoded). At most 256
+ * candidates; returns1 on a hit with start/delta rewritten. */
+int sa3ds_ec_collision_camera_ray(SA3DSECCollision *stage,float start[3],float delta[3],float radius);
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision *stage,
     SA1Vec3 previous,SA1PlayerState *player);
 /* Bridge the inherited controller support-center convention to PC2004's task

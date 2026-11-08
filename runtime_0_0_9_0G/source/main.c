@@ -68,6 +68,8 @@
 #include "../../src/platform/3ds/input_adapter.h"
 #include "../../src/sa1/physics/physics_constants.h"
 #include "../../src/sa1/physics/steam_flat.h"
+#include "../../src/game/cam_mode4.h"
+#include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
 #define DISPLAY_TRANSFER_FLAGS \
@@ -325,6 +327,14 @@ static SA3DSSonicAnimationObservation g_observation;
 static SA3DSSonicAnimationSelection g_selection;
 static SA3DSParityZoneId g_selected_zone=SA3DS_PARITY_ZONE_CALIBRATION;
 static SA3DSParityCameraState g_camera={SA3DS_PARITY_CAMERA_FOLLOW,0.0f};
+/*View eye/target for the frame: the original mode4 camera (469590/435C70)
+ *in Emerald Coast play, else the bounded follow eye used by probes/replays.*/
+static float g_cam_eye[3],g_cam_target[3];
+static SA3DSCamera g_cam4;static uint32_t g_cam4_frames;static int g_cam4_active;static unsigned g_cam4_hits;static int g_cam_probe_turn;
+static void camera_legacy_view(void){
+    g_cam_eye[0]=g_player.pos.x-sinf(g_camera.yaw)*40.f;g_cam_eye[1]=g_player.pos.y+18.f;g_cam_eye[2]=g_player.pos.z-cosf(g_camera.yaw)*40.f;
+    g_cam_target[0]=g_player.pos.x;g_cam_target[1]=g_player.pos.y+3.f;g_cam_target[2]=g_player.pos.z;
+}
 static int g_dev_overlay=1;
 static int g_paused=0;
 static SA3DSWhiteZoneTick g_tick_clock;
@@ -1603,7 +1613,8 @@ static void checkpoint_unlink(SA3DSNativeCheckpoint*s){
 static int tick_checkpoints(void){
     if(!g_checkpoints_ready)return 1;
     SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
-    SA1Vec3 camera={g_player.pos.x-sinf(g_camera.yaw)*40.f,g_player.pos.y+18.f,g_player.pos.z-cosf(g_camera.yaw)*40.f};
+    if(!g_cam4_active)camera_legacy_view();
+    SA1Vec3 camera={g_cam_eye[0],g_cam_eye[1],g_cam_eye[2]};
     for(uint32_t i=0;i<g_checkpoint_assets.placements.count;i++){
         SA3DSMovementPlacement p;if(!sa3ds_movement_objects_placement(&g_checkpoint_assets.placements,i,&p))return 0;
         SA3DSNativeCheckpoint*s=&g_checkpoint_states[i];s->queued=0;s->draw.display=0;
@@ -1812,9 +1823,7 @@ static int draw_scatter(void){
     return 1;
 }
 
-static void whale_camera_eye(float out[3]){
-    out[0]=g_player.pos.x-sinf(g_camera.yaw)*40.f;out[1]=g_player.pos.y+18.f;out[2]=g_player.pos.z-cosf(g_camera.yaw)*40.f;
-}
+static void whale_camera_eye(float out[3]){if(!g_cam4_active)camera_legacy_view();memcpy(out,g_cam_eye,12);}
 static int whale_read_frame(void*context,SA3DSWhaleTriggerFrame*f){(void)context;*f=g_whale_frame;return 1;}
 static int whale_summon(void*context,const float p[3],int32_t yaw){(void)context;return sa3ds_whale_tasks_summon(&g_whales,p,yaw);}
 static void whale_kill(void*context){(void)context;(void)sa3ds_whale_tasks_kill(&g_whales);}
@@ -2523,7 +2532,39 @@ static void tick_whale_probe(void){
 /*Explicit railing fixture: Sonic on pier724 (outside the AO summon sphere), driven toward +X each tick.
  *Velocity injection stands in for input; only the CCL response is tested.*/
 static unsigned g_box_probe_ticks;static float g_box_probe_max_x,g_box_probe_limit;
-static int g_box_probe_cube;static SA1Vec3 g_box_probe_center,g_box_probe_dir;static float g_box_probe_extent,g_box_probe_pen;static uint16_t g_box_probe_yaw;
+static int g_box_probe_cube;
+static double cam4_sine(void*context,uint16_t angle){(void)context;return spring_source_sin(&g_rings,angle);}
+static int cam4_ray(void*context,float start[3],float delta[3],float radius){
+    (void)context;int hit=sa3ds_ec_collision_camera_ray(&g_ec_collision,start,delta,radius);if(hit)g_cam4_hits++;return hit;
+}
+static int camera_original_allowed(void){
+    return g_ec_combined&&g_camera.mode==SA3DS_PARITY_CAMERA_FOLLOW&&!g_ec_replay&&!g_wca_replay&&!g_ring_probe&&
+        !g_checkpoint_probe&&!g_spring_probe&&!g_panel_probe&&!g_saru_probe&&!g_death_probe&&!g_whale_probe&&!g_box_probe&&
+        !g_ec_cycle_probe&&!g_homing_probe&&!g_hurt_probe&&!g_gameover_probe&&!g_air_attack_probe;
+}
+/*Per-tick camera after the player task, like 438090 after the character.
+ *A large player jump (reload/restart) re-seeds as a fresh mode (03B2CAEC=0).*/
+static void camera_update(int turn_left,int turn_right){
+    if(!camera_original_allowed()){g_cam4_active=0;camera_legacy_view();return;}
+    float p[3]={g_player.pos.x,g_player.pos.y,g_player.pos.z};
+    float dx=p[0]-g_cam4.param.target[0],dz=p[2]-g_cam4.param.target[2];
+    if(!g_cam4_active||dx*dx+dz*dz>200.f*200.f){
+        camera_legacy_view();memset(&g_cam4,0,sizeof g_cam4);
+        memcpy(g_cam4.param.eye,g_cam_eye,12);memcpy(g_cam4.position,g_cam_eye,12);
+        g_cam4.param.roll=0x68c;g_cam4.rot_x=0xf1c8;g_cam4_frames=0;g_cam4_active=1;
+    }
+    if(g_cam_probe_turn)turn_left=1;
+    SA3DSCamInput in={{p[0],p[1],p[2]},{g_player.vel.x,g_player.vel.y,g_player.vel.z},
+        SA1_STEAM_SONIC_PARAMETER_EVIDENCE.eyes_height,g_cam4_frames,(uint8_t)(turn_left?1:0),(uint8_t)(turn_right?1:0),0};
+    SA3DSCamServices sv={NULL,cam4_sine,cam4_ray,NULL};
+    if(!sa3ds_cam_mode4_update(&g_cam4,&in,&sv)){g_cam4_active=0;camera_legacy_view();return;}
+    g_cam4_frames++;
+    memcpy(g_cam_eye,g_cam4.position,12);memcpy(g_cam_target,g_cam4.param.target,12);
+    /*Controls stay camera-relative: the follow yaw is the eye->player bearing.*/
+    float bx=p[0]-g_cam_eye[0],bz=p[2]-g_cam_eye[2];
+    if(bx*bx+bz*bz>1e-6f)g_camera.yaw=atan2f(bx,bz);
+}
+static SA1Vec3 g_box_probe_center,g_box_probe_dir;static float g_box_probe_extent,g_box_probe_pen;static uint16_t g_box_probe_yaw;
 static void begin_box_probe(void){
     FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_box_probe.flag","rb");if(!f)return;int mode=fgetc(f);unsigned cube_row=642;
     if((mode=='C'||mode=='T')&&fscanf(f,"%u",&cube_row)!=1)cube_row=642;
@@ -2568,6 +2609,32 @@ static void begin_box_probe(void){
     g_box_probe_limit=p.position[0]+23.5f-1.f;g_box_probe_max_x=-1e9f;
     g_box_side_pushes=g_box_top_hits=g_box_under_hits=g_box_raw_hits=g_box_no_push=g_box_broad=0;g_box_probe=1;g_box_probe_ticks=0;
     boot_log("BOX_PROBE","BEGIN: pier724 deck (outside AO summon sphere), +X drive into railing");
+}
+/*Camera probe: ordinary EC play (mode4 allowed), forward drive then a held
+ *manual turn; checks the original camera stays active, finite and inside its
+ *distance bands (20..90 plus the 30-unit overhead push).*/
+static int g_camera_probe;static unsigned g_camera_probe_ticks,g_camera_probe_active,g_camera_probe_bad;
+static float g_camera_probe_min=1e9f,g_camera_probe_max=0,g_camera_probe_yaw0,g_camera_probe_turned;
+static void begin_camera_probe(void){
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_camera_probe.flag","rb");if(!f)return;fclose(f);
+    g_camera_probe=1;g_camera_probe_ticks=0;boot_log("CAMERA_PROBE","BEGIN: original mode4 follow camera, forward drive then held manual turn");
+}
+static void tick_camera_probe(void){
+    if(!g_camera_probe)return;
+    unsigned t=g_camera_probe_ticks++;
+    if(t>=30&&t<210&&g_player.grounded){g_player.vel.x=sinf(g_camera.yaw)*2.f;g_player.vel.z=cosf(g_camera.yaw)*2.f;}
+    g_cam_probe_turn=t>=240&&t<330;if(t==240)g_camera_probe_yaw0=g_camera.yaw;
+    if(g_cam4_active){
+        g_camera_probe_active++;
+        float dx=g_cam_eye[0]-g_player.pos.x,dy=g_cam_eye[1]-g_player.pos.y,dz=g_cam_eye[2]-g_player.pos.z,d=sqrtf(dx*dx+dy*dy+dz*dz);
+        if(!isfinite(d))g_camera_probe_bad++;else if(t>=20){if(d<g_camera_probe_min)g_camera_probe_min=d;if(d>g_camera_probe_max)g_camera_probe_max=d;}
+    }
+    if(t==330){float y=g_camera.yaw-g_camera_probe_yaw0;while(y>3.14159265f)y-=6.2831853f;while(y< -3.14159265f)y+=6.2831853f;g_camera_probe_turned=y;}
+    if(t<360)return;
+    int pass=g_camera_probe_active>=355&&!g_camera_probe_bad&&g_camera_probe_min>=15.f&&g_camera_probe_max<=95.f&&fabsf(g_camera_probe_turned)>.05f;
+    char note[220];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u turnYaw=%.3f bad=%u; no retail trace comparison",
+        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_camera_probe_turned,g_camera_probe_bad);
+    boot_log("CAMERA_PROBE",note);g_camera_probe=0;g_cam_probe_turn=0;g_paused=1;
 }
 static void tick_box_probe(void){
     if(!g_box_probe)return;
@@ -2673,25 +2740,22 @@ static int init_scene(void) {
 
 static int sample_pose(void) {
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
+    if(!g_cam4_active)camera_legacy_view();
     if (g_emerald_coast) {
         C3D_Mtx stage_mv;
         if(g_ec_combined){
-            Mtx_LookAt(&stage_mv,FVec3_New(g_player.pos.x-sinf(g_camera.yaw)*40.0f,
-                g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f),
-                FVec3_New(g_player.pos.x,g_player.pos.y+3.0f,g_player.pos.z),
+            Mtx_LookAt(&stage_mv,FVec3_New(g_cam_eye[0],g_cam_eye[1],g_cam_eye[2]),
+                FVec3_New(g_cam_target[0],g_cam_target[1],g_cam_target[2]),
                 FVec3_New(0,1,0),false);
         }else Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
         if(g_ec_gpu.full_act){
-            float eye[3]={g_player.pos.x-sinf(g_camera.yaw)*40.0f,
-                g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f};
-            float target[3]={g_player.pos.x,g_player.pos.y+3.0f,g_player.pos.z};
-            sa3ds_ec_gpu_set_view(&g_ec_gpu,eye,target,C3D_AngleFromDegrees(55.0f),
+            sa3ds_ec_gpu_set_view(&g_ec_gpu,g_cam_eye,g_cam_target,C3D_AngleFromDegrees(55.0f),
                 C3D_AspectRatioTop,0.1f,5000.0f);
         }
-        float background_eye[3]={g_ec_combined?g_player.pos.x-sinf(g_camera.yaw)*40.0f:0.0f,
-            g_ec_combined?g_player.pos.y+18.0f:95.0f,
-            g_ec_combined?g_player.pos.z-cosf(g_camera.yaw)*40.0f:-260.0f};
+        float background_eye[3]={g_ec_combined?g_cam_eye[0]:0.0f,
+            g_ec_combined?g_cam_eye[1]:95.0f,
+            g_ec_combined?g_cam_eye[2]:-260.0f};
         C3D_CullFace(GPU_CULL_NONE);
         if(!draw_background(&stage_mv,background_eye))return 0;
         g_ec_view=stage_mv;
@@ -2772,7 +2836,7 @@ static int sample_pose(void) {
     if(g_pose_lab||sa3ds_player_damage_visible(g_player.pc2004_hurt_timer)){
         if(g_sonic_lighting&&g_ec_combined&&!g_pose_lab){
             SA3CMatrix actor;sa3ds_ec_model_transform(&g_player,&actor);
-            float eye[3]={g_player.pos.x-sinf(g_camera.yaw)*40.0f,g_player.pos.y+18.0f,g_player.pos.z-cosf(g_camera.yaw)*40.0f};
+            float eye[3]={g_cam_eye[0],g_cam_eye[1],g_cam_eye[2]};
             int ok=sa3ds_sonic_lighting_gpu_draw(g_sonic_lighting,&g_sonic_gpu,g_ec_act_index,
                 &g_projection,&g_ec_view,&actor,eye,root,g_world,g_node_count,&g_stats);
             C3D_BindProgram(&g_program);
@@ -2928,7 +2992,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -3224,7 +3288,7 @@ int main(void) {
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
             if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
-            tick_whale_probe();tick_box_probe();
+            tick_whale_probe();tick_box_probe();tick_camera_probe();
             if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
             g_course_clock.enabled=stage_phase.controls_enabled;sa3ds_course_clock_tick(&g_course_clock);
             if(g_checkpoint_probe){
@@ -3325,8 +3389,9 @@ int main(void) {
                     boot_log("DEATH_PROBE",note);g_death_probe=0;g_saru_probe=0;g_paused=1;
                 }
             }
-            sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
+            if(!g_cam4_active)sa3ds_parity_camera_tick(&g_camera,g_player.yaw,
                 (g_ec_replay || g_ring_probe || g_checkpoint_probe || (!modifier && (held&(KEY_L|KEY_R)))) ? 1 : 0);
+            camera_update(!modifier&&(held&KEY_L),!modifier&&(held&KEY_R));
             if(g_ec_replay) {
                 if(g_ec_replay_tick%30==0 || tick_input.jump_pressed) {
                     char line[180];snprintf(line,sizeof(line),

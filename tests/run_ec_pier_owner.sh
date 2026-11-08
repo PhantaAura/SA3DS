@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 task_tmp="$(mktemp -d "${TMPDIR:-/tmp}/sa3ds-pier-owner.XXXXXX")"
 trap 'rm -rf "$task_tmp"' EXIT HUP INT TERM
 cc -std=c11 -O2 -ffp-contract=off -Wall -Wextra -Werror -Isrc/game -Isrc/sa1/physics -Isrc/sa3c -Isrc/sa3dspak \
- tests/test_ec_pier_owner.c src/game/ec_pier.c src/game/emerald_coast_collision.c src/game/emerald_coast_residency.c \
+ tests/test_ec_pier_owner.c src/game/ec_pier.c src/game/emerald_coast_collision.c src/game/pc2004_sphere_sweep.c src/game/emerald_coast_residency.c \
  src/game/emerald_coast_route.c src/game/owned_task_list.c src/game/set_task_lifetime.c src/game/set_object_clip.c \
  src/game/set_preparation.c src/sa3dspak/sa3dspak.c src/sa3c/sa3c_pose.c src/sa1/physics/*.c -lm -o "$task_tmp/test"
 "$task_tmp/test" "$PIER_PACKAGE" "$EC_COLLISION_PACKAGE"

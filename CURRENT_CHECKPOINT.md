@@ -1,3 +1,22 @@
+# WCA84 — original follow camera drives Emerald Coast
+
+Native EC play now runs mode4 (469590 -> 435C70) every tick after the player
+in place of the bounded 40/18 chase eye; the view (stage, GPU set_view,
+background, Sonic lighting, checkpoint/whale camera relevance) reads the
+mode4 eye/target, and control yaw is the eye->player bearing. Camera rays go
+through `sa3ds_ec_collision_camera_ray` (grid-gathered resident triangles,
+grouped per instance, into the 439620/453820 port; 0x400002 skipped
+provisionally). Probes, replays and REFERENCE mode keep the old eye, so their
+witnesses are unchanged. A >200-unit jump re-seeds the camera as a fresh mode.
+Azahar (isolated profile) `emerald_coast_camera_probe.flag`: PASS active
+360/361, distance 49.95..79.76, finite, held manual turn moved yaw 3.07 rad,
+0 ray hits on the open beach (collision clipping not exercised in emulator).
+Host suite PASS incl. stage camera-ray floor/miss/water cases; native build
+PASS. Not done: CAM region pushes, adjust table, modes 8-11, whale scripted
+camera, hardware, retail trace.
+
+---
+
 # WCA83 — default follow camera mode4 ported
 
 `cam_mode4.[ch]` ports mode4 (469590) on the parameter block plus the 435C70

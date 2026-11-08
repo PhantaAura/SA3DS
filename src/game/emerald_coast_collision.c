@@ -1,6 +1,7 @@
 #include "emerald_coast_collision.h"
 #include "sa3dspak.h"
 #include "sa3c_pose.h"
+#include "pc2004_sphere_sweep.h"
 #include "../sa1/physics/surface_frame.h"
 #include "../sa1/physics/steam_player_parameters.h"
 #include <math.h>
@@ -708,4 +709,38 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             p->support_distance=floor.signed_distance;
         }
     }
+}
+
+#define CAMERA_RAY_CANDIDATES 256u
+int sa3ds_ec_collision_camera_ray(SA3DSECCollision*s,float start[3],float delta[3],float radius){
+    if(!s||!s->references||!start||!delta||!isfinite(radius)||radius<=0)return 0;
+    for(unsigned k=0;k<3;k++)if(!isfinite(start[k])||!isfinite(delta[k]))return 0;
+    static SA3DSSweepTriangle tris[CAMERA_RAY_CANDIDATES];static uint32_t ids[CAMERA_RAY_CANDIDATES];
+    float lo[3],hi[3];size_t n=0;
+    for(unsigned k=0;k<3;k++){float e=start[k]+delta[k];lo[k]=fminf(start[k],e)-radius;hi[k]=fmaxf(start[k],e)+radius;}
+    if(hi[0]<s->min_x||lo[0]>s->max_x||hi[2]<s->min_z||lo[2]>s->max_z)return 0;
+    s->queries++;
+    if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*sizeof(*s->visited));s->query_serial=1;}
+    int x0=cell_x(s,lo[0]),x1=cell_x(s,hi[0]),z0=cell_z(s,lo[2]),z1=cell_z(s,hi[2]);
+    for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
+      unsigned c=(unsigned)z*16u+(unsigned)x;
+      for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+        uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
+        const SA3DSECTriangle*t=&s->triangles[ti];
+        if(t->flags&0x400002u)continue;
+        if(t->max_x<lo[0]||t->min_x>hi[0]||t->max_z<lo[2]||t->min_z>hi[2])continue;
+        float ymin=fminf(t->a.y,fminf(t->b.y,t->c.y)),ymax=fmaxf(t->a.y,fmaxf(t->b.y,t->c.y));
+        if(ymax<lo[1]||ymin>hi[1])continue;
+        if(n==CAMERA_RAY_CANDIDATES)goto full;
+        /*Insertion keeps each source instance contiguous for 439620.*/
+        size_t at=n;while(at&&ids[at-1]>t->source_instance){tris[at]=tris[at-1];ids[at]=ids[at-1];at--;}
+        SA3DSSweepTriangle*o=&tris[at];
+        o->v[0][0]=t->a.x;o->v[0][1]=t->a.y;o->v[0][2]=t->a.z;
+        o->v[1][0]=t->b.x;o->v[1][1]=t->b.y;o->v[1][2]=t->b.z;
+        o->v[2][0]=t->c.x;o->v[2][1]=t->c.y;o->v[2][2]=t->c.z;
+        o->flags=t->flags;ids[at]=t->source_instance;n++;s->triangle_tests++;
+      }
+    }
+full:
+    return n?sa3ds_pc2004_camera_ray(tris,ids,n,start,delta,radius):0;
 }
