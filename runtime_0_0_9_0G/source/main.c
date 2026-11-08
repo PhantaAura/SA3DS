@@ -923,6 +923,29 @@ static void ec_toggle_texture_override(void){
     g_last_frame_ms=osGetTime();
 }
 
+/*CP9 toggle probe: injects SELECT held + D-pad Up down into the ordinary
+ *input path (after hidScanInput) at frames 120 and 240 and records the
+ *override state, persisted flag and override draws around each press.*/
+static int g_mod_toggle_probe=-1;static uint32_t g_mod_probe_draws_on,g_mod_probe_draws_off;static int g_mod_probe_on_ok,g_mod_probe_off_ok;
+static int mod_enabled_file(void){FILE*f=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.enabled","rb");int v=f&&fgetc(f)=='1';if(f)fclose(f);return v;}
+static void mod_toggle_probe_input(uint32_t frame,u32*down,u32*held){
+    if(g_mod_toggle_probe<0){FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_mod_toggle_probe.flag","rb");g_mod_toggle_probe=f!=NULL;if(f)fclose(f);
+        if(g_mod_toggle_probe)boot_log("MOD_TOGGLE_PROBE","BEGIN: SELECT+Up injected at frames 120/240 through the normal input path");}
+    if(g_mod_toggle_probe!=1)return;
+    if(frame==120||frame==240){*held|=KEY_SELECT;*down|=KEY_DUP;}
+}
+static void mod_toggle_probe_frame(uint32_t frame){
+    if(g_mod_toggle_probe!=1)return;
+    if(frame==119)g_mod_probe_draws_off=g_ec_gpu.override_submitted_draws;
+    if(frame==200){g_mod_probe_draws_on=g_ec_gpu.override_submitted_draws;g_mod_probe_on_ok=g_ec_gpu.override_enabled&&mod_enabled_file()&&g_mod_probe_draws_on>0;}
+    if(frame==300){
+        g_mod_probe_off_ok=!g_ec_gpu.override_enabled&&!mod_enabled_file()&&g_ec_gpu.override_submitted_draws==0;
+        char note[200];snprintf(note,sizeof(note),"%s startOff draws=%lu, after press1 enabled+file+draws=%d (%lu override draws), after press2 off+no file+0 draws=%d",
+            g_mod_probe_on_ok&&g_mod_probe_off_ok&&g_mod_probe_draws_off==0?"PASS":"FAIL",(unsigned long)g_mod_probe_draws_off,
+            g_mod_probe_on_ok,(unsigned long)g_mod_probe_draws_on,g_mod_probe_off_ok);
+        boot_log("MOD_TOGGLE_PROBE",note);g_mod_toggle_probe=2;
+    }
+}
 static int g_bgm_started;static void start_stage_bgm(void);
 static int ec_change_act(uint32_t act){
     uint64_t load_start=osGetTime();
@@ -3143,6 +3166,7 @@ int main(void) {
     while (aptMainLoop()) {
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
+        if(g_emerald_coast)mod_toggle_probe_input(g_rendered_frames,&down,&held);
         if(g_game_over_exit)break;
         if(g_emerald_coast&&(g_stage_restart.state==18||g_stage_restart.state==19)&&!(held&KEY_SELECT)){
             if(down&KEY_A)g_game_over_pressed|=4;
@@ -3577,6 +3601,7 @@ int main(void) {
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;
         sa3ds_bgm_update();
+        if(g_emerald_coast)mod_toggle_probe_frame(g_rendered_frames);
         if(g_rendered_frames==600&&g_bgm_started){SA3DSBgmStats b;sa3ds_bgm_stats(&b);char note[140];
             snprintf(note,sizeof(note),"600 frames: ready=%d playing=%d adxFrames=%lu sample=%lu loops=%lu underruns=%lu",b.ready,b.playing,
                 (unsigned long)b.frames,(unsigned long)b.sample,(unsigned long)b.loops,(unsigned long)b.underruns);boot_log("BGM",note);

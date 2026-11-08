@@ -1,3 +1,15 @@
+# WCA94 — CP9 in-game mod toggle verified in Azahar
+
+`emerald_coast_mod_toggle_probe.flag` injects SELECT held + D-pad Up down
+right after hidScanInput at frames 120 and 240, so the press runs the same
+`modifier && (down&KEY_DUP)` branch as a real button. Azahar: PASS — start
+off with 0 override draws; press 1 enabled the replacement (texture 0,
+65536 bytes, 3 override draws that frame) and wrote mods/emerald_coast.enabled;
+press 2 restored the originals, removed the flag, 0 override draws. A
+physical button press and hardware were not exercised.
+
+---
+
 # WCA93 — ring, jump, spring and dash-panel sounds
 
 Original ids traced in the exe and wired to the native events: ring pickup
