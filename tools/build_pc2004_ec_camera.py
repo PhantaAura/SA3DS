@@ -32,6 +32,12 @@ SPANS={ #decoded camera code (mode4, region drivers and pushes)
  (0x4629a0,407):'dc78759b2f8d34bdc04466413758e038e82c6d5c433cbc275d04d6afd3aac02d',
  (0x436c60,101):'ebf5cd605cc65e6eeaaaa0ccaf695d32ce0933e3835fe60a30c78c25d1decef6',
  (0x436690,96):'51477f3f553f94684ef684d8e3a1fe09319a8f872fa11db77623653a538d0f67',
+ #adjust 469D10, its helpers 4683C0..4687F6, the 0x7E0888 table, 462CF0, 4383B0
+ (0x469d10,380):'cc9095b9cfab762258d1b09bb43a376d716157b74421258f996c9ebb6ad78f44',
+ (0x4683c0,1072):'1003b556c3369acfc477df14c7fc7f331867a6a71f7e359b22685c57aff99752',
+ (0x7e0888,252):'73b97cbf3d1581669803b8d331ec4cf39f2b959f50d32dc48216d79bb5eab4df',
+ (0x462cf0,403):'466df79984466cf1750d1d97f9f5a5f395241ee5fb4d58485e683d05b36dd1a8',
+ (0x4383b0,19):'06ee468f7aed3a01c0a6c7e51e3b0e129570fbb3def05f438293a7c6bc552f5c',
 }
 def build(exe,system):
  r=verified_reader(exe)
@@ -67,4 +73,4 @@ if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);ap.add_argument('system',type=Path);ap.add_argument('output',type=Path);a=ap.parse_args()
  if a.output.resolve().is_relative_to(ROOT):raise ValueError('owner output must remain outside source tree')
  data,rows=build(a.exe,a.system);a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_bytes(data)
- print(f'EC camera owner package: PASS 22 code spans,77 modes+apply,28 adjusts (flags 2/4, adjust0 no-op) (prio4 3/7/11/15/19/61/64/72/76),zero gate plane,rows {rows}; {len(data)}B SHA256 {hashlib.sha256(data).hexdigest()}')
+ print(f'EC camera owner package: PASS 27 code spans,77 modes+apply,28 adjusts (flags 2/4, adjust0 no-op) (prio4 3/7/11/15/19/61/64/72/76),zero gate plane,rows {rows}; {len(data)}B SHA256 {hashlib.sha256(data).hexdigest()}')

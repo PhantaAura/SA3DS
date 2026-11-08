@@ -1,3 +1,22 @@
+# WCA90 — camera transition blends (adjust 469D10)
+
+`cam_adjust.[ch]` ports adjusts 6..26 (469D10), run after the mode and
+435C70 like 437A20 with the previous Camera_Data1 as "old": table 0x7E0888
+{ray flag, duration 60/180/600/1800/3600/30000, frame split}; t =
+counter/duration; position blend 4684E0 (idx<=15: (new-old)+(old-player)
+*(1-t)*0.2, scaled by t and by counter/frames before the split) or 468650
+(idx>=16: old offset from the previous player position eased to the new
+offset); rotations eased by |d|*t (4686F0) and clamped to the old camera's
+look-at angles within limits growing to 0x1C71/0xE38 (468790); odd entries
+run 462CF0. t>=1 ends it (adjust 0, or 0xB in mode 0x4C). The native view
+now comes from Camera_Data1 position + angles (435600) so blended angles
+show. Checks: host suite PASS (adjust cases), owner gate PASS (27 spans),
+native build PASS, Azahar camera probe PASS (300 blended frames, 0
+unported, eye 41.7..64.4), whale probe PASS (unchanged chase). Not done:
+adjusts 1-5/27, mode16 and rarer modes, idle and free camera, hardware.
+
+---
+
 # WCA89 — whale chase under the original camera
 
 Traced the whale's camera calls: 5029F0's only one is 4348A0(0) (free camera

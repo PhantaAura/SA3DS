@@ -222,3 +222,6 @@ sh tests/run_cam_mode4.sh
 
 printf '\n== Original CAM mode selector ==\n'
 sh tests/run_cam_select.sh
+
+printf '\n== Original camera adjust blend ==\n'
+sh tests/run_cam_adjust.sh
