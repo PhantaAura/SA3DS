@@ -70,6 +70,7 @@
 #include "../../src/sa1/physics/steam_flat.h"
 #include "../../src/game/cam_mode4.h"
 #include "../../src/game/cam_trigger.h"
+#include "../../src/game/cam_select.h"
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
@@ -2535,13 +2536,18 @@ static void tick_whale_probe(void){
 static unsigned g_box_probe_ticks;static float g_box_probe_max_x,g_box_probe_limit;
 static int g_box_probe_cube;
 /*Owner CAM rows (CAM010xS) and mode priorities for the 437E90/437F20 pushes.*/
-static SA3DSCamRecord g_cam_records[3][256];static uint32_t g_cam_record_count[3];static uint8_t g_cam_priority[256];
+static SA3DSCamRecord g_cam_records[3][256];static uint32_t g_cam_record_count[3];static uint8_t g_cam_priority[256],g_cam_apply[256],g_cam_adjust_flag[256];
+static SA3DSCamSelect g_cam_select;static unsigned g_cam_select_changes,g_cam_select_unported;
 static int g_cam_regions_ready;static unsigned g_cam_region_pushes,g_cam_gate_reverts;
 static void load_camera_regions(void){
     uint8_t*bytes=NULL;size_t size=0;SA3DSPak pak;SA3DSPakChunk c;g_cam_regions_ready=0;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_camera.sa3dspak",&bytes,&size)||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||
        sa3dspak_find(&pak,"CAMPRIO",&c)!=SA3DSPAK_OK||c.flags||c.size!=256)goto fail;
     memcpy(g_cam_priority,c.data,256);
+    if(sa3dspak_find(&pak,"CAMMODE",&c)!=SA3DSPAK_OK||c.flags||c.size!=256)goto fail;
+    memcpy(g_cam_apply,c.data,256);
+    if(sa3dspak_find(&pak,"CAMADJF",&c)!=SA3DSPAK_OK||c.flags||c.size!=256)goto fail;
+    memcpy(g_cam_adjust_flag,c.data,256);
     for(unsigned a=0;a<3;a++){
         char key[16];snprintf(key,sizeof(key),"CAMACT%u",a);
         if(sa3dspak_find(&pak,key,&c)!=SA3DSPAK_OK||c.flags||
@@ -2555,6 +2561,22 @@ fail:sa3ds_free_file(bytes);memset(g_cam_record_count,0,sizeof(g_cam_record_coun
     boot_log("CAMERA","Owner ec_camera package unavailable; CAM region pushes off");
 }
 static double cam4_sine(void*context,uint16_t angle){(void)context;return spring_source_sin(&g_rings,angle);}
+/*437FB0 before the mode runs. Only mode4-7 (469590) is ported: other
+ *selections are counted and mode4 keeps executing.*/
+static void camera_select_tick(int reseed){
+    if(!g_cam_regions_ready||g_ec_act_index>2)return;
+    SA3DSCamTables t={g_cam_priority,g_cam_apply,g_cam_adjust_flag};
+    if(reseed)sa3ds_cam_select_init(&g_cam_select,&t,4,0); /*stage init 4345C0(4) -> 436040(4,0)*/
+    SA1Vec3 o=sa3ds_ec_task_origin(&g_player);float cur[3]={o.x,o.y,o.z},h1[3],h2[3];
+    if(!sa3ds_player_position_history_read(&g_player_position_history,1,h1))memcpy(h1,cur,12);
+    if(!sa3ds_player_position_history_read(&g_player_position_history,2,h2))memcpy(h2,cur,12);
+    g_cam_select.changed=0;g_cam_select.reset_frames=0;
+    if(!sa3ds_cam_select_update(&g_cam_select,&t,g_cam_records[g_ec_act_index],g_cam_record_count[g_ec_act_index],0,cur,h1,h2,cam4_sine,NULL))return;
+    if(g_cam_select.changed)g_cam_select_changes++;
+    int ported=g_cam_select.mode>=4&&g_cam_select.mode<=7;
+    if(!ported)g_cam_select_unported++;
+    else if(g_cam_select.reset_frames)g_cam4_frames=0; /*435F50/436140 clear 03B2CAEC*/
+}
 static void cam4_regions(void*context,float eye[3],const float previous[3]){
     (void)context;if(!g_cam_regions_ready||g_ec_act_index>2)return;unsigned reverts=0;
     g_cam_region_pushes+=(unsigned)sa3ds_cam_regions_apply(g_cam_records[g_ec_act_index],g_cam_record_count[g_ec_act_index],
@@ -2579,7 +2601,8 @@ static void camera_update(int turn_left,int turn_right){
         camera_legacy_view();memset(&g_cam4,0,sizeof g_cam4);
         memcpy(g_cam4.param.eye,g_cam_eye,12);memcpy(g_cam4.position,g_cam_eye,12);
         g_cam4.param.roll=0x68c;g_cam4.rot_x=0xf1c8;g_cam4_frames=0;g_cam4_active=1;
-    }
+        camera_select_tick(1);
+    }else camera_select_tick(0);
     if(g_cam_probe_turn)turn_left=1;
     SA3DSCamInput in={{p[0],p[1],p[2]},{g_player.vel.x,g_player.vel.y,g_player.vel.z},
         SA1_STEAM_SONIC_PARAMETER_EVIDENCE.eyes_height,g_cam4_frames,(uint8_t)(turn_left?1:0),(uint8_t)(turn_right?1:0),0};
@@ -2684,8 +2707,8 @@ static void tick_camera_probe(void){
     if(t==330){float y=g_camera.yaw-g_camera_probe_yaw0;while(y>3.14159265f)y-=6.2831853f;while(y< -3.14159265f)y+=6.2831853f;g_camera_probe_turned=y;}
     if(t<360)return;
     int pass=g_camera_probe_active>=355&&!g_camera_probe_bad&&g_camera_probe_min>=15.f&&g_camera_probe_max<=95.f&&fabsf(g_camera_probe_turned)>.05f;
-    char note[220];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u regions=%u/%lu turnYaw=%.3f bad=%u; no retail trace comparison",
-        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_cam_region_pushes,(unsigned long)g_cam_record_count[0],g_camera_probe_turned,g_camera_probe_bad);
+    char note[300];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u regions=%u/%lu camSel=%u/%u mode=%u turnYaw=%.3f bad=%u; no retail trace comparison",
+        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_cam_region_pushes,(unsigned long)g_cam_record_count[0],g_cam_select_changes,g_cam_select_unported,g_cam_select.mode,g_camera_probe_turned,g_camera_probe_bad);
     boot_log("CAMERA_PROBE",note);g_camera_probe=0;g_cam_probe_turn=0;g_paused=1;
 }
 static void tick_box_probe(void){

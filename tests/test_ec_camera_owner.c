@@ -1,3 +1,4 @@
+#include "cam_select.h"
 #include "cam_trigger.h"
 #include "sa3dspak.h"
 #include <assert.h>
@@ -36,6 +37,23 @@ int main(int argc,char**argv){
   uint8_t p[256];memcpy(p,prio.data,256);float far[3]={1e6f,1e6f,1e6f},old[3]={1e6f,1e6f,1e6f};unsigned reverts;
   assert(sa3ds_cam_regions_apply(r,count,p,old,far,sine,NULL,&reverts)==0&&far[0]==1e6f);
  }
+ /*437FB0 selector over act0: stand at each non-region record's center.*/
+ SA3DSPakChunk modes,adjf;assert(sa3dspak_find(&pak,"CAMMODE",&modes)==SA3DSPAK_OK&&modes.size==256&&sa3dspak_find(&pak,"CAMADJF",&adjf)==SA3DSPAK_OK&&adjf.size==256);
+ assert(modes.data[4]==2&&adjf.data[2]&&adjf.data[4]&&!adjf.data[0]);
+ SA3DSCamTables tab={prio.data,modes.data,adjf.data};
+ assert(sa3dspak_find(&pak,"CAMACT0",&rows)==SA3DSPAK_OK);static SA3DSCamRecord a0[256];uint32_t c0=0;
+ assert(sa3ds_cam_records_decode(a0,256,rows.data,(size_t)rows.size,&c0));
+ SA3DSCamSelect sel;sa3ds_cam_select_init(&sel,&tab,4,0);unsigned changes=0,seen[256]={0},distinct=0;
+ for(uint32_t i=1;i<c0;i++){
+  if(prio.data[a0[i].mode]==4||a0[i].shape==1)continue;
+  float p[3]={a0[i].center[0],a0[i].center[1]-4.f,a0[i].center[2]};
+  for(unsigned k=0;k<3;k++){sel.changed=0;assert(sa3ds_cam_select_update(&sel,&tab,a0,c0,0,p,p,p,sine,NULL));changes+=sel.changed;}
+  assert(sel.record!=0&&sel.priority>=0&&sel.priority<4);
+  if(!seen[sel.mode]++)distinct++;
+ }
+ float far2[3]={1e6f,1e6f,1e6f};assert(sa3ds_cam_select_update(&sel,&tab,a0,c0,0,far2,far2,far2,sine,NULL));
+ assert(changes>0&&distinct>=3&&sel.priority==0);
+ printf("EC camera selector owner walk: PASS %u state changes, %u distinct modes, far point returns to priority0 mode %u\n",changes,distinct,sel.mode);
  printf("EC camera owner package: PASS CAMPRIO 256, act rows 96/133/1, priority-4 regions 23/49/0, %u sphere and %u box pushes onto their surfaces, %u gates, far eye untouched\n",spheres,boxes,gates);
  free(b);
 }

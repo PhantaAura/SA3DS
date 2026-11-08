@@ -1,3 +1,27 @@
+# WCA86 — CAM mode selector (437FB0) and the adjust step
+
+Ported the stage CAM selector as `cam_select.[ch]`: a per-priority camera
+stack walked over records count-1..1 (record0 never); 437750 enters at
+priority0 (and never leaves there), 4377A0 enters/replaces (higher
+sub-priority leaves then enters)/leaves at priorities1/3 (a gate record
+leaves at once), 437900 pops (436140) and enters at priority2 and lets a
+priority-4 gate retarget the return state's mode/adjust. 435DE0/435F50 keep
+the original adjust rule (record adjust only when a sub-priority is <10) and
+the "record -1" sub-priority read from CAM header byte1. Idle camera 4374C0
+(modes 64/76) is not ported.
+Adjust step: default mode4 uses adjust0 = 467D80, which computes the camera
+move distance and discards it (no-op); 466B60 only switches to adjust17 from
+adjust types 1-5/8-15/18-26, so the default camera has no adjust behaviour.
+`ec_camera.sa3dspak` now also carries CAMMODE (mode +5 apply bytes) and
+CAMADJF (28 adjusts, flags only 2/4); builder checks 16 code spans.
+Native runs the selector before mode4 each tick. Checks: host suite PASS,
+owner walk PASS (71 state changes, 12 distinct modes over act0 records),
+native build PASS, Azahar camera probe PASS: selector changed state 3 times
+near the act start and selects mode21 (46A350), which is not ported, so mode4
+still executes there. Next: modes 20/21, 31, 39, 16 and adjusts 18-21.
+
+---
+
 # WCA85 — CAM region pushes (437E90/437F20) on the native camera
 
 Decoded and ported the priority-4 region pushes the mode4 camera applies to

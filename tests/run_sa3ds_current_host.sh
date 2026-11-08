@@ -219,3 +219,6 @@ sh tests/run_pc2004_sphere_sweep.sh
 
 printf '\n== Original camera mode4 follow + apply ==\n'
 sh tests/run_cam_mode4.sh
+
+printf '\n== Original CAM mode selector ==\n'
+sh tests/run_cam_select.sh
