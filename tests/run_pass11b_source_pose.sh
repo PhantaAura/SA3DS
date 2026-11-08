@@ -95,3 +95,6 @@ PIER_PACKAGE="$tmp/ec_pier.sa3dspak" EC_COLLISION_PACKAGE="$tmp/emerald_coast_co
 
 python3 tools/build_pc2004_ec_ccube.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_ccube.sa3dspak"
 CCUBE_PACKAGE="$tmp/ec_ccube.sa3dspak" sh tests/run_ec_ccube_owner.sh
+
+python3 tools/build_pc2004_ec_camera.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_camera.sa3dspak"
+CAMERA_PACKAGE="$tmp/ec_camera.sa3dspak" sh tests/run_ec_camera_owner.sh

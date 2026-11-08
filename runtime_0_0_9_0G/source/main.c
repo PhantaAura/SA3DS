@@ -69,6 +69,7 @@
 #include "../../src/sa1/physics/physics_constants.h"
 #include "../../src/sa1/physics/steam_flat.h"
 #include "../../src/game/cam_mode4.h"
+#include "../../src/game/cam_trigger.h"
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
@@ -2533,7 +2534,33 @@ static void tick_whale_probe(void){
  *Velocity injection stands in for input; only the CCL response is tested.*/
 static unsigned g_box_probe_ticks;static float g_box_probe_max_x,g_box_probe_limit;
 static int g_box_probe_cube;
+/*Owner CAM rows (CAM010xS) and mode priorities for the 437E90/437F20 pushes.*/
+static SA3DSCamRecord g_cam_records[3][256];static uint32_t g_cam_record_count[3];static uint8_t g_cam_priority[256];
+static int g_cam_regions_ready;static unsigned g_cam_region_pushes,g_cam_gate_reverts;
+static void load_camera_regions(void){
+    uint8_t*bytes=NULL;size_t size=0;SA3DSPak pak;SA3DSPakChunk c;g_cam_regions_ready=0;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_camera.sa3dspak",&bytes,&size)||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||
+       sa3dspak_find(&pak,"CAMPRIO",&c)!=SA3DSPAK_OK||c.flags||c.size!=256)goto fail;
+    memcpy(g_cam_priority,c.data,256);
+    for(unsigned a=0;a<3;a++){
+        char key[16];snprintf(key,sizeof(key),"CAMACT%u",a);
+        if(sa3dspak_find(&pak,key,&c)!=SA3DSPAK_OK||c.flags||
+           !sa3ds_cam_records_decode(g_cam_records[a],256,c.data,(size_t)c.size,&g_cam_record_count[a]))goto fail;
+    }
+    sa3ds_free_file(bytes);g_cam_regions_ready=1;
+    char note[120];snprintf(note,sizeof(note),"Owner CAM rows %lu/%lu/%lu and mode priorities loaded; priority-4 region pushes active",
+        (unsigned long)g_cam_record_count[0],(unsigned long)g_cam_record_count[1],(unsigned long)g_cam_record_count[2]);
+    boot_log("CAMERA",note);return;
+fail:sa3ds_free_file(bytes);memset(g_cam_record_count,0,sizeof(g_cam_record_count));
+    boot_log("CAMERA","Owner ec_camera package unavailable; CAM region pushes off");
+}
 static double cam4_sine(void*context,uint16_t angle){(void)context;return spring_source_sin(&g_rings,angle);}
+static void cam4_regions(void*context,float eye[3],const float previous[3]){
+    (void)context;if(!g_cam_regions_ready||g_ec_act_index>2)return;unsigned reverts=0;
+    g_cam_region_pushes+=(unsigned)sa3ds_cam_regions_apply(g_cam_records[g_ec_act_index],g_cam_record_count[g_ec_act_index],
+        g_cam_priority,previous,eye,cam4_sine,NULL,&reverts);
+    g_cam_gate_reverts+=reverts; /*436560(0) adjust reset: adjust table not ported*/
+}
 static int cam4_ray(void*context,float start[3],float delta[3],float radius){
     (void)context;int hit=sa3ds_ec_collision_camera_ray(&g_ec_collision,start,delta,radius);if(hit)g_cam4_hits++;return hit;
 }
@@ -2556,7 +2583,7 @@ static void camera_update(int turn_left,int turn_right){
     if(g_cam_probe_turn)turn_left=1;
     SA3DSCamInput in={{p[0],p[1],p[2]},{g_player.vel.x,g_player.vel.y,g_player.vel.z},
         SA1_STEAM_SONIC_PARAMETER_EVIDENCE.eyes_height,g_cam4_frames,(uint8_t)(turn_left?1:0),(uint8_t)(turn_right?1:0),0};
-    SA3DSCamServices sv={NULL,cam4_sine,cam4_ray,NULL};
+    SA3DSCamServices sv={NULL,cam4_sine,cam4_ray,cam4_regions};
     if(!sa3ds_cam_mode4_update(&g_cam4,&in,&sv)){g_cam4_active=0;camera_legacy_view();return;}
     g_cam4_frames++;
     memcpy(g_cam_eye,g_cam4.position,12);memcpy(g_cam_target,g_cam4.param.target,12);
@@ -2615,13 +2642,38 @@ static void begin_box_probe(void){
  *distance bands (20..90 plus the 30-unit overhead push).*/
 static int g_camera_probe;static unsigned g_camera_probe_ticks,g_camera_probe_active,g_camera_probe_bad;
 static float g_camera_probe_min=1e9f,g_camera_probe_max=0,g_camera_probe_yaw0,g_camera_probe_turned;
+static int g_camera_probe_region;
 static void begin_camera_probe(void){
-    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_camera_probe.flag","rb");if(!f)return;fclose(f);
-    g_camera_probe=1;g_camera_probe_ticks=0;boot_log("CAMERA_PROBE","BEGIN: original mode4 follow camera, forward drive then held manual turn");
+    FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_camera_probe.flag","rb");if(!f)return;int mode=fgetc(f);fclose(f);
+    g_camera_probe=1;g_camera_probe_ticks=0;g_camera_probe_region=mode=='R';
+    if(g_camera_probe_region){boot_log("CAMERA_PROBE","BEGIN: region mode, Sonic placed inside act0 CAM row22 box on tick1");return;}
+    boot_log("CAMERA_PROBE","BEGIN: original mode4 follow camera, forward drive then held manual turn");
 }
 static void tick_camera_probe(void){
     if(!g_camera_probe)return;
     unsigned t=g_camera_probe_ticks++;
+    if(g_camera_probe_region){
+        if(t==1){
+            /*Act0 CAM row22: mode61 box at (-230,10,-25), rotY 0x0FA0, half (441,130,60).*/
+            /*Walk from the act start toward the box's local z=0 line and keep
+             *the farthest point that still has imported ground.*/
+            float x=g_player.pos.x,z=g_player.pos.z,h=0,bx=x,bz=z,bh=-1e9f;
+            for(int k=0;k<=24;k++){
+                float cx=x-0.37f*5.f*k,cz=z-0.93f*5.f*k,ch=0;
+                if(sa3ds_ec_collision_floor_below(&g_ec_collision,cx,g_player.pos.y+40.f,cz,&ch)&&ch>-1000.f){bx=cx;bz=cz;bh=ch;}
+            }
+            x=bx;z=bz;h=bh;
+            if(h<-1000.f){boot_log("CAMERA_PROBE","FAIL: region probe found no ground");g_camera_probe=0;g_paused=1;return;}
+            g_player.pos=(SA1Vec3){x,h+1.f,z};g_player.vel=(SA1Vec3){0};g_player.grounded=false;g_cam4_active=0;g_cam_region_pushes=0;
+            char pn[120];snprintf(pn,sizeof(pn),"placed at %.2f,%.2f,%.2f floor=%.2f",x,h+1.f,z,h);boot_log("CAMERA_PROBE",pn);
+        }
+        if(t==60){char pn[120];snprintf(pn,sizeof(pn),"t60 player=%.2f,%.2f,%.2f pushes=%u",g_player.pos.x,g_player.pos.y,g_player.pos.z,g_cam_region_pushes);boot_log("CAMERA_PROBE",pn);}
+        if(t<150)return;
+        int pass=g_cam4_active&&g_cam_region_pushes>0&&isfinite(g_cam_eye[0]);
+        char rn[200];snprintf(rn,sizeof(rn),"%s region mode: pushes=%u eye=%.2f,%.2f,%.2f player=%.2f,%.2f,%.2f",pass?"PASS":"FAIL",
+            g_cam_region_pushes,g_cam_eye[0],g_cam_eye[1],g_cam_eye[2],g_player.pos.x,g_player.pos.y,g_player.pos.z);
+        boot_log("CAMERA_PROBE",rn);g_camera_probe=0;g_paused=1;return;
+    }
     if(t>=30&&t<210&&g_player.grounded){g_player.vel.x=sinf(g_camera.yaw)*2.f;g_player.vel.z=cosf(g_camera.yaw)*2.f;}
     g_cam_probe_turn=t>=240&&t<330;if(t==240)g_camera_probe_yaw0=g_camera.yaw;
     if(g_cam4_active){
@@ -2632,8 +2684,8 @@ static void tick_camera_probe(void){
     if(t==330){float y=g_camera.yaw-g_camera_probe_yaw0;while(y>3.14159265f)y-=6.2831853f;while(y< -3.14159265f)y+=6.2831853f;g_camera_probe_turned=y;}
     if(t<360)return;
     int pass=g_camera_probe_active>=355&&!g_camera_probe_bad&&g_camera_probe_min>=15.f&&g_camera_probe_max<=95.f&&fabsf(g_camera_probe_turned)>.05f;
-    char note[220];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u turnYaw=%.3f bad=%u; no retail trace comparison",
-        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_camera_probe_turned,g_camera_probe_bad);
+    char note[220];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u regions=%u/%lu turnYaw=%.3f bad=%u; no retail trace comparison",
+        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_cam_region_pushes,(unsigned long)g_cam_record_count[0],g_camera_probe_turned,g_camera_probe_bad);
     boot_log("CAMERA_PROBE",note);g_camera_probe=0;g_cam_probe_turn=0;g_paused=1;
 }
 static void tick_box_probe(void){
@@ -2713,6 +2765,7 @@ static int init_scene(void) {
         load_whale();
         load_piers();
         load_cubes();
+        load_camera_regions();
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_scatter.sa3dspak",&g_scatter_bytes,&g_scatter_size)||
            !sa3ds_ring_scatter_assets_open(&g_scatter_assets,g_scatter_bytes,g_scatter_size)){
             sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;memset(&g_scatter_assets,0,sizeof(g_scatter_assets));

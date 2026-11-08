@@ -1,3 +1,25 @@
+# WCA85 — CAM region pushes (437E90/437F20) on the native camera
+
+Decoded and ported the priority-4 region pushes the mode4 camera applies to
+its eye: sphere 4367B0 (|eye-center|^2 < +1C strict -> center + unit*+14),
+box 436AD0 (inclusive local box; smallest-gap axis, ties x then y, set to
++-extent with 0 -> negative), gate 436850 (inside sqrt(x^2+y^2), not moving
+toward the +24 point, old->eye straddling local z=0 -> eye = old, 436560(0)).
+The gate's plane global 915440 is never written (BSS zero), so its 788640 hit
+is NaN and the rectangle test always passes; ported as shipped. Drivers walk
+records count-1..1 (record0 skipped), boxes/spheres first, gates second.
+Mode priorities (77 modes; priority4 = 3/7/11/15/19/61/64/72/76) come from the
+owner exe via new `tools/build_pc2004_ec_camera.py` -> `ec_camera.sa3dspak`
+(CAMPRIO + CAMACT0..2 = CAM010xS rows; EC act0 has 23 region rows, act1 49,
+no priority-4 gates). Native loads it and feeds `cam4_regions`.
+Checks: host suite PASS (region cases in test_cam_trigger), owner gate PASS
+(35 sphere / 37 box owner rows push onto their surfaces), native build PASS,
+Azahar region probe (`emerald_coast_camera_probe.flag` = `R`, Sonic beside
+act0 row22 box): PASS 4 pushes. Not done: adjust table/436560, modes 8-11,
+whale scripted camera, hardware, retail trace.
+
+---
+
 # WCA84 — original follow camera drives Emerald Coast
 
 Native EC play now runs mode4 (469590 -> 435C70) every tick after the player
