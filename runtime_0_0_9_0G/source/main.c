@@ -73,6 +73,7 @@
 #include "../../src/game/cam_select.h"
 #include "../../src/game/cam_adjust.h"
 #include "bgm_player.h"
+#include "se_player.h"
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
@@ -1542,7 +1543,7 @@ static int tick_saru(void){
         s->queued=out.enqueue_collision;
         s->display=out.display;
         if(g_saru_probe&&s->actor.action<32)g_saru_probe_actions|=1u<<s->actor.action;
-        g_saru_projectiles+=out.projectile;g_saru_sounds+=out.sound_count;g_saru_dust+=out.dust_bursts;
+        g_saru_projectiles+=out.projectile;g_saru_sounds+=out.sound_count;for(unsigned k=0;k<out.sound_count;k++)sa3ds_se_play(out.sound_ids[k]);g_saru_dust+=out.dust_bursts;
         /* Requests remain observable counters until their source executors are
          * connected. No substitute bomb, death fragment or animal is spawned. */
     }
@@ -1665,7 +1666,7 @@ static int tick_checkpoints(void){
                 g_restart_record.task_position.x,g_restart_record.task_position.y,g_restart_record.task_position.z,
                 g_restart_record.minutes,g_restart_record.seconds,g_restart_record.frames,spin);boot_log("CHECKPOINT_SAVE",note);
         }
-        g_checkpoint_sounds+=s->draw.play_sound;g_checkpoint_effects+=s->draw.emit_effect;g_checkpoint_time_draws+=s->draw.display_time;
+        g_checkpoint_sounds+=s->draw.play_sound;if(s->draw.play_sound)sa3ds_se_play(s->draw.sound_id);g_checkpoint_effects+=s->draw.emit_effect;g_checkpoint_time_draws+=s->draw.display_time;
         if(s->draw.initialize||s->draw.sync_children)g_checkpoint_child_sync_requests+=2; /*source child callback51F680 is RET; no land collision executor*/
     }
     return 1;
@@ -1855,7 +1856,7 @@ static void whale_wave(void*context,float x,float z,float zero,float scale,float
 static void whale_effects(void*context,const SA3DSWhaleMotionResult*r,const float previous_tip[3]){
     (void)context;(void)previous_tip;
     g_whale_splashes+=r->surface_splash+r->cycle_splash;g_whale_rumbles+=r->rumble;
-    g_whale_sounds+=r->sound2f;g_whale_free_camera+=r->allow_free_camera;
+    g_whale_sounds+=r->sound2f;if(r->sound2f)sa3ds_se_play(0x2f);g_whale_free_camera+=r->allow_free_camera;
 }
 static void whale_camera_disable(void*context){(void)context;g_whale_camera_disables++;}
 static void whale_rumble_stop(void*context){(void)context;} /*RumbleA(0,0): no 3DS rumble device*/
@@ -2555,6 +2556,7 @@ static void start_stage_bgm(void){
     if(!sa3ds_bgm_init()){if(!g_bgm_started)boot_log("BGM","ndsp unavailable (no DSP component); silent");g_bgm_started=1;return;}
     char path[96];snprintf(path,sizeof(path),"sdmc:/3ds/SA3DS/assets/bgm/ecoast%lu.adx",(unsigned long)g_ec_act_index+1);
     int ok=sa3ds_bgm_play(path);g_bgm_started=1;
+    {static int se_tried;if(!se_tried){se_tried=1;boot_log("SE",sa3ds_se_init("sdmc:/3ds/SA3DS/assets/se")?"Owner SE banks loaded (COMMON/EC01/CHECK/ENEMY/EC05/SONIC)":"Owner SE banks unavailable; effects silent");}}
     char note[140];snprintf(note,sizeof(note),"%s %s",ok?"Streaming owner ADX":"Owner ADX missing/invalid, silent:",path);boot_log("BGM",note);
 }
 static void load_camera_regions(void){
@@ -3289,6 +3291,7 @@ int main(void) {
                 if(requests.accepted){
                     g_spring_pending.valid=0;g_player_damage_requests=requests;
                     g_hurt_events++;g_hurt_scatter_requests+=requests.scatter_count;spawn_scatter(&requests);
+                    for(unsigned k=0;k<requests.sound_count;k++)sa3ds_se_play(requests.sound_ids[k]);
                     char note[200];snprintf(note,sizeof(note),"tick=%llu action=%u timer=%u rings=%d scatterRequested=%u soundsPending=%u deathPending=%u",
                         (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,g_player.pc2004_hurt_timer,
                         g_rings.rings,requests.scatter_count,requests.sound_count,requests.death_requested);boot_log("PLAYER_DAMAGE",note);
@@ -3571,7 +3574,8 @@ int main(void) {
         sa3ds_bgm_update();
         if(g_rendered_frames==600&&g_bgm_started){SA3DSBgmStats b;sa3ds_bgm_stats(&b);char note[140];
             snprintf(note,sizeof(note),"600 frames: ready=%d playing=%d adxFrames=%lu sample=%lu loops=%lu underruns=%lu",b.ready,b.playing,
-                (unsigned long)b.frames,(unsigned long)b.sample,(unsigned long)b.loops,(unsigned long)b.underruns);boot_log("BGM",note);}
+                (unsigned long)b.frames,(unsigned long)b.sample,(unsigned long)b.loops,(unsigned long)b.underruns);boot_log("BGM",note);
+            uint32_t sp,sm,stc;sa3ds_se_stats(&sp,&sm,&stc);snprintf(note,sizeof(note),"600 frames: played=%lu missing=%lu truncated=%lu",(unsigned long)sp,(unsigned long)sm,(unsigned long)stc);boot_log("SE",note);}
         if (g_boottrace_first_frame) {
             boot_log("OK","First frame rendered/submitted");
             g_boottrace_first_frame=0;
@@ -3625,7 +3629,7 @@ int main(void) {
     }
 
     cleanup();
-    sa3ds_bgm_exit();
+    sa3ds_se_exit();sa3ds_bgm_exit();
     C3D_Fini(); romfsExit(); gfxExit();
     return g_ec_transition_failed?1:0;
 }

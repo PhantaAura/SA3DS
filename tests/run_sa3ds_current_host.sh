@@ -228,3 +228,6 @@ sh tests/run_cam_adjust.sh
 
 printf '\n== CRI ADX decoder ==\n'
 sh tests/run_adx.sh
+
+printf '\n== Original SE id resolution ==\n'
+sh tests/run_se_bank.sh

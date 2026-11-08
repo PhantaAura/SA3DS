@@ -1,3 +1,25 @@
+# WCA92 — sound effects from the owner SE banks
+
+PC2004 SE banks are "archive  V2.DMZ" containers of ADX clips (22050 Hz,
+mostly mono, short v4 headers; the decoder now accepts those). Sound ids
+resolve as 425120 does: first entry of the descending 0x910090 threshold
+table below the id gives the bank slot, index = id-threshold-1, ids <=39 are
+bank0, ids >0x568 are voices (not ported); the clip is the bank entry named
+B%02d_00_%02d.wav compared from its 4th character (423AD0). Emerald Coast
+loads set0 (COMMON00, EMERALD_COAST01, CHECK_SHEET02, ENEMY_SET04,
+EMERALD_COAST05) and Sonic set1 (P_SONICTAILS03); 4246C0's second-player
+remap is not modeled. `tools/stage_pc2004_se.py` verifies those exe facts
+and copies the six banks unchanged with se_map.sa3dspak; `se_player.c`
+plays clips on ndsp channels 1-8 (decoded whole, up to 12 s). Wired requests:
+player damage, E SARU, checkpoint (id 10), whale 0x2F. Rings, springs,
+jumps and other actions do not request sounds yet.
+Checks: host suite PASS (resolver), owner gate PASS (all clips in the six
+banks decode), native build PASS, Azahar whale probe PASS with BGM + SE:
+2 whale sounds played in full, 0 missing ids, minimum linear free 20 MB.
+Audible output and hardware playback not checked.
+
+---
+
 # WCA91 — stage music: owner ADX streamed through ndsp
 
 `src/game/adx.[ch]` decodes CRI ADX encoding 3 (published format with

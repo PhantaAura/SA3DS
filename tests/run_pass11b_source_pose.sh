@@ -102,3 +102,8 @@ CAMERA_PACKAGE="$tmp/ec_camera.sa3dspak" sh tests/run_ec_camera_owner.sh
 game_root="$(dirname "$(dirname "$SONIC_PVM_PATH")")"
 python3 tools/stage_pc2004_bgm.py "$SONIC_EXE_PATH" "$game_root" "$tmp/bgm"
 BGM_DIR="$tmp/bgm" sh tests/run_adx_owner.sh
+
+python3 tools/stage_pc2004_se.py "$SONIC_EXE_PATH" "$game_root" "$tmp/se"
+cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/game tests/test_adx_owner.c src/game/adx.c -lm -o "$tmp/se_decode"
+"$tmp/se_decode" "$tmp/se/COMMON_BANK00.dat" "$tmp/se/EMERALD_COAST_BANK01.dat" "$tmp/se/CHECK_SHEET_BANK02.dat" \
+ "$tmp/se/P_SONICTAILS_BANK03.dat" "$tmp/se/ENEMY_SET_BANK04.dat" "$tmp/se/EMERALD_COAST_BANK05.dat"
