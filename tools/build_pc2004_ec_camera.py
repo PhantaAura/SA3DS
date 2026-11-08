@@ -25,6 +25,13 @@ SPANS={ #decoded camera code (mode4, region drivers and pushes)
  (0x436040,246):'83a70ac97cd60c7916e0a57947ce190531ea856168efefd30fe9559bfb1aa45c',
  (0x467d80,60):'fde050e1e4a93dccdf8aa943d7aefdee21856144cecbd877e7c0eab20326230d',
  (0x436560,39):'1c4f46fcae04f41304d120bc176b6eae3c5a46ea525a84e9335ac65964bcd3f5',
+ #modes 39/31/20, 4629A0 standing orbit, 436C60 (dead blend), 436690 still flag
+ (0x469e90,526):'02dfa96b953aa187dfae0d0e5ffa730d17bf890f9059eabd96aa860835bf69bf',
+ (0x46a0a0,685):'339a9e2c217ef3bc89f0ddc460ce61d64a63befe04707adcc6ca6001eeb9cc72',
+ (0x46a350,320):'6d6ea2d4b97b53bb8e8c5a1769561f8be68c1caca9a4660717cdb525b3d4f94c',
+ (0x4629a0,407):'dc78759b2f8d34bdc04466413758e038e82c6d5c433cbc275d04d6afd3aac02d',
+ (0x436c60,101):'ebf5cd605cc65e6eeaaaa0ccaf695d32ce0933e3835fe60a30c78c25d1decef6',
+ (0x436690,96):'51477f3f553f94684ef684d8e3a1fe09319a8f872fa11db77623653a538d0f67',
 }
 def build(exe,system):
  r=verified_reader(exe)
@@ -45,7 +52,9 @@ def build(exe,system):
   if not 0x401000<=fn<0x7db000:break
   adjf[i]=1 if f else 0;adjn+=1
  assert adjn==28 and [i for i in range(adjn) if adjf[i]]==[2,4] and struct.unpack('<I',r(0x9758e4,4))[0]==0x467d80
- assert r(0x915440,16)==bytes(16) #gate plane global is zero (BSS), see cam_trigger.h
+ assert r(0x915440,16)==bytes(16)
+ assert struct.unpack('<5f',bytes(r(0x7df1fc,4))+r(0x7dffd8,4)+r(0x7dd568,4)+r(0x7dd58c,4)+r(0x7dfff0,4))==(7.,7.5,struct.unpack('<f',struct.pack('<f',.1))[0],struct.unpack('<f',struct.pack('<f',.2))[0],struct.unpack('<f',struct.pack('<f',.9))[0])
+ assert r(0x909fb0,1)==b'\x01' #40EF60 manual camera default on #gate plane global is zero (BSS), see cam_trigger.h
  names={f'CAM010{a}S.BIN' for a in (0,1,2)}
  src={s.name:s for s in list_cam_sources(system,names)}
  chunks=[('CAMPRIO',bytes(prio),0),('CAMMODE',bytes(apply),0),('CAMADJF',bytes(adjf),0)];rows={}
@@ -58,4 +67,4 @@ if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);ap.add_argument('system',type=Path);ap.add_argument('output',type=Path);a=ap.parse_args()
  if a.output.resolve().is_relative_to(ROOT):raise ValueError('owner output must remain outside source tree')
  data,rows=build(a.exe,a.system);a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_bytes(data)
- print(f'EC camera owner package: PASS 16 code spans,77 modes+apply,28 adjusts (flags 2/4, adjust0 no-op) (prio4 3/7/11/15/19/61/64/72/76),zero gate plane,rows {rows}; {len(data)}B SHA256 {hashlib.sha256(data).hexdigest()}')
+ print(f'EC camera owner package: PASS 22 code spans,77 modes+apply,28 adjusts (flags 2/4, adjust0 no-op) (prio4 3/7/11/15/19/61/64/72/76),zero gate plane,rows {rows}; {len(data)}B SHA256 {hashlib.sha256(data).hexdigest()}')

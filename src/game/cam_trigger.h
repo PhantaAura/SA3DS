@@ -9,7 +9,8 @@
  *Every test raises the player positions by4. The broad check uses the current
  *task position; gate/box details use task-position history (4419C0) selector1
  *(and selector2 for the gate's previous point).*/
-typedef struct {uint8_t mode,priority,adjust,shape;uint16_t rot_x,rot_y;float center[3],extent[3],point[3],view[3];} SA3DSCamRecord; /*point +24..+2C, view +30..+38*/
+typedef struct {uint8_t mode,priority,adjust,shape;uint16_t rot_x,rot_y;float center[3],extent[3],point[3],view[3];
+ uint16_t word20,word22;float extent3c;} SA3DSCamRecord; /*point +24..+2C, view +30..+38*/
 int sa3ds_cam_record_decode(SA3DSCamRecord *out,const uint8_t record[64]);
 /*Decodes a CAMACTn chunk (raw 64-byte CAM rows). Returns0 for a ragged or
  *over-capacity chunk.*/

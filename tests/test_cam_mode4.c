@@ -55,6 +55,29 @@ int main(void){
  assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,1,&manual,&fs,&adj)&&!manual&&adj==0x1a);
  fi.turn_right=1;assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,0,&manual,&fs,&adj)&&!manual); /*909FB0 off*/
  manual=1;fi.turn_right=0;fi.frames_since_reset=0;assert(sa3ds_cam_mode20_update(&c,&fi,fe,1,1,&manual,&fs,&adj)&&!manual&&c.position[0]==100);
+ /*Mode39 pivot line, word20 skips the final ray; standing orbit.*/
+ SA3DSCamRecord rec;memset(&rec,0,sizeof rec);rec.point[2]=-10;rec.extent3c=40;
+ SA3DSCamExtra ex={0,0,0,0,0,0,0,1};SA3DSCamModeState st;memset(&st,0,sizeof st);
+ SA3DSCamInput mi={{0,0,0},{0,0,0},10,5,0,0,0};x.hit=1;SA3DSCamServices rs={&x,sine,ray,NULL};
+ c=cam(0,7.5f,40);rec.word20=1;assert(sa3ds_cam_mode39_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(c.param.eye[2],40)&&near(c.param.eye[1],7.5)&&near(c.param.target[1],7.5)&&adj==-1);
+ rec.word20=0;c=cam(0,7.5f,60);assert(sa3ds_cam_mode39_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(c.param.eye[2],50)); /*hit: old+delta/2*/
+ x.hit=0;
+ ex.player_still=1;ex.analog_l=255;mi.turn_left=1;c=cam(0,7.5f,40);c.param.target[1]=7.5f;memset(&st,0,sizeof st);
+ assert(sa3ds_cam_mode39_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&st.orbit==1&&st.manual39==1);
+ double ang=atan2(c.param.eye[0]-c.param.target[0],c.param.eye[2]-c.param.target[2])*65536/6.283185307179586;
+ assert(fabs(ang+371)<1.5&&near(sqrt(c.param.eye[0]*c.param.eye[0]+c.param.eye[2]*c.param.eye[2]),40));
+ /*Orbit ends when the player moves: adjust8 request.*/
+ uint8_t orb=1;ex.player_still=0;assert(!sa3ds_cam_orbit_update(&c,&mi,&ex,&orb,&rs,&adj)&&adj==8&&!orb);
+ ex.player_still=1;ex.adjust_index=3;orb=0;assert(!sa3ds_cam_orbit_update(&c,&mi,&ex,&orb,&rs,&adj)&&!orb); /*needs adjust0*/
+ ex.adjust_index=0;ex.stick_active=1;orb=1;adj=-1;assert(!sa3ds_cam_orbit_update(&c,&mi,&ex,&orb,&rs,&adj)&&adj==8);
+ ex.stick_active=0;mi.turn_left=0;ex.analog_l=0;
+ /*Mode31: H=+3C*0.5, height raise (L-d)/L*H, airborne drift.*/
+ memset(&st,0,sizeof st);mi.frames_since_reset=0;c=cam(0,20,40);ex.player_still=0;
+ assert(sa3ds_cam_mode31_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(st.height31,20)&&near(c.param.eye[2],40)&&near(c.param.eye[1],24)&&near(c.param.target[1],0));
+ mi.frames_since_reset=1;ex.airborne=1;assert(sa3ds_cam_mode31_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(st.drift31,-.2)&&near(c.param.eye[1],24.2));
+ ex.airborne=0;assert(sa3ds_cam_mode31_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(st.drift31,-.18));
+ rec.word20=150;mi.frames_since_reset=0;assert(sa3ds_cam_mode31_update(&c,&mi,&ex,&rec,&st,&rs,&adj)&&near(st.height31,15));
+ printf("Camera modes39/31 + 4629A0 orbit: PASS pivot line, word20 ray skip, final ray clip, orbit start/angle/radius/adjust8 exits/adjust0 gate, mode31 height/raise/drift/word20 height\n");
  printf("Camera mode20 (46A350): PASS fixed eye/target+7, L/R manual handoff, still-player hold, 0x1A adjust request, 909FB0 gate, frames0 reset\n");
  printf("Camera mode4 (469590) + 435C70 apply: PASS target seed/ease/look-ahead,distance bands,above-player 30 push,pitch approach,manual turn,regions hook,462B40 radius4/8 clip and 10%% turning blend,far probe\n");
 }

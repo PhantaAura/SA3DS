@@ -1,3 +1,25 @@
+# WCA88 — camera modes 39 and 31/32 and the standing orbit
+
+Mode39 (469E90): target = player+(0,7.5,0), eye = target + unit(player - CAM
+record +24 point) * record +3C; CAM region pushes; 462B40 only when record
+word +20 is 0; L/R hands off to mode4 like modes20/31. Before placing, 4629A0
+standing orbit: with no stick/face buttons and the player standing still, L/R
+(adjust 0 only) swings the eye around the target by (R-L)<<8 * -0.0056875
+BAMS; leaving it requests adjust 8. Mode31/32 (46A0A0): horizontal
+unit(player - point) * +3C, height H = word+20*0.1 or +3C*0.5 (set on frame0)
+raised by (L-d)/L*H (L = eye's horizontal distance from the point), airborne
+drift -0.2/frame when word+22==0 else *0.9, regions, 462B40. 436C60 blends
+on 03B2CBBC, which nothing in the exe sets, so it is a no-op. Mode requests
+(8, 0x1A) set the selector's adjust index like 436560; the blends themselves
+(469D10 etc.) are not ported, so mode changes cut instantly.
+Checks: host suite PASS, owner gate PASS (22 code spans + constants), native
+build PASS, Azahar camera probe PASS: every frame ran an original mode
+(mode39 186, mode31 174, unported 0), eye 41.7..66.2 from Sonic, 56 camera
+ray hits, held-L handoff. Not done: adjust blends, mode16 and other modes,
+whale scripted camera, hardware, retail trace.
+
+---
+
 # WCA87 — fixed camera modes 20-23 (46A350)
 
 `sa3ds_cam_mode20_update`: eye = CAM record +30..+38 (new `view` field),

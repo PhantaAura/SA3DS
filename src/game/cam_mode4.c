@@ -12,6 +12,19 @@ static uint16_t approach(uint32_t a,uint32_t b,int step){
  }
  return (uint16_t)ub;
 }
+/*462B40: keep the new eye unless the move from the old camera hits.*/
+static void final_ray(float eye[3],const float old[3],const float p[3],int turning,const SA3DSCamServices*sv){
+ if(!sv->ray)return;
+ float start[3];memcpy(start,old,12);
+ float delta[3]={(float)((double)eye[0]-old[0]),(float)((double)eye[1]-old[1]),(float)((double)eye[2]-old[2])};
+ float po[3]={p[0]-old[0],p[1]-old[1],p[2]-old[2]},pe[3]={p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]};
+ double lo=(float)sqrt((double)po[0]*po[0]+(double)po[1]*po[1]+(double)po[2]*po[2]);
+ double le=sqrt((double)pe[0]*pe[0]+(double)pe[1]*pe[1]+(double)pe[2]*pe[2]);
+ if(sv->ray(sv->context,start,delta,le<=lo?4.f:8.f)){
+  if(!turning)for(unsigned a=0;a<3;a++)eye[a]=delta[a]+start[a];
+  else for(unsigned a=0;a<3;a++)eye[a]=(float)(((double)eye[a]-start[a])*(double).1f+start[a]);
+ }
+}
 void sa3ds_cam_apply_look(SA3DSCamera*c){
  memcpy(c->position,c->param.eye,12);
  double dx=(float)((double)c->param.eye[0]-c->param.target[0]),dz=(float)((double)c->param.eye[2]-c->param.target[2]);
@@ -79,18 +92,7 @@ int sa3ds_cam_mode4_update(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamSe
   }
  }
  if(sv->regions)sv->regions(sv->context,eye,old);
- /*462B40: keep the new eye unless the move from the old camera hits.*/
- if(sv->ray){
-  float start[3];memcpy(start,old,12);
-  float delta[3]={(float)((double)eye[0]-old[0]),(float)((double)eye[1]-old[1]),(float)((double)eye[2]-old[2])};
-  float po[3]={p[0]-old[0],p[1]-old[1],p[2]-old[2]},pe[3]={p[0]-eye[0],p[1]-eye[1],p[2]-eye[2]};
-  double lo=(float)sqrt((double)po[0]*po[0]+(double)po[1]*po[1]+(double)po[2]*po[2]);
-  double le=sqrt((double)pe[0]*pe[0]+(double)pe[1]*pe[1]+(double)pe[2]*pe[2]);
-  if(sv->ray(sv->context,start,delta,le<=lo?4.f:8.f)){
-   if(!in->turn_left&&!in->turn_right)for(unsigned a=0;a<3;a++)eye[a]=delta[a]+start[a];
-   else for(unsigned a=0;a<3;a++)eye[a]=(float)(((double)eye[a]-start[a])*(double).1f+start[a]);
-  }
- }
+ final_ray(eye,old,p,in->turn_left||in->turn_right,sv);
  sa3ds_cam_apply_look(c); /*437A20 -> 435C70 for mode byte2*/
  return finite3(c->position);
 }
@@ -107,6 +109,90 @@ int sa3ds_cam_mode20_update(SA3DSCamera*c,const SA3DSCamInput*in,const float eye
  if((in->turn_left||in->turn_right)&&allowed)*manual=1;      /*46A42E: placement still runs*/
  memcpy(c->param.eye,eye,12);
  c->param.target[0]=in->player[0];c->param.target[1]=(float)((double)in->player[1]+7.f);c->param.target[2]=in->player[2];
+ sa3ds_cam_apply_look(c);
+ return finite3(c->position);
+}
+/*418AC0-style normalize; returns the length (zero vector left zero).*/
+static double normalize3(float v[3]){
+ double l=sqrt((double)v[0]*v[0]+(double)v[1]*v[1]+(double)v[2]*v[2]);
+ if(l!=0){for(unsigned k=0;k<3;k++)v[k]=(float)(v[k]/l);}
+ return l;
+}
+static int lr(const SA3DSCamInput*in){return in->turn_left||in->turn_right;}
+/*Shared manual tail (46A049/46A230/46A392): mode4, then release.*/
+static int manual_tail(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamExtra*x,uint8_t*manual,const SA3DSCamServices*sv,int*adjust){
+ if(!sa3ds_cam_mode4_update(c,in,sv))return 0;
+ if(!lr(in)&&!x->player_still){*manual=0;*adjust=0x1a;}
+ return 1;
+}
+int sa3ds_cam_orbit_update(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamExtra*x,uint8_t*orbit,const SA3DSCamServices*sv,int*adjust){
+ if(!x->stick_active&&!x->buttons_active&&x->player_still){
+  int start=lr(in)&&x->adjust_index==0;
+  if(start)*orbit=1;
+  if(*orbit){
+   float*e=c->param.eye,*t=c->param.target;
+   float dx=(float)((double)t[0]-e[0]),dz=(float)((double)t[2]-e[2]);
+   double h=(float)sqrt((float)((double)dz*dz+(double)dx*dx));
+   float dy=(float)((double)e[1]-t[1]);
+   int32_t a=(int32_t)(atan2(dx,dz)*65536.0*0.15915497620314795);
+   int32_t d=(int32_t)((float)(((int32_t)x->analog_r-(int32_t)x->analog_l)<<8)*-0.005687499884516001f);
+   int32_t ang=a-d+0x8000;
+   e[0]=(float)(sv->sine(sv->context,(uint16_t)ang)*h+t[0]);
+   e[1]=(float)((double)dy+t[1]);
+   e[2]=(float)(sv->sine(sv->context,(uint16_t)(ang+0x4000))*h+t[2]);
+   return 1;
+  }
+  return 0;
+ }
+ if(*orbit==1)*adjust=8;
+ *orbit=0;return 0;
+}
+int sa3ds_cam_mode39_update(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamExtra*x,const SA3DSCamRecord*r,
+ SA3DSCamModeState*st,const SA3DSCamServices*sv,int*adjust){
+ if(!c||!in||!x||!r||!st||!sv||!sv->sine||!adjust||!finite3(in->player))return 0;
+ *adjust=-1;
+ if(in->frames_since_reset==0)st->manual39=0;
+ else if(st->manual39)return manual_tail(c,in,x,&st->manual39,sv,adjust);
+ if(lr(in)&&x->manual_allowed&&!in->manual_disabled)st->manual39=1;   /*469EF7*/
+ float old[3];memcpy(old,c->position,12);
+ float*eye=c->param.eye,*tgt=c->param.target;const float*p=in->player;
+ if(!sa3ds_cam_orbit_update(c,in,x,&st->orbit,sv,adjust)){
+  tgt[0]=p[0];tgt[1]=(float)((double)p[1]+7.5f);tgt[2]=p[2];
+  float d[3]={(float)((double)p[0]-r->point[0]),(float)((double)p[1]-r->point[1]),(float)((double)p[2]-r->point[2])};
+  normalize3(d);
+  for(unsigned k=0;k<3;k++)eye[k]=(float)((double)d[k]*r->extent3c+tgt[k]);
+ }
+ if(sv->regions)sv->regions(sv->context,eye,old);
+ /*436C60: 03B2CBBC is never set in the shipped exe, so no blend.*/
+ if(r->word20==0)final_ray(eye,old,p,lr(in),sv);
+ sa3ds_cam_apply_look(c);
+ return finite3(c->position);
+}
+int sa3ds_cam_mode31_update(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamExtra*x,const SA3DSCamRecord*r,
+ SA3DSCamModeState*st,const SA3DSCamServices*sv,int*adjust){
+ if(!c||!in||!x||!r||!st||!sv||!adjust||!finite3(in->player))return 0;
+ *adjust=-1;
+ if(in->frames_since_reset==0){
+  st->height31=r->word20?(float)((float)r->word20*0.1f):(float)(r->extent3c*0.5f);
+  st->drift31=0;st->manual31=0;
+ }else if(st->manual31)return manual_tail(c,in,x,&st->manual31,sv,adjust);
+ if(lr(in)&&x->manual_allowed)st->manual31=1;                         /*46A127*/
+ float old[3];memcpy(old,c->position,12);
+ float*eye=c->param.eye,*tgt=c->param.target;const float*p=in->player;
+ memcpy(tgt,p,12);
+ float d[3]={(float)((double)p[0]-r->point[0]),0,(float)((double)p[2]-r->point[2])};
+ normalize3(d);
+ eye[0]=(float)((double)d[0]*r->extent3c+tgt[0]);
+ eye[1]=(float)((double)st->height31+tgt[1]);
+ eye[2]=(float)((double)d[2]*r->extent3c+tgt[2]);
+ if(x->airborne&&r->word22==0)st->drift31=(float)((double)st->drift31-0.2f);
+ else st->drift31=(float)((double)st->drift31*0.9f);
+ eye[1]=(float)((double)eye[1]-st->drift31);
+ float v[3]={(float)((double)eye[0]-r->point[0]),0,(float)((double)eye[2]-r->point[2])};
+ double l=normalize3(v);
+ if(l!=0)eye[1]=(float)((l-r->extent3c)/l*st->height31+eye[1]);
+ if(sv->regions)sv->regions(sv->context,eye,old);
+ final_ray(eye,old,p,lr(in),sv);
  sa3ds_cam_apply_look(c);
  return finite3(c->position);
 }

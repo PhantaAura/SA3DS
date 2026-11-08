@@ -5,15 +5,15 @@
 #include <stdio.h>
 static double sine(void*c,uint16_t a){(void)c;if(!(a&0x3fff)){const double v[]={0,1,0,-1};return v[a>>14];}return sin(a*6.2831853071795864769/65536.0);}
 static SA3DSCamRecord rec(uint8_t shape,uint16_t rx,uint16_t ry,float c0,float c1,float c2,float e0,float e1,float e2){
- SA3DSCamRecord r={7,1,0,shape,rx,ry,{c0,c1,c2},{e0,e1,e2},{0,0,0},{0,0,0}};return r;}
+ SA3DSCamRecord r={7,1,0,shape,rx,ry,{c0,c1,c2},{e0,e1,e2},{0,0,0},{0,0,0},0,0,0};return r;}
 static int in(const SA3DSCamRecord*r,float x,float y,float z,const float*h1,const float*h2){
  float c[3]={x,y,z};int v=-1;assert(sa3ds_cam_trigger_inside(r,c,h1,h2,sine,0,&v));return v;}
 static int nearf(float a,float b){return fabsf(a-b)<1e-4f;}
 static void region_cases(void){
- SA3DSCamRecord sp={61,0,0,0,0,0,{0,0,0},{10,0,100},{0,0,0},{0,0,0}};
+ SA3DSCamRecord sp={61,0,0,0,0,0,{0,0,0},{10,0,100},{0,0,0},{0,0,0},0,0,0};
  float e[3]={3,4,0};assert(sa3ds_cam_region_sphere_push(&sp,e)&&nearf(e[0],6)&&nearf(e[1],8));
  float f[3]={6,8,0};assert(!sa3ds_cam_region_sphere_push(&sp,f)); /*strict r^2*/
- SA3DSCamRecord bx={61,0,0,2,0,0,{0,0,0},{10,20,30},{0,0,0},{0,0,0}};
+ SA3DSCamRecord bx={61,0,0,2,0,0,{0,0,0},{10,20,30},{0,0,0},{0,0,0},0,0,0};
  float g[3]={8,0,0};assert(sa3ds_cam_region_box_push(&bx,g,sine,0)&&nearf(g[0],10)&&g[1]==0);
  float h[3]={0,-15,0};assert(sa3ds_cam_region_box_push(&bx,h,sine,0)&&nearf(h[1],-20));
  float t[3]={1,15,20};assert(sa3ds_cam_region_box_push(&bx,t,sine,0)&&nearf(t[0],1)&&nearf(t[1],20));
@@ -21,7 +21,7 @@ static void region_cases(void){
  float z[3]={0,0,0};assert(sa3ds_cam_region_box_push(&bx,z,sine,0)&&nearf(z[0],-10)); /*0 -> negative*/
  float o[3]={11,0,0};assert(!sa3ds_cam_region_box_push(&bx,o,sine,0));
  SA3DSCamRecord ry=bx;ry.rot_y=0x4000;float q[3]={0,0,8};assert(sa3ds_cam_region_box_push(&ry,q,sine,0)&&nearf(q[2],10)&&nearf(q[0],0));
- SA3DSCamRecord gt={61,0,0,1,0,0,{0,0,0},{30,30,0},{0,0,-100},{0,0,0}};
+ SA3DSCamRecord gt={61,0,0,1,0,0,{0,0,0},{30,30,0},{0,0,-100},{0,0,0},0,0,0};
  float old[3]={0,0,-2},eye[3]={0,0,3};assert(sa3ds_cam_region_gate_push(&gt,old,eye,sine,0)&&eye[2]==-2);
  float o2[3]={0,0,3},e2[3]={0,0,-2};assert(!sa3ds_cam_region_gate_push(&gt,o2,e2,sine,0)&&e2[2]==-2); /*toward point*/
  float o3[3]={0,0,1},e3[3]={0,0,3};assert(!sa3ds_cam_region_gate_push(&gt,o3,e3,sine,0)); /*same side*/
