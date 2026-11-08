@@ -94,3 +94,19 @@ int sa3ds_cam_mode4_update(SA3DSCamera*c,const SA3DSCamInput*in,const SA3DSCamSe
  sa3ds_cam_apply_look(c); /*437A20 -> 435C70 for mode byte2*/
  return finite3(c->position);
 }
+int sa3ds_cam_mode20_update(SA3DSCamera*c,const SA3DSCamInput*in,const float eye[3],uint8_t still,uint8_t allowed,
+ uint8_t*manual,const SA3DSCamServices*sv,int*adjust){
+ if(!c||!in||!eye||!manual||!sv||!adjust||!finite3(in->player)||!finite3(eye))return 0;
+ *adjust=-1;
+ if(in->frames_since_reset==0)*manual=0;                     /*46A363*/
+ if(*manual){
+  if(!sa3ds_cam_mode4_update(c,in,sv))return 0;              /*46A393*/
+  if(!in->turn_left&&!in->turn_right&&!still){*manual=0;*adjust=0x1a;}
+  return 1;
+ }
+ if((in->turn_left||in->turn_right)&&allowed)*manual=1;      /*46A42E: placement still runs*/
+ memcpy(c->param.eye,eye,12);
+ c->param.target[0]=in->player[0];c->param.target[1]=(float)((double)in->player[1]+7.f);c->param.target[2]=in->player[2];
+ sa3ds_cam_apply_look(c);
+ return finite3(c->position);
+}

@@ -5,8 +5,8 @@
 #include <string.h>
 static double sine(void*c,uint16_t a){(void)c;if(!(a&0x3fff)){const double v[]={0,1,0,-1};return v[a>>14];}return sin(a*6.2831853071795864769/65536.0);}
 static uint8_t prio[256],apply[256],aflag[256];
-static SA3DSCamRecord sphere(uint8_t mode,uint8_t sub,uint8_t adj,float x,float r){SA3DSCamRecord v={mode,sub,adj,0,0,0,{x,0,0},{r,0,r*r},{0,0,0}};return v;}
-static SA3DSCamRecord box(uint8_t mode,uint8_t sub,uint8_t adj,float x,float h){SA3DSCamRecord v={mode,sub,adj,2,0,0,{x,0,0},{h,h,h},{0,0,0}};return v;}
+static SA3DSCamRecord sphere(uint8_t mode,uint8_t sub,uint8_t adj,float x,float r){SA3DSCamRecord v={mode,sub,adj,0,0,0,{x,0,0},{r,0,r*r},{0,0,0},{0,0,0}};return v;}
+static SA3DSCamRecord box(uint8_t mode,uint8_t sub,uint8_t adj,float x,float h){SA3DSCamRecord v={mode,sub,adj,2,0,0,{x,0,0},{h,h,h},{0,0,0},{0,0,0}};return v;}
 static int step(SA3DSCamSelect*s,SA3DSCamTables*t,SA3DSCamRecord*r,uint32_t n,float x){
  float p[3]={x,-4,0};return sa3ds_cam_select_update(s,t,r,n,0,p,p,p,sine,0);}
 int main(void){
@@ -35,7 +35,7 @@ int main(void){
  assert(step(&s,&t,r,6,300)&&s.priority==2&&s.record==5&&s.mode==51);
  assert(s.saved[2].priority==0&&s.saved[2].mode==31);
  /*Prio4 gate at level2 retargets the return state's adjust (mode61 keeps mode).*/
- SA3DSCamRecord g[7];memcpy(g,r,sizeof r);g[6]=(SA3DSCamRecord){61,0,23,1,0,0,{300,0,0},{30,30,0},{0,0,0}};
+ SA3DSCamRecord g[7];memcpy(g,r,sizeof r);g[6]=(SA3DSCamRecord){61,0,23,1,0,0,{300,0,0},{30,30,0},{0,0,0},{0,0,0}};
  float p1[3]={300,-4,1},p2[3]={300,-4,-1};
  assert(sa3ds_cam_select_update(&s,&t,g,7,0,p1,p1,p2,sine,0)&&s.saved[2].adjust==23&&s.saved[2].mode==31&&s.mode==51);
  /*Default mode restore after a prio2 pop that returns to level0.*/

@@ -2537,7 +2537,8 @@ static unsigned g_box_probe_ticks;static float g_box_probe_max_x,g_box_probe_lim
 static int g_box_probe_cube;
 /*Owner CAM rows (CAM010xS) and mode priorities for the 437E90/437F20 pushes.*/
 static SA3DSCamRecord g_cam_records[3][256];static uint32_t g_cam_record_count[3];static uint8_t g_cam_priority[256],g_cam_apply[256],g_cam_adjust_flag[256];
-static SA3DSCamSelect g_cam_select;static unsigned g_cam_select_changes,g_cam_select_unported;
+static SA3DSCamSelect g_cam_select;static unsigned g_cam_select_changes,g_cam_select_unported,g_cam_mode20_frames,g_cam_adjust_requests;
+static uint8_t g_cam_manual,g_cam_fixed_now;static float g_cam_still_pos[3];
 static int g_cam_regions_ready;static unsigned g_cam_region_pushes,g_cam_gate_reverts;
 static void load_camera_regions(void){
     uint8_t*bytes=NULL;size_t size=0;SA3DSPak pak;SA3DSPakChunk c;g_cam_regions_ready=0;
@@ -2573,7 +2574,7 @@ static void camera_select_tick(int reseed){
     g_cam_select.changed=0;g_cam_select.reset_frames=0;
     if(!sa3ds_cam_select_update(&g_cam_select,&t,g_cam_records[g_ec_act_index],g_cam_record_count[g_ec_act_index],0,cur,h1,h2,cam4_sine,NULL))return;
     if(g_cam_select.changed)g_cam_select_changes++;
-    int ported=g_cam_select.mode>=4&&g_cam_select.mode<=7;
+    int ported=(g_cam_select.mode>=4&&g_cam_select.mode<=7)||(g_cam_select.mode>=20&&g_cam_select.mode<=23);
     if(!ported)g_cam_select_unported++;
     else if(g_cam_select.reset_frames)g_cam4_frames=0; /*435F50/436140 clear 03B2CAEC*/
 }
@@ -2607,7 +2608,16 @@ static void camera_update(int turn_left,int turn_right){
     SA3DSCamInput in={{p[0],p[1],p[2]},{g_player.vel.x,g_player.vel.y,g_player.vel.z},
         SA1_STEAM_SONIC_PARAMETER_EVIDENCE.eyes_height,g_cam4_frames,(uint8_t)(turn_left?1:0),(uint8_t)(turn_right?1:0),0};
     SA3DSCamServices sv={NULL,cam4_sine,cam4_ray,cam4_regions};
-    if(!sa3ds_cam_mode4_update(&g_cam4,&in,&sv)){g_cam4_active=0;camera_legacy_view();return;}
+    float dx0=p[0]-g_cam_still_pos[0],dy0=p[1]-g_cam_still_pos[1],dz0=p[2]-g_cam_still_pos[2];
+    uint8_t still=(uint8_t)(sqrtf(dx0*dx0+dy0*dy0+dz0*dz0)<0.1f&&g_player.grounded);memcpy(g_cam_still_pos,p,12);
+    int sel=g_cam_regions_ready&&g_ec_act_index<=2&&g_cam_select.record>0&&(uint32_t)g_cam_select.record<g_cam_record_count[g_ec_act_index];
+    g_cam_fixed_now=0;
+    if(sel&&g_cam_select.mode>=20&&g_cam_select.mode<=23){
+        int adjust=-1;g_cam_fixed_now=!g_cam_manual;
+        if(!sa3ds_cam_mode20_update(&g_cam4,&in,g_cam_records[g_ec_act_index][g_cam_select.record].view,still,1,&g_cam_manual,&sv,&adjust)){
+            g_cam4_active=0;camera_legacy_view();return;}
+        g_cam_mode20_frames++;if(adjust>=0)g_cam_adjust_requests++; /*adjust26 (469D10) not ported*/
+    }else if(!sa3ds_cam_mode4_update(&g_cam4,&in,&sv)){g_cam4_active=0;camera_legacy_view();return;}
     g_cam4_frames++;
     memcpy(g_cam_eye,g_cam4.position,12);memcpy(g_cam_target,g_cam4.param.target,12);
     /*Controls stay camera-relative: the follow yaw is the eye->player bearing.*/
@@ -2702,13 +2712,13 @@ static void tick_camera_probe(void){
     if(g_cam4_active){
         g_camera_probe_active++;
         float dx=g_cam_eye[0]-g_player.pos.x,dy=g_cam_eye[1]-g_player.pos.y,dz=g_cam_eye[2]-g_player.pos.z,d=sqrtf(dx*dx+dy*dy+dz*dz);
-        if(!isfinite(d))g_camera_probe_bad++;else if(t>=20){if(d<g_camera_probe_min)g_camera_probe_min=d;if(d>g_camera_probe_max)g_camera_probe_max=d;}
+        if(!isfinite(d))g_camera_probe_bad++;else if(t>=20&&!g_cam_fixed_now){if(d<g_camera_probe_min)g_camera_probe_min=d;if(d>g_camera_probe_max)g_camera_probe_max=d;}
     }
     if(t==330){float y=g_camera.yaw-g_camera_probe_yaw0;while(y>3.14159265f)y-=6.2831853f;while(y< -3.14159265f)y+=6.2831853f;g_camera_probe_turned=y;}
     if(t<360)return;
     int pass=g_camera_probe_active>=355&&!g_camera_probe_bad&&g_camera_probe_min>=15.f&&g_camera_probe_max<=95.f&&fabsf(g_camera_probe_turned)>.05f;
-    char note[300];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u regions=%u/%lu camSel=%u/%u mode=%u turnYaw=%.3f bad=%u; no retail trace comparison",
-        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_cam_region_pushes,(unsigned long)g_cam_record_count[0],g_cam_select_changes,g_cam_select_unported,g_cam_select.mode,g_camera_probe_turned,g_camera_probe_bad);
+    char note[300];snprintf(note,sizeof(note),"%s active=%u/%u dist=%.2f..%.2f rayHits=%u regions=%u/%lu camSel=%u/%u mode=%u fixed=%u turnYaw=%.3f bad=%u; no retail trace comparison",
+        pass?"PASS":"FAIL",g_camera_probe_active,t+1,g_camera_probe_min,g_camera_probe_max,g_cam4_hits,g_cam_region_pushes,(unsigned long)g_cam_record_count[0],g_cam_select_changes,g_cam_select_unported,g_cam_select.mode,g_cam_mode20_frames,g_camera_probe_turned,g_camera_probe_bad);
     boot_log("CAMERA_PROBE",note);g_camera_probe=0;g_cam_probe_turn=0;g_paused=1;
 }
 static void tick_box_probe(void){

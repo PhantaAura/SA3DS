@@ -44,5 +44,17 @@ int main(void){
  /*Capped >90 probes toward the player; hit within3 drops the distance to20.*/
  x.rays=0;c=cam(0,0,200);sa3ds_cam_mode4_update(&c,&in,&sv);assert(x.rays==2);
  float bad[3]={NAN,0,0};memcpy(in.player,bad,12);assert(!sa3ds_cam_mode4_update(&c,&in,&sv));
+ /*Mode20 fixed camera + manual handoff.*/
+ SA3DSCamServices fs={&x,sine,NULL,NULL};float fe[3]={100,50,0};uint8_t manual=0;int adj=0;
+ SA3DSCamInput fi={{0,0,0},{0,0,0},10,5,0,0,0};c=cam(0,0,50);
+ assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,1,&manual,&fs,&adj)&&!manual&&adj==-1&&c.position[0]==100&&c.param.target[1]==7);
+ assert(c.rot_y==(int32_t)(atan2(100.,0.)*65536*0.15915497620314795));
+ fi.turn_left=1;assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,1,&manual,&fs,&adj)&&manual&&c.position[0]==100); /*placement still this frame*/
+ assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,1,&manual,&fs,&adj)&&manual&&c.position[0]!=100); /*mode4 now*/
+ fi.turn_left=0;assert(sa3ds_cam_mode20_update(&c,&fi,fe,1,1,&manual,&fs,&adj)&&manual&&adj==-1); /*standing still keeps manual*/
+ assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,1,&manual,&fs,&adj)&&!manual&&adj==0x1a);
+ fi.turn_right=1;assert(sa3ds_cam_mode20_update(&c,&fi,fe,0,0,&manual,&fs,&adj)&&!manual); /*909FB0 off*/
+ manual=1;fi.turn_right=0;fi.frames_since_reset=0;assert(sa3ds_cam_mode20_update(&c,&fi,fe,1,1,&manual,&fs,&adj)&&!manual&&c.position[0]==100);
+ printf("Camera mode20 (46A350): PASS fixed eye/target+7, L/R manual handoff, still-player hold, 0x1A adjust request, 909FB0 gate, frames0 reset\n");
  printf("Camera mode4 (469590) + 435C70 apply: PASS target seed/ease/look-ahead,distance bands,above-player 30 push,pitch approach,manual turn,regions hook,462B40 radius4/8 clip and 10%% turning blend,far probe\n");
 }

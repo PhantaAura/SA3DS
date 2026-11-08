@@ -30,6 +30,15 @@ typedef struct {
  void (*regions)(void *context,float eye[3],const float previous[3]);
 } SA3DSCamServices;
 int sa3ds_cam_mode4_update(SA3DSCamera *camera,const SA3DSCamInput *input,const SA3DSCamServices *services);
+/*Modes20-23 (46A350): fixed eye at the CAM record's +30 point, target =
+ *player + (0,7,0). Frames==0 clears manual; with manual set it runs mode4
+ *and drops manual (requesting adjust 0x1A) once neither L nor R is held and
+ *the player is not standing still (436690: moved <0.1 while grounded).
+ *L/R starts manual when 40EF60 (909FB0, default1) allows it. 4625E0 only acts
+ *in level6 act2 and is omitted. Returns1 on success; *adjust_request gets
+ *0x1A or -1.*/
+int sa3ds_cam_mode20_update(SA3DSCamera *camera,const SA3DSCamInput *input,const float fixed_eye[3],
+ uint8_t player_still,uint8_t manual_allowed,uint8_t *manual,const SA3DSCamServices *services,int *adjust_request);
 /*435C70: position=eye, rot_y=atan2(eye-target XZ), rot_x=atan2(dy,horizontal).*/
 void sa3ds_cam_apply_look(SA3DSCamera *camera);
 #endif

@@ -5,7 +5,7 @@ static uint16_t r16(const uint8_t*p){return (uint16_t)(p[0]|(p[1]<<8));}
 static float rf(const uint8_t*p){uint32_t u=p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);float f;memcpy(&f,&u,4);return f;}
 int sa3ds_cam_record_decode(SA3DSCamRecord*o,const uint8_t r[64]){
  if(!o||!r)return 0;
- SA3DSCamRecord n={r[0],r[1],r[2],r[3],r16(r+4),r16(r+6),{rf(r+8),rf(r+12),rf(r+16)},{rf(r+20),rf(r+24),rf(r+28)},{rf(r+36),rf(r+40),rf(r+44)}};
+ SA3DSCamRecord n={r[0],r[1],r[2],r[3],r16(r+4),r16(r+6),{rf(r+8),rf(r+12),rf(r+16)},{rf(r+20),rf(r+24),rf(r+28)},{rf(r+36),rf(r+40),rf(r+44)},{rf(r+48),rf(r+52),rf(r+56)}};
  *o=n;return 1;
 }
 int sa3ds_cam_records_decode(SA3DSCamRecord*out,uint32_t cap,const uint8_t*rows,size_t size,uint32_t*count){

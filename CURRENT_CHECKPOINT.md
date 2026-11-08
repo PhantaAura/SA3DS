@@ -1,3 +1,18 @@
+# WCA87 — fixed camera modes 20-23 (46A350)
+
+`sa3ds_cam_mode20_update`: eye = CAM record +30..+38 (new `view` field),
+target = player + (0,7,0) (7DF1FC), then 435C70. Frames==0 clears manual
+(3C4AC18); L/R (analog >0x80) with 909FB0 (default1) starts manual, which runs
+mode4 469590 until neither is held and the player is not standing still
+(436690: moved <0.1 while grounded), then requests adjust 0x1A. 4625E0 is a
+level6-act2-only hook, omitted. Native selects it whenever 437FB0 picks modes
+20-23. Checks: host suite PASS (mode20 cases), native build PASS, Azahar
+camera probe PASS: selector picks mode21 at the act start, 130 fixed-camera
+frames, then the held-L manual handoff to mode4. Not done: adjust 26/18-21
+(469D10 blend; cuts are instant), modes 31/39/16, hardware, retail trace.
+
+---
+
 # WCA86 — CAM mode selector (437FB0) and the adjust step
 
 Ported the stage CAM selector as `cam_select.[ch]`: a per-priority camera
