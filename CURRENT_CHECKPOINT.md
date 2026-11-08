@@ -17,8 +17,9 @@ decode to their loop ends; loop byte offsets match headers; 0-6444 clipped
 samples), native build PASS. Azahar: without sdmc:/3ds/dspfirm.cdc ndsp is
 unavailable and the game logs it and runs silent; with a test-only
 placeholder component in the isolated emulator profile (HLE audio) the stream
-ran: 950272 samples by frame 600, 0 underruns. Audible output and hardware
-playback (needs the owner's dumped DSP component) were not checked. SE banks
+ran: 950272 samples by frame 600, 0 underruns; repeated with the owner's own
+dumped dspfirm.cdc (DSP1, 49756 bytes, copied only into the isolated emulator
+profile): same result. Audible output and hardware playback were not checked. SE banks
 and voices are not ported.
 
 ---
