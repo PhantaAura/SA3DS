@@ -1,3 +1,16 @@
+# WCA93 — ring, jump, spring and dash-panel sounds
+
+Original ids traced in the exe and wired to the native events: ring pickup
+and scattered-ring recollect play 7 after AddRings (4504DA/45051F/450557;
+up to 3 per frame like 424590), jump start plays 0x11 (495F61; 0x307 only
+when 03B18DB5 is set), Spring/SpringB launch 9 (7A4E16/7A505E), Dash Panel
+0x2E2 (7A461D, CHECK_SHEET bank2 entry 0). Jump start is detected natively
+as grounded->air on a jump press. Azahar: panel probe (row 0) played 23
+clips, spring probe (row 101) 22, 0 missing ids. Audible output and
+hardware not checked; voices and enemy/object sounds beyond these remain.
+
+---
+
 # WCA92 — sound effects from the owner SE banks
 
 PC2004 SE banks are "archive  V2.DMZ" containers of ADX clips (22050 Hz,

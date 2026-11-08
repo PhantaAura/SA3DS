@@ -1153,6 +1153,7 @@ static void tick_springs(void){
             if(sa3ds_spring_player_apply(&g_player,&p,&state->trig,&result.launch,
                     SA3DS_EC_CONTROLLER_SUPPORT,&g_spring_pending)){
                 if(g_spring_probe)g_spring_probe_launches++;
+                sa3ds_se_play(9); /*7A4E16/7A505E*/
                 char note[180];snprintf(note,sizeof(note),"tick=%llu row=%lu kind=%u command=%u task=%.3f,%.3f,%.3f velocity=%.3f,%.3f,%.3f",
                     (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,kind,result.launch.command.command,
                     result.launch.position.x,result.launch.position.y,result.launch.position.z,
@@ -1231,7 +1232,7 @@ static void tick_panels(const SA1PlayerState *queued_player){
             char note[160];snprintf(note,sizeof(note),"tick=%llu row=%lu speed=%.3f lockout=%ld control=%d velocity=%.3f,%.3f,%.3f",
                 (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,result.parameters.speed,
                 (long)result.parameters.lockout,g_player.pc2004_control_timer,g_player.vel.x,g_player.vel.y,g_player.vel.z);
-            boot_log("PANEL_BOOST",note);
+            boot_log("PANEL_BOOST",note);sa3ds_se_play(0x2e2); /*7A461D*/
             if(g_panel_probe&&p.source_row==g_panel_probe_row)g_panel_probe_boosts++;
         }
         if(result.enqueue_collision&&g_movement_ccl_queued<256){
@@ -1791,7 +1792,7 @@ static int tick_scatter(void){
         g_scatter_updates++;
         if(out.clear_hit)s->ccl.outer_flags&=(uint16_t)~1u;
         if(out.destroy){*link=s->next;free(s);g_scatter_deleted++;continue;}
-        if(out.award_ring){sa3ds_rings_add(&g_rings,1);g_scatter_awards++;}
+        if(out.award_ring){sa3ds_rings_add(&g_rings,1);g_scatter_awards++;sa3ds_se_play(7);} /*4504DA*/
         g_scatter_particle_requests+=out.pickup_effect; /*original particle art/audio still pending*/
         s->queued=out.enqueue_collision;s->draw=out.normal_draw;
         if(s->queued){s->shape.center=out.collision_position;g_scatter_enqueued++;}
@@ -3316,9 +3317,12 @@ int main(void) {
             uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
+            int was_grounded=g_player.grounded;
             sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
                 g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+            /*495F61: jump start plays 0x11 (0x307 only when 03B18DB5 is set).*/
+            if(g_emerald_coast&&was_grounded&&!g_player.grounded&&tick_input.jump_pressed)sa3ds_se_play(0x11);
             if(g_player.pc2004_homing_failed){fail_screen("Native source homing context/frame failed");break;}
             if(g_saru_probe&&g_homing_probe){
                 g_homing_probe_calls+=g_player.pc2004_homing_calls;g_homing_probe_tracks+=g_player.pc2004_homing_tracks;
@@ -3469,6 +3473,7 @@ int main(void) {
                 SA1Vec3 center={actor.m[12],actor.m[13],actor.m[14]};
                 unsigned collected=sa3ds_rings_tick_presented(&g_rings,sa3ds_ec_task_origin(&g_player),center,
                     SA1_STEAM_SONIC_PARAMETER_EVIDENCE.rad,0,1,g_rings.clip_level,step+1==steps);
+                for(unsigned k=0;k<collected&&k<3;k++)sa3ds_se_play(7); /*AddRings+PlaySound(7); 424590 allows 3 per frame*/
                 if(collected){char note[96];snprintf(note,sizeof(note),"tick=%llu collected=%u rings=%d",
                     (unsigned long long)g_player.sim_frame,collected,g_rings.rings);boot_log("RINGS",note);}
             }
