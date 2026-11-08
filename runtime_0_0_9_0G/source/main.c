@@ -2505,6 +2505,7 @@ static void begin_whale_probe(void){
     boot_log("WHALE_PROBE",note);return;
 fail:{char why[96];snprintf(why,sizeof(why),"FAIL: %s",reason);boot_log("WHALE_PROBE",why);}g_paused=1;
 }
+static SA3DSCamSelect g_cam_select;static unsigned g_cam_mode39_frames,g_cam_mode31_frames,g_cam_mode20_frames; /*tentative: defined with the camera*/
 static void tick_whale_probe(void){
     if(!g_whale_probe)return;
     if(g_whale_probe_hold.y!=-1e9f){
@@ -2523,11 +2524,11 @@ static void tick_whale_probe(void){
     if(g_whales.constructs>g_whale_probe_constructs)g_whale_probe_constructs=g_whales.constructs;
     if(g_piers.breaks>g_whale_probe_breaks)g_whale_probe_breaks=g_piers.breaks;
     if(++g_whale_probe_ticks<600)return;
-    char note[420];snprintf(note,sizeof(note),"%s ticks=%u spawns=%lu constructs=%lu emergedTick=%u draws=%u destructs=%lu contacts=%u bounces=%u waves=%u splashes=%u rumbles=%u sounds=%u cameraDisable=%u freeCamera=%u pierBreaks=%lu pierDraws=%u boxSide=%u boxTop=%u boxUnder=%u pierThrows=%u pieceDraws=%u; camera/sound/effects pending",
+    char note[520];snprintf(note,sizeof(note),"%s ticks=%u spawns=%lu constructs=%lu emergedTick=%u draws=%u destructs=%lu contacts=%u bounces=%u waves=%u splashes=%u rumbles=%u sounds=%u cameraDisable=%u freeCamera=%u pierBreaks=%lu pierDraws=%u boxSide=%u boxTop=%u boxUnder=%u pierThrows=%u pieceDraws=%u camMode=%u m39=%u m31=%u fixed=%u camRay=%u; sound/effects pending",
         g_whale_probe_spawns>=1&&g_whale_probe_constructs>=1&&g_whale_probe_emerged&&g_whale_draws&&!g_whale_error?"PASS":"FAIL",
         g_whale_probe_ticks,g_whale_probe_spawns,g_whale_probe_constructs,g_whale_probe_emerged,g_whale_draws,
         (unsigned long)g_whales.destructs,g_whale_contacts,g_whale_bounces,g_whale_waves,g_whale_splashes,g_whale_rumbles,g_whale_sounds,
-        g_whale_camera_disables,g_whale_free_camera,g_whale_probe_breaks,g_pier_draws,g_box_side_pushes,g_box_top_hits,g_box_under_hits,g_pier_throws,g_piece_draws);
+        g_whale_camera_disables,g_whale_free_camera,g_whale_probe_breaks,g_pier_draws,g_box_side_pushes,g_box_top_hits,g_box_under_hits,g_pier_throws,g_piece_draws,g_cam_select.mode,g_cam_mode39_frames,g_cam_mode31_frames,g_cam_mode20_frames,g_cam4_hits);
     boot_log("WHALE_PROBE",note);g_whale_probe=0;g_paused=1;
 }
 
@@ -2591,7 +2592,7 @@ static int cam4_ray(void*context,float start[3],float delta[3],float radius){
 }
 static int camera_original_allowed(void){
     return g_ec_combined&&g_camera.mode==SA3DS_PARITY_CAMERA_FOLLOW&&!g_ec_replay&&!g_wca_replay&&!g_ring_probe&&
-        !g_checkpoint_probe&&!g_spring_probe&&!g_panel_probe&&!g_saru_probe&&!g_death_probe&&!g_whale_probe&&!g_box_probe&&
+        !g_checkpoint_probe&&!g_spring_probe&&!g_panel_probe&&!g_saru_probe&&!g_death_probe&&!g_box_probe&&
         !g_ec_cycle_probe&&!g_homing_probe&&!g_hurt_probe&&!g_gameover_probe&&!g_air_attack_probe;
 }
 /*Per-tick camera after the player task, like 438090 after the character.

@@ -1,3 +1,15 @@
+# WCA89 — whale chase under the original camera
+
+Traced the whale's camera calls: 5029F0's only one is 4348A0(0) (free camera
+off) and the dive's is 4348A0(1); there is no scripted whale camera. The
+whale probe now runs with the original CAM camera (it was excluded before),
+so the whale main reads a Camera_Data1 produced by the ported modes. Azahar
+whale probe PASS: summon, emerge tick14, 21 pier breaks, 3 throws, camera
+mode39 308 frames / mode31 24, 14 camera ray hits. Docs: CP4/CP6 rows
+updated. Not done: analog free camera, adjust blends, sound/effects.
+
+---
+
 # WCA88 — camera modes 39 and 31/32 and the standing orbit
 
 Mode39 (469E90): target = player+(0,7.5,0), eye = target + unit(player - CAM

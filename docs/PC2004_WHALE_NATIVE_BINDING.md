@@ -66,3 +66,12 @@ the route there is built from type59 `O PIER` (62 rows, callback4FF060),
 type24 `C CUBE` (50) and type20 `WALL` (17) objects, none implemented. No whale
 raster, chase or hardware result is claimed. Next: O PIER/C CUBE/WALL objects,
 then natural summon, pier destruction and camera. CP6 and CP1–CP9 remain open.
+
+## WCA89 whale camera
+
+5029F0 ends with `4348A0(ebp=0)`: clears camera flag bit4 (03B2CBA8), which
+the analog free camera (434D80 path, requires bit1 user toggle and bit4)
+needs; the dive phase's request is `4348A0(1)`. There is no scripted whale
+camera: during the chase the stage CAM selector (437FB0) and modes
+39/31/20/4 decide the view. Native now runs those during the whale probe;
+Camera_Data1 read by the whale main is the original-mode camera.
