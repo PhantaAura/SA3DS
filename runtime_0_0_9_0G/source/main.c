@@ -34,6 +34,8 @@
 #include "ec_pier.h"
 #include "ccl_box_push.h"
 #include "ec_ccube.h"
+#include "ec_itembox.h"
+#include "ccl_cylinder.h"
 #include <3ds.h>
 #include <citro3d.h>
 #include <float.h>
@@ -275,6 +277,14 @@ static unsigned g_pier_break_requests,g_pier_draws;
 static uint8_t*g_cube_bytes;static size_t g_cube_size;static SA3DSCubeAssets g_cube_assets;
 static SA3DSCubeRuntime g_cubes;static SA3DSCubeEntry g_cube_entries[CUBE_CAPACITY];static int g_cubes_ready;
 static SA3DSCubeFrame g_cube_frame;
+#define ITEMBOX_CAPACITY 32u
+static uint8_t*g_ibox_bytes;static size_t g_ibox_size;static SA3DSItemBoxAssets g_ibox_assets;static SA3DSCCLRules g_ibox_rules[2];
+static SA3DSItemBoxRuntime g_iboxes;static SA3DSItemBoxEntry g_ibox_entries[ITEMBOX_CAPACITY];static int g_iboxes_ready;
+static SA3DSItemBoxFrame g_ibox_frame;static SA3DSCCLBody g_ibox_body[ITEMBOX_CAPACITY];static SA3DSCCLShape g_ibox_shape[ITEMBOX_CAPACITY][2];
+static SA3DSECVisual g_ibox_visual[7];static SA3DSECGpu g_ibox_gpu[7];static int g_ibox_gpu_count;
+static unsigned g_ibox_draws,g_ibox_breaks,g_ibox_awards,g_ibox_rings,g_ibox_lives,g_ibox_tops,g_ibox_sides,g_ibox_sphere_hits,g_ibox_effects;
+static int itembox_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous);
+static int world_prepare_itemboxes(int restart);
 
 
 static SA3DSLabVertex*g_stage_fade_quad;
@@ -1491,7 +1501,7 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_tas
         }
     }
     if(!scatter_ccl_pass()||!checkpoint_ccl_pass(queued_player,previous_task))return 0;
-    if(!whale_ccl_pass(queued_player,1)||!pier_ccl_pass(queued_player,previous_task)||!cube_ccl_pass(queued_player,previous_task))return 0;
+    if(!whale_ccl_pass(queued_player,1)||!pier_ccl_pass(queued_player,previous_task)||!cube_ccl_pass(queued_player,previous_task)||!itembox_ccl_pass(queued_player,previous_task))return 0;
     if(g_player_enemy_ccl.status&4)g_saru_player_hurt_contacts++;
     return 1;
 }
@@ -1951,6 +1961,7 @@ static void world_prepare(int restart){
         for(uint32_t i=0;i<count;i++)g_pier_entries[i].lifetime.loads=set[i].loads;
     }
     if(!world_prepare_cubes(restart)){g_whale_error=1;return;}
+    if(!world_prepare_itemboxes(restart)){g_whale_error=1;return;}
     g_ec_dynamic_applied=g_ec_dynamic.changes-1u;world_apply_dynamic();
 }
 static void destroy_whale(void){
@@ -2007,7 +2018,7 @@ static void pier_throw(void*context,const float v[3]){whale_bounce(context,v);g_
 /*SET loading phase for list3 owners, then one shared traversal (AO triggers,
  *AO task, O PIER). DynamicCOL changes reach the next player tick.*/
 static int tick_world(const SA1PlayerState*done){
-    if(!g_world_tasks.slots||(!g_whale_ready&&!g_piers_ready&&!g_cubes_ready))return 1;
+    if(!g_world_tasks.slots||(!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready))return 1;
     SA3DSSetClipInput clip;float center[3];world_clip_frame(done,&clip,center);
     if(g_whale_ready){
         SA3DSWhaleTriggerFrame*f=&g_whale_frame;memset(f,0,sizeof(*f));
@@ -2026,6 +2037,11 @@ static int tick_world(const SA1PlayerState*done){
         memset(&g_cube_frame,0,sizeof(g_cube_frame));
         g_cube_frame.act=g_ec_act_index;g_cube_frame.clip_level=g_rings.clip_level;g_cube_frame.clip=clip;
         if(!sa3ds_cubes_load(&g_cubes))return 0;
+    }
+    if(g_iboxes_ready){
+        memset(&g_ibox_frame,0,sizeof(g_ibox_frame));
+        g_ibox_frame.act=g_ec_act_index;g_ibox_frame.clip_level=g_rings.clip_level;g_ibox_frame.clip=clip;
+        if(!sa3ds_itemboxes_load(&g_iboxes))return 0;
     }
     if(!sa3ds_owned_tasks_run(&g_world_tasks,NULL)||g_whale_error)return 0;
     world_apply_dynamic();return !g_whale_error;
@@ -2187,6 +2203,153 @@ static int cube_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
         if(!box_contact(player,previous,&body,&box,0,center,dims[0],dims[1],dims[2],
             (uint16_t)(p.angles[1]+((uint16_t)raw[40]|((uint16_t)raw[41]<<8))),p.angles[0],p.angles[2]))return 0;
     }
+    return 1;
+}
+/*O ITEMBOX services and CCL pass (4D6F10 / 4D6670 / 41CCD0 / 41AA00).*/
+static int ibox_read_frame(void*context,SA3DSItemBoxFrame*f){(void)context;*f=g_ibox_frame;return 1;}
+static int ibox_contact(void*context,uint32_t row,SA3DSItemBoxContact*out){
+    (void)context;if(row>=ITEMBOX_CAPACITY)return 0;SA3DSCCLBody*b=&g_ibox_body[row];
+    out->status=(uint16_t)((b->outer_flags&1)|(b->status&4));
+    out->player=b->cached_other_id&&b->cached_other_id==g_player_enemy_ccl.hits.actor_id?0:-1;
+    out->self_shape=(int8_t)b->cached_self_shape;out->player_grounded=g_player.grounded?1:0;return 1;
+}
+static void ibox_bounce(void*context,int player){if(player==0){const float v[3]={0,2,0};whale_bounce(context,v);}} /*441280(p,0,2,0)*/
+static void ibox_award(void*context,uint32_t row,const SA3DSItemAward*a){
+    (void)context;(void)row;g_ibox_awards++;
+    if(a->rings){sa3ds_rings_add(&g_rings,a->rings);g_ibox_rings+=(unsigned)a->rings;}
+    if(a->lives){g_stage_restart.lives+=a->lives;g_ibox_lives+=(unsigned)a->lives;}
+    for(unsigned k=0;k<a->sound_count;k++)sa3ds_se_play(a->sounds[k]);
+    char note[96];snprintf(note,sizeof(note),"row=%lu kind=%u rings+%ld lives+%ld total=%d",(unsigned long)row,a->icon,(long)a->rings,(long)a->lives,g_rings.rings);boot_log("ITEMBOX",note);
+}
+static void ibox_effect(void*context,const float p[3]){(void)context;(void)p;g_ibox_effects++;g_ibox_breaks++;} /*4B9B10 executor pending*/
+static uint16_t ibox_rand(void*context){return saru_random(context);}
+static const SA3DSItemBoxServices g_ibox_services={NULL,ibox_read_frame,ibox_contact,ibox_bounce,ibox_award,ibox_effect,ibox_rand};
+static float ibox_float(const uint8_t*p){float f;memcpy(&f,p,4);return f;}
+static int itembox_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
+    (void)previous;
+    if(!g_iboxes_ready)return 1;
+    for(uint32_t i=0;i<g_ibox_assets.count;i++)sa3ds_ccl_body_clear(&g_ibox_body[i],g_ibox_shape[i],2);
+    if(!g_checkpoints_ready||!player->pc2004_ccl_state_valid||(g_player_enemy_shapes[0].attributes&0x10))return 1;
+    const uint8_t*pr=g_checkpoint_assets.player_colliders;SA3DSCCLShape*primary=&g_player_enemy_shapes[0];
+    SA3DSCCLPrimaryExtent ext={ibox_float(pr+24),ibox_float(pr+28)};
+    for(uint32_t i=0;i<g_ibox_assets.count;i++){
+        const SA3DSItemBoxEntry*e=&g_ibox_entries[i];SA3DSItemBoxPlacement p;
+        if(!e->lifetime.task||!e->queued||!sa3ds_itembox_placement(&g_ibox_assets,i,&p))continue;
+        SA3DSCCLBody*b=&g_ibox_body[i];uint16_t keep_outer=b->outer_flags,keep_status=b->status;(void)keep_outer;(void)keep_status;
+        if(b->hits.actor_id!=0x60000u+i){sa3ds_ccl_body_init(b,0x60000u+i);}
+        b->hits.has_ccl=1;b->rules=g_ibox_rules[e->broken_shapes?1:0];
+        b->task_position=(SA1Vec3){p.position[0],p.position[1],p.position[2]};
+        const uint8_t*cci=e->broken_shapes?g_ibox_assets.cci_broken:g_ibox_assets.cci_intact;
+        for(unsigned k=0;k<2;k++){
+            const uint8_t*rec=cci+k*48;SA1Vec3 c={p.position[0]+ibox_float(rec+8),p.position[1]+ibox_float(rec+12),p.position[2]+ibox_float(rec+16)};
+            if(!sa3ds_ccl_shape_decode(&g_ibox_shape[i][k],rec,c))return 0;
+        }
+        SA1Vec3 task=sa3ds_ec_task_origin(player);
+        float dx=task.x-p.position[0],dz=task.z-p.position[2];if(dx*dx+dz*dz>40.f*40.f)continue;
+        for(unsigned k=0;k<2;k++){
+            SA3DSCCLShape*bs=&g_ibox_shape[i][k];
+            if((bs->attributes&0x10)||(g_player_enemy_ccl.rules.excluded_attributes&bs->attributes)||(b->rules.excluded_attributes&primary->attributes))continue;
+            if(bs->form==1){
+                SA1Vec3 pos=task;int tilt;
+                int kind=sa3ds_ccl_cylinder_contact(&g_player_enemy_ccl,primary,0,&ext,b,bs,k,ibox_float(cci+k*48+24),1,&pos,&tilt);
+                if(kind<0)return 0;
+                if(kind==1)g_ibox_tops++;else if(kind==2)g_ibox_sides++;
+                if(kind&&(pos.x!=task.x||pos.y!=task.y||pos.z!=task.z)){
+                    g_player.pos.x+=pos.x-task.x;g_player.pos.y+=pos.y-task.y;g_player.pos.z+=pos.z-task.z;
+                    if(kind==1){ /*top: one-update support like the C CUBE top (square of foot+radius)*/
+                        float half=(float)((double)ext.foot_radius+bs->radius);
+                        SA3DSECObjectSupport o={bs->center.x,bs->center.z,half,half,0,1,
+                            (float)((double)bs->center.y+ibox_float(cci+k*48+24)),b->hits.actor_id,(SA1Vec3){0,1,0}};
+                        (void)sa3ds_ec_object_support_add(&g_ec_dynamic,&o);
+                    }
+                }
+            }else{
+                SA3DSCCLContactResult r;
+                if(!sa3ds_ccl_sphere_contact(&g_player_enemy_ccl,primary,0,b,bs,k,&r))return 0;
+                if(r.overlap)g_ibox_sphere_hits++;
+            }
+        }
+    }
+    return 1;
+}
+static int draw_itemboxes(void){
+    if(!g_iboxes_ready||g_ibox_gpu_count<7)return 1;
+    for(uint32_t i=0;i<g_ibox_assets.count;i++){
+        const SA3DSItemBoxEntry*e=&g_ibox_entries[i];SA3DSItemBoxPlacement p;
+        if(!e->lifetime.task||!sa3ds_itembox_placement(&g_ibox_assets,i,&p))continue;
+        if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,p.position,20.f))continue;        /*403330(pos,20)*/
+        C3D_Mtx model,mv;Mtx_Identity(&model);Mtx_Translate(&model,p.position[0],p.position[1],p.position[2],true);
+        if(e->broken_shapes){ /*4D6B20: base model only*/
+            Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_ibox_gpu[0],0))return 0;
+            g_ibox_draws++;continue;
+        }
+        if(e->action!=2){float s=(float)((double)e->grow*.2f);Mtx_Scale(&model,s,s,s);}
+        C3D_Mtx icon=model;Mtx_Translate(&icon,0,7.5f,0,true);
+        int angle=(int)e->icon_angle;if(angle)Mtx_RotateY(&icon,(float)(angle&0xffff)*(2.f*PI/65536.f),true);
+        int kind=p.kind==2?3:p.kind==3?4:p.kind==4?5:p.kind==6?6:-1;
+        if(kind>=0){Mtx_Multiply(&mv,&g_ec_view,&icon);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);if(!sa3ds_ec_gpu_draw(&g_ibox_gpu[kind],0))return 0;}
+        Mtx_Multiply(&mv,&g_ec_view,&model);C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+        for(unsigned k=0;k<3;k++)if(!sa3ds_ec_gpu_draw(&g_ibox_gpu[k],0))return 0;
+        g_ibox_draws++;
+    }
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);return 1;
+}
+/*Item box probe: `emerald_coast_itembox_probe.flag` holds an act0 SET row;
+ *Sonic is dropped from 25 units above that box on tick 1 and the break,
+ *award and bounce are reported after 150 ticks.*/
+static int g_ibox_probe=-1;static unsigned g_ibox_probe_row,g_ibox_probe_ticks;static int g_ibox_probe_rings0;static float g_ibox_probe_max_vy;
+static void tick_itembox_probe(void){
+    if(g_ibox_probe<0){FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_itembox_probe.flag","rb");g_ibox_probe=0;
+        if(f){g_ibox_probe=fscanf(f,"%u",&g_ibox_probe_row)==1;fclose(f);if(g_ibox_probe)boot_log("ITEMBOX_PROBE","BEGIN: drop onto the given act0 box from 25 units");}}
+    if(g_ibox_probe!=1||!g_iboxes_ready)return;
+    unsigned t=g_ibox_probe_ticks++;
+    if(t==1){
+        int found=0;for(uint32_t i=0;i<g_ibox_assets.count&&!found;i++){SA3DSItemBoxPlacement p;
+            if(sa3ds_itembox_placement(&g_ibox_assets,i,&p)&&p.act==g_ec_act_index&&p.source_row==g_ibox_probe_row){
+                if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,p.position[0],p.position[2],&g_player))break;
+                g_player.pos=(SA1Vec3){p.position[0],p.position[1]+25.f,p.position[2]};g_player.vel=(SA1Vec3){0};g_player.grounded=false;found=1;}}
+        if(!found){boot_log("ITEMBOX_PROBE","FAIL: row/residency");g_ibox_probe=2;g_paused=1;return;}
+        g_ibox_probe_rings0=g_rings.rings;
+    }
+    if(t>1&&g_player.vel.y>g_ibox_probe_max_vy)g_ibox_probe_max_vy=g_player.vel.y;
+    if(t<150)return;
+    int pass=g_ibox_breaks>=1&&g_ibox_awards>=1&&g_rings.rings>g_ibox_probe_rings0&&g_ibox_draws>0;
+    char note[220];snprintf(note,sizeof(note),"%s row=%u breaks=%u awards=%u rings %d->%d tops=%u sides=%u sphereHits=%u maxVy=%.2f draws=%u",
+        pass?"PASS":"FAIL",g_ibox_probe_row,g_ibox_breaks,g_ibox_awards,g_ibox_probe_rings0,g_rings.rings,g_ibox_tops,g_ibox_sides,g_ibox_sphere_hits,g_ibox_probe_max_vy,g_ibox_draws);
+    boot_log("ITEMBOX_PROBE",note);g_ibox_probe=2;g_paused=1;
+}
+static void destroy_itemboxes(void){
+    if(g_ibox_gpu_count){C3D_FrameSync();for(int i=0;i<g_ibox_gpu_count;i++)sa3ds_ec_gpu_destroy(&g_ibox_gpu[i]);}
+    g_ibox_gpu_count=0;sa3ds_free_file(g_ibox_bytes);g_ibox_bytes=NULL;memset(&g_ibox_assets,0,sizeof(g_ibox_assets));g_iboxes_ready=0;
+}
+static void load_itemboxes(void){
+    SA3DSPak pak;SA3DSPakChunk c;
+    if(!g_ec_combined||!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_itembox.sa3dspak",&g_ibox_bytes,&g_ibox_size)||
+       !sa3ds_itembox_assets_open(&g_ibox_assets,g_ibox_bytes,g_ibox_size)||g_ibox_assets.count>ITEMBOX_CAPACITY||
+       sa3dspak_open(&pak,g_ibox_bytes,g_ibox_size)!=SA3DSPAK_OK||sa3dspak_find(&pak,"IBOXRULE",&c)!=SA3DSPAK_OK||c.size!=16||!world_tasks_ensure())goto fail;
+    for(unsigned k=0;k<2;k++){const uint8_t*q=c.data+k*8;g_ibox_rules[k]=(SA3DSCCLRules){q[0],q[1],q[2],(uint32_t)q[4]|((uint32_t)q[5]<<8)|((uint32_t)q[6]<<16)|((uint32_t)q[7]<<24)};}
+    static const char*keys[7]={"VISUAL0","VISUAL1","VISUAL2","ICON2","ICON3","ICON4","ICON6"};
+    for(unsigned i=0;i<7;i++){
+        if(sa3dspak_find(&pak,keys[i],&c)!=SA3DSPAK_OK||c.flags||sa3ds_ec_visual_open(&g_ibox_visual[i],c.data,(size_t)c.size)!=SA3DS_EC_VISUAL_OK||
+           !sa3ds_ec_gpu_init(&g_ibox_gpu[i],&g_ibox_visual[i],FLT_MAX,log_texture_stage,NULL))goto fail;
+        g_ibox_gpu_count++;
+    }
+    memset(g_ibox_body,0,sizeof(g_ibox_body));
+    g_iboxes_ready=1;world_prepare(0);if(g_whale_error)goto fail;
+    char note[120];snprintf(note,sizeof(note),"Owner O ITEMBOX rows=%lu, box+icon art, 41CCD0 cylinder + sphere CCL loaded",(unsigned long)g_ibox_assets.count);
+    boot_log("ITEMBOX",note);return;
+fail:destroy_itemboxes();boot_log("ITEMBOX","Owner item box package unavailable or invalid; item boxes absent");
+}
+static int world_prepare_itemboxes(int restart){
+    if(!g_iboxes_ready)return 1;
+    uint32_t count=g_ibox_assets.count;SA3DSSetTaskLifetime set[ITEMBOX_CAPACITY];
+    uint16_t types[ITEMBOX_CAPACITY],flags[ITEMBOX_CAPACITY];uint8_t current[ITEMBOX_CAPACITY];
+    for(uint32_t i=0;i<count;i++){SA3DSItemBoxPlacement p;if(!sa3ds_itembox_placement(&g_ibox_assets,i,&p))return 0;types[i]=p.type;current[i]=p.act==g_ec_act_index;}
+    if(!world_set_flags(restart,count,types,current,&g_ibox_entries[0].lifetime,sizeof(g_ibox_entries[0]),set,flags)||
+       !sa3ds_itemboxes_init(&g_iboxes,&g_ibox_assets,&g_world_tasks,g_ibox_entries,flags,ITEMBOX_CAPACITY,&g_ibox_services))return 0;
+    for(uint32_t i=0;i<count;i++)g_ibox_entries[i].lifetime.loads=set[i].loads;
+    memset(g_ibox_body,0,sizeof(g_ibox_body));
     return 1;
 }
 static void destroy_cubes(void){sa3ds_free_file(g_cube_bytes);g_cube_bytes=NULL;memset(&g_cube_assets,0,sizeof(g_cube_assets));g_cubes_ready=0;}
@@ -2867,6 +3030,7 @@ static int init_scene(void) {
         load_whale();
         load_piers();
         load_cubes();
+        load_itemboxes();
         load_camera_regions();
         start_stage_bgm();
         if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ring_scatter.sa3dspak",&g_scatter_bytes,&g_scatter_size)||
@@ -2918,7 +3082,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_whale())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -3022,7 +3186,7 @@ static void cleanup(void) {
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
     whale_world_clear();memset(&g_world_tasks,0,sizeof(g_world_tasks));
-    destroy_cubes();destroy_piers();destroy_whale();
+    destroy_itemboxes();destroy_cubes();destroy_piers();destroy_whale();
     destroy_saru();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
@@ -3450,7 +3614,7 @@ int main(void) {
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
             if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
-            tick_whale_probe();tick_box_probe();tick_camera_probe();
+            tick_whale_probe();tick_box_probe();tick_camera_probe();tick_itembox_probe();
             if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
             g_course_clock.enabled=stage_phase.controls_enabled;sa3ds_course_clock_tick(&g_course_clock);
             if(g_checkpoint_probe){

@@ -234,3 +234,6 @@ sh tests/run_se_bank.sh
 
 printf '\n== Original item box rules ==\n'
 sh tests/run_item_box.sh
+
+printf '\n== Original CCL cylinder contact ==\n'
+sh tests/run_ccl_cylinder.sh

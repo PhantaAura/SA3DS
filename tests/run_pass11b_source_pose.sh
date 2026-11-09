@@ -112,3 +112,5 @@ python3 tools/stage_pc2004_voices.py "$SONIC_EXE_PATH" "$game_root" "$tmp/voice"
 test -s "$tmp/voice/1847.adx" && echo "Voice 1847 (death 0x5DE+0x159) staged: PASS"
 
 python3 tools/verify_pc2004_item_box.py "$SONIC_EXE_PATH"
+
+python3 tools/build_pc2004_ec_itembox.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_itembox.sa3dspak"

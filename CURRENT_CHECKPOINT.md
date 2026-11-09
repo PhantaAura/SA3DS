@@ -1,3 +1,27 @@
+# WCA98 — item boxes in the native game
+
+`tools/build_pc2004_ec_itembox.py` packages the 18 Emerald Coast O ITEMBOX
+rows, the intact (0x9BF0C0) and broken (0x9BF120) CCI, CCL category rules 2/4
+(0x90E3BC/B0/C8/D4), the three box models (0x8BF260/0x8BEAA8/0x8BE620) and the
+icon model 0x8BE270 with each kind's icon texture (OBJ_REGULAR; the 1-up uses
+Sonic's 0x9BF1D8 entry). `ec_itembox.[ch]` runs the 4D6F10 task on the SET
+lifetime machinery (load 160000; actions 0 init with SET|0x10 and the bit4
+"already broken" path, 1 grow 0.11/frame to 5, 2 4D6670 break test, 3 4D6E80
+break with SET|4, 4 broken solid). `ccl_cylinder.[ch]` ports 41CCD0 (top
+landing, side push, head bump) on the existing CCL bookkeeping. Native draws
+the box with its icon (y+7.5, slow +3 BAMS spin) or the broken base, within
+the 403330 radius 20.
+Checks: host suite PASS (rules + cylinder cases), owner gate PASS, native
+build PASS. Azahar `emerald_coast_itembox_probe.flag` = 276: PASS — Sonic
+dropped onto the act0 10-ring box broke it through the top-sphere hit, +10
+rings with sound 0xB, 393 box draws. The airborne bounce (vy=2) did not fire:
+Sonic touched the cylinder top and the top sphere in the same pass and was
+already grounded when the box read the hit; the original pair order is not
+verified. Approximations: the top support is a square of foot+radius, the
+break effect (4B9B10) and floating item icon (4C00B0) are counted only.
+
+---
+
 # WCA97 — item box rules (first slice)
 
 `src/game/item_box.[ch]` ports the O ITEMBOX (list entry 13, 4D6F10) item
