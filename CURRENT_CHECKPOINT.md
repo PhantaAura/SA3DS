@@ -1,3 +1,18 @@
+# WCA96 — character voices
+
+PlaySound ids above 0x568 go to the voice player as id+0x159 (425135), and
+425710 requests a voice number directly; voices load from
+SoundData\VOICE_JP|US\WMA\%04d (03B0EF38 picks the language; the owner
+Steam install stores them as ADX). `tools/stage_pc2004_voices.py` checks
+those exe facts and copies the US clips unchanged (2035 files);
+`sa3ds_voice_play` loads one from sdmc:/3ds/SA3DS/assets/voice on demand and
+plays it on ndsp channel 9. Damage and death requests now honour their
+channel (0 = 423D70 SE, 1 = 425710 voice). Azahar death probe (`28 Z`): PASS,
+death request 0x5DE played voice 1847, 0 missing. Default language is US;
+JP selection and audible/hardware output not checked.
+
+---
+
 # WCA95 — mod and music across the act change
 
 Azahar act-cycle probe (`emerald_coast_act_cycle.flag`) with

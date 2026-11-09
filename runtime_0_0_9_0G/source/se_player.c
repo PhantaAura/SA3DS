@@ -38,8 +38,32 @@ int sa3ds_se_init(const char*dir){
  for(unsigned v=0;v<SE_VOICES;v++){ndspChnReset(1+v);ndspChnSetInterp(1+v,NDSP_INTERP_LINEAR);ndspChnSetFormat(1+v,NDSP_FORMAT_MONO_PCM16);}
  g.ready=1;return 1;
 }
+static int16_t*g_voice_pcm;static ndspWaveBuf g_voice_wave;static uint32_t g_voice_played,g_voice_missing;
+/*425500/425575: voice N plays SoundData\VOICE_??\WMA\%04d (the owner Steam
+ *install stores these as ADX); staged to sdmc:/3ds/SA3DS/assets/voice.*/
+int sa3ds_voice_play(uint32_t number){
+ if(!g.ready||number>9999)return 0;
+ char path[96];snprintf(path,sizeof path,"sdmc:/3ds/SA3DS/assets/voice/%04lu.adx",(unsigned long)number);
+ size_t n=0;uint8_t*b=read_all(path,&n);SA3DSAdxInfo in;
+ if(!b||!sa3ds_adx_open(&in,b,n)){free(b);g_voice_missing++;return 0;}
+ if(!g_voice_pcm)g_voice_pcm=linearAlloc(SE_MAX_SAMPLES*2);
+ if(!g_voice_pcm){free(b);return 0;}
+ ndspChnWaveBufClear(9);ndspChnSetInterp(9,NDSP_INTERP_LINEAR);ndspChnSetFormat(9,NDSP_FORMAT_MONO_PCM16);
+ SA3DSAdxState st;memset(&st,0,sizeof st);size_t pos=in.data_offset,fb=(size_t)in.block_size*in.channels;uint32_t k=0;int16_t tmp[64];
+ while(st.sample<in.total_samples&&pos+fb<=n&&k+32<=SE_MAX_SAMPLES){
+  if(!sa3ds_adx_decode_frame(&in,&st,b+pos,tmp))break;
+  pos+=fb;for(unsigned i=0;i<32;i++)g_voice_pcm[k+i]=in.channels==2?(int16_t)((tmp[i*2]+tmp[i*2+1])/2):tmp[i];
+  k+=32;
+ }
+ free(b);if(k>in.total_samples)k=in.total_samples;if(!k)return 0;
+ DSP_FlushDataCache(g_voice_pcm,k*2);ndspChnSetRate(9,(float)in.rate);float mix[12]={0};mix[0]=mix[1]=1.0f;ndspChnSetMix(9,mix);
+ memset(&g_voice_wave,0,sizeof g_voice_wave);g_voice_wave.data_vaddr=g_voice_pcm;g_voice_wave.nsamples=k;ndspChnWaveBufAdd(9,&g_voice_wave);
+ g_voice_played++;return 1;
+}
+void sa3ds_voice_stats(uint32_t*played,uint32_t*missing){if(played)*played=g_voice_played;if(missing)*missing=g_voice_missing;}
 int sa3ds_se_play(uint32_t id){
  if(!g.ready)return 0;
+ if(id>0x568)return sa3ds_voice_play(id+0x159);                 /*425135*/
  uint8_t slot;uint32_t index;SA3DSSoundBankEntry e;SA3DSAdxInfo in;
  if(!sa3ds_se_resolve(g.thresh,g.thresh_count,id,&slot,&index)||slot>=8||!g.bank[slot]||
     !sa3ds_se_find(g.bank[slot],g.bank_size[slot],index,&e)||!sa3ds_adx_open(&in,e.data,e.size)){g.missing++;return 0;}
@@ -63,6 +87,6 @@ int sa3ds_se_play(uint32_t id){
 void sa3ds_se_exit(void){
  for(unsigned v=0;v<SE_VOICES&&g.ready;v++)ndspChnReset(1+v);
  for(unsigned i=0;i<8;i++){free(g.bank[i]);g.bank[i]=NULL;}
- if(g.pcm){linearFree(g.pcm);g.pcm=NULL;}g.ready=0;
+ if(g.pcm){linearFree(g.pcm);g.pcm=NULL;}if(g_voice_pcm){ndspChnReset(9);linearFree(g_voice_pcm);g_voice_pcm=NULL;}g.ready=0;
 }
 void sa3ds_se_stats(uint32_t*played,uint32_t*missing,uint32_t*truncated){if(played)*played=g.played;if(missing)*missing=g.missing;if(truncated)*truncated=g.truncated;}

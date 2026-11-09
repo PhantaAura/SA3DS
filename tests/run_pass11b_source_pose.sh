@@ -107,3 +107,6 @@ python3 tools/stage_pc2004_se.py "$SONIC_EXE_PATH" "$game_root" "$tmp/se"
 cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/game tests/test_adx_owner.c src/game/adx.c -lm -o "$tmp/se_decode"
 "$tmp/se_decode" "$tmp/se/COMMON_BANK00.dat" "$tmp/se/EMERALD_COAST_BANK01.dat" "$tmp/se/CHECK_SHEET_BANK02.dat" \
  "$tmp/se/P_SONICTAILS_BANK03.dat" "$tmp/se/ENEMY_SET_BANK04.dat" "$tmp/se/EMERALD_COAST_BANK05.dat"
+
+python3 tools/stage_pc2004_voices.py "$SONIC_EXE_PATH" "$game_root" "$tmp/voice"
+test -s "$tmp/voice/1847.adx" && echo "Voice 1847 (death 0x5DE+0x159) staged: PASS"

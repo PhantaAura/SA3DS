@@ -2574,7 +2574,7 @@ static int g_cam_regions_ready;static unsigned g_cam_region_pushes,g_cam_gate_re
 /*Stage BGM: owner ecoast<act+1>.adx copied to SD by tools/stage_pc2004_bgm.py.
  *The act->track pairing follows the music table names (ids 28-30), not a
  *traced stage-music call.*/
-static int g_bgm_started;
+static int g_bgm_started,g_voice_logged;
 static void start_stage_bgm(void){
     if(!g_ec_combined)return;
     if(!sa3ds_bgm_init()){if(!g_bgm_started)boot_log("BGM","ndsp unavailable (no DSP component); silent");g_bgm_started=1;return;}
@@ -3316,7 +3316,7 @@ int main(void) {
                 if(requests.accepted){
                     g_spring_pending.valid=0;g_player_damage_requests=requests;
                     g_hurt_events++;g_hurt_scatter_requests+=requests.scatter_count;spawn_scatter(&requests);
-                    for(unsigned k=0;k<requests.sound_count;k++)sa3ds_se_play(requests.sound_ids[k]);
+                    for(unsigned k=0;k<requests.sound_count;k++){if(requests.sound_channels[k]==1)sa3ds_voice_play(requests.sound_ids[k]);else sa3ds_se_play(requests.sound_ids[k]);}
                     char note[200];snprintf(note,sizeof(note),"tick=%llu action=%u timer=%u rings=%d scatterRequested=%u soundsPending=%u deathPending=%u",
                         (unsigned long long)g_player.sim_frame,g_player.pc2004_action_state,g_player.pc2004_hurt_timer,
                         g_rings.rings,requests.scatter_count,requests.sound_count,requests.death_requested);boot_log("PLAYER_DAMAGE",note);
@@ -3326,6 +3326,7 @@ int main(void) {
                     if(!sa3ds_player_death_player_command(&g_player,0,&sound,&channel)||!spawn_native_death()){
                         fail_screen("Source death command rejected");break;
                     }
+                    if(channel==1)sa3ds_voice_play(sound);else sa3ds_se_play(sound); /*425710 / 423D70*/
                     char note[110];snprintf(note,sizeof(note),"sourceFrame=%lu action86 animation86 soundPending=%u channel=%u",
                         (unsigned long)g_source_frame,sound,channel);boot_log("DEATH_COMMAND",note);
                 }else if(ready!=1){
@@ -3606,6 +3607,7 @@ int main(void) {
             snprintf(note,sizeof(note),"600 frames: ready=%d playing=%d adxFrames=%lu sample=%lu loops=%lu underruns=%lu",b.ready,b.playing,
                 (unsigned long)b.frames,(unsigned long)b.sample,(unsigned long)b.loops,(unsigned long)b.underruns);boot_log("BGM",note);
             uint32_t sp,sm,stc;sa3ds_se_stats(&sp,&sm,&stc);snprintf(note,sizeof(note),"600 frames: played=%lu missing=%lu truncated=%lu",(unsigned long)sp,(unsigned long)sm,(unsigned long)stc);boot_log("SE",note);}
+        if(g_bgm_started&&g_death_created&&!g_voice_logged){g_voice_logged=1;uint32_t vp,vm;sa3ds_voice_stats(&vp,&vm);char vn[80];snprintf(vn,sizeof(vn),"after death command: voices played=%lu missing=%lu",(unsigned long)vp,(unsigned long)vm);boot_log("VOICE",vn);}
         if (g_boottrace_first_frame) {
             boot_log("OK","First frame rendered/submitted");
             g_boottrace_first_frame=0;
