@@ -1,3 +1,17 @@
+# Goal scope and music pairing (2026-11-09)
+
+Owner clarification: Old 3DS hardware tests are not part of the CP1–CP9
+goal; docs/WCA_0_0_10_0.md now marks the hardware row informational. The
+remaining acceptance bar is the contract's natural, debug-free full Sonic
+route that looks/controls/plays like PC2004.
+Traced: the EC level task init 4F69E0 creates the delayed BGM task with id
+0x1C (ecoast1) for act0 and 0x1D (ecoast2) for act1 (delay 10), so WCA91's
+act->track pairing is now source-backed, not name-based. Act1's level task
+only sets state 2; the stage-clear trigger for Sonic's act1 is still being
+traced (no capsule/goal type in SET0101S; level object list ends at 83).
+
+---
+
 # WCA98 — item boxes in the native game
 
 `tools/build_pc2004_ec_itembox.py` packages the 18 Emerald Coast O ITEMBOX
@@ -126,9 +140,7 @@ buffers, looping at the header loop points; it restarts on act change and
 stays silent when ndsp/DSP component or the file is missing.
 `tools/stage_pc2004_bgm.py` checks the exe music table (0x910298: ids 28-30
 = ecoast1-3, looping; 425421 indexes it) and copies the owner files
-unchanged to an SD folder. The act->track pairing follows those names; the
-stage code that selects the track was not traced (the 424C80 level switch
-is SE banks).
+unchanged to an SD folder. The act->track pairing is source-backed (4F69E0: act0 0x1C, act1 0x1D).
 Checks: host suite PASS (decoder cases), owner gate PASS (all three tracks
 decode to their loop ends; loop byte offsets match headers; 0-6444 clipped
 samples), native build PASS. Azahar: without sdmc:/3ds/dspfirm.cdc ndsp is
