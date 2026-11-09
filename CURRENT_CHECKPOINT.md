@@ -14,10 +14,12 @@ the 403330 radius 20.
 Checks: host suite PASS (rules + cylinder cases), owner gate PASS, native
 build PASS. Azahar `emerald_coast_itembox_probe.flag` = 276: PASS — Sonic
 dropped onto the act0 10-ring box broke it through the top-sphere hit, +10
-rings with sound 0xB, 393 box draws. The airborne bounce (vy=2) did not fire:
-Sonic touched the cylinder top and the top sphere in the same pass and was
-already grounded when the box read the hit; the original pair order is not
-verified. Approximations: the top support is a square of foot+radius, the
+rings with sound 0xB, 393 box draws. No bounce, which matches the original
+frame order: the end-of-frame CCL pass gives Sonic task status 0x20 for the
+cylinder-top landing, Sonic's next update turns that into ground bit1
+(49A9B0) before the box main runs, and 4D6670 only bounces when that bit is
+clear. The vy=2 bounce therefore needs a top-sphere hit while still
+airborne (not exercised by this probe). Approximations: the top support is a square of foot+radius, the
 break effect (4B9B10) and floating item icon (4C00B0) are counted only.
 
 ---
