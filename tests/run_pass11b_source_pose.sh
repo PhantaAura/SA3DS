@@ -110,3 +110,5 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/game tests/test_adx_owner.c src/game
 
 python3 tools/stage_pc2004_voices.py "$SONIC_EXE_PATH" "$game_root" "$tmp/voice"
 test -s "$tmp/voice/1847.adx" && echo "Voice 1847 (death 0x5DE+0x159) staged: PASS"
+
+python3 tools/verify_pc2004_item_box.py "$SONIC_EXE_PATH"

@@ -231,3 +231,6 @@ sh tests/run_adx.sh
 
 printf '\n== Original SE id resolution ==\n'
 sh tests/run_se_bank.sh
+
+printf '\n== Original item box rules ==\n'
+sh tests/run_item_box.sh

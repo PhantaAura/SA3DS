@@ -1,3 +1,20 @@
+# WCA97 — item box rules (first slice)
+
+`src/game/item_box.[ch]` ports the O ITEMBOX (list entry 13, 4D6F10) item
+rules: kind = trunc(SET scale.x) with negative -> 8 and >8 -> 0; handler
+table 0x9BF194: kind2 AddRings(5), kind3 AddRings(10), kind4 random rings
+{1,5,10,15,20,40} indexed by |trunc(rand/32768*-6)| (shared MSVC rand),
+kind6 AddLives(1); each plays sound 0xB (+0x51A for character 6). Emerald
+Coast uses kinds 2/3/4/6 (11 boxes in act0, 7 in act1). Decoded but not yet
+ported: the break conditions (4D6670: top-sphere contact bounces an airborne
+player vy=2 and breaks; attack status bit4 on the cylinder body breaks), the
+broken state's solid shapes 0x9BF120, the item icon (4C00B0) and the box
+model/display (4D6810). Native contact needs CCL cylinder (form1) support
+first. Checks: host test PASS (all random-table boundaries), owner witness
+PASS. Not yet in the native game.
+
+---
+
 # WCA96 — character voices
 
 PlaySound ids above 0x568 go to the voice player as id+0x159 (425135), and
