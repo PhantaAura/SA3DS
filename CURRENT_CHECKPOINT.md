@@ -1,3 +1,15 @@
+# WCA95 — mod and music across the act change
+
+Azahar act-cycle probe (`emerald_coast_act_cycle.flag`) with
+mods/emerald_coast.enabled: act0 loads the external texture (texture 0,
+65536 bytes); the explicit act0->act1 loader switch restarts BGM on
+ecoast2.adx and rejects the act0 replacement for act1 ("TARGET"), keeping
+the original textures; act1 PERF 300 frames, min linear free 20.66 MB vs
+20.01 MB in act0 (no leak across the swap). This is the explicit loader
+probe, not natural stage progression; hardware not run.
+
+---
+
 # WCA94 — CP9 in-game mod toggle verified in Azahar
 
 `emerald_coast_mod_toggle_probe.flag` injects SELECT held + D-pad Up down
