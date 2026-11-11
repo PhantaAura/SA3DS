@@ -111,3 +111,18 @@ minor1 has six. Both versions require one unique chunk with flags0.
 The C reader borrows the package bytes. The runtime uses the spring and
 dash-panel records. The added classes supply placements for subsequent
 gameplay work. Owner outputs remain outside Git.
+
+### Optional JUMP_VISUAL v1
+
+`ec_jump_visual.sa3dspak` supplies the three original O JUMP display
+components. The 36-byte `JUMP_VISUAL` chunk stores magic
+`SA3JVIS\0`, version1, and two local XYZ offsets as little-endian
+float32 triples. The base draws at the SET origin. The fixed and
+rotating parts use the offsets in order. The stage applies the SET
+Z/Y/X rotations and the last part's display-driven X rotation.
+
+`VISUAL0`, `VISUAL1`, and `VISUAL2` each hold a single-model,
+single-instance geometry/material/texture package with compacted
+textures from the owner's Emerald Coast object archive. This package
+is optional for gameplay. The launch task uses the movement placement
+package independently of the visual resources.

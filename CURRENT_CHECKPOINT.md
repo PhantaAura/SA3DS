@@ -1,3 +1,31 @@
+# WCA104 — original O JUMP display
+
+The native stage draws the owner's original three-part launch pad at
+each O JUMP placement. The display applies the SET Z/Y/X rotation,
+the fixed and rotating part offsets, and the original unsigned
+counter's five-degree step. All three models use compact textures
+from the owner OBJ_BEACH archive and the existing CPU upload path.
+
+Host suite, owner import and native build passed. The exact final
+visual package opened in the C reader with 10/2/3 meshes and 8/2/3
+textures. In Azahar the Act 1 row537 fixture loaded the display
+package, submitted the three-part draw and launched at tick4.
+Sonic was still airborne at tick90. This confirms model submission
+and launch in the fixture. Retail raster parity and natural landing
+remain open.
+
+The next collision source is the 94-point, 120-triangle base model
+registered by 4FFEC0 through 43B2E0 with flags1. The current build
+has the O JUMP contact box and launch but does not register that
+base as DynamicCOL. Numbered O JPanel and O TIKAL remain open.
+
+Generate `ec_jump_visual.sa3dspak` with
+`tools/build_pc2004_ec_jump_visual.py`. The 580968-byte code-only
+3DSX has SHA-256
+`8b8e40b62ac66725e3a7ca0719ef402923e07130abc2b58af77e36220de50e3c`.
+
+---
+
 # WCA103 — original O JUMP launch behavior
 
 The stage consumes kind40 placements from both Sonic acts. The task

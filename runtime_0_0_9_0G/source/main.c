@@ -177,10 +177,16 @@ static SA3DSNativeSpring *g_spring_states;
 static SA3DSSpringVisual g_spring_visual;
 static SA3DSECGpu g_spring_gpu[6];
 static SA3DSSpringPendingCommand g_spring_pending;
-typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame,jump_action,jump_counter;int32_t next,previous;} SA3DSNativePanel;
+typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame,jump_action,jump_counter;uint16_t jump_angle,jump_draw_angle;int32_t next,previous;} SA3DSNativePanel;
 static SA3DSNativePanel *g_panel_states;
 static SA3DSPanelVisual g_panel_visual;
-static SA3DSECGpu g_panel_gpu[3];
+static SA3DSECGpu g_panel_gpu[3],g_jump_gpu[3];
+static SA3DSECVisual g_jump_visual[3];
+static uint8_t *g_jump_visual_bytes;
+static size_t g_jump_visual_size;
+static float g_jump_visual_offsets[2][3];
+static int g_jump_visual_ready;
+static unsigned g_jump_visual_draws;
 static uint8_t *g_panel_visual_bytes;
 static size_t g_panel_visual_size;
 typedef struct {SA3DSSaruActor actor;SA3DSCCLBody ccl;SA3DSCCLShape shape;
@@ -1232,12 +1238,50 @@ fail:
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
     boot_log("PANELS","Owner panel resources unavailable; gameplay objects remain incomplete");
 }
+static void destroy_jump_visual(void){
+    for(unsigned part=0;part<3;part++)sa3ds_ec_gpu_destroy(&g_jump_gpu[part]);
+    sa3ds_free_file(g_jump_visual_bytes);g_jump_visual_bytes=NULL;
+    g_jump_visual_ready=0;g_jump_visual_draws=0;
+}
+static void load_jump_visual(void){
+    if(!g_panel_states)return;
+    SA3DSPak pak;SA3DSPakChunk config;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_jump_visual.sa3dspak",
+        &g_jump_visual_bytes,&g_jump_visual_size)||g_jump_visual_size>1024u*1024u||
+       sa3dspak_open(&pak,g_jump_visual_bytes,g_jump_visual_size)!=SA3DSPAK_OK||pak.toc_count!=5||
+       sa3dspak_find(&pak,"JUMP_VISUAL",&config)!=SA3DSPAK_OK||config.flags||config.size!=36||
+       memcmp(config.data,"SA3JVIS\0\1\0\0\0",12))goto fail;
+    memcpy(g_jump_visual_offsets,config.data+12,sizeof(g_jump_visual_offsets));
+    for(unsigned part=0;part<2;part++)for(unsigned axis=0;axis<3;axis++){
+        float offset=g_jump_visual_offsets[part][axis];
+        if(!isfinite(offset)||fabsf(offset)>64.f)goto fail;
+    }
+    for(unsigned part=0;part<3;part++){
+        static const char *const keys[]={"VISUAL0","VISUAL1","VISUAL2"};
+        SA3DSPakChunk chunk;SA3DSECVisual *visual=&g_jump_visual[part];
+        if(sa3dspak_find(&pak,keys[part],&chunk)!=SA3DSPAK_OK||chunk.flags||
+           sa3ds_ec_visual_open(visual,chunk.data,(size_t)chunk.size)!=SA3DS_EC_VISUAL_OK||
+           visual->model_count!=1||visual->instance_count!=1||
+           !sa3ds_ec_gpu_init_full(&g_jump_gpu[part],visual,log_texture_stage,NULL))goto fail;
+    }
+    g_jump_visual_ready=1;
+    boot_log("JUMP_VISUAL","Original O JUMP base and two model parts loaded");
+    return;
+fail:
+    destroy_jump_visual();
+    boot_log("JUMP_VISUAL","Owner display package unavailable");
+}
 static void tick_jump_pad(SA3DSNativePanel *state,const SA3DSMovementPlacement *p,
         SA1Vec3 previous,SA1Vec3 current){
-    switch(state->jump_action){
-    case 0:
+    if(state->jump_action==0){
         state->jump_action=1;
         return;
+    }
+    /* 500020 advances the unsigned display counter by five after drawing. */
+    state->draw=1;
+    state->jump_draw_angle=(uint16_t)(int32_t)(-(double)state->jump_angle*65536.0/360.0);
+    state->jump_angle=(uint16_t)(state->jump_angle+5u);
+    switch(state->jump_action){
     case 2:
         state->pending_hit=0;
         if(sa3ds_jump_pad_apply(&g_player,p,&state->trig,SA3DS_EC_CONTROLLER_SUPPORT)){
@@ -1365,6 +1409,37 @@ static int draw_panels(void){
                 g_panel_probe_draws++;g_panel_probe_mask|=1u<<state->frame;
             }
         }
+    }
+    return 1;
+}
+static int draw_jump_pads(void){
+    if(!g_jump_visual_ready)return 1;
+    const float bams=2.f*PI/65536.f;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        const SA3DSNativePanel *state=&g_panel_states[i];
+        if(!state->draw)continue;
+        SA3DSMovementPlacement p;
+        if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||
+           p.act!=g_ec_act_index||(p.type&4095u)!=40)continue;
+        float center[]={p.position.x,p.position.y,p.position.z};
+        if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,70.f))continue;
+        C3D_Mtx actor;Mtx_Identity(&actor);
+        Mtx_Translate(&actor,p.position.x,p.position.y,p.position.z,true);
+        Mtx_RotateZ(&actor,p.angles[2]*bams,true);
+        Mtx_RotateY(&actor,p.angles[1]*bams,true);
+        Mtx_RotateX(&actor,p.angles[0]*bams,true);
+        for(unsigned part=0;part<3;part++){
+            C3D_Mtx model=actor,mv;
+            if(part){
+                const float *offset=g_jump_visual_offsets[part-1];
+                Mtx_Translate(&model,offset[0],offset[1],offset[2],true);
+            }
+            if(part==2)Mtx_RotateX(&model,state->jump_draw_angle*bams,true);
+            Mtx_Multiply(&mv,&g_ec_view,&model);
+            C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+            if(!sa3ds_ec_gpu_draw(&g_jump_gpu[part],0)||!sa3ds_ec_gpu_draw(&g_jump_gpu[part],1))return 0;
+        }
+        if(g_jump_visual_draws++==0)boot_log("JUMP_VISUAL","Original O JUMP three-part draw submitted");
     }
     return 1;
 }
@@ -3245,6 +3320,7 @@ static int init_scene(void) {
         load_background();
         load_springs();
         load_panels();
+        load_jump_visual();
         load_saru();
         load_finish_tails();
         load_checkpoints();
@@ -3303,7 +3379,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_jump_pads()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -3410,6 +3486,7 @@ static void cleanup(void) {
     destroy_itemboxes();destroy_cubes();destroy_piers();destroy_whale();
     destroy_saru();
     destroy_finish_tails();
+    destroy_jump_visual();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;

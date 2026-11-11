@@ -118,3 +118,6 @@ python3 tools/build_pc2004_ec_itembox.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PV
 # Finish display uses the CHRMODELS rig and a separate executable motion.
 python3 tools/build_pc2004_ec_finish_tails.py "$SONIC_EXE_PATH" "$CHRMODELS_PATH" \
   "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_finish_tails"
+
+python3 tools/build_pc2004_ec_jump_visual.py "$SONIC_EXE_PATH" \
+  "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_jump_visual.sa3dspak"
