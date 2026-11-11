@@ -26,19 +26,25 @@ int sa3ds_movement_objects_open(SA3DSMovementObjects*out,const void*data,size_t 
     if(found!=1||c.flags||c.size<80)return 0;
     const uint8_t*b=c.data;
     uint32_t n=r32(b+12),off=r32(b+16),spec=r32(b+20),total=r32(b+28);
-    if(memcmp(b,"SA3DMOVE",8)||r16(b+8)!=1||r16(b+10)||n>2046||off!=32||
-       spec!=32+n*40||r32(b+24)!=3||total!=spec+48||total!=c.size)return 0;
-    for(unsigned i=0;i<3;i++){
+    uint16_t revision=r16(b+10);
+    static const uint16_t kinds[]={1,2,3,18,26,40};
+    static const uint8_t lists[]={2,2,3,2,2,3}, flags[]={2,2,3,2,2,6};
+    unsigned count=revision?6:3;
+    if(memcmp(b,"SA3DMOVE",8)||r16(b+8)!=1||revision>1||n>2046||off!=32||
+       spec!=32+n*40||r32(b+24)!=count||total!=spec+count*16||total!=c.size)return 0;
+    for(unsigned i=0;i<count;i++){
         const uint8_t*p=b+spec+i*16;
-        if(r16(p)!=i+1||p[2]!=(i==2?3:2)||p[3]!=(i==2?3:2)||
-           rf(p+4)!=360000.f||rf(p+8)!=360100.f||r32(p+12))return 0;
+        float load=i==3?4000000.f:360000.f;
+        if(r16(p)!=kinds[i]||p[2]!=lists[i]||p[3]!=flags[i]||
+           rf(p+4)!=load||rf(p+8)!=load+100.f||r32(p+12))return 0;
     }
     SA3DSMovementObjects candidate={b+off,b+spec,n};
     SA3DSMovementPlacement prev={0},p;
     for(uint32_t i=0;i<n;i++){
         if(!sa3ds_movement_objects_placement(&candidate,i,&p))return 0;
         unsigned kind=p.type&4095;
-        if(p.act>1||p.source_row>=1023||kind<1||kind>3||!isfinite(p.position.x)||!isfinite(p.position.y)||!isfinite(p.position.z))return 0;
+        int known=(kind>=1&&kind<=3)||(revision&&(kind==18||kind==26||kind==40));
+        if(p.act>1||p.source_row>=1023||!known||!isfinite(p.position.x)||!isfinite(p.position.y)||!isfinite(p.position.z))return 0;
         for(int j=0;j<3;j++)if(!isfinite(p.parameters[j]))return 0;
         if(i&&(p.act<prev.act||(p.act==prev.act&&p.source_row<=prev.source_row)))return 0;
         prev=p;

@@ -1,3 +1,23 @@
+# WCA102 — original Emerald Coast jump and hint placements
+
+The movement package builder and reader preserve the original SET rows
+for six O JUMP launch pads, six numbered O JPanel objects and the Act 2
+O TIKAL orb. Both movement package revisions are supported. The exact
+owner import produced 88 total placements and preserved the existing
+26 spring commands. In particular, Act 1 row537 is the O JUMP near the
+pier exit, and Act 2 row694 is the O TIKAL placement with hint value 8.
+
+Host suite, exact owner import and native build passed.
+
+The new placements are available to the stage runtime. Their actor
+logic, visuals and route verification remain pending. O JUMP consumes a
+previous collision pass hit before calling the same direct-speed helper
+as the dash panel. Its local velocity is (SET parameter X, 4, 0), with
+SET Y plus 0x8000, ceil(SET parameter Y) control duration and a ten-count
+post-launch state. The numbered Act 2 panels run a separate task.
+
+---
+
 # WCA101 — Tails at the Emerald Coast finish
 
 The ordinary second-act finish draws Tails using the owner-generated

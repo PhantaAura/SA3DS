@@ -90,19 +90,24 @@ capacity128 is retained for this ring subsystem; cross-category queue ordering
 remains a later object integration requirement.
 
 
-### Optional MOVE_OBJECTS v1 (definitions only)
+### Optional MOVE_OBJECTS v1.0 and v1.1
 
-Owner-generated Emerald Coast movement-object package. Header32bytes
-`<8sHHIIIII>`: magic `SA3DMOVE`, version1, flags0, row count0..2046,
-row offset32, spec offset32+count*40, spec count3, total size.
-Rows40bytes `<II32s>`: act0/1, original SET slot0..1022, original32-byte SET row.
-Rows sorted strictly by(act,slot); low12class must be1(spring),2(SpringB),
-3(dash panel). High bits and parameters retained unchanged; positions/parameters
-must be finite. No pointers or live object state.
+Owner-generated Emerald Coast placement package. The 32-byte header
+`<8sHHIIIII>` stores magic `SA3DMOVE`, major1, minor0/1, row count0..2046,
+row offset32, spec offset32+count*40, spec count, and total size.
+The 40-byte rows `<II32s>` store act0/1, original SET slot0..1022, and
+the original 32-byte SET row. Rows are sorted strictly by(act,slot).
+High type bits and parameters are retained. Positions and parameters
+must be finite.
 
-Three16-byte specs `<HBBffI>` in class order1/2/3: class, source object list,
-flags, load squared, unload squared, reserved0. Lists2/2/3, flags2/2/3,
-load360000 and unload360100. Total size=spec offset+48, no trailing bytes.
-One unique chunk per package, flags0. C reader borrows the package bytes,
-allocates nothing and does not spawn or launch objects. Normal runtime does
-not yet consume this optional package. Owner outputs remain outside Git.
+Specs are 16-byte `<HBBffI>` records ordered by class, with class, source
+object list, registry flags, load radius squared, unload radius squared
+and reserved0. Minor0 supports classes1(spring),2(SpringB),3(dash panel).
+Minor1 adds 18(O JPanel),26(O TIKAL),40(O JUMP). Their list/flag pairs are
+2/2, 2/2, and 3/6. Class18 loads at 4000000 squared units. All others load
+at 360000. The unload threshold adds 100. Minor0 has three specs and
+minor1 has six. Both versions require one unique chunk with flags0.
+
+The C reader borrows the package bytes. The runtime uses the spring and
+dash-panel records. The added classes supply placements for subsequent
+gameplay work. Owner outputs remain outside Git.
