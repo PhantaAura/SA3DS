@@ -113,6 +113,12 @@ static size_t g_ec_size;
 static uint8_t *g_ec_collision_bytes;
 static size_t g_ec_collision_size;
 static SA3DSECRoute g_ec_route;
+enum { EC_GOAL_RUNNING, EC_GOAL_WAIT_GROUND, EC_GOAL_FINISHED };
+static unsigned g_ec_goal_result;
+static uint8_t g_ec_goal_action;
+static SA3DSSetTaskLifetime g_ec_goal_lifetime;
+static SA3DSSetClipInput g_ec_goal_clip;
+static SA3DSWhaleContactPlayer g_ec_goal_players[2];
 static int g_ec_full_route=0;
 static int g_ec_transition_failed=0;
 static uint32_t g_ec_act_index=0;
@@ -640,7 +646,8 @@ static void emerald_coast_status(void) {
     if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
     else printf("\x1b[25;1HPartial collision/follow camera ");
     printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
-    printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
+    if(g_ec_goal_result==EC_GOAL_FINISHED)printf("\x1b[27;1HStage Clear                          ");
+    else printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
 }
 
 static void pose_lab_help(void) {
@@ -1936,8 +1943,14 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
 /*The task tree is destroyed first, so SET associations are dropped as the
  *loader would overwrite them.*/
 static void world_prepare(int restart){
+    if(g_world_tasks.slots)whale_world_clear();
+    g_ec_goal_result=EC_GOAL_RUNNING;
+    g_ec_goal_action=0;
+    g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
+    if(g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index)
+        g_ec_goal_lifetime.flags=0x8000;
     if(!g_world_tasks.slots)return;
-    whale_world_clear();sa3ds_ec_dynamic_clear(&g_ec_dynamic);
+    sa3ds_ec_dynamic_clear(&g_ec_dynamic);
     if(g_whale_ready){
         uint32_t count=g_whale_trigger_assets.count;SA3DSSetTaskLifetime set[WHALE_TRIGGER_CAPACITY];
         uint16_t types[WHALE_TRIGGER_CAPACITY],flags[WHALE_TRIGGER_CAPACITY];uint8_t current[WHALE_TRIGGER_CAPACITY];
@@ -2019,9 +2032,98 @@ static unsigned g_pier_throws;
 static void pier_throw(void*context,const float v[3]){whale_bounce(context,v);g_pier_throws++;} /*same441280 port*/
 /*SET loading phase for list3 owners, then one shared traversal (AO triggers,
  *AO task, O PIER). DynamicCOL changes reach the next player tick.*/
+/* O BZ action 2 uses the original 441840 CCL-center predicate.
+ * Its results request is consumed on a later traversal, as with the new
+ * list3 task allocated by 415540. */
+static int ec_goal_free(SA3DSOwnedTaskList *list,uint32_t task,void *context){
+    uint8_t freed;
+    if(!sa3ds_set_task_run_free(&g_ec_goal_lifetime,task,1,NULL,NULL,&freed)||!freed)return 0;
+    return sa3ds_owned_task_release(list,task,context);
+}
+static int ec_goal_main(SA3DSOwnedTaskList *list,uint32_t task,void *context){
+    (void)context;
+    uint8_t unload;
+    if(!sa3ds_set_object_clip(&g_ec_goal_clip,&unload))return 0;
+    if(unload)
+        return sa3ds_set_task_defer_free(&g_ec_goal_lifetime,task)&&
+            sa3ds_owned_task_set_main(list,task,ec_goal_free);
+    if(g_ec_goal_action==0){
+        g_ec_goal_action=2;
+        return 1;
+    }
+    if(g_ec_goal_action!=2||g_ec_goal_result!=EC_GOAL_RUNNING)return 1;
+    uint8_t player;
+    if(!sa3ds_whale_trigger_inside(g_ec_goal_clip.position,g_ec_route.goal.radius,
+            g_ec_goal_players,&player))return 0;
+    if(player==1){
+        g_ec_goal_action=5;
+        g_ec_goal_result=EC_GOAL_WAIT_GROUND;
+        char note[100];
+        snprintf(note,sizeof(note),"O BZ row %lu contact. Ground=%u tick=%lu",
+            (unsigned long)g_ec_route.goal.source_row,(unsigned)g_player.grounded,(unsigned long)g_source_frame);
+        boot_log("GOAL",note);
+    }
+    return 1;
+}
+static int ec_goal_load(const SA1PlayerState *player,const SA3DSSetClipInput *clip,const float center[3]){
+    const SA3DSECGoal *goal=&g_ec_route.goal;
+    if(!g_ec_full_route||!g_ec_route.has_goal||g_ec_act_index!=goal->act_index)return 1;
+    if(g_ec_goal_result==EC_GOAL_WAIT_GROUND&&(player->grounded||(player->pc2004_status_flags&2))){
+        g_ec_goal_result=EC_GOAL_FINISHED;
+        char note[100];
+        snprintf(note,sizeof(note),"Ground condition met at tick %lu. Stage finished.",
+            (unsigned long)g_source_frame);
+        boot_log("GOAL",note);
+    }
+    if(g_ec_goal_result!=EC_GOAL_RUNNING)return 1;
+    g_ec_goal_clip=*clip;
+    g_ec_goal_clip.position[0]=goal->center.x;
+    g_ec_goal_clip.position[1]=goal->center.y;
+    g_ec_goal_clip.position[2]=goal->center.z;
+    g_ec_goal_clip.has_set_data=1;
+    g_ec_goal_clip.set_flags=(uint8_t)g_ec_goal_lifetime.flags;
+    g_ec_goal_clip.unload_distance_squared=g_ec_goal_lifetime.unload_distance_squared;
+    g_ec_goal_players[0]=(SA3DSWhaleContactPlayer){{center[0],center[1],center[2]},1,player->pc2004_ccl_state_valid!=0};
+    if(!sa3ds_set_task_load_eligible(&g_ec_goal_lifetime))return 1;
+    unsigned high=(goal->type>>12)&7;
+    if(high&&(high==1?g_rings.clip_level>=1:g_rings.clip_level>=2))return 1;
+    int in_range;
+    if(!sa3ds_set_position_in_range(g_ec_goal_clip.position,clip->player0.position,
+            goal->load_distance_squared,&in_range))return 0;
+    if(!in_range)return 1;
+    uint32_t task=sa3ds_owned_task_allocate(&g_world_tasks,ec_goal_main,NULL);
+    if(!task)return 1;
+    if(!sa3ds_set_task_load_commit(&g_ec_goal_lifetime,task,goal->load_distance_squared))return 0;
+    g_ec_goal_clip.unload_distance_squared=g_ec_goal_lifetime.unload_distance_squared;
+    g_ec_goal_action=0;
+    return 1;
+}
+/* Exercise the original finish task from a nearby airborne start. */
+static void begin_ec_goal_probe(void){
+    FILE *marker=fopen("sdmc:/3ds/SA3DS/emerald_coast_goal_probe.flag","rb");
+    if(!marker)return;
+    fclose(marker);
+    const SA3DSECGoal *goal=&g_ec_route.goal;
+    if(!g_ec_full_route||!g_ec_route.has_goal||g_ec_act_index!=goal->act_index||
+       !sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
+           goal->center.x,goal->center.z,&g_player)){
+        boot_log("GOAL_PROBE","FAIL: finish placement and terrain required");
+        return;
+    }
+    g_player.pos=goal->center;
+    g_player.pos.y+=14.0f;
+    g_player.vel=(SA1Vec3){0,0,0};
+    g_player.grounded=0;
+    g_player.surface_id=-1;
+    g_player.pc2004_status_flags&=~3u;
+    boot_log("GOAL_PROBE","Airborne start at the original finish placement");
+}
 static int tick_world(const SA1PlayerState*done){
-    if(!g_world_tasks.slots||(!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready))return 1;
+    int goal_active=g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index;
+    if(goal_active&&!world_tasks_ensure())return 0;
+    if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready))return 1;
     SA3DSSetClipInput clip;float center[3];world_clip_frame(done,&clip,center);
+    if(!ec_goal_load(done,&clip,center))return 0;
     if(g_whale_ready){
         SA3DSWhaleTriggerFrame*f=&g_whale_frame;memset(f,0,sizeof(*f));
         f->act=g_ec_act_index;f->clip_level=g_rings.clip_level;f->clip=clip;
@@ -3314,7 +3416,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();begin_ec_goal_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -3453,7 +3555,7 @@ int main(void) {
             /* Screen input -> RH chase view; physics turn inertia is unchanged. */
             /*40EF50 disables processed analog/buttons through fade/reload;
              * case4 reenables only AFTER its final world update.*/
-            if(g_emerald_coast&&g_ec_combined&&!stage_phase.controls_enabled)tick_input=(SA1Input){0};
+            if(g_emerald_coast&&g_ec_combined&&(!stage_phase.controls_enabled||g_ec_goal_result!=EC_GOAL_RUNNING))tick_input=(SA1Input){0};
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
             if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
@@ -3618,7 +3720,9 @@ int main(void) {
             if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
             tick_whale_probe();tick_box_probe();tick_camera_probe();tick_itembox_probe();
             if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
-            g_course_clock.enabled=stage_phase.controls_enabled;sa3ds_course_clock_tick(&g_course_clock);
+            g_course_clock.enabled=stage_phase.controls_enabled&&g_ec_goal_result==EC_GOAL_RUNNING;
+            sa3ds_course_clock_tick(&g_course_clock);
+            if(g_ec_goal_result==EC_GOAL_FINISHED){g_paused=1;steps=step+1;}
             if(g_checkpoint_probe){
                 g_checkpoint_probe_ticks++;
                 if(g_checkpoint_activations&&!g_checkpoint_probe_injected)g_checkpoint_probe_age++;

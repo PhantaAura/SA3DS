@@ -4,7 +4,7 @@ import struct
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from tools import sa3dspak
-from tools.build_pc2004_emerald_coast_route import HEADER,START,EDGE
+from tools.build_pc2004_emerald_coast_route import HEADER,START,EDGE,GOAL
 starts=[(0,0,10,20,30,0x6000),(1,0,-10,100,-20,0x4000)]
 edges=[(0,1,500,30,-60,22)]
 so=32;eo=so+len(starts)*24
@@ -15,6 +15,15 @@ for i,row in enumerate(edges):EDGE.pack_into(body,eo+i*24,*row)
 path=Path(sys.argv[1])
 def write(suffix,data):path.with_name(path.name+suffix).write_bytes(sa3dspak.build([('ROUTE',bytes(data),0)]))
 write('',body)
+with_goal=bytearray(body)+GOAL.pack(1,99,81,900,50,600,42,160000)
+struct.pack_into('<H',with_goal,10,1)
+write('-goal',with_goal)
+for name, offset, fmt, value in [('goal-kind',8,'I',80),('goal-act',0,'I',0),
+                                 ('goal-radius',24,'f',float('nan'))]:
+    invalid=bytearray(with_goal)
+    struct.pack_into('<'+fmt,invalid,len(body)+offset,value)
+    write('.'+name,invalid)
+write('.goal-truncated',with_goal[:-1])
 for name,off,fmt,value in [('version',8,'H',2),('flags',10,'H',1),('level',12,'I',3),
  ('count',16,'I',99),('overlap',28,'I',32),('duplicate',so+24,'I',0),
  ('character',so+4,'I',7),('nan',so+8,'f',float('nan')),('yaw',so+20,'I',65536),

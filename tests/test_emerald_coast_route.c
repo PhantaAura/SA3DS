@@ -2,15 +2,22 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "emerald_coast_route.h"
 int main(int argc,char **argv){
     assert(argc==2||argc==3);FILE*f=fopen(argv[1],"rb");assert(f);
     assert(!fseek(f,0,SEEK_END));long n=ftell(f);assert(n>0);rewind(f);
     void*bytes=malloc((size_t)n);assert(bytes);assert(fread(bytes,1,(size_t)n,f)==(size_t)n);assert(!fclose(f));
     SA3DSECRoute route;
-    if(argc==3){assert(!sa3ds_ec_route_open(&route,bytes,(size_t)n));assert(!route.start_count&&!route.edge_count);free(bytes);return 0;}
+    if(argc==3&&!strcmp(argv[2],"reject")){assert(!sa3ds_ec_route_open(&route,bytes,(size_t)n));assert(!route.start_count&&!route.edge_count);free(bytes);return 0;}
     assert(sa3ds_ec_route_open(&route,bytes,(size_t)n));free(bytes);
     assert(route.start_count==2&&route.edge_count==1);
+    assert(route.has_goal==(argc==3));
+    if(route.has_goal){
+        assert(route.goal.act_index==1&&route.goal.source_row==99&&route.goal.type==81);
+        assert(route.goal.center.x==900&&route.goal.center.y==50&&route.goal.center.z==600);
+        assert(route.goal.radius==42&&route.goal.load_distance_squared==160000);
+    }
     const SA3DSECStart*start=sa3ds_ec_route_start(&route,0);
     assert(start&&start->task_origin.x==10&&start->task_origin.y==20&&start->task_origin.z==30);
     assert(start->task_yaw==0x6000);

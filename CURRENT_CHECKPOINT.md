@@ -1,3 +1,22 @@
+# WCA100 — second-act finish trigger
+
+The route package v1.1 adds the original O BZ placement. The owner builder
+checks the SET registry and finish code before reading SET0101S. The native
+list3 task follows the source load/clip rules and action0 -> 2 -> 5 flow.
+The player-0 collision center triggers the request. The port stops input
+and the course clock while waiting for the original ground condition, then
+shows Stage Clear on the bottom screen and pauses the scene.
+
+Host, owner pose/import and native build passed. An isolated Azahar test
+started Sonic airborne at the original finish placement. Contact occurred
+at tick2 with ground clear. The finish reached ground at tick18 and
+the scene continued drawing at the same simulation tick. Full natural
+traversal, the original Tails display, results presentation and post-clear
+transition remain pending. The display source is 4F9DA0, which uses
+MILES_OBJECTS[0] and motion 010C6298 in the ordinary unrescued path.
+
+---
+
 # WCA99 — collision windows supported by pier decks
 
 A region containing only DynamicCOL can now open with its registered deck
