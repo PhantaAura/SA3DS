@@ -17,6 +17,9 @@ int main(int argc,char **argv){
         assert(route.goal.act_index==1&&route.goal.source_row==99&&route.goal.type==81);
         assert(route.goal.center.x==900&&route.goal.center.y==50&&route.goal.center.z==600);
         assert(route.goal.radius==42&&route.goal.load_distance_squared==160000);
+        assert(route.goal.has_angles==!strcmp(argv[2],"oriented"));
+        if(route.goal.has_angles)
+            assert(route.goal.angles[0]==65535&&route.goal.angles[1]==0x4000&&route.goal.angles[2]==23);
     }
     const SA3DSECStart*start=sa3ds_ec_route_start(&route,0);
     assert(start&&start->task_origin.x==10&&start->task_origin.y==20&&start->task_origin.z==30);

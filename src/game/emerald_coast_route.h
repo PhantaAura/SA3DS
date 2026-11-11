@@ -10,6 +10,8 @@ typedef struct {
     uint16_t type;
     SA1Vec3 center;
     float radius,load_distance_squared;
+    uint16_t angles[3];
+    uint8_t has_angles;
 } SA3DSECGoal;
 typedef struct {
     uint32_t start_count,edge_count;

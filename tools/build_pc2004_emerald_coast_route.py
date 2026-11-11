@@ -14,6 +14,7 @@ HEADER=struct.Struct('<8sHHIIIII')
 START=struct.Struct('<IIfffI')
 EDGE=struct.Struct('<IIffff')
 GOAL=struct.Struct('<IIIfffff')
+GOAL_ANGLES=struct.Struct('<3hH')
 
 def goal_row(exe, system):
     read = verified_reader(exe)
@@ -43,14 +44,17 @@ def goal_row(exe, system):
     add = struct.unpack('<f', read(0x7DCB10, 4))[0]
     scale = struct.unpack('<f', read(0x7E07E4, 4))[0]
     return (1, index, row.type_word, *row.position,
-            (row.parameters[0] + add) * scale, load_distance)
+            (row.parameters[0] + add) * scale, load_distance, *row.angle_words)
 
 def build(starts,edges,goal=None):
     start_offset=HEADER.size;edge_offset=start_offset+len(starts)*START.size
     end=edge_offset+len(edges)*EDGE.size
-    data=bytearray(end+(GOAL.size if goal else 0))
-    HEADER.pack_into(data,0,b'SA3DECRO',1,int(goal is not None),1,len(starts),len(edges),start_offset,edge_offset)
-    if goal:GOAL.pack_into(data,end,*goal)
+    minor=2 if goal else 0
+    data=bytearray(end+(GOAL.size+GOAL_ANGLES.size if goal else 0))
+    HEADER.pack_into(data,0,b'SA3DECRO',1,minor,1,len(starts),len(edges),start_offset,edge_offset)
+    if goal:
+        GOAL.pack_into(data,end,*goal[:8])
+        GOAL_ANGLES.pack_into(data,end+GOAL.size,*goal[8:],0)
     for i,row in enumerate(starts):START.pack_into(data,start_offset+i*START.size,*row)
     for i,row in enumerate(edges):EDGE.pack_into(data,edge_offset+i*EDGE.size,*row)
     metadata=json.dumps({'source_profile':'SADX_PC_2004_CANONICAL','source_sha256':PROFILE_SHA256,

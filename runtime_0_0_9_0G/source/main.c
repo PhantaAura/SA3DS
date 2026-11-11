@@ -115,7 +115,16 @@ static size_t g_ec_collision_size;
 static SA3DSECRoute g_ec_route;
 enum { EC_GOAL_RUNNING, EC_GOAL_WAIT_GROUND, EC_GOAL_FINISHED };
 static unsigned g_ec_goal_result;
-static uint8_t g_ec_goal_action;
+static uint8_t g_ec_goal_action,g_ec_goal_draw;
+static float g_ec_goal_frame;
+static uint8_t *g_finish_tails_character_bytes,*g_finish_tails_texture_bytes;
+static SA3CCharacter g_finish_tails_character;
+static SA3TArchive g_finish_tails_textures;
+static SA3DSSonicGpu g_finish_tails_gpu;
+static SA3CTransform g_finish_tails_local[68];
+static SA3CMatrix g_finish_tails_world[68];
+static int g_finish_tails_ready;
+static unsigned g_finish_tails_draws;
 static SA3DSSetTaskLifetime g_ec_goal_lifetime;
 static SA3DSSetClipInput g_ec_goal_clip;
 static SA3DSWhaleContactPlayer g_ec_goal_players[2];
@@ -1945,7 +1954,8 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
 static void world_prepare(int restart){
     if(g_world_tasks.slots)whale_world_clear();
     g_ec_goal_result=EC_GOAL_RUNNING;
-    g_ec_goal_action=0;
+    g_ec_goal_action=g_ec_goal_draw=0;
+    g_ec_goal_frame=0;g_finish_tails_draws=0;
     g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
     if(g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index)
         g_ec_goal_lifetime.flags=0x8000;
@@ -2035,6 +2045,55 @@ static void pier_throw(void*context,const float v[3]){whale_bounce(context,v);g_
 /* O BZ action 2 uses the original 441840 CCL-center predicate.
  * Its results request is consumed on a later traversal, as with the new
  * list3 task allocated by 415540. */
+static void destroy_finish_tails(void){
+    if(g_finish_tails_ready)C3D_FrameSync();
+    sa3ds_sonic_gpu_destroy(&g_finish_tails_gpu);
+    sa3ds_free_file(g_finish_tails_character_bytes);
+    sa3ds_free_file(g_finish_tails_texture_bytes);
+    g_finish_tails_character_bytes=g_finish_tails_texture_bytes=NULL;
+    g_finish_tails_ready=0;
+}
+static void load_finish_tails(void){
+    if(!g_ec_combined||!g_ec_full_route||!g_ec_route.goal.has_angles)return;
+    size_t character_size,texture_size;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_finish_tails.sa3c",&g_finish_tails_character_bytes,&character_size)||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_finish_tails.sa3t",&g_finish_tails_texture_bytes,&texture_size)||
+       sa3c_character_open(&g_finish_tails_character,g_finish_tails_character_bytes,character_size)!=SA3C_OK||
+       sa3c_character_validate_references(&g_finish_tails_character)!=SA3C_OK||
+       g_finish_tails_character.sections[0].count!=68||g_finish_tails_character.sections[7].count!=1||
+       action_frame_count(&g_finish_tails_character,0)!=60||
+       sa3t_open(&g_finish_tails_textures,g_finish_tails_texture_bytes,texture_size)!=SA3T_OK||
+       !sa3ds_sonic_gpu_init_traced(&g_finish_tails_gpu,&g_finish_tails_character,
+           &g_finish_tails_textures,log_texture_stage,NULL)){
+        destroy_finish_tails();
+        boot_log("GOAL","Tails display assets unavailable");
+        return;
+    }
+    g_finish_tails_ready=1;
+}
+static int draw_finish_tails(void){
+    if(!g_finish_tails_ready||!g_ec_goal_draw)return 1;
+    uint16_t root=INVALID_U16;
+    if(sa3c_pose_sample_action(&g_finish_tails_character,0,g_ec_goal_frame,0,g_finish_tails_local,68,&root)!=SA3C_POSE_OK||
+       sa3c_pose_build_world_animated(&g_finish_tails_character,root,g_finish_tails_local,68,
+           g_finish_tails_world,68)!=SA3C_POSE_OK)return 0;
+    const SA3DSECGoal *goal=&g_ec_route.goal;
+    /* 4F9DA0 uses SET translation +5Y and local Z, X, Y+0xC000. */
+    C3D_Mtx model,view;
+    const float bams=2.f*PI/65536.f;
+    Mtx_Identity(&model);
+    Mtx_Translate(&model,goal->center.x,goal->center.y+5.f,goal->center.z,true);
+    Mtx_RotateZ(&model,goal->angles[2]*bams,true);
+    Mtx_RotateX(&model,goal->angles[0]*bams,true);
+    Mtx_RotateY(&model,(uint16_t)(goal->angles[1]+0xc000u)*bams,true);
+    Mtx_Multiply(&view,&g_ec_view,&model);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&view);
+    sa3ds_sonic_gpu_begin_frame(&g_finish_tails_gpu);
+    int drawn=sa3ds_sonic_gpu_draw_append(&g_finish_tails_gpu,root,g_finish_tails_world,68,NULL);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
+    if(drawn&&++g_finish_tails_draws==1)boot_log("GOAL","Original finish Tails draw submitted");
+    return drawn;
+}
 static int ec_goal_free(SA3DSOwnedTaskList *list,uint32_t task,void *context){
     uint8_t freed;
     if(!sa3ds_set_task_run_free(&g_ec_goal_lifetime,task,1,NULL,NULL,&freed)||!freed)return 0;
@@ -2044,14 +2103,19 @@ static int ec_goal_main(SA3DSOwnedTaskList *list,uint32_t task,void *context){
     (void)context;
     uint8_t unload;
     if(!sa3ds_set_object_clip(&g_ec_goal_clip,&unload))return 0;
-    if(unload)
+    if(unload){
+        g_ec_goal_draw=0;
         return sa3ds_set_task_defer_free(&g_ec_goal_lifetime,task)&&
             sa3ds_owned_task_set_main(list,task,ec_goal_free);
+    }
     if(g_ec_goal_action==0){
         g_ec_goal_action=2;
         return 1;
     }
     if(g_ec_goal_action!=2||g_ec_goal_result!=EC_GOAL_RUNNING)return 1;
+    g_ec_goal_frame+=0.5f;
+    if(g_ec_goal_frame>59.0f)g_ec_goal_frame=0;
+    g_ec_goal_draw=1;
     uint8_t player;
     if(!sa3ds_whale_trigger_inside(g_ec_goal_clip.position,g_ec_route.goal.radius,
             g_ec_goal_players,&player))return 0;
@@ -2095,7 +2159,7 @@ static int ec_goal_load(const SA1PlayerState *player,const SA3DSSetClipInput *cl
     if(!task)return 1;
     if(!sa3ds_set_task_load_commit(&g_ec_goal_lifetime,task,goal->load_distance_squared))return 0;
     g_ec_goal_clip.unload_distance_squared=g_ec_goal_lifetime.unload_distance_squared;
-    g_ec_goal_action=0;
+    g_ec_goal_action=0;g_ec_goal_frame=0;
     return 1;
 }
 /* Exercise the original finish task from a nearby airborne start. */
@@ -3130,6 +3194,7 @@ static int init_scene(void) {
         load_springs();
         load_panels();
         load_saru();
+        load_finish_tails();
         load_checkpoints();
         load_whale();
         load_piers();
@@ -3186,7 +3251,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -3292,6 +3357,7 @@ static void cleanup(void) {
     whale_world_clear();memset(&g_world_tasks,0,sizeof(g_world_tasks));
     destroy_itemboxes();destroy_cubes();destroy_piers();destroy_whale();
     destroy_saru();
+    destroy_finish_tails();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;

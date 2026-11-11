@@ -114,3 +114,7 @@ test -s "$tmp/voice/1847.adx" && echo "Voice 1847 (death 0x5DE+0x159) staged: PA
 python3 tools/verify_pc2004_item_box.py "$SONIC_EXE_PATH"
 
 python3 tools/build_pc2004_ec_itembox.py "$SONIC_EXE_PATH" "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_itembox.sa3dspak"
+
+# Finish display uses the CHRMODELS rig and a separate executable motion.
+python3 tools/build_pc2004_ec_finish_tails.py "$SONIC_EXE_PATH" "$CHRMODELS_PATH" \
+  "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_finish_tails"

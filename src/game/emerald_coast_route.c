@@ -19,10 +19,10 @@ int sa3ds_ec_route_open(SA3DSECRoute*out,const void*data,size_t size){
        sa3dspak_find(&pak,"ROUTE",&chunk)!=SA3DSPAK_OK||chunk.size<32)return 0;
     const uint8_t*b=chunk.data;
     uint16_t minor=r16(b+10);
-    if(memcmp(b,"SA3DECRO",8)||r16(b+8)!=1||minor>1||r32(b+12)!=1)return 0;
+    if(memcmp(b,"SA3DECRO",8)||r16(b+8)!=1||minor>2||r32(b+12)!=1)return 0;
     uint32_t ns=r32(b+16),ne=r32(b+20),so=r32(b+24),eo=r32(b+28);
     if(!ns||ns>SA3DS_EC_ROUTE_MAX_ACTS||ne>SA3DS_EC_ROUTE_MAX_ACTS||so!=32||
-       eo!=so+ns*24u||chunk.size!=(size_t)eo+ne*24u+(minor?32u:0u))return 0;
+       eo!=so+ns*24u||chunk.size!=(size_t)eo+ne*24u+(minor?32u:0u)+(minor==2?8u:0u))return 0;
     SA3DSECRoute route={.start_count=ns,.edge_count=ne};
     for(uint32_t i=0;i<ns;i++){
         const uint8_t*p=b+so+i*24u;uint32_t act=r32(p),yaw=r32(p+20);
@@ -47,7 +47,13 @@ int sa3ds_ec_route_open(SA3DSECRoute*out,const void*data,size_t size){
         if(act!=1||!sa3ds_ec_route_start(&route,act)||row>=1023||type>65535||
            (type&4095)!=81||!finite3(center)||!isfinite(radius)||radius<=0||
            !isfinite(load)||load<=0)return 0;
-        route.goal=(SA3DSECGoal){act,row,(uint16_t)type,center,radius,load};
+        route.goal=(SA3DSECGoal){.act_index=act,.source_row=row,.type=(uint16_t)type,
+            .center=center,.radius=radius,.load_distance_squared=load};
+        if(minor==2){
+            if(r16(p+38))return 0;
+            for(unsigned axis=0;axis<3;axis++)route.goal.angles[axis]=r16(p+32+axis*2);
+            route.goal.has_angles=1;
+        }
         route.has_goal=1;
     }
     *out=route;return 1;

@@ -1,3 +1,24 @@
+# WCA101 — Tails at the Emerald Coast finish
+
+The ordinary second-act finish draws Tails using the owner-generated
+MILES model, original 60-frame finish motion and MILES texture archive.
+The renderer applies the finish placement's original rotation and
+vertical offset. Older route packages still support the finish trigger.
+
+Host suite, exact owner pose/import and native build passed. The isolated
+Azahar finish fixture logged the original row935 contact while airborne
+at tick2, a Tails draw submission, and grounded completion at tick18.
+The fixture starts at the finish. Natural traversal, the wreck model,
+the retail results presentation and the post-clear transition remain open.
+
+The code-only 3DSX is 576724 bytes with SHA-256
+`7632f57a6875364685e1a4e25c22af7ea1d090cfd3c18169bae56e90d9ad5ff4`.
+Generate the optional `ec_finish_tails.sa3c` and `ec_finish_tails.sa3t`
+pair with `tools/build_pc2004_ec_finish_tails.py` and place it alongside
+the updated route package in `sdmc:/3ds/SA3DS/assets/`.
+
+---
+
 # WCA100 — second-act finish trigger
 
 The route package v1.1 adds the original O BZ placement. The owner builder
