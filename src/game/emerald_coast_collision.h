@@ -102,6 +102,10 @@ int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive *out,
 int sa3ds_ec_collision_open_archive_region(SA3DSECCollision *out,
     const SA3DSECCollisionArchive *archive,uint32_t act_index,
     float center_x,float center_z);
+/* A valid region may be supported entirely by registered DynamicCOL. */
+int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision *out,
+    const SA3DSECCollisionArchive *archive,uint32_t act_index,float center_x,float center_z,
+    const SA3DSECDynamicSet *dynamic);
 void sa3ds_ec_collision_destroy(SA3DSECCollision *stage);
 /* Static resident-triangle adapter for49E920: highest upward floor no higher
  * than ceiling, ignoring land flags400002. Returns0 outside the guaranteed

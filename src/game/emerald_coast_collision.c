@@ -271,7 +271,7 @@ int sa3ds_ec_object_support_inside(const SA3DSECObjectSupport*o,float px,float p
     return 1;
 }
 int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
-    if(!s||!s->triangles||!s->static_triangle_count)return 0;
+    if(!s||!s->triangles)return 0;
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;triangle=s->triangles[p->surface_id].source_triangle;
@@ -281,7 +281,8 @@ int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
         const SA3DSECTriangle*t=&set->triangles[i];
         if(!(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z))extra++;
     }
-    SA3DSECTriangle*grown=realloc(s->triangles,(size_t)(s->static_triangle_count+extra)*sizeof(*grown));
+    uint32_t count=s->static_triangle_count+extra;
+    SA3DSECTriangle*grown=realloc(s->triangles,(size_t)(count?count:1)*sizeof(*grown));
     if(!grown)return 0;
     s->triangles=grown;s->triangle_count=s->static_triangle_count;
     if(set)for(uint32_t i=0;i<set->triangle_count;i++){
@@ -346,6 +347,11 @@ int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive*out,const void*data,
 }
 int sa3ds_ec_collision_open_archive_region(SA3DSECCollision*s,
     const SA3DSECCollisionArchive*archive,uint32_t act_index,float center_x,float center_z){
+    return sa3ds_ec_collision_open_archive_region_dynamic(s,archive,act_index,center_x,center_z,NULL);
+}
+int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
+    const SA3DSECCollisionArchive*archive,uint32_t act_index,float center_x,float center_z,
+    const SA3DSECDynamicSet*dynamic){
     if(!s)return 0;
     /* Permit callers to rebuild from their current stage's borrowed view. */
     SA3DSECCollisionArchive source={0};if(archive)source=*archive;
@@ -398,12 +404,15 @@ int sa3ds_ec_collision_open_archive_region(SA3DSECCollision*s,
             s->triangles[s->triangle_count++]=t;
         }
     }
-    if(!s->triangle_count)goto fail;
-    SA3DSECTriangle *compact=realloc(s->triangles,(size_t)s->triangle_count*sizeof(*s->triangles));
+    if(!s->triangle_count&&!dynamic)goto fail;
+    uint32_t compact_count=s->triangle_count?s->triangle_count:1;
+    SA3DSECTriangle *compact=realloc(s->triangles,(size_t)compact_count*sizeof(*s->triangles));
     if(compact)s->triangles=compact;
     s->static_triangle_count=s->triangle_count;
     if(!build_index(s))goto fail;
     mark_contact_edges(s);
+    s->dynamic=dynamic;
+    if(dynamic&&(!sa3ds_ec_collision_apply_dynamic(s,NULL)||!s->triangle_count))goto fail;
     s->world=(SA1PhysicsWorld){.query_surface=sa3ds_ec_collision_surface,
         .query_contact=sa3ds_ec_collision_contact,.context=s,
         .reset_min_x=s->min_x,.reset_max_x=s->max_x,.reset_min_y=-80.0f,

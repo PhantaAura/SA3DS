@@ -1,3 +1,32 @@
+# WCA99 — collision windows supported by pier decks
+
+A region containing only DynamicCOL can now open with its registered deck
+triangles. The former loader rejected the region during the static build
+before adding the deck. The replacement keeps the standing triangle's
+source identity and updates the failed-region cache when dynamic geometry
+changes. Removing the last deck leaves an empty collision index.
+
+Host suite and native build passed. In a focused replay with owner terrain,
+all intact pier decks registered and ordinary chained pad boosts, first-act
+panel row22 lost support at tick79 on the previous code. The same replay
+stayed grounded through tick90 with the patch. Rows2/7/10/14/20/21 stayed
+grounded in both runs. Some later pad trajectories still leave support
+in this replay. Live emulator and hardware reproduction are pending.
+
+Use the owner-generated `ec_pier.sa3dspak` in `sdmc:/3ds/SA3DS/assets/`.
+The installed Azahar asset folder inspected for the replay lacked this
+package. It carries the pier collision as well as the models.
+
+CP7 source trace found the finish in SET0101S row935, kind81 O BZ.
+4F9FB0 arms action2, which calls 5B24B0 on the unrescued story path.
+That uses 441840 with radius (SET parameter X + 1) * 14 and requires
+player ordinal1 before requesting 415540 and storing action5. For ordinary
+Sonic, 415540 disables input, stops the course clock and queues 4141F0.
+That task waits for player status bits0/1 before the command and results
+sequence. The native finish and results implementation remains pending.
+
+---
+
 # Goal scope and music pairing (2026-11-09)
 
 Owner clarification: Old 3DS hardware tests are not part of the CP1–CP9

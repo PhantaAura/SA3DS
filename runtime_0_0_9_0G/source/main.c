@@ -1921,6 +1921,8 @@ static void world_apply_dynamic(void){
     g_ec_collision.dynamic=&g_ec_dynamic;
     if(!sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player)){g_whale_error=1;return;}
     g_ec_dynamic_applied=g_ec_dynamic.changes;
+    /* Newly registered pier triangles may make a previously empty window usable. */
+    g_ec_failed_region_valid=0;
 }
 static int pier_read_frame(void*context,SA3DSPierFrame*f);
 static int pier_dynamic_add(void*context,uint32_t task,const SA3DSPierPlacement*p);

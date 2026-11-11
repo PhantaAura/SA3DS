@@ -12,14 +12,12 @@ int sa3ds_ec_residency_recenter(SA3DSECCollision*s,const void*data,size_t size,
     SA3DSECCollision next;
     /* The native loader owns these immutable bytes for the whole session.
      * A different package still takes the full untrusted validation path. */
-    int loaded=s->archive.package==data&&s->archive.package_size==size?
-        sa3ds_ec_collision_open_archive_region(&next,&s->archive,s->act_index,x,z):
-        sa3ds_ec_collision_open_region(&next,data,size,s->act_index,x,z);
-    if(!loaded)return 0;
-    /* DynamicCOL survives the window move; apply it before remapping so a
-     * player standing on a dynamic object keeps that support. */
-    next.dynamic=s->dynamic;
-    if(next.dynamic&&!sa3ds_ec_collision_apply_dynamic(&next,NULL)){sa3ds_ec_collision_destroy(&next);return 0;}
+    SA3DSECCollisionArchive archive=s->archive;
+    if((archive.package!=data||archive.package_size!=size)&&
+       !sa3ds_ec_collision_archive_open(&archive,data,size))return 0;
+    /* Apply DynamicCOL before deciding whether this window has geometry.
+     * The pier can be the sole source of support this far offshore. */
+    if(!sa3ds_ec_collision_open_archive_region_dynamic(&next,&archive,s->act_index,x,z,s->dynamic))return 0;
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;

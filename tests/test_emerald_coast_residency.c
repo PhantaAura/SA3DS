@@ -57,6 +57,26 @@ int main(int argc,char **argv){
     assert(!sa3ds_ec_collision_archive_open(&rejected,bad,(size_t)n));
     assert(!rejected.package&&!rejected.collision);
     free(bad);
+    /* Move from terrain to a window where only a registered deck exists. */
+    static SA3DSECDynamicSet dynamic;
+    static const float deck[][3]={{0,0,0},{0,0,20},{20,0,0}};
+    static const uint16_t indices[]={0,1,2};
+    const float deck_x=12288,deck_z=-16384;
+    SA3CMatrix matrix;
+    sa3c_matrix_build_object(&matrix,(SA3CVec3){deck_x,12,deck_z},
+        (SA3CVec3){0,0,0},(SA3CVec3){1,1,1},0);
+    assert(sa3ds_ec_dynamic_add(&dynamic,7,1,deck,3,indices,3,&matrix));
+    stage.dynamic=&dynamic;p.pos=(SA1Vec3){deck_x+2,13,deck_z+2};
+    assert(sa3ds_ec_residency_recenter(&stage,bytes,(size_t)n,deck_x,deck_z,&p));
+    assert(!stage.static_triangle_count&&stage.triangle_count==1);
+    floor=stage.world.query_surface(stage.world.context,p.pos.x,p.pos.z);
+    assert(floor.valid&&floor.ground_y==12);
+    p.surface_id=floor.surface_id;
+    assert(sa3ds_ec_residency_recenter(&stage,bytes,(size_t)n,deck_x+128,deck_z,&p));
+    assert(p.surface_id>=0&&stage.triangles[p.surface_id].source_instance==(SA3DS_EC_DYNAMIC_SOURCE|7));
+    assert(sa3ds_ec_dynamic_remove(&dynamic,7));
+    assert(sa3ds_ec_collision_apply_dynamic(&stage,&p)&&!stage.triangle_count&&p.surface_id==-1);
+    assert(!stage.world.query_surface(stage.world.context,p.pos.x,p.pos.z).valid);
     sa3ds_ec_collision_destroy(&stage);free(bytes);
     puts("Emerald Coast residency: PASS (source start bridge, moving region, cached/fresh geometry and masks, fresh-package integrity, stable context/source identity/state, atomic rejection)");
     return 0;
