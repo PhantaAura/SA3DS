@@ -177,7 +177,7 @@ static SA3DSNativeSpring *g_spring_states;
 static SA3DSSpringVisual g_spring_visual;
 static SA3DSECGpu g_spring_gpu[6];
 static SA3DSSpringPendingCommand g_spring_pending;
-typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame;int32_t next,previous;} SA3DSNativePanel;
+typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame,jump_action,jump_counter;int32_t next,previous;} SA3DSNativePanel;
 static SA3DSNativePanel *g_panel_states;
 static SA3DSPanelVisual g_panel_visual;
 static SA3DSECGpu g_panel_gpu[3];
@@ -314,7 +314,8 @@ static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
 static void reset_saru(void);
 static int g_panels_ready;
-static int g_panel_probe;
+static int g_panel_probe,g_panel_probe_jump;
+static unsigned g_panel_probe_rise,g_panel_probe_landed;
 static unsigned g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_mask,g_panel_probe_draws,g_panel_probe_sim_mask;
 static uint32_t g_panel_probe_row;
 static int32_t g_panel_head=-1;
@@ -1220,25 +1221,71 @@ static void reset_panels(void){
 }
 static void load_panels(void){
     if(!g_springs_ready)goto fail;
+    g_panel_states=calloc(g_movement.count,sizeof(*g_panel_states));if(!g_panel_states)goto fail;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/panel_visual.sa3dspak",&g_panel_visual_bytes,&g_panel_visual_size)||
        !sa3ds_panel_visual_open(&g_panel_visual,g_panel_visual_bytes,g_panel_visual_size))goto fail;
-    g_panel_states=calloc(g_movement.count,sizeof(*g_panel_states));if(!g_panel_states)goto fail;
     for(unsigned i=0;i<3;i++)
         if(!sa3ds_ec_gpu_init_full(&g_panel_gpu[i],&g_panel_visual.components[i],log_texture_stage,NULL))goto fail;
     g_panels_ready=1;reset_panels();boot_log("PANELS","Original animated panel components and SET placements loaded");return;
 fail:
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
-    free(g_panel_states);g_panel_states=NULL;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
     boot_log("PANELS","Owner panel resources unavailable; gameplay objects remain incomplete");
 }
-static void tick_panels(const SA1PlayerState *queued_player){
-    if(!g_panels_ready)return;
+static void tick_jump_pad(SA3DSNativePanel *state,const SA3DSMovementPlacement *p,
+        SA1Vec3 previous,SA1Vec3 current){
+    switch(state->jump_action){
+    case 0:
+        state->jump_action=1;
+        return;
+    case 2:
+        state->pending_hit=0;
+        if(sa3ds_jump_pad_apply(&g_player,p,&state->trig,SA3DS_EC_CONTROLLER_SUPPORT)){
+            char note[160];
+            snprintf(note,sizeof(note),"tick=%llu row=%lu control=%d velocity=%.3f,%.3f,%.3f",
+                (unsigned long long)g_player.sim_frame,(unsigned long)p->source_row,
+                g_player.pc2004_control_timer,g_player.vel.x,g_player.vel.y,g_player.vel.z);
+            boot_log("JUMP_PAD_LAUNCH",note);
+            if(g_panel_probe&&g_panel_probe_jump&&p->source_row==g_panel_probe_row)g_panel_probe_boosts++;
+            sa3ds_se_play(0x2e2);
+        }
+        state->jump_action=3;
+        state->jump_counter=10;
+        return;
+    case 3:
+        if(state->jump_counter)state->jump_counter--;
+        else state->jump_action=1;
+        return;
+    default:
+        break;
+    }
+    if(state->pending_hit)state->jump_action=2;
+    state->pending_hit=0;
+    if(g_movement_ccl_queued>=256)return;
+    g_movement_ccl_queued++;
+    /* CCI 010C83E8 uses a 20x10x10 form3 box with local center (0,10,0).
+     * The form7 narrow phase uses the yaw rectangle around that center. */
+    SA1Vec3 up={-state->trig.sine[2]*state->trig.cosine[0],
+        state->trig.cosine[2]*state->trig.cosine[0],state->trig.sine[0]};
+    SA1Vec3 center=sa1_vec3_add(p->position,sa1_vec3_scale(up,10.f));
+    SA1Vec3 delta=sa1_vec3_sub(current,center);
+    if(fabsf(delta.x)>50.f||fabsf(delta.y)>50.f||fabsf(delta.z)>50.f)return;
+    SA3DSCheckpointSweep sweep={.previous_task=previous,.current_task=current,.box_center=center,
+        .player_radius=4.f,.player_half_height=4.f,.player_foot_radius=.65f,
+        .box_x=20.f,.box_y=10.f,.box_z=10.f,.box_yaw=(uint16_t)p->angles[1],
+        .sine=spring_source_sin,.context=&g_rings};
+    SA3DSCheckpointContact hit;
+    state->pending_hit=sa3ds_checkpoint_sweep(&sweep,&hit)&&hit.kind;
+}
+static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
+    if(!g_panel_states)return;
+    SA1Vec3 current=sa3ds_ec_task_origin(queued_player);
     SA3CMatrix queued_transform;sa3ds_ec_model_transform(queued_player,&queued_transform);
     SA1Vec3 center={queued_transform.m[12],queued_transform.m[13],queued_transform.m[14]};
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
-        if((p.type&4095u)!=3)continue;
+        unsigned kind=p.type&4095u;
+        if(kind!=40&&(kind!=3||!g_panels_ready))continue;
         SA3DSNativePanel *state=&g_panel_states[i];state->draw=0;
         SA1Vec3 delta=sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),p.position);
         float distance=sa1_vec3_dot(delta,delta);
@@ -1267,6 +1314,7 @@ static void tick_panels(const SA1PlayerState *queued_player){
     for(int32_t i=g_panel_head;i>=0;i=g_panel_states[i].next){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,(uint32_t)i,&p);
         SA3DSNativePanel *state=&g_panel_states[i];
+        if((p.type&4095u)==40){tick_jump_pad(state,&p,previous,current);continue;}
         SA3DSDashPanelInput input={.first_hit_player=state->pending_hit?0:-1,
             .player_ground_status_bit0=g_player.grounded};SA3DSDashPanelResult result;
         if(!sa3ds_dash_panel_tick(&state->actor,&p,&input,&result)){state->pending_hit=0;continue;}
@@ -1380,23 +1428,27 @@ fail:
 static void begin_panel_probe(void){
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_panel_probe.flag","rb");
     if(!file)return;
-    unsigned row=0;int parsed=fscanf(file,"%u",&row)==1;fclose(file);
-    if(!parsed||!g_panels_ready||!g_ec_full_route){boot_log("PANEL_PROBE","FAIL: full owner route/resources required");g_paused=1;return;}
+    unsigned row=0,kind=3;
+    int parsed=fscanf(file,"%u %u",&row,&kind);fclose(file);
+    if(parsed<1||(kind!=3&&kind!=40)||!g_panel_states||(kind==3&&!g_panels_ready)||!g_ec_full_route){boot_log("PANEL_PROBE","FAIL: full owner route/resources required");g_paused=1;return;}
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
-        if(p.act==g_ec_act_index&&p.source_row==row&&(p.type&4095u)==3){target=p;found=1;break;}
+        if(p.act==g_ec_act_index&&p.source_row==row&&(p.type&4095u)==kind){target=p;found=1;break;}
     }
     if(!found||!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
         target.position.x,target.position.z,&g_player))goto fail;
     g_ec_collision.reference_y=target.position.y+8;
     SA1Surface floor=sa3ds_ec_collision_surface(&g_ec_collision,target.position.x,target.position.z);
-    if(!floor.valid||floor.normal.y<.8f||fabsf(floor.ground_y-target.position.y)>20)goto fail;
-    g_player.pos=(SA1Vec3){target.position.x,floor.ground_y+SA3DS_EC_CONTROLLER_SUPPORT,target.position.z};
-    g_player.vel=(SA1Vec3){0};g_player.grounded=true;g_player.surface_id=floor.surface_id;
-    g_player.ground_normal=floor.normal;g_player.surface_frame_active=false;
+    int grounded=floor.valid&&floor.normal.y>=.8f&&fabsf(floor.ground_y-target.position.y)<=20;
+    if(!grounded&&kind==3)goto fail;
+    float start_y=grounded?floor.ground_y:target.position.y+2.f;
+    g_player.pos=(SA1Vec3){target.position.x,start_y+SA3DS_EC_CONTROLLER_SUPPORT,target.position.z};
+    g_player.vel=(SA1Vec3){0};g_player.grounded=grounded;g_player.surface_id=grounded?floor.surface_id:-1;
+    g_player.ground_normal=grounded?floor.normal:(SA1Vec3){0,1,0};g_player.surface_frame_active=false;
     g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
-    reset_springs();g_panel_probe=1;g_panel_probe_ticks=0;
+    reset_springs();g_panel_probe=1;g_panel_probe_jump=kind==40;
+    g_panel_probe_rise=g_panel_probe_landed=0;g_panel_probe_ticks=0;
     g_panel_probe_row=target.source_row;g_panel_probe_boosts=g_panel_probe_mask=g_panel_probe_draws=g_panel_probe_sim_mask=0;
     g_camera.yaw=0;
     boot_log("PANEL_PROBE","BEGIN: explicit original-placement panel fixture; course progress is not being tested");return;
@@ -3780,7 +3832,7 @@ int main(void) {
              * movement/animation phase; consume them next player tick. */
             if(!tick_scatter()){fail_screen("Native scattered-ring task/CCL failed");break;}
             tick_springs();
-            tick_panels(&physics_done);
+            tick_panels(&physics_done,checkpoint_previous_task);
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
             if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
@@ -3815,7 +3867,17 @@ int main(void) {
                 boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
                 }
             }
-            if(g_panel_probe&&++g_panel_probe_ticks>=32){
+            if(g_panel_probe&&g_panel_probe_jump&&g_panel_probe_boosts){
+                if(!g_player.grounded&&g_player.vel.y>0.f)g_panel_probe_rise++;
+                if(g_panel_probe_rise&&g_player.grounded)g_panel_probe_landed++;
+            }
+            if(g_panel_probe&&g_panel_probe_jump&&++g_panel_probe_ticks>=90){
+                char note[180];snprintf(note,sizeof(note),"%s: ticks=%u launches=%u rise=%u landed=%u; explicit placement fixture only",
+                    g_panel_probe_boosts==1&&g_panel_probe_rise&&g_panel_probe_landed?"PASS":"FAIL",
+                    g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_rise,g_panel_probe_landed);
+                boot_log("JUMP_PAD_PROBE",note);g_panel_probe=0;g_paused=1;
+            }
+            if(g_panel_probe&&!g_panel_probe_jump&&++g_panel_probe_ticks>=32){
                 char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x; explicit placement fixture only",
                     g_panel_probe_boosts&&g_panel_probe_draws&&g_panel_probe_sim_mask==255?"PASS":"FAIL",
                     g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_draws,g_panel_probe_sim_mask,g_panel_probe_mask);

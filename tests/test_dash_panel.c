@@ -62,6 +62,13 @@ int main(void){
     assert(sa3ds_dash_panel_primary_overlap(&p,&trig,(SA1Vec3){18.43f,0,0},4)==1);
     assert(sa3ds_dash_panel_primary_overlap(&p,&trig,(SA1Vec3){0,0,14.01f},4)==0);
     assert(sa3ds_dash_panel_primary_overlap(&p,&trig,(SA1Vec3){0,0,0},-1)==-1);
+    p.type=40;p.angles[1]=0;p.parameters[0]=11.f;p.parameters[1]=59.2f;
+    trig=(SA3DSSpringTrig){{0,0,0},{1,1,1}};
+    player=before;
+    assert(sa3ds_jump_pad_apply(&player,&p,&trig,1));
+    assert(player.vel.x==0&&player.vel.y==4&&player.vel.z==-11.f);
+    assert(player.pos.x==10&&player.pos.y==21&&player.pos.z==30);
+    assert(player.pc2004_control_timer==60&&player.grounded&&player.action_state==before.action_state);
     puts("Dash panel: PASS source init/defaults/ceil/low16, prior-hit grounded gate, per-player lockout, expiry order, direct velocity/frame without spring command");
     return 0;
 }

@@ -21,4 +21,7 @@ int sa3ds_dash_panel_primary_overlap(const SA3DSMovementPlacement *placement,
  * The following player tick's existing timer filter blocks analog as required. */
 int sa3ds_dash_panel_apply(SA1PlayerState *player,const SA3DSMovementPlacement *placement,
     const SA3DSSpringTrig *trig,const SA3DSDashPanelParameters *parameters,float support);
+/* O JUMP action2 uses the same player helper with a different local vector. */
+int sa3ds_jump_pad_apply(SA1PlayerState *player,const SA3DSMovementPlacement *placement,
+    const SA3DSSpringTrig *trig,float support);
 #endif

@@ -37,23 +37,44 @@ int sa3ds_dash_panel_tick(SA3DSDashPanel *a,const SA3DSMovementPlacement *p,
     }
     *a=next;*out=result;return 1;
 }
-int sa3ds_dash_panel_apply(SA1PlayerState *p,const SA3DSMovementPlacement *placement,
-    const SA3DSSpringTrig *trig,const SA3DSDashPanelParameters *params,float support){
-    if(!p||!placement||!params||(placement->type&4095)!=3||!isfinite(params->speed)||
-       params->speed<=0||!isfinite(support)||support<0)return 0;
+static int direct_speed(SA1PlayerState *p,const SA3DSMovementPlacement *placement,
+    const SA3DSSpringTrig *trig,float speed,float lift,int16_t timer,float support){
+    if(!p||!placement||!isfinite(speed)||!isfinite(support)||support<0)return 0;
     SA3DSMovementPlacement orientation=*placement;orientation.type=2;
     SA1SurfaceFrame frame;
     if(!sa3ds_springb_physical_frame(&orientation,trig,&frame))return 0;
     SA1Vec3 old_up=p->surface_frame_active?p->ground_normal:(SA1Vec3){0,1,0};
     SA1Vec3 task=sa1_vec3_sub(p->pos,sa1_vec3_scale(old_up,support));
-    SA1Vec3 velocity=sa1_vec3_scale(frame.forward,params->speed);
+    SA1Vec3 velocity=sa1_vec3_add(sa1_vec3_scale(frame.forward,speed),sa1_vec3_scale(frame.up,lift));
     if(!isfinite(velocity.x)||!isfinite(velocity.y)||!isfinite(velocity.z))return 0;
     p->pos=sa1_vec3_add(task,sa1_vec3_scale(frame.up,support));
     p->vel=velocity;p->ground_normal=frame.up;p->surface_forward=frame.forward;
     p->surface_right=frame.right;p->surface_frame_active=true;
     if(frame.forward.x*frame.forward.x+frame.forward.z*frame.forward.z>1e-8f)
         p->yaw=atan2f(frame.forward.x,frame.forward.z);
-    p->pc2004_control_timer=params->control_timer;return 1;
+    p->pc2004_control_timer=timer;return 1;
+}
+
+int sa3ds_dash_panel_apply(SA1PlayerState *p,const SA3DSMovementPlacement *placement,
+    const SA3DSSpringTrig *trig,const SA3DSDashPanelParameters *params,float support){
+    if(!placement||!params||(placement->type&4095)!=3||params->speed<=0)return 0;
+    return direct_speed(p,placement,trig,params->speed,0.f,params->control_timer,support);
+}
+
+int sa3ds_jump_pad_apply(SA1PlayerState *p,const SA3DSMovementPlacement *placement,
+    const SA3DSSpringTrig *trig,float support){
+    if(!placement||!trig||(placement->type&4095)!=40)return 0;
+    double duration=ceil(placement->parameters[1]);
+    if(!isfinite(duration)||duration<-2147483648.||duration>2147483647.)return 0;
+    uint16_t low=(uint16_t)(int32_t)duration;int16_t timer;
+    memcpy(&timer,&low,sizeof(timer));
+    SA3DSMovementPlacement rotated=*placement;
+    uint16_t yaw=(uint16_t)((uint16_t)placement->angles[1]+0x8000u);
+    memcpy(&rotated.angles[1],&yaw,sizeof(yaw));
+    SA3DSSpringTrig launch_trig=*trig;
+    launch_trig.sine[1]=-trig->sine[1];
+    launch_trig.cosine[1]=-trig->cosine[1];
+    return direct_speed(p,&rotated,&launch_trig,placement->parameters[0],4.f,timer,support);
 }
 
 int sa3ds_dash_panel_primary_overlap(const SA3DSMovementPlacement *p,

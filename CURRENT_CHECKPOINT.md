@@ -1,3 +1,27 @@
+# WCA103 — original O JUMP launch behavior
+
+The stage consumes kind40 placements from both Sonic acts. The task
+uses the previous collision pass's box contact, arms the launch for
+the next update, and waits through the original ten-count cooldown.
+The shared direct-speed helper preserves task position and existing
+action while applying the original local lift, yaw and control timer.
+
+Host suite and native build passed. In Azahar, the Act 1 row537
+fixture launched once at tick4 with control timer60 and world speed
+(11.000, 3.835, -1.137). Sonic rose for 41 ticks and had not landed
+by tick90. A separate zero-input host replay using owner terrain and
+intact pier decks triggered row537 from dash panel rows17 and18 at
+tick34. The row18 approach reached ground during the 180-tick replay.
+The row17 approach reached the wall around x5408 with no landing in
+that window. This does not establish natural route acceptance.
+
+The O JUMP display and secondary registration, numbered O JPanel
+sequence and Tikal actor remain pending. Use the v1.1 owner movement
+package. The 579276-byte code-only 3DSX has SHA-256
+`e6ba5be3d038c52ca07cc2ee066202ced6978f464c9a37720a94b46df97a9f2a`.
+
+---
+
 # WCA102 — original Emerald Coast jump and hint placements
 
 The movement package builder and reader preserve the original SET rows
