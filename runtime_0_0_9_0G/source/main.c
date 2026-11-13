@@ -177,7 +177,7 @@ static SA3DSNativeSpring *g_spring_states;
 static SA3DSSpringVisual g_spring_visual;
 static SA3DSECGpu g_spring_gpu[6];
 static SA3DSSpringPendingCommand g_spring_pending;
-typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame,jump_action,jump_counter;uint16_t jump_angle,jump_draw_angle;int32_t next,previous;} SA3DSNativePanel;
+typedef struct {SA3DSDashPanel actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,phase,frame,jump_action,jump_counter,jump_registered;uint16_t jump_angle,jump_draw_angle;int32_t next,previous;} SA3DSNativePanel;
 static SA3DSNativePanel *g_panel_states;
 static SA3DSPanelVisual g_panel_visual;
 static SA3DSECGpu g_panel_gpu[3],g_jump_gpu[3];
@@ -185,7 +185,10 @@ static SA3DSECVisual g_jump_visual[3];
 static uint8_t *g_jump_visual_bytes;
 static size_t g_jump_visual_size;
 static float g_jump_visual_offsets[2][3];
-static int g_jump_visual_ready;
+#define JUMP_COLLISION_ID_BASE 0x10000u
+static float g_jump_collision_points[94][3];
+static uint16_t g_jump_collision_indices[360];
+static int g_jump_visual_ready,g_jump_collision_ready;
 static unsigned g_jump_visual_draws;
 static uint8_t *g_panel_visual_bytes;
 static size_t g_panel_visual_size;
@@ -1223,7 +1226,11 @@ static void tick_springs(void){
 }
 static void reset_panels(void){
     g_panel_head=-1;
-    if(g_panel_states)memset(g_panel_states,0,g_movement.count*sizeof(*g_panel_states));
+    if(g_panel_states){
+        for(uint32_t i=0;i<g_movement.count;i++)
+            if(g_panel_states[i].jump_registered)sa3ds_ec_dynamic_remove(&g_ec_dynamic,JUMP_COLLISION_ID_BASE+i);
+        memset(g_panel_states,0,g_movement.count*sizeof(*g_panel_states));
+    }
 }
 static void load_panels(void){
     if(!g_springs_ready)goto fail;
@@ -1241,14 +1248,14 @@ fail:
 static void destroy_jump_visual(void){
     for(unsigned part=0;part<3;part++)sa3ds_ec_gpu_destroy(&g_jump_gpu[part]);
     sa3ds_free_file(g_jump_visual_bytes);g_jump_visual_bytes=NULL;
-    g_jump_visual_ready=0;g_jump_visual_draws=0;
+    g_jump_visual_ready=0;g_jump_collision_ready=0;g_jump_visual_draws=0;
 }
 static void load_jump_visual(void){
     if(!g_panel_states)return;
     SA3DSPak pak;SA3DSPakChunk config;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_jump_visual.sa3dspak",
         &g_jump_visual_bytes,&g_jump_visual_size)||g_jump_visual_size>1024u*1024u||
-       sa3dspak_open(&pak,g_jump_visual_bytes,g_jump_visual_size)!=SA3DSPAK_OK||pak.toc_count!=5||
+       sa3dspak_open(&pak,g_jump_visual_bytes,g_jump_visual_size)!=SA3DSPAK_OK||(pak.toc_count!=5&&pak.toc_count!=6)||
        sa3dspak_find(&pak,"JUMP_VISUAL",&config)!=SA3DSPAK_OK||config.flags||config.size!=36||
        memcmp(config.data,"SA3JVIS\0\1\0\0\0",12))goto fail;
     memcpy(g_jump_visual_offsets,config.data+12,sizeof(g_jump_visual_offsets));
@@ -1264,6 +1271,23 @@ static void load_jump_visual(void){
            visual->model_count!=1||visual->instance_count!=1||
            !sa3ds_ec_gpu_init_full(&g_jump_gpu[part],visual,log_texture_stage,NULL))goto fail;
     }
+    if(pak.toc_count==6){
+        SA3DSPakChunk collision;
+        const uint32_t fields[]={1,94,120,1};
+        const size_t header=8+sizeof(fields);
+        if(sa3dspak_find(&pak,"JUMP_COL",&collision)!=SA3DSPAK_OK||collision.flags||
+           collision.size!=header+sizeof(g_jump_collision_points)+sizeof(g_jump_collision_indices)||
+           memcmp(collision.data,"SA3JCOL\0",8)||memcmp(collision.data+8,fields,sizeof(fields)))goto fail;
+        memcpy(g_jump_collision_points,collision.data+header,sizeof(g_jump_collision_points));
+        memcpy(g_jump_collision_indices,collision.data+header+sizeof(g_jump_collision_points),sizeof(g_jump_collision_indices));
+        for(unsigned point=0;point<94;point++)for(unsigned axis=0;axis<3;axis++){
+            float value=g_jump_collision_points[point][axis];
+            if(!isfinite(value)||fabsf(value)>128.f)goto fail;
+        }
+        for(unsigned i=0;i<360;i++)if(g_jump_collision_indices[i]>=94)goto fail;
+        g_jump_collision_ready=1;
+        boot_log("JUMP_COL","Original O JUMP DynamicCOL mesh loaded");
+    }
     g_jump_visual_ready=1;
     boot_log("JUMP_VISUAL","Original O JUMP base and two model parts loaded");
     return;
@@ -1271,8 +1295,26 @@ fail:
     destroy_jump_visual();
     boot_log("JUMP_VISUAL","Owner display package unavailable");
 }
-static void tick_jump_pad(SA3DSNativePanel *state,const SA3DSMovementPlacement *p,
+static void tick_jump_pad(uint32_t index,const SA3DSMovementPlacement *p,
         SA1Vec3 previous,SA1Vec3 current){
+    SA3DSNativePanel *state=&g_panel_states[index];
+    if(g_jump_collision_ready&&!state->jump_registered){
+        const float bams=2.f*PI/65536.f;
+        SA3CMatrix matrix;
+        sa3c_matrix_build_object(&matrix,(SA3CVec3){p->position.x,p->position.y,p->position.z},
+            (SA3CVec3){p->angles[0]*bams,p->angles[1]*bams,p->angles[2]*bams},
+            (SA3CVec3){1,1,1},0);
+        uint32_t flags=1;
+        if(((uint16_t)(p->angles[0]|p->angles[1]|p->angles[2])&0xfff0u)!=0)flags|=0x10000000u;
+        if(!sa3ds_ec_dynamic_add(&g_ec_dynamic,JUMP_COLLISION_ID_BASE+index,flags,
+            g_jump_collision_points,94,g_jump_collision_indices,360,&matrix)){
+            g_whale_error=1;
+            return;
+        }
+        state->jump_registered=1;
+        if(g_panel_probe&&g_panel_probe_jump&&p->source_row==g_panel_probe_row)
+            boot_log("JUMP_COL","Probe pad registered its original base mesh");
+    }
     if(state->jump_action==0){
         state->jump_action=1;
         return;
@@ -1335,6 +1377,7 @@ static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
         float distance=sa1_vec3_dot(delta,delta);
         if(p.act!=g_ec_act_index||(state->loaded&&distance>360100.f)){
             if(state->loaded){
+                if(state->jump_registered)sa3ds_ec_dynamic_remove(&g_ec_dynamic,JUMP_COLLISION_ID_BASE+i);
                 if(state->previous>=0)g_panel_states[state->previous].next=state->next;
                 else g_panel_head=state->next;
                 if(state->next>=0)g_panel_states[state->next].previous=state->previous;
@@ -1358,7 +1401,7 @@ static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
     for(int32_t i=g_panel_head;i>=0;i=g_panel_states[i].next){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,(uint32_t)i,&p);
         SA3DSNativePanel *state=&g_panel_states[i];
-        if((p.type&4095u)==40){tick_jump_pad(state,&p,previous,current);continue;}
+        if((p.type&4095u)==40){tick_jump_pad((uint32_t)i,&p,previous,current);continue;}
         SA3DSDashPanelInput input={.first_hit_player=state->pending_hit?0:-1,
             .player_ground_status_bit0=g_player.grounded};SA3DSDashPanelResult result;
         if(!sa3ds_dash_panel_tick(&state->actor,&p,&input,&result)){state->pending_hit=0;continue;}
@@ -2088,6 +2131,7 @@ static void world_prepare(int restart){
         g_ec_goal_lifetime.flags=0x8000;
     if(!g_world_tasks.slots)return;
     sa3ds_ec_dynamic_clear(&g_ec_dynamic);
+    if(g_panel_states)for(uint32_t i=0;i<g_movement.count;i++)g_panel_states[i].jump_registered=0;
     if(g_whale_ready){
         uint32_t count=g_whale_trigger_assets.count;SA3DSSetTaskLifetime set[WHALE_TRIGGER_CAPACITY];
         uint16_t types[WHALE_TRIGGER_CAPACITY],flags[WHALE_TRIGGER_CAPACITY];uint8_t current[WHALE_TRIGGER_CAPACITY];
@@ -2312,7 +2356,10 @@ static void begin_ec_goal_probe(void){
 static int tick_world(const SA1PlayerState*done){
     int goal_active=g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index;
     if(goal_active&&!world_tasks_ensure())return 0;
-    if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready))return 1;
+    if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready)){
+        world_apply_dynamic();
+        return !g_whale_error;
+    }
     SA3DSSetClipInput clip;float center[3];world_clip_frame(done,&clip,center);
     if(!ec_goal_load(done,&clip,center))return 0;
     if(g_whale_ready){

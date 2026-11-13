@@ -57,7 +57,9 @@ typedef struct {
 /* 43B2E0 DynamicCOL projection: world-space triangles per owner task, copied
  * when added. Source source_instance is 0x80000000|owner, source_triangle the
  * owner-local index. Edge masks are derived within one owner's triangles. */
-#define SA3DS_EC_DYNAMIC_MAX_TRIANGLES 512u
+/* Emerald Coast act0 can contain four 120-triangle O JUMP bases and
+ * 62 two-triangle pier decks. */
+#define SA3DS_EC_DYNAMIC_MAX_TRIANGLES 640u
 #define SA3DS_EC_DYNAMIC_MAX_OWNERS 128u
 #define SA3DS_EC_DYNAMIC_SOURCE 0x80000000u
 typedef struct {uint32_t owner,first,count;} SA3DSECDynamicOwner;

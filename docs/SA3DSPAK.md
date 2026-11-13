@@ -126,3 +126,10 @@ single-instance geometry/material/texture package with compacted
 textures from the owner's Emerald Coast object archive. This package
 is optional for gameplay. The launch task uses the movement placement
 package independently of the visual resources.
+
+The optional `JUMP_COL` chunk adds the original base model's terrain
+mesh. It has magic `SA3JCOL\0`, then four little-endian uint32 values
+for version1, 94 points, 120 triangles, and base surface flags1.
+The payload stores 94 float32 XYZ triples followed by 120 uint16
+index triples. The stage adds the base mesh to DynamicCOL when
+the pad loads and removes it when the pad unloads.

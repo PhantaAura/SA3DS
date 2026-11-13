@@ -1,3 +1,23 @@
+# WCA105 — original O JUMP terrain collision
+
+The owner package carries the original 94-point, 120-triangle O JUMP
+base mesh. The stage registers it as DynamicCOL on pad initialization
+and removes it on unload or reset. The pool holds all 604 possible
+Act 1 launch-pad and pier triangles. Older visual packages still load.
+
+The host suite, exact owner import and native build passed. Azahar
+registered the Act 1 row537 mesh and launched at tick4 with timer60.
+Sonic was still airborne at tick90. A separate 180-tick owner replay
+registered all 604 triangles and ran the two dash-panel approaches.
+Both retained support until tick35, one tick longer than WCA103.
+The row18 approach landed. The row17 approach still reached the wall
+near x5408 without a landing in that window.
+
+Use the updated `ec_jump_visual.sa3dspak`. The native build SHA-256
+is `f888cab3916a265bf50ebd916b78708a50d1accc8ab8d9ebfd7c55a824a38e84`.
+
+---
+
 # WCA104 — original O JUMP display
 
 The native stage draws the owner's original three-part launch pad at
