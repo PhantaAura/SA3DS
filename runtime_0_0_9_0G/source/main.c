@@ -653,8 +653,8 @@ static void emerald_coast_help(void) {
 
 static char g_tikal_lines[2][2][40];
 static uint16_t g_tikal_duration[2],g_tikal_voice;
-static unsigned g_tikal_page,g_tikal_remaining;
-static int g_tikal_hint_ready,g_tikal_triggered;
+static unsigned g_tikal_page,g_tikal_remaining,g_tikal_cooldown;
+static int g_tikal_hint_ready;
 
 static void emerald_coast_status(void) {
     printf("\x1b[14;1HInstances:%4lu  Batches:%3lu       ",
@@ -1142,7 +1142,7 @@ static double spring_source_sin(void *context,uint16_t angle){
 }
 static void reset_springs(void){
     g_spring_head=-1;reset_panels();reset_saru();
-    g_tikal_remaining=0;g_tikal_triggered=0;
+    g_tikal_remaining=0;g_tikal_cooldown=0;
     sa3ds_numbered_panels_open(&g_numbered_panels,&g_movement,g_ec_act_index);
     g_numbered_target=g_numbered_contact=-1;g_numbered_age=0;
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
@@ -1554,7 +1554,7 @@ static int draw_panels(void){
 }
 static C3D_Tex g_tikal_textures[8];
 static SA3DSLabVertex *g_tikal_quad;
-static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws;
+static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws,g_tikal_rise;
 static int g_tikal_visible;
 static SA1Vec3 g_tikal_position;
 static void destroy_tikal(void){
@@ -1610,9 +1610,16 @@ fail:
     sa3ds_free_file(bytes);destroy_tikal();
 }
 static void tick_tikal(void){
-    if(g_tikal_remaining&&!--g_tikal_remaining&&g_tikal_page==0){
-        g_tikal_page=1;g_tikal_remaining=g_tikal_duration[1];
-        boot_log("TIKAL","Hint advanced to second page");
+    if(g_tikal_cooldown)g_tikal_cooldown--;
+    if(g_tikal_remaining&&!--g_tikal_remaining){
+        if(g_tikal_page==0){
+            g_tikal_page=1;g_tikal_remaining=g_tikal_duration[1];
+            boot_log("TIKAL","Hint advanced to second page");
+        }else{
+            /* 7A17B3 releases the player command and starts a 240-tick wait. */
+            g_tikal_cooldown=240;
+            boot_log("TIKAL","Hint closed and controls restored");
+        }
     }
     int was_visible=g_tikal_visible;
     g_tikal_visible=0;
@@ -1623,18 +1630,23 @@ static void tick_tikal(void){
         if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||p.act!=1||(p.type&4095u)!=26)continue;
         SA1Vec3 delta=sa1_vec3_sub(player,p.position);
         if(sa1_vec3_dot(delta,delta)>=115600.f)continue;
-        g_tikal_position=sa1_vec3_add(p.position,(SA1Vec3){0,4.f,0});
+        /* 7A15B5–7A15F6: the final tick changes state before adding height. */
+        g_tikal_rise=was_visible?g_tikal_rise+(g_tikal_rise<59):0;
+        g_tikal_position=sa1_vec3_add(p.position,(SA1Vec3){0,(float)g_tikal_rise/3.f,0});
         g_tikal_visible=1;
         g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
-        if(g_tikal_hint_ready&&!g_tikal_triggered&&p.parameters[2]==8.f&&
+        if(g_tikal_hint_ready&&g_tikal_rise==59&&!g_tikal_remaining&&!g_tikal_cooldown&&
+           g_numbered_target<0&&g_player.action_state!=SA1_ACTION_HURT&&
+           g_player.action_state!=SA1_ACTION_DEAD&&p.parameters[2]==8.f&&
            sa1_vec3_dot(delta,delta)<225.f){
-            g_tikal_triggered=1;g_tikal_page=0;g_tikal_remaining=g_tikal_duration[0];
+            g_tikal_page=0;g_tikal_remaining=g_tikal_duration[0];
+            g_player.vel=(SA1Vec3){0};
+            sa3ds_se_play(6);
             int voice=sa3ds_voice_play(g_tikal_voice);
             boot_log("TIKAL",voice?"Hint opened and voice queued":"Hint opened; voice unavailable");
         }
         break;
     }
-    if(!g_tikal_visible)g_tikal_triggered=0;
 }
 static void begin_tikal_probe(void){
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_tikal_probe.flag","rb");
@@ -4080,6 +4092,7 @@ int main(void) {
             if(g_emerald_coast&&g_ec_combined&&(!stage_phase.controls_enabled||g_ec_goal_result!=EC_GOAL_RUNNING))tick_input=(SA1Input){0};
             if(g_numbered_probe)tick_input=(SA1Input){
                 .jump_pressed=g_numbered_target<0&&g_numbered_contact>0};
+            if(g_tikal_remaining)tick_input=(SA1Input){0};
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
             if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
