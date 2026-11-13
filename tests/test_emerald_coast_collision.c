@@ -316,6 +316,14 @@ int main(int argc,char**argv){
         sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);assert(!p.grounded);
         in.jump_pressed=false;int landed=0;for(int i=0;i<120;i++){s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);if(p.grounded){landed=1;break;}}assert(landed);
         p.pos=(SA1Vec3){40,1,20};p.vel=(SA1Vec3){20,0,0};sa3ds_ec_collision_resolve_walls(&s,(SA1Vec3){20,1,20},&p);assert(s.wall_hits);assert(fabsf(p.pos.x-27)<0.001f);assert(fabsf(p.vel.x)<0.001f);
+        /* At the exposed vertical edge (32, y, 0), the wall must stop
+         * inward motion while allowing the airborne actor to descend. */
+        p.grounded=false;p.action_state=SA1_ACTION_AIRBORNE;
+        p.ground_normal=(SA1Vec3){0,1,0};p.surface_frame_active=false;
+        p.pos=(SA1Vec3){29,8,-3};p.vel=(SA1Vec3){1,-2,0};
+        sa3ds_ec_collision_resolve_walls(&s,(SA1Vec3){28,10,-3},&p);
+        assert(!p.grounded&&fabsf(p.pos.y-8)<0.001f&&fabsf(p.vel.y+2)<0.001f);
+        assert(hypotf(p.pos.x-32,p.pos.z)>=4.999f);
         /* A wall leaning over a real floor must not push a grounded actor
          * below that floor after the controller already resolved support. */
         for(uint32_t ti=0;ti<s.triangle_count;ti++){

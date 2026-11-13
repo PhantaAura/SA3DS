@@ -658,24 +658,36 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
     }
     /* Face projection is insufficient at finite polygon corners. Sweep only
      * exposed/sharp edges; coplanar internal diagonals were removed at load. */
-    if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*sizeof(*s->visited));s->query_serial=1;}
-    float best=2;SA1Vec3 edge_normal={0};
-    s->queries++;
-    for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
-        unsigned c=z*16+x;
-        for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
-            uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
-            SA3DSECTriangle*t=&s->triangles[ti];if(fabsf(t->normal.y)>0.45f||!t->wall_edge_mask)continue;
-            s->triangle_tests++;
-            for(unsigned e=0;e<3;e++)if(t->wall_edge_mask&(1u<<e)){
-                float q;SA1Vec3 n;
-                if(sweep_edge(previous,center,edge_point(t,e),edge_point(t,(e+1)%3),radius,&q,&n)&&q<best){best=q;edge_normal=n;}
+    /* Re-sweep the tangent remainder after an edge hit. Truncating the
+     * whole step at a near-zero hit can pin an actor to a vertical seam. */
+    for(unsigned pass=0;pass<3;pass++){
+        if(++s->query_serial==0){memset(s->visited,0,(size_t)s->triangle_count*sizeof(*s->visited));s->query_serial=1;}
+        x0=cell_x(s,fminf(previous.x,center.x)-radius);x1=cell_x(s,fmaxf(previous.x,center.x)+radius);
+        z0=cell_z(s,fminf(previous.z,center.z)-radius);z1=cell_z(s,fmaxf(previous.z,center.z)+radius);
+        float best=2;SA1Vec3 edge_normal={0};
+        s->queries++;
+        for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
+            unsigned c=z*16+x;
+            for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+                uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
+                SA3DSECTriangle*t=&s->triangles[ti];if(fabsf(t->normal.y)>0.45f||!t->wall_edge_mask)continue;
+                s->triangle_tests++;
+                for(unsigned e=0;e<3;e++)if(t->wall_edge_mask&(1u<<e)){
+                    float q;SA1Vec3 n;
+                    if(sweep_edge(previous,center,edge_point(t,e),edge_point(t,(e+1)%3),radius,&q,&n)&&q<best){best=q;edge_normal=n;}
+                }
             }
         }
-    }
-    if(best<=1){
-        SA1Vec3 hit=sa1_vec3_add(previous,sa1_vec3_scale(sa1_vec3_sub(center,previous),best));
-        SA1Vec3 correction=sa1_vec3_sub(hit,center);p->pos=sa1_vec3_add(p->pos,correction);center=hit;
+        if(best>1)break;
+        SA1Vec3 motion=sa1_vec3_sub(center,previous);
+        SA1Vec3 hit=sa1_vec3_add(previous,sa1_vec3_scale(motion,best));
+        SA1Vec3 remainder=sa1_vec3_sub(center,hit);
+        float into_edge=sa1_vec3_dot(remainder,edge_normal);
+        if(into_edge<0)remainder=sa1_vec3_sub(remainder,sa1_vec3_scale(edge_normal,into_edge));
+        SA1Vec3 next=pass==2?hit:sa1_vec3_add(hit,remainder);
+        p->pos=sa1_vec3_add(p->pos,sa1_vec3_sub(next,center));
+        center=next;
+        previous=hit;
         float inward=sa1_vec3_dot(p->vel,edge_normal);
         if(inward<0)p->vel=sa1_vec3_sub(p->vel,sa1_vec3_scale(edge_normal,inward));
         s->wall_hits++;

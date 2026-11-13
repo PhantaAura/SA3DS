@@ -1,3 +1,24 @@
+# WCA106 — preserve downward movement at wall seams
+
+The wall-edge sweep now removes the inward component of remaining
+movement and sweeps the tangent remainder again. The old response
+stopped the entire move at the first edge even when the contact normal
+was horizontal. The new sweep is bounded to three contacts per tick.
+
+A focused 180-tick replay used owner terrain, all intact pier decks and
+the original launch-pad bases. In the row17 approach, Sonic previously
+stayed at the wall near x5408 and y45.74 while downward velocity kept
+increasing. He now descends along the wall and lands by tick130.
+The row18 approach still lands. The regression fixture checks descent
+along a vertical edge while maintaining the collision radius.
+
+The host suite and native build passed. The approach replay ran on the
+host and does not establish natural traversal in Azahar or PC2004.
+Use the same owner SD files as WCA105. The 582712-byte 3DSX SHA-256 is
+`c151787e7c11bc8e13e2dff8d46ddac8679f1b801246e8a4d287c0f909c24a22`.
+
+---
+
 # WCA105 — original O JUMP terrain collision
 
 The owner package carries the original 94-point, 120-triangle O JUMP
