@@ -654,6 +654,7 @@ static void emerald_coast_help(void) {
 static char g_tikal_lines[2][2][40];
 static uint16_t g_tikal_duration[2],g_tikal_voice;
 static unsigned g_tikal_page,g_tikal_remaining,g_tikal_cooldown;
+static uint16_t g_tikal_orbit;
 static int g_tikal_hint_ready;
 
 static void emerald_coast_status(void) {
@@ -1632,14 +1633,27 @@ static void tick_tikal(void){
         if(sa1_vec3_dot(delta,delta)>=115600.f)continue;
         /* 7A15B5–7A15F6: the final tick changes state before adding height. */
         g_tikal_rise=was_visible?g_tikal_rise+(g_tikal_rise<59):0;
-        g_tikal_position=sa1_vec3_add(p.position,(SA1Vec3){0,(float)g_tikal_rise/3.f,0});
+        SA1Vec3 hover=sa1_vec3_add(p.position,(SA1Vec3){0,(float)g_tikal_rise/3.f,0});
+        if(g_tikal_remaining){
+            /* 7A1700/7A177C orbit the buffered player position. 4A34B0
+             * applies a unit step toward the moving point each update. */
+            g_tikal_orbit=(uint16_t)(g_tikal_orbit+0x2b7u);
+            float sine=(float)spring_source_sin(&g_rings,g_tikal_orbit);
+            float cosine=(float)spring_source_sin(&g_rings,(uint16_t)(g_tikal_orbit+0x4000u));
+            SA1Vec3 target=sa1_vec3_add(player,(SA1Vec3){15.f*sine,5.f+2.5f*sine,15.f*cosine});
+            SA1Vec3 travel=sa1_vec3_sub(target,g_tikal_position);
+            if(sa1_vec3_dot(travel,travel)>0.f)
+                g_tikal_position=sa1_vec3_add(g_tikal_position,sa1_vec3_normalize(travel));
+        }else{
+            g_tikal_position=hover;
+        }
         g_tikal_visible=1;
         g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
         if(g_tikal_hint_ready&&g_tikal_rise==59&&!g_tikal_remaining&&!g_tikal_cooldown&&
            g_numbered_target<0&&g_player.action_state!=SA1_ACTION_HURT&&
            g_player.action_state!=SA1_ACTION_DEAD&&p.parameters[2]==8.f&&
            sa1_vec3_dot(delta,delta)<225.f){
-            g_tikal_page=0;g_tikal_remaining=g_tikal_duration[0];
+            g_tikal_page=0;g_tikal_orbit=0;g_tikal_remaining=g_tikal_duration[0];
             g_player.vel=(SA1Vec3){0};
             sa3ds_se_play(6);
             int voice=sa3ds_voice_play(g_tikal_voice);
