@@ -121,3 +121,6 @@ python3 tools/build_pc2004_ec_finish_tails.py "$SONIC_EXE_PATH" "$CHRMODELS_PATH
 
 python3 tools/build_pc2004_ec_jump_visual.py "$SONIC_EXE_PATH" \
   "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_jump_visual.sa3dspak"
+
+python3 tools/build_pc2004_ec_numbered_panel.py "$SONIC_EXE_PATH" \
+  "$(dirname "$SONIC_PVM_PATH")" "$tmp/ec_numbered_panel.sa3dspak"

@@ -1,3 +1,17 @@
+# WCA109 — original Act 2 panel bases
+
+The numbered-panel route now draws the original two-model base using
+owner OBJ_REGULAR textures and the source 500-unit camera distance.
+The separate number overlay and conditional slot-zero display remain
+pending. The optional owner package is ec_numbered_panel.sa3dspak.
+
+Host suite, exact owner import and native build passed. Azahar loaded
+the base, submitted its draw, and reached slots 2, 3, 4, 5 and 0 in
+the existing scripted fixture. Natural approach and the landing after
+slot zero remain unverified.
+
+---
+
 # WCA108 — numbered jump-panel traversal in Act 2
 
 Sonic can take the numbered panel route on successive jump presses.

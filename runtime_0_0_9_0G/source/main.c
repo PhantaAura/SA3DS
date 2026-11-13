@@ -172,6 +172,11 @@ static void spawn_scatter(const SA3DSPlayerDamageResult *requests);
 typedef struct {SA3DSSpringActor actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,unsupported;int32_t next,previous;} SA3DSNativeSpring;
 static SA3DSMovementObjects g_movement;
 static SA3DSNumberedPanels g_numbered_panels;
+static SA3DSECVisual g_numbered_visual;
+static SA3DSECGpu g_numbered_gpu;
+static uint8_t *g_numbered_visual_bytes;
+static unsigned g_numbered_draws;
+static int g_numbered_visual_ready;
 static int g_numbered_target=-1,g_numbered_contact=-1;
 static unsigned g_numbered_age,g_numbered_probe_ticks,g_numbered_probe_arrivals;
 static int g_numbered_probe;
@@ -1536,6 +1541,48 @@ static int draw_panels(void){
                 g_panel_probe_draws++;g_panel_probe_mask|=1u<<state->frame;
             }
         }
+    }
+    return 1;
+}
+static void destroy_numbered_visual(void){
+    sa3ds_ec_gpu_destroy(&g_numbered_gpu);
+    sa3ds_free_file(g_numbered_visual_bytes);g_numbered_visual_bytes=NULL;
+    g_numbered_visual_ready=0;g_numbered_draws=0;
+}
+static void load_numbered_visual(void){
+    size_t size=0;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_numbered_panel.sa3dspak",&g_numbered_visual_bytes,&size))return;
+    if(size>256u*1024u||
+       sa3ds_ec_visual_open(&g_numbered_visual,g_numbered_visual_bytes,size)!=SA3DS_EC_VISUAL_OK||
+       g_numbered_visual.model_count!=2||g_numbered_visual.instance_count!=2||
+       !sa3ds_ec_gpu_init_full(&g_numbered_gpu,&g_numbered_visual,log_texture_stage,NULL)){
+        destroy_numbered_visual();
+        boot_log("NUMBERED_PANEL","Owner panel base package invalid");
+        return;
+    }
+    g_numbered_visual_ready=1;
+    boot_log("NUMBERED_PANEL","Original two-part panel base loaded");
+}
+static int draw_numbered_panels(void){
+    if(!g_numbered_visual_ready)return 1;
+    SA1Vec3 camera={g_cam_eye[0],g_cam_eye[1],g_cam_eye[2]};
+    const float bams=2.f*PI/65536.f;
+    for(unsigned slot=1;slot<SA3DS_NUMBERED_PANEL_SLOTS;slot++){
+        if(!(g_numbered_panels.present&(1u<<slot)))continue;
+        const SA3DSMovementPlacement *p=&g_numbered_panels.slots[slot];
+        SA1Vec3 delta=sa1_vec3_sub(camera,p->position);
+        if(sa1_vec3_dot(delta,delta)>=250000.f)continue;
+        float center[]={p->position.x,p->position.y,p->position.z};
+        if(!sa3ds_ec_gpu_sphere_visible(&g_ec_gpu,center,20.f))continue;
+        C3D_Mtx model,mv;Mtx_Identity(&model);
+        Mtx_Translate(&model,p->position.x,p->position.y,p->position.z,true);
+        Mtx_RotateZ(&model,p->angles[2]*bams,true);
+        Mtx_RotateX(&model,p->angles[0]*bams,true);
+        Mtx_RotateY(&model,p->angles[1]*bams,true);
+        Mtx_Multiply(&mv,&g_ec_view,&model);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&mv);
+        if(!sa3ds_ec_gpu_draw(&g_numbered_gpu,0)||!sa3ds_ec_gpu_draw(&g_numbered_gpu,1))return 0;
+        if(g_numbered_draws++==0)boot_log("NUMBERED_PANEL","Original panel base draw submitted");
     }
     return 1;
 }
@@ -3466,6 +3513,7 @@ static int init_scene(void) {
         load_springs();
         load_panels();
         load_jump_visual();
+        load_numbered_visual();
         load_saru();
         load_finish_tails();
         load_checkpoints();
@@ -3524,7 +3572,7 @@ static int sample_pose(void) {
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&stage_mv);
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
-        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_jump_pads()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
+        if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_jump_pads()||!draw_numbered_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -3632,6 +3680,7 @@ static void cleanup(void) {
     destroy_saru();
     destroy_finish_tails();
     destroy_jump_visual();
+    destroy_numbered_visual();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
