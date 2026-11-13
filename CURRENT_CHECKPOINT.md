@@ -1,3 +1,18 @@
+# WCA111 — original Tikal panel hint
+
+The owner Tikal package now includes the two original English hint
+pages, their 270-tick durations and voice ID1550. The Act 2 orb opens
+the hint within the source 15-unit radius. The native approximation
+shows it on the bottom screen during ordinary play. Original message
+presentation, Sonic control gating and replay behavior remain open.
+
+Host suite, exact owner import and native build passed. The Azahar
+placement fixture opened the hint and advanced to page two. Its DSP
+component was unavailable. The separate owner voice check decoded all
+169600 samples at 22050 Hz. Audible playback remains unverified.
+
+---
+
 # WCA110 — Tikal orb display in Act 2
 
 The stage draws an animated billboard from the eight original HINT

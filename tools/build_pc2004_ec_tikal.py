@@ -31,8 +31,26 @@ def build(exe, system):
         raise ValueError('Incomplete Tikal orb sequence')
     textures = sa3t.build(frames, archive.sha256())
     sa3t.parse(textures)
+    # English stage hint table, level 1, message 8 (O TIKAL SET parameter Z).
+    table, = struct.unpack('<I', read(0x9BED60 + 4 * (5 + 1), 4))
+    script, pages = struct.unpack('<2I', read(table + 8 * 8, 8))
+    command, voice, end = struct.unpack('<3h', read(script, 6))
+    if (command, end) != (-4, -1) or not 0 <= voice <= 9999:
+        raise ValueError('Unexpected Act 2 Tikal voice script')
+    hint = struct.pack('<8sHH', b'SA3HINT\0', 1, voice)
+    for address, ticks in struct.iter_unpack('<2I', read(pages, 16)):
+        text = read(address, 96).split(b'\0', 1)[0]
+        if not text.startswith(b'\x07') or not 0 < ticks <= 600:
+            raise ValueError('Unexpected Act 2 Tikal message page')
+        lines = text[1:].split(b'\n')
+        if len(lines) != 2 or any(not 0 < len(line) < 40 or
+                                  any(not 32 <= c <= 126 for c in line) for line in lines):
+            raise ValueError('Tikal hint exceeds native text bounds')
+        hint += struct.pack('<H40s40s', ticks, *lines)
+    if read(pages + 16, 8) != bytes(8):
+        raise ValueError('Expected exactly two Tikal message pages')
     return sa3dspak.build([('METADATA', b'{"scope":"original Tikal orb frames"}', 0),
-                           ('TEXTURES', textures, 0)])
+                           ('TEXTURES', textures, 0), ('TIKAL_HINT', hint, 0)])
 
 
 if __name__ == '__main__':

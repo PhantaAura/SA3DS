@@ -651,6 +651,11 @@ static void emerald_coast_help(void) {
     printf("No retail camera/collision claim.\n");
 }
 
+static char g_tikal_lines[2][2][40];
+static uint16_t g_tikal_duration[2],g_tikal_voice;
+static unsigned g_tikal_page,g_tikal_remaining;
+static int g_tikal_hint_ready,g_tikal_triggered;
+
 static void emerald_coast_status(void) {
     printf("\x1b[14;1HInstances:%4lu  Batches:%3lu       ",
         (unsigned long)g_ec_gpu.instance_count,(unsigned long)g_ec_gpu.draw_count);
@@ -676,6 +681,8 @@ static void emerald_coast_status(void) {
     printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
     if(g_ec_goal_result==EC_GOAL_FINISHED)printf("\x1b[27;1HStage Clear                          ");
     else printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
+    for(unsigned line=0;line<2;line++)
+        printf("\x1b[%u;1H%-39s",28+line,g_tikal_remaining?g_tikal_lines[g_tikal_page][line]:"");
 }
 
 static void pose_lab_help(void) {
@@ -1135,6 +1142,7 @@ static double spring_source_sin(void *context,uint16_t angle){
 }
 static void reset_springs(void){
     g_spring_head=-1;reset_panels();reset_saru();
+    g_tikal_remaining=0;g_tikal_triggered=0;
     sa3ds_numbered_panels_open(&g_numbered_panels,&g_movement,g_ec_act_index);
     g_numbered_target=g_numbered_contact=-1;g_numbered_age=0;
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
@@ -1555,11 +1563,31 @@ static void destroy_tikal(void){
     if(g_tikal_quad)linearFree(g_tikal_quad);
     g_tikal_quad=NULL;
 }
+static int load_tikal_hint(const SA3DSPak *pak){
+    SA3DSPakChunk chunk;
+    if(sa3dspak_find(pak,"TIKAL_HINT",&chunk)!=SA3DSPAK_OK||chunk.flags||chunk.size!=176||
+       memcmp(chunk.data,"SA3HINT\0\1\0",10))return 0;
+    g_tikal_voice=chunk.data[10]|((uint16_t)chunk.data[11]<<8);
+    if(g_tikal_voice>9999)return 0;
+    for(unsigned page=0;page<2;page++){
+        const uint8_t *p=chunk.data+12+page*82;
+        g_tikal_duration[page]=p[0]|((uint16_t)p[1]<<8);
+        if(!g_tikal_duration[page]||g_tikal_duration[page]>600)return 0;
+        for(unsigned line=0;line<2;line++){
+            const uint8_t *text=p+2+line*40;
+            const uint8_t *end=memchr(text,0,40);
+            if(!end||end==text)return 0;
+            for(const uint8_t *c=text;c<end;c++)if(*c<32||*c>126)return 0;
+            memcpy(g_tikal_lines[page][line],text,40);
+        }
+    }
+    return 1;
+}
 static void load_tikal(void){
     uint8_t *bytes=NULL;size_t size=0;
     SA3DSPak pak;SA3DSPakChunk textures;SA3TArchive archive;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_tikal.sa3dspak",&bytes,&size))return;
-    if(size>256u*1024u||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||pak.toc_count!=2||
+    if(size>256u*1024u||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||(pak.toc_count!=2&&pak.toc_count!=3)||
        sa3dspak_find(&pak,"TEXTURES",&textures)!=SA3DSPAK_OK||textures.flags||
        sa3t_open(&archive,textures.data,textures.size)!=SA3T_OK||archive.texture_count!=8)goto fail;
     const SA3DSLabVertex quad[6]={{{-4,-4,0},{0,1}},{{4,-4,0},{1,1}},{{-4,4,0},{0,0}},
@@ -1574,6 +1602,7 @@ static void load_tikal(void){
         C3D_TexSetFilter(&g_tikal_textures[i],GPU_LINEAR,GPU_LINEAR);
         C3D_TexSetWrap(&g_tikal_textures[i],GPU_CLAMP_TO_EDGE,GPU_CLAMP_TO_EDGE);
     }
+    g_tikal_hint_ready=pak.toc_count==3&&load_tikal_hint(&pak);
     sa3ds_free_file(bytes);
     boot_log("TIKAL","Eight original HINT orb textures loaded");
     return;
@@ -1581,6 +1610,10 @@ fail:
     sa3ds_free_file(bytes);destroy_tikal();
 }
 static void tick_tikal(void){
+    if(g_tikal_remaining&&!--g_tikal_remaining&&g_tikal_page==0){
+        g_tikal_page=1;g_tikal_remaining=g_tikal_duration[1];
+        boot_log("TIKAL","Hint advanced to second page");
+    }
     int was_visible=g_tikal_visible;
     g_tikal_visible=0;
     if(g_tikal_loaded!=8||g_ec_act_index!=1)return;
@@ -1593,7 +1626,31 @@ static void tick_tikal(void){
         g_tikal_position=sa1_vec3_add(p.position,(SA1Vec3){0,4.f,0});
         g_tikal_visible=1;
         g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
+        if(g_tikal_hint_ready&&!g_tikal_triggered&&p.parameters[2]==8.f&&
+           sa1_vec3_dot(delta,delta)<225.f){
+            g_tikal_triggered=1;g_tikal_page=0;g_tikal_remaining=g_tikal_duration[0];
+            int voice=sa3ds_voice_play(g_tikal_voice);
+            boot_log("TIKAL",voice?"Hint opened and voice queued":"Hint opened; voice unavailable");
+        }
         break;
+    }
+    if(!g_tikal_visible)g_tikal_triggered=0;
+}
+static void begin_tikal_probe(void){
+    FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_tikal_probe.flag","rb");
+    if(!file)return;
+    fclose(file);
+    if(!g_tikal_hint_ready||g_ec_act_index!=1)return;
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;
+        if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||p.act!=1||(p.type&4095u)!=26)continue;
+        if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,
+            p.position.x,p.position.z,&g_player))return;
+        g_player.pos=sa1_vec3_add(p.position,(SA1Vec3){0,SA3DS_EC_CONTROLLER_SUPPORT+3.f,0});
+        g_player.vel=(SA1Vec3){0};g_player.grounded=false;g_player.surface_frame_active=false;
+        g_player.ground_normal=(SA1Vec3){0,1,0};g_player.surface_id=-1;
+        boot_log("TIKAL","Proximity fixture starts above the original SET placement");
+        return;
     }
 }
 static void draw_tikal(void){
@@ -3881,7 +3938,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_numbered_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();begin_ec_goal_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_numbered_panel_probe();begin_tikal_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();begin_ec_goal_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
