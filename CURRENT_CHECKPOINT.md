@@ -1,3 +1,17 @@
+# WCA114 — Tikal's post-hint movement
+
+After the hint closes, the orb accelerates around Sonic for 240 ticks,
+then disappears for 300 ticks before it can rise again. The native
+motion uses the source speed increment and angle calculation. The
+source afterimage effect and exact sprite presentation remain open.
+
+The host suite and 3DS build passed. The preceding WCA113 Azahar
+fixture submitted the orb draw and ran the hint through both pages.
+The WCA114 exit motion has not been visually verified. Use the same
+owner assets as WCA113.
+
+---
+
 # WCA111 — original Tikal panel hint
 
 The owner Tikal package now includes the two original English hint

@@ -655,6 +655,7 @@ static char g_tikal_lines[2][2][40];
 static uint16_t g_tikal_duration[2],g_tikal_voice;
 static unsigned g_tikal_page,g_tikal_remaining,g_tikal_cooldown;
 static uint16_t g_tikal_orbit;
+static float g_tikal_retreat_speed;
 static int g_tikal_hint_ready;
 
 static void emerald_coast_status(void) {
@@ -1611,20 +1612,25 @@ fail:
     sa3ds_free_file(bytes);destroy_tikal();
 }
 static void tick_tikal(void){
-    if(g_tikal_cooldown)g_tikal_cooldown--;
+    if(g_tikal_cooldown){
+        g_tikal_cooldown--;
+        if(!g_tikal_cooldown)g_tikal_visible=0;
+    }
     if(g_tikal_remaining&&!--g_tikal_remaining){
         if(g_tikal_page==0){
             g_tikal_page=1;g_tikal_remaining=g_tikal_duration[1];
             boot_log("TIKAL","Hint advanced to second page");
         }else{
             /* 7A17B3 releases the player command and starts a 240-tick wait. */
-            g_tikal_cooldown=240;
+            g_tikal_cooldown=540; /* 240 retreat + 300 inactive */
+            g_tikal_retreat_speed=1.f;
             boot_log("TIKAL","Hint closed and controls restored");
         }
     }
     int was_visible=g_tikal_visible;
     g_tikal_visible=0;
-    if(g_tikal_loaded!=8||g_ec_act_index!=1)return;
+    if(g_tikal_loaded!=8||g_ec_act_index!=1||
+       (g_tikal_cooldown&&g_tikal_cooldown<=300))return;
     SA1Vec3 player=sa3ds_ec_task_origin(&g_player);
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;
@@ -1634,16 +1640,23 @@ static void tick_tikal(void){
         /* 7A15B5–7A15F6: the final tick changes state before adding height. */
         g_tikal_rise=was_visible?g_tikal_rise+(g_tikal_rise<59):0;
         SA1Vec3 hover=sa1_vec3_add(p.position,(SA1Vec3){0,(float)g_tikal_rise/3.f,0});
-        if(g_tikal_remaining){
-            /* 7A1700/7A177C orbit the buffered player position. 4A34B0
-             * applies a unit step toward the moving point each update. */
-            g_tikal_orbit=(uint16_t)(g_tikal_orbit+0x2b7u);
+        if(g_tikal_remaining||g_tikal_cooldown>300){
+            int retreat=g_tikal_cooldown>300;
+            float speed=1.f;
+            unsigned angle_step=0x2b7u;
+            if(retreat){
+                g_tikal_retreat_speed+=0.0791666657f;
+                speed=g_tikal_retreat_speed;
+                angle_step=(unsigned)(speed*(65536.f/94.247757f));
+            }
+            g_tikal_orbit=(uint16_t)(g_tikal_orbit+angle_step);
             float sine=(float)spring_source_sin(&g_rings,g_tikal_orbit);
             float cosine=(float)spring_source_sin(&g_rings,(uint16_t)(g_tikal_orbit+0x4000u));
-            SA1Vec3 target=sa1_vec3_add(player,(SA1Vec3){15.f*sine,5.f+2.5f*sine,15.f*cosine});
+            float height=retreat?hover.y+0.5f:player.y+5.f+2.5f*sine;
+            SA1Vec3 target={player.x+15.f*sine,height,player.z+15.f*cosine};
             SA1Vec3 travel=sa1_vec3_sub(target,g_tikal_position);
             if(sa1_vec3_dot(travel,travel)>0.f)
-                g_tikal_position=sa1_vec3_add(g_tikal_position,sa1_vec3_normalize(travel));
+                g_tikal_position=sa1_vec3_add(g_tikal_position,sa1_vec3_scale(sa1_vec3_normalize(travel),speed));
         }else{
             g_tikal_position=hover;
         }
