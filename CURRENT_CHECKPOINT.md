@@ -1,3 +1,20 @@
+# WCA108 — numbered jump-panel traversal in Act 2
+
+Sonic can take the numbered panel route on successive jump presses.
+The native bridge uses the owner positions, rotated aim and arrival
+offsets, travel step, and 30-tick continuation window. The bridge
+currently uses a bounded contact proxy and simplified facing.
+Original numbered panel visuals, exact CCL arbitration, animation
+clips and the Tikal interaction remain pending.
+
+The host suite and native build passed. In the isolated Azahar
+fixture, starting above slot 1 with scripted jump presses, Sonic
+reached slots 2, 3, 4, 5 and 0 on ticks 12, 29, 43, 84 and 99.
+The fixture ends at slot 0. Natural approach and onward landing
+remain unverified. Use the existing WCA106 owner SD files.
+
+---
+
 # WCA107 — original numbered jump-panel route
 
 The exact-owner movement check now verifies the Act 2 numbered panel

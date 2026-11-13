@@ -171,6 +171,10 @@ static int scatter_ccl_pass(void);
 static void spawn_scatter(const SA3DSPlayerDamageResult *requests);
 typedef struct {SA3DSSpringActor actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,unsupported;int32_t next,previous;} SA3DSNativeSpring;
 static SA3DSMovementObjects g_movement;
+static SA3DSNumberedPanels g_numbered_panels;
+static int g_numbered_target=-1,g_numbered_contact=-1;
+static unsigned g_numbered_age,g_numbered_probe_ticks,g_numbered_probe_arrivals;
+static int g_numbered_probe;
 static uint8_t *g_movement_bytes,*g_spring_visual_bytes;
 static size_t g_movement_size,g_spring_visual_size;
 static SA3DSNativeSpring *g_spring_states;
@@ -1126,6 +1130,8 @@ static double spring_source_sin(void *context,uint16_t angle){
 }
 static void reset_springs(void){
     g_spring_head=-1;reset_panels();reset_saru();
+    sa3ds_numbered_panels_open(&g_numbered_panels,&g_movement,g_ec_act_index);
+    g_numbered_target=g_numbered_contact=-1;g_numbered_age=0;
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
     memset(&g_spring_pending,0,sizeof(g_spring_pending));
 }
@@ -1363,6 +1369,84 @@ static void tick_jump_pad(uint32_t index,const SA3DSMovementPlacement *p,
     SA3DSCheckpointContact hit;
     state->pending_hit=sa3ds_checkpoint_sweep(&sweep,&hit)&&hit.kind;
 }
+/* Numbered panel contacts are queued after Sonic's movement and read on the
+ * following tick. The primary form2 proxy covers the top of slots 1..9. */
+static int numbered_panel_contact(const SA1PlayerState *player){
+    SA1Vec3 task=sa3ds_ec_task_origin(player);
+    for(unsigned slot=0;slot<SA3DS_NUMBERED_PANEL_SLOTS;slot++){
+        if(!(g_numbered_panels.present&(1u<<slot)))continue;
+        const SA3DSMovementPlacement *panel=&g_numbered_panels.slots[slot];
+        SA1Vec3 delta=sa1_vec3_sub(task,panel->position);
+        float radius=slot?12.2f:9.f;
+        if(delta.x*delta.x+delta.z*delta.z<radius*radius&&delta.y> -4.f&&delta.y<6.3f)
+            return (int)slot;
+    }
+    return -1;
+}
+static SA1Vec3 numbered_panel_offset(const SA3DSMovementPlacement *p,float height){
+    float sx=(float)spring_source_sin(&g_rings,(uint16_t)p->angles[0]);
+    float cx=(float)spring_source_sin(&g_rings,(uint16_t)(p->angles[0]+0x4000));
+    float sz=(float)spring_source_sin(&g_rings,(uint16_t)p->angles[2]);
+    float cz=(float)spring_source_sin(&g_rings,(uint16_t)(p->angles[2]+0x4000));
+    return sa1_vec3_add(p->position,(SA1Vec3){-sz*cx*height,cz*cx*height,sx*height});
+}
+static void numbered_panel_action(uint8_t action,uint16_t animation){
+    g_player.pc2004_action_state=action;g_player.pc2004_action_state_valid=true;
+    g_player.animation_script_request=animation;g_player.animation_script_valid=true;
+    g_player.animation_script_serial++;
+}
+static int step_numbered_panels(const SA1Input *input){
+    if(!g_emerald_coast||!g_numbered_panels.present)return 0;
+    if(g_player.action_state==SA1_ACTION_HURT||g_player.action_state==SA1_ACTION_DEAD){
+        g_numbered_target=-1;g_numbered_age=0;return 0;
+    }
+    if(g_numbered_target<0){
+        int waiting=g_player.pc2004_action_state_valid&&g_player.pc2004_action_state==41;
+        if(input->jump_pressed&&g_numbered_contact>0&&(!waiting||g_numbered_age<30))
+            g_numbered_target=sa3ds_numbered_panel_next(&g_numbered_panels,(unsigned)g_numbered_contact);
+        if(g_numbered_target<0){
+            if(waiting&&g_numbered_contact>0&&g_numbered_age<30){
+                g_numbered_age++;g_player.sim_frame++;
+                sa1_player_capture_ccl_state(&g_player);
+                return 1;
+            }
+            if(waiting)numbered_panel_action(1,2);
+            return 0;
+        }
+        g_player.grounded=false;g_player.action_state=SA1_ACTION_AIRBORNE;
+        g_player.ball_form=false;g_player.surface_id=-1;g_player.surface_flags=0;
+        numbered_panel_action(40,73);
+    }
+    const SA3DSMovementPlacement *target=&g_numbered_panels.slots[g_numbered_target];
+    SA1Vec3 next,velocity;
+    int result=sa3ds_numbered_panel_step(sa3ds_ec_task_origin(&g_player),g_player.vel,
+        numbered_panel_offset(target,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.center_height+3.8f),
+        numbered_panel_offset(target,3.3f),&next,&velocity);
+    if(!result){g_numbered_target=-1;return 0;}
+    if(result==2){
+        if(g_numbered_probe){
+            char note[80];snprintf(note,sizeof(note),"Arrived at slot %d on tick %llu",g_numbered_target,(unsigned long long)g_player.sim_frame);
+            boot_log("NUMBERED_PANEL",note);
+            g_numbered_probe_arrivals|=1u<<g_numbered_target;
+        }
+        g_player.yaw=-(float)target->angles[1]*(2.f*PI/65536.f);
+        g_player.grounded=g_numbered_target!=0;
+        g_player.action_state=g_player.grounded?SA1_ACTION_GROUNDED:SA1_ACTION_AIRBORNE;
+        numbered_panel_action(g_player.grounded?41:12,g_player.grounded?74:18);
+        g_numbered_target=-1;g_numbered_age=0;
+        sa3ds_se_play(0x21);
+    }else if(velocity.x!=0.f||velocity.z!=0.f){
+        g_player.yaw=atan2f(velocity.x,velocity.z);
+        if(sa1_vec3_length(sa1_vec3_sub(target->position,next))<32.f&&g_player.animation_script_request!=72)
+            numbered_panel_action(40,72);
+    }
+    g_player.surface_frame_active=false;
+    g_player.ground_normal=(SA1Vec3){0,1,0};
+    g_player.pos=sa1_vec3_add(next,(SA1Vec3){0,SA3DS_EC_CONTROLLER_SUPPORT,0});
+    g_player.vel=velocity;g_player.sim_frame++;
+    sa1_player_capture_ccl_state(&g_player);
+    return 1;
+}
 static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
     if(!g_panel_states)return;
     SA1Vec3 current=sa3ds_ec_task_origin(queued_player);
@@ -1542,6 +1626,20 @@ static void begin_spring_probe(void){
     boot_log("SPRING_PROBE","BEGIN: explicit original-placement launch fixture; course progress is not being tested");return;
 fail:
     boot_log("SPRING_PROBE","FAIL: original placement lacks supported nearby terrain");g_paused=1;
+}
+static void begin_numbered_panel_probe(void){
+    FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_numbered_panel_probe.flag","rb");
+    if(!file)return;
+    fclose(file);
+    if((g_numbered_panels.present&63u)!=63u)return;
+    SA1Vec3 start=numbered_panel_offset(&g_numbered_panels.slots[1],3.3f);
+    if(!sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,start.x,start.z,&g_player))return;
+    g_player.pos=sa1_vec3_add(start,(SA1Vec3){0,SA3DS_EC_CONTROLLER_SUPPORT,0});
+    g_player.vel=(SA1Vec3){0};g_player.grounded=false;g_player.surface_frame_active=false;
+    g_player.ground_normal=(SA1Vec3){0,1,0};g_player.surface_id=-1;
+    g_numbered_contact=numbered_panel_contact(&g_player);
+    g_numbered_probe=1;g_numbered_probe_ticks=g_numbered_probe_arrivals=0;
+    boot_log("NUMBERED_PANEL","Fixture starts above slot 1");
 }
 static void begin_panel_probe(void){
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_panel_probe.flag","rb");
@@ -3658,7 +3756,7 @@ int main(void) {
         sa3ds_wz_tick_reset(&g_tick_clock);
         g_last_frame_ms=osGetTime();
     } else reset_selected_zone();
-    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();begin_ec_goal_probe();}
+    if(g_emerald_coast&&g_ec_combined){begin_spring_probe();begin_panel_probe();begin_numbered_panel_probe();begin_saru_probe();begin_checkpoint_probe();begin_whale_probe();begin_box_probe();begin_camera_probe();begin_ec_goal_probe();}
     if(g_emerald_coast&&g_ec_combined){
         FILE *probe=fopen("sdmc:/3ds/SA3DS/emerald_coast_air_attack_probe.flag","rb");
         if(probe){fclose(probe);g_air_attack_probe=1;g_air_attack_probe_previous_action=g_player.pc2004_action_state;
@@ -3798,6 +3896,8 @@ int main(void) {
             /*40EF50 disables processed analog/buttons through fade/reload;
              * case4 reenables only AFTER its final world update.*/
             if(g_emerald_coast&&g_ec_combined&&(!stage_phase.controls_enabled||g_ec_goal_result!=EC_GOAL_RUNNING))tick_input=(SA1Input){0};
+            if(g_numbered_probe)tick_input=(SA1Input){
+                .jump_pressed=g_numbered_target<0&&g_numbered_contact>0};
             tick_input=sa3ds_view_input(tick_input);
             SA1SteamFlatDebug physics_trace={0};
             if (!g_ec_replay && !g_ring_probe && !modifier && (held&KEY_L)) sa3ds_parity_camera_manual_yaw(&g_camera,-0.035f);
@@ -3853,7 +3953,8 @@ int main(void) {
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
             int was_grounded=g_player.grounded;
-            sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
+            int numbered_step=step_numbered_panels(&tick_input);
+            if(!numbered_step)sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
                 g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
                 &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
             /*495F61: jump start plays 0x11 (0x307 only when 03B18DB5 is set).*/
@@ -3871,7 +3972,7 @@ int main(void) {
                 }
             }
             sa3ds_spring_player_tail(&g_player);
-            if(g_emerald_coast && !(previous_tick && g_player.sim_frame==1))
+            if(g_emerald_coast && !numbered_step && !(previous_tick && g_player.sim_frame==1))
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
             if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
                 g_rings.rings=0;reset_selected_zone();
@@ -3957,6 +4058,11 @@ int main(void) {
             if(!tick_scatter()){fail_screen("Native scattered-ring task/CCL failed");break;}
             tick_springs();
             tick_panels(&physics_done,checkpoint_previous_task);
+            g_numbered_contact=g_numbered_panels.present?numbered_panel_contact(&physics_done):-1;
+            if(g_numbered_probe&&((g_numbered_probe_arrivals&1u)||++g_numbered_probe_ticks>=300)){
+                boot_log("NUMBERED_PANEL",g_numbered_probe_arrivals==61u?"PASS: slots 2,3,4,5,0 reached":"FAIL: incomplete sequence");
+                g_numbered_probe=0;g_paused=1;
+            }
             if(!tick_saru()){fail_screen("Native E SARU task failed");break;}
             if(!tick_checkpoints()){fail_screen("Native checkpoint task failed");break;}
             if(!tick_world(&physics_done)){fail_screen("Native list3 world task failed");break;}
