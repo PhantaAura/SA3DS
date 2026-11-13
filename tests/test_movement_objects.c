@@ -31,12 +31,24 @@ int main(int argc,char**argv){
         }
         assert(counts[0][1]==0&&counts[0][2]==11&&counts[0][3]==28);
         assert(counts[1][1]==5&&counts[1][2]==10&&counts[1][3]==21&&springs==26);
+        SA3DSNumberedPanels panels;
+        assert(sa3ds_numbered_panels_open(&panels,&o,0)&&panels.present==0);
+        assert(sa3ds_numbered_panels_open(&panels,&o,1)&&panels.present==63);
+        const unsigned rows[]={137,566,962,757,912,519};
+        for(unsigned slot=0;slot<6;slot++)assert(panels.slots[slot].source_row==rows[slot]);
+        for(unsigned slot=1;slot<5;slot++)assert(sa3ds_numbered_panel_next(&panels,slot)==(int)slot+1);
+        assert(sa3ds_numbered_panel_next(&panels,5)==0&&sa3ds_numbered_panel_next(&panels,0)==-1);
         assert(counts[0][40]==4&&counts[1][40]==2);
         assert(counts[0][18]==0&&counts[1][18]==6);
         assert(counts[0][26]==0&&counts[1][26]==1&&pier_exit==1&&tikal_hint==1);
         free(bytes);puts("Exact-owner movement definitions: PASS (88 placements, 26 spring commands)");return 0;
     }
     if(argc>2){assert(!ok&&!o.count&&!o.rows);free(bytes);return 0;}
+    SA1Vec3 next,velocity,zero={0},aim={20,0,0},landing={19,0,0};
+    assert(sa3ds_numbered_panel_step(zero,zero,aim,landing,&next,&velocity)==1&&next.x==9);
+    assert(sa3ds_numbered_panel_step(next,velocity,aim,landing,&next,&velocity)==1&&next.x==18.5f);
+    assert(sa3ds_numbered_panel_step(next,velocity,aim,landing,&next,&velocity)==2&&next.x==19&&velocity.x==0);
+    assert(sa3ds_numbered_panel_step(zero,(SA1Vec3){9,0,0},(SA1Vec3){9,0,0},landing,&next,&velocity)==1&&next.x==9.5f);
     assert(ok&&o.count==6);SA3DSMovementPlacement p;SA3DSSpringCommand c;
     assert(sa3ds_movement_objects_placement(&o,0,&p));
     assert(p.act==0&&p.source_row==1&&p.type==0x8002&&p.angles[0]==-16384&&p.angles[2]==-3);

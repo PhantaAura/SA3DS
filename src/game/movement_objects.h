@@ -23,4 +23,16 @@ int sa3ds_movement_objects_placement(const SA3DSMovementObjects *objects,uint32_
 /* Decode the spring's final command only. Source hit arbitration, launch
  * placement, angle/frame conversion and the action9/10 movement are separate. */
 int sa3ds_movement_spring_command(const SA3DSMovementPlacement *placement,SA3DSSpringCommand *out);
+/* Original O JPanel slot table. A missing next slot selects slot zero. */
+#define SA3DS_NUMBERED_PANEL_SLOTS 10
+typedef struct {
+    SA3DSMovementPlacement slots[SA3DS_NUMBERED_PANEL_SLOTS];
+    uint16_t present;
+} SA3DSNumberedPanels;
+int sa3ds_numbered_panels_open(SA3DSNumberedPanels *out,const SA3DSMovementObjects *objects,unsigned act);
+int sa3ds_numbered_panel_next(const SA3DSNumberedPanels *panels,unsigned from);
+/* 4B8910 translational step. The caller supplies source-rotated target offsets.
+ * Returns 1 for travel, 2 for arrival, 0 for invalid input. */
+int sa3ds_numbered_panel_step(SA1Vec3 task,SA1Vec3 velocity,SA1Vec3 aim,SA1Vec3 landing,
+    SA1Vec3 *next_task,SA1Vec3 *next_velocity);
 #endif

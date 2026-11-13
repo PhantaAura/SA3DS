@@ -25,6 +25,10 @@ SPECS = {1: (2, 2, 360000., 360100.), 2: (2, 2, 360000., 360100.),
          26: (2, 2, 360000., 360100.), 40: (3, 6, 360000., 360100.)}
 TASKS = {1: 0x7A4C30, 2: 0x7A4E50, 3: 0x7A4450, 18: 0x4B8DC0, 26: 0x7A1AA0, 40: 0x5001E0}
 FUNCTIONS = {
+    (0x4B83C0, 272): '1fbb7b71a6a1ede64b69d8f9a3797ab4bcc28b7883e8cde8bfb63b2f4d91a641',
+    (0x4B8910, 1012): '7f9fbc74117db0f87b3e66d68b9cc7f58ec997986ff072b93c9692fc5d97de98',
+    (0x4B8DC0, 190): '91808e37605676ea09bf142e4fd10f94c89b793e3a6b2ee1d7e5e1d750734f14',
+    (0x789320, 53): 'e63c152d7a47430a4dfee040308b96f961ffb0dd1107892e034bda2d4da7e37b',
     (0x7A46C0, 0x2B3): '6347f6f636443998dcd65d122dd39bb00c4960140cf5f714de716b91c91c2d81',
     (0x441370, 0x70): '2faa7a0b64bd869e728c40648b2e4dbd1f4bc51a3a055331a42bbdb97daab46e',
     (0x4413E0, 0xB4): 'f718facbc5b09a906409e0ee839a6ef57a2f950902454997c840eb8e5cf80aa7',
@@ -63,7 +67,7 @@ def build(exe, system):
     read = verified_reader(exe)
     for (address, size), digest in FUNCTIONS.items():
         if hashlib.sha256(read(address, size)).hexdigest() != digest:
-            raise ValueError('spring command function witness mismatch')
+            raise ValueError('movement function witness mismatch')
     for kind, (objlist, flags, load, _) in SPECS.items():
         registry = struct.unpack('<BBHfIII', read(0x1036420 + kind * 20, 20))
         if registry[:6] != (flags, objlist, 1, load, 0, TASKS[kind]):

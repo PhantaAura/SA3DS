@@ -69,3 +69,48 @@ int sa3ds_movement_spring_command(const SA3DSMovementPlacement*p,SA3DSSpringComm
         (uint8_t)((p->type&4095)==1?9:10),16};
     return 1;
 }
+
+int sa3ds_numbered_panels_open(SA3DSNumberedPanels *out,const SA3DSMovementObjects *objects,unsigned act){
+    if(!out)return 0;
+    *out=(SA3DSNumberedPanels){0};
+    if(!objects||act>1)return 0;
+    SA3DSNumberedPanels panels={0};
+    for(uint32_t index=0;index<objects->count;index++){
+        SA3DSMovementPlacement p;
+        if(!sa3ds_movement_objects_placement(objects,index,&p))return 0;
+        if(p.act!=act||(p.type&4095u)!=18)continue;
+        /* 4B8DC0 checks the range, then truncates abs(Scale.x). */
+        unsigned slot=p.parameters[0]>0.f&&p.parameters[0]<10.f?(unsigned)p.parameters[0]:0;
+        unsigned bit=1u<<slot;
+        if(panels.present&bit)return 0;
+        panels.present|=bit;
+        panels.slots[slot]=p;
+    }
+    *out=panels;
+    return 1;
+}
+int sa3ds_numbered_panel_next(const SA3DSNumberedPanels *panels,unsigned from){
+    if(!panels||from==0||from>=SA3DS_NUMBERED_PANEL_SLOTS||!(panels->present&(1u<<from)))return -1;
+    unsigned next=from+1;
+    if(next<SA3DS_NUMBERED_PANEL_SLOTS&&(panels->present&(1u<<next)))return (int)next;
+    return panels->present&1u?0:-1;
+}
+int sa3ds_numbered_panel_step(SA1Vec3 task,SA1Vec3 velocity,SA1Vec3 aim,SA1Vec3 landing,
+    SA1Vec3 *next_task,SA1Vec3 *next_velocity){
+    if(!next_task||!next_velocity||!isfinite(landing.x)||!isfinite(landing.y)||!isfinite(landing.z))return 0;
+    SA1Vec3 delta={aim.x-task.x,aim.y-task.y,aim.z-task.z};
+    float distance=sqrtf(delta.x*delta.x+delta.y*delta.y+delta.z*delta.z);
+    float speed=sqrtf(velocity.x*velocity.x+velocity.y*velocity.y+velocity.z*velocity.z);
+    if(!isfinite(distance)||!isfinite(speed))return 0;
+    if(distance<speed){
+        *next_task=landing;
+        *next_velocity=(SA1Vec3){0};
+        return 2;
+    }
+    if(speed<9.f)speed=9.f;
+    else if(speed<15.f)speed+=0.5f;
+    float scale=distance>0.f?speed/distance:0.f;
+    *next_velocity=(SA1Vec3){delta.x*scale,delta.y*scale,delta.z*scale};
+    *next_task=(SA1Vec3){task.x+next_velocity->x,task.y+next_velocity->y,task.z+next_velocity->z};
+    return 1;
+}

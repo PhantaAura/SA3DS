@@ -1,3 +1,22 @@
+# WCA107 — original numbered jump-panel route
+
+The exact-owner movement check now verifies the Act 2 numbered panel
+sequence 1→2→3→4→5→0 from SET rows 566, 962, 757, 912, 519 and 137.
+PC2004 decodes the panel number by truncating SET parameter X after
+range validation. Its active panel selects the next slot or slot zero.
+The translated movement step compares distance to incoming speed,
+uses 9 as the minimum travel speed, increases speed by 0.5 below 15,
+and stops at the separately rotated arrival point.
+
+Owner and synthetic movement checks passed. The native game does not
+yet consume the numbered panel sequence. The pending integration
+includes cached panel contact, action 40 transit and action 41 waiting,
+facing and animation writes, and drawing the numbered panel models.
+The original jump mask is 4 in the owner's PC2004 input layout. Tikal
+remains pending.
+
+---
+
 # WCA106 — preserve downward movement at wall seams
 
 The wall-edge sweep now removes the inward component of remaining
