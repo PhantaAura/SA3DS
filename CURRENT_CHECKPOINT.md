@@ -1,3 +1,20 @@
+# WCA110 — Tikal orb display in Act 2
+
+The stage draws an animated billboard from the eight original HINT
+archive frames at the owner Act 2 O TIKAL placement. The activation
+distance uses the source squared radius 115600. The billboard size,
+height and animation timing are native approximations pending comparison.
+The owner-only asset is ec_tikal.sa3dspak.
+
+Host suite, exact owner import and native build passed. In Azahar the
+Act 2 numbered-panel fixture loaded all eight frames, submitted the
+orb draw and still reached panel 0. The interaction, dialogue and
+voice playback remain open. The source hint record is level1 index8
+in the language-specific 009BED60 table with a voice command in its
+shared script. This was a draw-submission check without raster comparison.
+
+---
+
 # WCA109 — original Act 2 panel bases
 
 The numbered-panel route now draws the original two-model base using

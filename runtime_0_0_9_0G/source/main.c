@@ -1544,6 +1544,79 @@ static int draw_panels(void){
     }
     return 1;
 }
+static C3D_Tex g_tikal_textures[8];
+static SA3DSLabVertex *g_tikal_quad;
+static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws;
+static int g_tikal_visible;
+static SA1Vec3 g_tikal_position;
+static void destroy_tikal(void){
+    for(unsigned i=0;i<g_tikal_loaded;i++)C3D_TexDelete(&g_tikal_textures[i]);
+    g_tikal_loaded=0;
+    if(g_tikal_quad)linearFree(g_tikal_quad);
+    g_tikal_quad=NULL;
+}
+static void load_tikal(void){
+    uint8_t *bytes=NULL;size_t size=0;
+    SA3DSPak pak;SA3DSPakChunk textures;SA3TArchive archive;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_tikal.sa3dspak",&bytes,&size))return;
+    if(size>256u*1024u||sa3dspak_open(&pak,bytes,size)!=SA3DSPAK_OK||pak.toc_count!=2||
+       sa3dspak_find(&pak,"TEXTURES",&textures)!=SA3DSPAK_OK||textures.flags||
+       sa3t_open(&archive,textures.data,textures.size)!=SA3T_OK||archive.texture_count!=8)goto fail;
+    const SA3DSLabVertex quad[6]={{{-4,-4,0},{0,1}},{{4,-4,0},{1,1}},{{-4,4,0},{0,0}},
+        {{-4,4,0},{0,0}},{{4,-4,0},{1,1}},{{4,4,0},{1,0}}};
+    g_tikal_quad=linearAlloc(sizeof(quad));if(!g_tikal_quad)goto fail;
+    memcpy(g_tikal_quad,quad,sizeof(quad));GSPGPU_FlushDataCache(g_tikal_quad,sizeof(quad));
+    for(unsigned i=0;i<8;i++){
+        SA3TTexture t;const uint8_t *rgba;
+        if(sa3t_texture(&archive,i,&t,&rgba)!=SA3T_OK||t.width!=64||t.height!=64||
+           !sa3ds_upload_rgba8_cpu(&g_tikal_textures[i],64,64,rgba,i,8,log_texture_stage,NULL))goto fail;
+        g_tikal_loaded++;
+        C3D_TexSetFilter(&g_tikal_textures[i],GPU_LINEAR,GPU_LINEAR);
+        C3D_TexSetWrap(&g_tikal_textures[i],GPU_CLAMP_TO_EDGE,GPU_CLAMP_TO_EDGE);
+    }
+    sa3ds_free_file(bytes);
+    boot_log("TIKAL","Eight original HINT orb textures loaded");
+    return;
+fail:
+    sa3ds_free_file(bytes);destroy_tikal();
+}
+static void tick_tikal(void){
+    int was_visible=g_tikal_visible;
+    g_tikal_visible=0;
+    if(g_tikal_loaded!=8||g_ec_act_index!=1)return;
+    SA1Vec3 player=sa3ds_ec_task_origin(&g_player);
+    for(uint32_t i=0;i<g_movement.count;i++){
+        SA3DSMovementPlacement p;
+        if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||p.act!=1||(p.type&4095u)!=26)continue;
+        SA1Vec3 delta=sa1_vec3_sub(player,p.position);
+        if(sa1_vec3_dot(delta,delta)>=115600.f)continue;
+        g_tikal_position=sa1_vec3_add(p.position,(SA1Vec3){0,4.f,0});
+        g_tikal_visible=1;
+        g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
+        break;
+    }
+}
+static void draw_tikal(void){
+    if(!g_tikal_visible||g_tikal_loaded!=8||g_ec_act_index!=1)return;
+    C3D_Mtx model;Mtx_Identity(&model);
+    for(unsigned i=0;i<3;i++)model.r[i].w=g_ec_view.r[i].x*g_tikal_position.x+
+        g_ec_view.r[i].y*g_tikal_position.y+g_ec_view.r[i].z*g_tikal_position.z+g_ec_view.r[i].w;
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&model);
+    C3D_CullFace(GPU_CULL_NONE);
+    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_COLOR);
+    C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE,GPU_ONE,GPU_ONE);
+    C3D_TexEnv *env=C3D_GetTexEnv(0);C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,0,0);C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
+    C3D_TexBind(0,&g_tikal_textures[g_tikal_frame/2]);
+    C3D_BufInfo *buffer=C3D_GetBufInfo();BufInfo_Init(buffer);
+    BufInfo_Add(buffer,g_tikal_quad,sizeof(*g_tikal_quad),2,0x10);
+    C3D_DrawArrays(GPU_TRIANGLES,0,6);
+    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);
+    C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&g_ec_view);
+    if(g_tikal_draws++==0)boot_log("TIKAL","Act 2 orb billboard submitted");
+}
+
 static void destroy_numbered_visual(void){
     sa3ds_ec_gpu_destroy(&g_numbered_gpu);
     sa3ds_free_file(g_numbered_visual_bytes);g_numbered_visual_bytes=NULL;
@@ -3514,6 +3587,7 @@ static int init_scene(void) {
         load_panels();
         load_jump_visual();
         load_numbered_visual();
+        load_tikal();
         load_saru();
         load_finish_tails();
         load_checkpoints();
@@ -3573,6 +3647,7 @@ static int sample_pose(void) {
         C3D_CullFace(GPU_CULL_NONE);
         if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;
         if (!draw_rings()||!draw_springs()||!draw_panels()||!draw_jump_pads()||!draw_numbered_panels()||!draw_saru()||!draw_checkpoints()||!draw_piers()||!draw_itemboxes()||!draw_whale()||!draw_finish_tails())return 0;
+        draw_tikal();
         if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);
     }
     uint16_t root=INVALID_U16;
@@ -3681,6 +3756,7 @@ static void cleanup(void) {
     destroy_finish_tails();
     destroy_jump_visual();
     destroy_numbered_visual();
+    destroy_tikal();
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     free(g_panel_states);g_panel_states=NULL;g_panels_ready=0;
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
@@ -4107,6 +4183,7 @@ int main(void) {
             if(!tick_scatter()){fail_screen("Native scattered-ring task/CCL failed");break;}
             tick_springs();
             tick_panels(&physics_done,checkpoint_previous_task);
+            if(g_emerald_coast)tick_tikal();
             g_numbered_contact=g_numbered_panels.present?numbered_panel_contact(&physics_done):-1;
             if(g_numbered_probe&&((g_numbered_probe_arrivals&1u)||++g_numbered_probe_ticks>=300)){
                 boot_log("NUMBERED_PANEL",g_numbered_probe_arrivals==61u?"PASS: slots 2,3,4,5,0 reached":"FAIL: incomplete sequence");
