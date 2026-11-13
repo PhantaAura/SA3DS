@@ -178,7 +178,7 @@ static uint8_t *g_numbered_visual_bytes;
 static unsigned g_numbered_draws;
 static int g_numbered_visual_ready;
 static int g_numbered_target=-1,g_numbered_contact=-1;
-static unsigned g_numbered_age,g_numbered_probe_ticks,g_numbered_probe_arrivals;
+static unsigned g_numbered_contact_age,g_numbered_probe_ticks,g_numbered_probe_arrivals;
 static int g_numbered_probe;
 static uint8_t *g_movement_bytes,*g_spring_visual_bytes;
 static size_t g_movement_size,g_spring_visual_size;
@@ -1146,7 +1146,7 @@ static void reset_springs(void){
     g_spring_head=-1;reset_panels();reset_saru();
     g_tikal_remaining=0;g_tikal_cooldown=0;
     sa3ds_numbered_panels_open(&g_numbered_panels,&g_movement,g_ec_act_index);
-    g_numbered_target=g_numbered_contact=-1;g_numbered_age=0;
+    g_numbered_target=g_numbered_contact=-1;g_numbered_contact_age=0;
     if(g_spring_states)memset(g_spring_states,0,g_movement.count*sizeof(*g_spring_states));
     memset(&g_spring_pending,0,sizeof(g_spring_pending));
 }
@@ -1413,19 +1413,26 @@ static void numbered_panel_action(uint8_t action,uint16_t animation){
 static int step_numbered_panels(const SA1Input *input){
     if(!g_emerald_coast||!g_numbered_panels.present)return 0;
     if(g_player.action_state==SA1_ACTION_HURT||g_player.action_state==SA1_ACTION_DEAD){
-        g_numbered_target=-1;g_numbered_age=0;return 0;
+        g_numbered_target=-1;g_numbered_contact_age=0;return 0;
     }
     if(g_numbered_target<0){
         int waiting=g_player.pc2004_action_state_valid&&g_player.pc2004_action_state==41;
-        if(input->jump_pressed&&g_numbered_contact>0&&(!waiting||g_numbered_age<30))
+        int can_advance=g_numbered_contact>0&&g_numbered_contact_age<30;
+        if(input->jump_pressed&&can_advance)
             g_numbered_target=sa3ds_numbered_panel_next(&g_numbered_panels,(unsigned)g_numbered_contact);
         if(g_numbered_target<0){
-            if(waiting&&g_numbered_contact>0&&g_numbered_age<30){
-                g_numbered_age++;g_player.sim_frame++;
+            if(waiting&&can_advance){
+                g_player.sim_frame++;
                 sa1_player_capture_ccl_state(&g_player);
                 return 1;
             }
-            if(waiting)numbered_panel_action(1,2);
+            if(waiting){
+                /* The panel is task support. Drop that support when the
+                 * continuation window expires and resume terrain physics. */
+                g_player.grounded=false;
+                g_player.action_state=SA1_ACTION_AIRBORNE;
+                numbered_panel_action(12,18);
+            }
             return 0;
         }
         g_player.grounded=false;g_player.action_state=SA1_ACTION_AIRBORNE;
@@ -1448,7 +1455,7 @@ static int step_numbered_panels(const SA1Input *input){
         g_player.grounded=g_numbered_target!=0;
         g_player.action_state=g_player.grounded?SA1_ACTION_GROUNDED:SA1_ACTION_AIRBORNE;
         numbered_panel_action(g_player.grounded?41:12,g_player.grounded?74:18);
-        g_numbered_target=-1;g_numbered_age=0;
+        g_numbered_target=-1;g_numbered_contact_age=0;
         sa3ds_se_play(0x21);
     }else if(velocity.x!=0.f||velocity.z!=0.f){
         g_player.yaw=atan2f(velocity.x,velocity.z);
@@ -4281,7 +4288,12 @@ int main(void) {
             tick_springs();
             tick_panels(&physics_done,checkpoint_previous_task);
             if(g_emerald_coast)tick_tikal();
-            g_numbered_contact=g_numbered_panels.present?numbered_panel_contact(&physics_done):-1;
+            int panel_contact=g_numbered_panels.present?numbered_panel_contact(&physics_done):-1;
+            /* 4B8600: slot 1 has no timeout. Later panels age while the
+             * player's primary contact persists, independent of action. */
+            if(panel_contact<=1||panel_contact!=g_numbered_contact)g_numbered_contact_age=0;
+            if(panel_contact>1&&g_numbered_contact_age<3600)g_numbered_contact_age++;
+            g_numbered_contact=panel_contact;
             if(g_numbered_probe&&((g_numbered_probe_arrivals&1u)||++g_numbered_probe_ticks>=300)){
                 boot_log("NUMBERED_PANEL",g_numbered_probe_arrivals==61u?"PASS: slots 2,3,4,5,0 reached":"FAIL: incomplete sequence");
                 g_numbered_probe=0;g_paused=1;
