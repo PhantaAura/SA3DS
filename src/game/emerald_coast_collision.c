@@ -421,7 +421,10 @@ int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
     if(!build_index(s))goto fail;
     mark_contact_edges(s);
     s->dynamic=dynamic;
-    if(dynamic&&(!sa3ds_ec_collision_apply_dynamic(s,NULL)||!s->triangle_count))goto fail;
+    /* The static index already covers the region when no DynamicCOL
+       triangles are registered. Object-support planes are queried separately. */
+    if(dynamic&&dynamic->triangle_count&&!sa3ds_ec_collision_apply_dynamic(s,NULL))goto fail;
+    if(!s->triangle_count)goto fail;
     s->world=(SA1PhysicsWorld){.query_surface=sa3ds_ec_collision_surface,
         .query_contact=sa3ds_ec_collision_contact,.context=s,
         .reset_min_x=s->min_x,.reset_max_x=s->max_x,.reset_min_y=-80.0f,
