@@ -82,5 +82,18 @@ int main(void){
     assert(!memcmp(&cursor,&saved,sizeof(cursor))&&!memcmp(&state,&before,sizeof(state)));
     in.explosion_radius=-1;in.explosion_center.x=NAN;
     assert(sa3ds_enemy_damage_check(&state,&in,NULL,&out)&&!out.killed);
+    SA3DSClearScore clear;
+    sa3ds_clear_score_begin(&clear,50,2,1,30);
+    assert(clear.remaining[1]==4100&&clear.remaining[2]==20);
+    for(unsigned tick=0;tick<309;tick++)assert(!sa3ds_clear_score_tick(&clear,0));
+    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==46);
+    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==50);
+    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==133);
+    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.total==4170);
+    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.total==4170);
+    sa3ds_clear_score_begin(&clear,0,0,0,59);
+    assert(clear.remaining[1]==5000&&!sa3ds_clear_score_tick(&clear,1)&&clear.total==0);
+    sa3ds_clear_score_begin(&clear,0,0,8,20);
+    assert(clear.remaining[1]==0);
     puts("Enemy damage: PASS source16-hit cursor/category priority/cache separation, task damage flags, score/bounce gates, strong attributes and strict explosion range; world bounce preserves tilted actor frame; source score/chain/timer boundaries");
 }

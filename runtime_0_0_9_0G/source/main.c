@@ -220,6 +220,7 @@ static int32_t g_saru_head=-1;
 static SA3DSCCLBody g_player_enemy_ccl;
 static SA3DSCCLShape g_player_enemy_shapes[2];
 static SA3DSGameScore g_game_score;
+static SA3DSClearScore g_clear_score;
 static SA1PC2004HomingList g_homing_list;
 static SA1PC2004HomingServices g_homing_services;
 static int g_homing_probe;
@@ -681,7 +682,12 @@ static void emerald_coast_status(void) {
     if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
     else printf("\x1b[25;1HPartial collision/follow camera ");
     printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
-    if(g_ec_goal_result==EC_GOAL_FINISHED)printf("\x1b[27;1HStage Clear                          ");
+    if(g_ec_goal_result==EC_GOAL_FINISHED){
+        printf("\x1b[23;1HScore bonus: %10lu          ",(unsigned long)g_clear_score.remaining[0]);
+        printf("\x1b[24;1HTime bonus:  %10lu          ",(unsigned long)g_clear_score.remaining[1]);
+        printf("\x1b[25;1HRing bonus:  %10lu          ",(unsigned long)g_clear_score.remaining[2]);
+        printf("\x1b[27;1HStage Clear  Total: %10lu   ",(unsigned long)g_clear_score.total);
+    }
     else printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
     for(unsigned line=0;line<2;line++)
         printf("\x1b[%u;1H%-39s",28+line,g_tikal_remaining?g_tikal_lines[g_tikal_page][line]:"");
@@ -2626,6 +2632,9 @@ static int ec_goal_load(const SA1PlayerState *player,const SA3DSSetClipInput *cl
     if(!g_ec_full_route||!g_ec_route.has_goal||g_ec_act_index!=goal->act_index)return 1;
     if(g_ec_goal_result==EC_GOAL_WAIT_GROUND&&(player->grounded||(player->pc2004_status_flags&2))){
         g_ec_goal_result=EC_GOAL_FINISHED;
+        unsigned rings=g_rings.rings>0?(unsigned)g_rings.rings:0;
+        sa3ds_clear_score_begin(&g_clear_score,g_game_score.total,rings,
+            g_course_clock.time[0],g_course_clock.time[1]);
         sa3ds_bgm_stop();
         g_ec_clear_audio_ticks=5; /* 41437E: delayed music request 0x4B. */
         char note[100];
@@ -4055,9 +4064,9 @@ int main(void) {
                 if(g_ec_clear_audio_ticks&&!--g_ec_clear_audio_ticks){
                     int played=sa3ds_bgm_play("sdmc:/3ds/SA3DS/assets/bgm/rndclear.adx");
                     boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
-                    g_paused=1;
-                    break;
                 }
+                int skip=(down&KEY_A)!=0&&step==0;
+                (void)sa3ds_clear_score_tick(&g_clear_score,skip);
                 continue;
             }
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
