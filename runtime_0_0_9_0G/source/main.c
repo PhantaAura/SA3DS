@@ -2710,6 +2710,7 @@ static void begin_ec_goal_probe(void){
     g_player.surface_id=-1;
     g_player.pc2004_status_flags&=~3u;
     g_ec_goal_probe=1;
+    g_ec_clear_record=(SA3DSClearRecord){.time_ticks=359999u};
     boot_log("GOAL_PROBE","Airborne start at the original finish placement");
 }
 static int tick_world(const SA1PlayerState*done){
@@ -3188,11 +3189,9 @@ static void update_results_record(int emblem){
     static const char path[]="sdmc:/3ds/SA3DS/emerald_coast_record.txt";
     static const char temporary[]="sdmc:/3ds/SA3DS/emerald_coast_record.tmp";
     static const char backup[]="sdmc:/3ds/SA3DS/emerald_coast_record.bak";
-    if(g_ec_goal_probe)return;
-
-    FILE *file=fopen(path,"rb");
+    FILE *file=g_ec_goal_probe?NULL:fopen(path,"rb");
     int had_primary=file!=NULL;
-    if(!file)file=fopen(backup,"rb");
+    if(!file&&!g_ec_goal_probe)file=fopen(backup,"rb");
     if(file){
         unsigned long score,time,rings,emblems=0;
         char line[80];
@@ -3214,8 +3213,11 @@ static void update_results_record(int emblem){
             rings,&g_ec_emblem_awarded);
         unsigned voice=g_ec_emblem_mission<0?0x5db:g_ec_emblem_awarded?0x5d8:0x5d9;
         sa3ds_se_play(voice);
+        if(g_ec_goal_probe)boot_log("GOAL_PROBE",g_ec_emblem_mission==2&&g_ec_emblem_awarded?
+            "First-clear emblem awarded in memory":"FAIL: first-clear emblem missing");
     }else g_ec_new_score=sa3ds_clear_record_update(&g_ec_clear_record,
         g_clear_score.final_score,g_course_clock.time,rings);
+    if(g_ec_goal_probe)return;
     if(previous.score==g_ec_clear_record.score&&previous.time_ticks==g_ec_clear_record.time_ticks&&
        previous.rings==g_ec_clear_record.rings&&previous.emblems==g_ec_clear_record.emblems)return;
 
