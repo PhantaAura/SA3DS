@@ -25,6 +25,10 @@ int sa3ds_clear_record_update(SA3DSClearRecord *record, uint32_t score,
  * Returns the attempted mission (A=0, B=1, C=2), or -1 when all are earned. */
 int sa3ds_clear_emblem(SA3DSClearRecord *record,const uint8_t time[3],
     uint16_t rings,int *awarded);
+/* 4283C0 ordinary results sequence, with the external award task's busy flag. */
+typedef struct {unsigned phase,ticks;} SA3DSClearExit;
+enum {SA3DS_CLEAR_AWARD=1,SA3DS_CLEAR_LEAVE=2};
+unsigned sa3ds_clear_exit_tick(SA3DSClearExit *exit,int mission,int awarded,int award_busy);
 /* Ordinary Sonic Emerald Coast branch of 42A680 / 4266C0. */
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds);

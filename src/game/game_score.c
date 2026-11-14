@@ -38,6 +38,34 @@ int sa3ds_clear_emblem(SA3DSClearRecord *record,const uint8_t time[3],
     return -1;
 }
 
+unsigned sa3ds_clear_exit_tick(SA3DSClearExit *exit,int mission,int awarded,int award_busy){
+    switch(exit->phase){
+    case 0:
+        if(exit->ticks++==20){
+            *exit=(SA3DSClearExit){.phase=1};
+            return SA3DS_CLEAR_AWARD;
+        }
+        break;
+    case 1:
+        if(++exit->ticks>(mission<0?120u:150u))
+            *exit=(SA3DSClearExit){.phase=awarded?2u:4u};
+        break;
+    case 2:
+        if(++exit->ticks>30&&!award_busy)*exit=(SA3DSClearExit){.phase=3};
+        break;
+    case 3:
+        if(++exit->ticks>90)*exit=(SA3DSClearExit){.phase=4};
+        break;
+    case 4:
+        *exit=(SA3DSClearExit){.phase=5};
+        break;
+    case 5:
+        if(++exit->ticks==4)return SA3DS_CLEAR_LEAVE;
+        break;
+    }
+    return 0;
+}
+
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds){
     uint32_t time_bonus=5000;

@@ -224,7 +224,8 @@ static SA3DSClearScore g_clear_score;
 static SA3DSClearRecord g_ec_clear_record={.time_ticks=359999u};
 static int g_ec_new_score,g_ec_goal_probe;
 static int g_ec_emblem_mission,g_ec_emblem_awarded;
-static unsigned g_ec_emblem_ticks;
+static SA3DSClearExit g_ec_clear_exit;
+static unsigned g_ec_clear_fade;
 enum { RESULTS_TEXTURES=28, RESULTS_QUADS=88, RESULTS_DIGITS=17 };
 static C3D_Tex g_results_textures[RESULTS_TEXTURES];
 static float g_results_labels[7][4];
@@ -699,7 +700,7 @@ static void emerald_coast_status(void) {
         }
         if(visible&SA3DS_CLEAR_TOTAL)
             printf("\x1b[27;1H%-14s Total: %10lu        ",g_ec_new_score?"New high score":"Stage Clear",(unsigned long)g_clear_score.total);
-        else if(g_ec_emblem_mission>=0&&g_ec_emblem_ticks>20)
+        else if(g_ec_emblem_mission>=0&&g_ec_clear_exit.phase>0)
             printf("\x1b[27;1HMission %c  %-27s",'A'+g_ec_emblem_mission,
                 g_ec_emblem_awarded?"Emblem earned":"Condition unmet");
         else printf("\x1b[27;1H%-39s","Stage Clear");
@@ -2475,7 +2476,7 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
 static void world_prepare(int restart){
     if(g_world_tasks.slots)whale_world_clear();
     g_ec_goal_result=EC_GOAL_RUNNING;g_ec_clear_audio_ticks=0;g_ec_new_score=0;
-    g_ec_emblem_mission=-1;g_ec_emblem_awarded=0;g_ec_emblem_ticks=0;
+    g_ec_emblem_mission=-1;g_ec_emblem_awarded=0;g_ec_clear_exit=(SA3DSClearExit){0};g_ec_clear_fade=0;
     g_ec_goal_action=g_ec_goal_draw=0;
     g_ec_goal_frame=0;g_finish_tails_draws=0;
     g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
@@ -4305,7 +4306,15 @@ int main(void) {
                     boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
                 }
                 if(g_clear_score.phase==2)update_results_record(0);
-                if(g_clear_score.phase==12&&g_ec_emblem_ticks++==20)update_results_record(1);
+                if(g_ec_clear_fade){
+                    unsigned alpha=(g_ec_clear_fade-1)*6;
+                    g_stage_restart.fade_alpha=(uint8_t)(alpha>255?255:alpha);
+                    g_ec_clear_fade++;
+                }else if(g_clear_score.phase==12){
+                    unsigned request=sa3ds_clear_exit_tick(&g_ec_clear_exit,g_ec_emblem_mission,g_ec_emblem_awarded,0);
+                    if(request==SA3DS_CLEAR_AWARD)update_results_record(1);
+                    if(request==SA3DS_CLEAR_LEAVE)g_ec_clear_fade=1;
+                }
                 unsigned sound=sa3ds_clear_score_tick(&g_clear_score,tick_input.jump_pressed||tick_input.action_pressed);
                 if(sound)sa3ds_se_play(sound);
                 continue;
@@ -4782,6 +4791,10 @@ int main(void) {
         if(g_game_over_draw){} else if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
+        if(g_ec_clear_fade>45){
+            boot_log("GOAL","Results complete and stage faded out");
+            break;
+        }
     }
 
     cleanup();

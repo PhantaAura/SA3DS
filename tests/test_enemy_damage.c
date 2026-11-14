@@ -98,6 +98,15 @@ int main(void){
     assert(sa3ds_clear_emblem(&record,boundary,50,&awarded)==0&&!awarded);
     assert(sa3ds_clear_emblem(&record,below,0,&awarded)==0&&awarded&&record.emblems==7);
     assert(sa3ds_clear_emblem(&record,below,50,&awarded)==-1&&!awarded);
+    SA3DSClearExit exit={0};
+    for(unsigned i=0;i<20;i++)assert(!sa3ds_clear_exit_tick(&exit,-1,0,0));
+    assert(sa3ds_clear_exit_tick(&exit,-1,0,0)==SA3DS_CLEAR_AWARD);
+    for(unsigned i=0;i<151;i++)assert(!sa3ds_clear_exit_tick(&exit,2,1,0));
+    assert(exit.phase==2);
+    for(unsigned i=0;i<35;i++)assert(!sa3ds_clear_exit_tick(&exit,2,1,1)&&exit.phase==2);
+    assert(!sa3ds_clear_exit_tick(&exit,2,1,0)&&exit.phase==3);
+    for(unsigned i=0;i<95;i++)assert(!sa3ds_clear_exit_tick(&exit,2,1,0));
+    assert(sa3ds_clear_exit_tick(&exit,2,1,0)==SA3DS_CLEAR_LEAVE);
     SA3DSClearScore clear;
     sa3ds_clear_score_begin(&clear,50,2,1,30);
     assert(clear.remaining[1]==4100&&clear.remaining[2]==20&&clear.final_score==4170);
