@@ -30,6 +30,9 @@ static const SA3DSSonicAnimationBinding kBindings[] = {
     {30, 20, 73,  4,  0, 1.0f,    0.9f, 72, 16, "Turn Around"},
     {31, 19, 73,  3, 31, 0.0625f, 1.0f, 72, 16, "Skidding"},
     {32, 21,  1,  3, 32, 0.5f,    1.0f,147,  7, "Spin Ball"},
+    {72,113, 73,  4, 74, 1.0f,    1.0f, 72, 31, "Jump panel approach"},
+    {73,114, 73,  5, 73, 1.0f,    2.0f, 72, 17, "Jump panel travel"},
+    {74,123, 73,  3, 74, 0.25f,   1.0f, 72, 16, "Jump panel wait"},
     {86,116, 73,  5, 86, 1.0f,    1.0f, 72, 22, "Death airborne"},
     {87,118, 73,  5, 87, 0.25f,   1.0f, 72, 70, "Death grounded"},
 };
@@ -212,7 +215,8 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                                                   : player->grounded;
     uint16_t requested_id = choose_runtime_id(player, observation,
                                                previous_grounded);
-    if(player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==86)&&player->animation_script_valid){
+    if(player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==40||
+        player->pc2004_action_state==41||player->pc2004_action_state==86)&&player->animation_script_valid){
         requested_id=(!runtime->initialized||player->animation_script_serial!=runtime->previous_script_serial)?
             player->animation_script_request:runtime->requested_runtime_id;
     }

@@ -1,3 +1,14 @@
+# WCA116 — Sonic's numbered-panel animations
+
+The normal animation selector now consumes the panel travel and arrival
+requests from Sonic actions 40 and 41. Runtime clips 72, 73 and 74 use
+the owner ACTION slots 113, 114 and 123 and their original playback
+properties. The generated owner Sonic package passed all 29 preflight
+bindings and the three panel motions passed the source pose comparison.
+Native visual verification and the panel digit overlays remain open.
+
+---
+
 # WCA114 — Tikal's post-hint movement
 
 After the hint closes, the orb accelerates around Sonic for 240 ticks,
