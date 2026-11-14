@@ -14,6 +14,16 @@ void sa3ds_game_score_tick(SA3DSGameScore*s,int enabled){
     if(old_negative)s->chain_timer=0;
 }
 
+int sa3ds_clear_record_update(SA3DSClearRecord *record,uint32_t score,
+    const uint8_t time[3],uint16_t rings){
+    uint32_t ticks=((uint32_t)time[0]*60+time[1])*60+time[2];
+    int best_score=signed32(score)>signed32(record->score);
+    if(best_score)record->score=score;
+    if(ticks<record->time_ticks)record->time_ticks=ticks;
+    if(rings>record->rings)record->rings=rings;
+    return best_score;
+}
+
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds){
     uint32_t time_bonus=5000;
@@ -21,7 +31,8 @@ void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned ring
         unsigned elapsed=minutes<9&&seconds<60?minutes*60+seconds:500;
         time_bonus=elapsed<500?5000-elapsed*10:0;
     }
-    *clear=(SA3DSClearScore){.remaining={score,time_bonus,rings*10u}};
+    *clear=(SA3DSClearScore){.remaining={score,time_bonus,rings*10u},
+        .final_score=score+time_bonus+rings*10u};
 }
 
 unsigned sa3ds_clear_score_tick(SA3DSClearScore *clear,int advance){

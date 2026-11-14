@@ -11,7 +11,15 @@ void sa3ds_game_score_tick(SA3DSGameScore *score,int stage_timer_enabled);
 typedef struct {
     uint32_t remaining[3], total;
     unsigned phase, timer, visible;
+    uint32_t final_score;
 } SA3DSClearScore;
+typedef struct {
+    uint32_t score, time_ticks;
+    uint16_t rings;
+} SA3DSClearRecord;
+/* PC2004 42A680 case 2 compares each record independently. */
+int sa3ds_clear_record_update(SA3DSClearRecord *record, uint32_t score,
+    const uint8_t time[3], uint16_t rings);
 /* Ordinary Sonic Emerald Coast branch of 42A680 / 4266C0. */
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds);

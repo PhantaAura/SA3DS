@@ -82,9 +82,17 @@ int main(void){
     assert(!memcmp(&cursor,&saved,sizeof(cursor))&&!memcmp(&state,&before,sizeof(state)));
     in.explosion_radius=-1;in.explosion_center.x=NAN;
     assert(sa3ds_enemy_damage_check(&state,&in,NULL,&out)&&!out.killed);
+    SA3DSClearRecord record={.time_ticks=359999};
+    const uint8_t first_time[]={1,30,15}, faster_time[]={1,30,14}, slower_time[]={1,30,16};
+    assert(sa3ds_clear_record_update(&record,4170,first_time,2));
+    assert(record.score==4170&&record.time_ticks==5415&&record.rings==2);
+    assert(!sa3ds_clear_record_update(&record,4170,faster_time,1));
+    assert(record.score==4170&&record.time_ticks==5414&&record.rings==2);
+    assert(!sa3ds_clear_record_update(&record,4100,slower_time,4));
+    assert(record.score==4170&&record.time_ticks==5414&&record.rings==4);
     SA3DSClearScore clear;
     sa3ds_clear_score_begin(&clear,50,2,1,30);
-    assert(clear.remaining[1]==4100&&clear.remaining[2]==20);
+    assert(clear.remaining[1]==4100&&clear.remaining[2]==20&&clear.final_score==4170);
     for(unsigned tick=0;tick<183;tick++)
         assert(!sa3ds_clear_score_tick(&clear,tick==182)&&!clear.visible);
     assert(clear.phase==3&&clear.timer==60);

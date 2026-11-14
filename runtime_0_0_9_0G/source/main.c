@@ -221,6 +221,8 @@ static SA3DSCCLBody g_player_enemy_ccl;
 static SA3DSCCLShape g_player_enemy_shapes[2];
 static SA3DSGameScore g_game_score;
 static SA3DSClearScore g_clear_score;
+static SA3DSClearRecord g_ec_clear_record={.time_ticks=359999u};
+static int g_ec_new_score,g_ec_goal_probe;
 enum { RESULTS_TEXTURES=28, RESULTS_QUADS=88, RESULTS_DIGITS=17 };
 static C3D_Tex g_results_textures[RESULTS_TEXTURES];
 static float g_results_labels[7][4];
@@ -694,7 +696,7 @@ static void emerald_coast_status(void) {
             else printf("\x1b[%u;1H%-39s",row,"");
         }
         if(visible&SA3DS_CLEAR_TOTAL)
-            printf("\x1b[27;1HStage Clear  Total: %10lu         ",(unsigned long)g_clear_score.total);
+            printf("\x1b[27;1H%-14s Total: %10lu        ",g_ec_new_score?"New high score":"Stage Clear",(unsigned long)g_clear_score.total);
         else printf("\x1b[27;1H%-39s","Stage Clear");
         printf("\x1b[26;1H%-39s","");
         if(visible&SA3DS_CLEAR_TIME)
@@ -2467,7 +2469,7 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
  *loader would overwrite them.*/
 static void world_prepare(int restart){
     if(g_world_tasks.slots)whale_world_clear();
-    g_ec_goal_result=EC_GOAL_RUNNING;g_ec_clear_audio_ticks=0;
+    g_ec_goal_result=EC_GOAL_RUNNING;g_ec_clear_audio_ticks=0;g_ec_new_score=0;
     g_ec_goal_action=g_ec_goal_draw=0;
     g_ec_goal_frame=0;g_finish_tails_draws=0;
     g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
@@ -2700,6 +2702,7 @@ static void begin_ec_goal_probe(void){
     g_player.grounded=0;
     g_player.surface_id=-1;
     g_player.pc2004_status_flags&=~3u;
+    g_ec_goal_probe=1;
     boot_log("GOAL_PROBE","Airborne start at the original finish placement");
 }
 static int tick_world(const SA1PlayerState*done){
@@ -3173,6 +3176,48 @@ static int native_stage_reload(void){
         restart.task_origin.x,restart.task_origin.y,restart.task_origin.z,(unsigned long)g_checkpoint_saved_row);boot_log("STAGE_RELOAD",note);
     return 1;
 }
+/* Native record file for this route. The owner PC save stays untouched. */
+static void update_results_record(void){
+    static const char path[]="sdmc:/3ds/SA3DS/emerald_coast_record.txt";
+    static const char temporary[]="sdmc:/3ds/SA3DS/emerald_coast_record.tmp";
+    static const char backup[]="sdmc:/3ds/SA3DS/emerald_coast_record.bak";
+    if(g_ec_goal_probe)return;
+
+    FILE *file=fopen(path,"rb");
+    int had_primary=file!=NULL;
+    if(!file)file=fopen(backup,"rb");
+    if(file){
+        unsigned long score,time,rings;
+        if(fscanf(file,"SA3DS-EC1 %10lu %6lu %5lu",&score,&time,&rings)==3&&
+           score<=INT32_MAX&&time<=359999u&&rings<=INT16_MAX)
+            g_ec_clear_record=(SA3DSClearRecord){(uint32_t)score,(uint32_t)time,(uint16_t)rings};
+        fclose(file);
+    }
+    SA3DSClearRecord previous=g_ec_clear_record;
+    unsigned rings=g_rings.rings>0?(unsigned)g_rings.rings:0;
+    g_ec_new_score=sa3ds_clear_record_update(&g_ec_clear_record,
+        g_clear_score.final_score,g_course_clock.time,(uint16_t)rings);
+    if(previous.score==g_ec_clear_record.score&&previous.time_ticks==g_ec_clear_record.time_ticks&&
+       previous.rings==g_ec_clear_record.rings)return;
+
+    file=fopen(temporary,"wb");
+    if(file){
+        int written=fprintf(file,"SA3DS-EC1 %lu %lu %u\n",(unsigned long)g_ec_clear_record.score,
+            (unsigned long)g_ec_clear_record.time_ticks,(unsigned)g_ec_clear_record.rings)>0;
+        if(fclose(file)==0&&written){
+            if(rename(temporary,path)==0){remove(backup);return;}
+            /* Some SD filesystems require an unused destination for rename. */
+            if(had_primary)remove(backup);
+            if(had_primary&&rename(path,backup)==0){
+                if(rename(temporary,path)==0){remove(backup);return;}
+                (void)rename(backup,path);
+            }
+        }
+    }
+    remove(temporary);
+    boot_log("GOAL","Could not persist Emerald Coast records");
+}
+
 static void destroy_results_art(void){
     while(g_results_loaded)C3D_TexDelete(&g_results_textures[--g_results_loaded]);
     if(g_results_vertices)linearFree(g_results_vertices);
@@ -4240,6 +4285,7 @@ int main(void) {
                     boot_log("GOAL",load_results_art()?"Owner results artwork loaded":"Owner results artwork unavailable");
                     boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
                 }
+                if(g_clear_score.phase==2)update_results_record();
                 unsigned sound=sa3ds_clear_score_tick(&g_clear_score,tick_input.jump_pressed||tick_input.action_pressed);
                 if(sound)sa3ds_se_play(sound);
                 continue;
