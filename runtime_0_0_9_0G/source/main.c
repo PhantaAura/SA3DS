@@ -221,6 +221,11 @@ static SA3DSCCLBody g_player_enemy_ccl;
 static SA3DSCCLShape g_player_enemy_shapes[2];
 static SA3DSGameScore g_game_score;
 static SA3DSClearScore g_clear_score;
+enum { RESULTS_TEXTURES=28, RESULTS_QUADS=72, RESULTS_DIGITS=17 };
+static C3D_Tex g_results_textures[RESULTS_TEXTURES];
+static float g_results_labels[7][4];
+static unsigned g_results_loaded;
+static SA3DSLabVertex *g_results_vertices;
 static SA1PC2004HomingList g_homing_list;
 static SA1PC2004HomingServices g_homing_services;
 static int g_homing_probe;
@@ -3168,6 +3173,133 @@ static int native_stage_reload(void){
         restart.task_origin.x,restart.task_origin.y,restart.task_origin.z,(unsigned long)g_checkpoint_saved_row);boot_log("STAGE_RELOAD",note);
     return 1;
 }
+static void destroy_results_art(void){
+    while(g_results_loaded)C3D_TexDelete(&g_results_textures[--g_results_loaded]);
+    if(g_results_vertices)linearFree(g_results_vertices);
+    g_results_vertices=NULL;
+}
+
+static int load_results_art(void){
+    if(g_results_loaded==RESULTS_TEXTURES)return 1;
+    uint8_t *bytes=NULL;
+    size_t size=0;
+    SA3DSPak package;
+    SA3DSPakChunk colors,labels;
+    SA3TArchive archive;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/emerald_coast_results.sa3dspak",&bytes,&size)||
+       size>512u*1024u||sa3dspak_open(&package,bytes,size)!=SA3DSPAK_OK||
+       sa3dspak_find(&package,"TEXTURES",&colors)!=SA3DSPAK_OK||colors.flags||
+       sa3dspak_find(&package,"SCORE_LABELS",&labels)!=SA3DSPAK_OK||labels.flags||
+       labels.size!=sizeof(g_results_labels)||
+       sa3t_open(&archive,colors.data,(size_t)colors.size)!=SA3T_OK||
+       archive.texture_count!=RESULTS_TEXTURES)goto fail;
+    memcpy(g_results_labels,labels.data,sizeof(g_results_labels));
+    for(unsigned i=0;i<7;i++)
+        for(unsigned j=0;j<4;j++)
+            if(!isfinite(g_results_labels[i][j])||g_results_labels[i][j]<0||
+               g_results_labels[i][j]>(j<2?640.f:4.f))goto fail;
+    g_results_vertices=linearAlloc(RESULTS_QUADS*6*sizeof(*g_results_vertices));
+    if(!g_results_vertices)goto fail;
+    for(unsigned i=0;i<RESULTS_TEXTURES;i++){
+        SA3TTexture texture;
+        const uint8_t *rgba;
+        if(sa3t_texture(&archive,i,&texture,&rgba)!=SA3T_OK||
+           texture.width<8||texture.height<8||texture.width>256||texture.height>256||
+           (texture.width&(texture.width-1))||(texture.height&(texture.height-1))||
+           !sa3ds_upload_rgba8_cpu(&g_results_textures[i],texture.width,texture.height,
+               rgba,i,RESULTS_TEXTURES,log_texture_stage,NULL))goto fail;
+        g_results_loaded++;
+        C3D_TexSetFilter(&g_results_textures[i],GPU_LINEAR,GPU_LINEAR);
+        C3D_TexSetWrap(&g_results_textures[i],GPU_CLAMP_TO_EDGE,GPU_CLAMP_TO_EDGE);
+    }
+    sa3ds_free_file(bytes);
+    return 1;
+fail:
+    sa3ds_free_file(bytes);
+    destroy_results_art();
+    return 0;
+}
+
+typedef struct {unsigned texture;uint32_t color;} SA3DSResultsQuad;
+
+static void results_quad(SA3DSResultsQuad *quads,unsigned *count,unsigned texture,
+    float x,float y,float width,float height,uint32_t color){
+    if(*count==RESULTS_QUADS)return;
+    float left=x/320.f-1.f,right=(x+width)/320.f-1.f;
+    float top=1.f-y/240.f,bottom=1.f-(y+height)/240.f;
+    SA3DSLabVertex vertices[6]={{{left,bottom,0},{0,1}},{{right,bottom,0},{1,1}},{{left,top,0},{0,0}},
+        {{left,top,0},{0,0}},{{right,bottom,0},{1,1}},{{right,top,0},{1,0}}};
+    memcpy(g_results_vertices+*count*6,vertices,sizeof(vertices));
+    quads[(*count)++]=(SA3DSResultsQuad){texture,color};
+}
+
+static void results_number(SA3DSResultsQuad *quads,unsigned *count,uint32_t number,
+    float x,float y,unsigned minimum){
+    do{
+        results_quad(quads,count,RESULTS_DIGITS+number%10,x,y-16,32,32,UINT32_MAX);
+        number/=10;
+        x-=32;
+        if(minimum)minimum--;
+    }while(number||minimum);
+}
+
+static void draw_results(void){
+    unsigned phase=g_clear_score.phase,visible=g_clear_score.visible;
+    if(g_ec_goal_result!=EC_GOAL_FINISHED||g_results_loaded!=RESULTS_TEXTURES||
+       phase<3||phase>10||(phase==10&&!visible))return;
+    SA3DSResultsQuad quads[RESULTS_QUADS];
+    unsigned count=0;
+    /* 426740 panel centers and interior extents in the 640x480 source space. */
+    results_quad(quads,&count,13,64,88,512,80,UINT32_MAX);
+    results_quad(quads,&count,13,64,208,512,128,UINT32_MAX);
+    results_quad(quads,&count,13,64,368,512,32,UINT32_MAX);
+    for(unsigned i=0;i<6;i++){
+        const float *pos=g_results_labels[i];
+        const C3D_Tex *texture=&g_results_textures[i];
+        float width=texture->width*pos[2],height=texture->height*pos[3];
+        results_quad(quads,&count,i,pos[0],pos[1]-height/2,width,height,UINT32_MAX);
+    }
+    if(visible&SA3DS_CLEAR_TIME){
+        results_number(quads,&count,g_course_clock.time[0],320,96,2);
+        results_quad(quads,&count,RESULTS_DIGITS+10,336,64,32,32,UINT32_MAX);
+        results_number(quads,&count,g_course_clock.time[1],416,96,2);
+        results_quad(quads,&count,RESULTS_DIGITS+10,432,64,32,32,UINT32_MAX);
+        results_number(quads,&count,g_course_clock.time[2],512,96,2);
+    }
+    if(visible&SA3DS_CLEAR_RINGS)
+        results_number(quads,&count,g_rings.rings>0?(unsigned)g_rings.rings:0,512,156,1);
+    static const unsigned y[]={228,274,320};
+    for(unsigned i=0;i<3;i++)
+        if(visible&(SA3DS_CLEAR_SCORE_BONUS<<i))
+            results_number(quads,&count,g_clear_score.remaining[i],512,y[i],1);
+    if(visible&SA3DS_CLEAR_TOTAL)results_number(quads,&count,g_clear_score.total,512,384,1);
+
+    C3D_Mtx identity,projection;
+    Mtx_Identity(&identity);
+    Mtx_OrthoTilt(&projection,-1,1,-1,1,0,1,false);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&projection);
+    C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&identity);
+    C3D_DepthTest(false,GPU_ALWAYS,GPU_WRITE_COLOR);
+    C3D_AlphaTest(true,GPU_GREATER,0);
+    C3D_CullFace(GPU_CULL_NONE);
+    C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA,GPU_SRC_ALPHA,GPU_ONE_MINUS_SRC_ALPHA);
+    C3D_TexEnv *env=C3D_GetTexEnv(0);
+    C3D_TexEnvInit(env);
+    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);
+    C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
+    GSPGPU_FlushDataCache(g_results_vertices,count*6*sizeof(*g_results_vertices));
+    C3D_BufInfo *buffer=C3D_GetBufInfo();
+    BufInfo_Init(buffer);
+    BufInfo_Add(buffer,g_results_vertices,sizeof(*g_results_vertices),2,0x10);
+    for(unsigned i=0;i<count;i++){
+        C3D_TexEnvColor(env,quads[i].color);
+        C3D_TexBind(0,&g_results_textures[quads[i].texture]);
+        C3D_DrawArrays(GPU_TRIANGLES,i*6,6);
+    }
+    C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_ALL);
+    C3D_AlphaTest(true,GPU_GREATER,15);
+}
+
 static void destroy_game_over_art(void){
     for(unsigned i=0;i<g_game_over_loaded;i++)C3D_TexDelete(&g_game_over_textures[i]);
     g_game_over_loaded=0;if(g_game_over_vertices)linearFree(g_game_over_vertices);g_game_over_vertices=NULL;
@@ -3872,7 +4004,8 @@ static void cleanup(void) {
     if(g_sonic_lighting){C3D_FrameSync();sa3ds_sonic_lighting_gpu_destroy(g_sonic_lighting);g_sonic_lighting=NULL;}
     sa3ds_free_file(g_lighting_bytes);g_lighting_bytes=NULL;
     destroy_checkpoints();
-    if(g_game_over_loaded)C3D_FrameSync();
+    if(g_game_over_loaded||g_results_loaded)C3D_FrameSync();
+    destroy_results_art();
     destroy_game_over_art();clear_native_protection();clear_native_death();if(g_stage_fade_quad)linearFree(g_stage_fade_quad);g_stage_fade_quad=NULL;
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
@@ -4076,6 +4209,7 @@ int main(void) {
             if(g_ec_goal_result==EC_GOAL_FINISHED){
                 if(g_ec_clear_audio_ticks&&!--g_ec_clear_audio_ticks){
                     int played=sa3ds_bgm_play("sdmc:/3ds/SA3DS/assets/bgm/rndclear.adx");
+                    boot_log("GOAL",load_results_art()?"Owner results artwork loaded":"Owner results artwork unavailable");
                     boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
                 }
                 unsigned sound=sa3ds_clear_score_tick(&g_clear_score,tick_input.jump_pressed||tick_input.action_pressed);
@@ -4490,6 +4624,7 @@ int main(void) {
             C3D_FrameEnd(0); fail_screen("White Zone pose/draw failed"); break;
         }
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameEnd");
+        draw_results();
         if(!draw_stage_fade()){fail_screen("Source stage fade draw failed");break;}
         if(!draw_game_over()){fail_screen("Original game-over menu draw failed");break;}
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu modDraws=%lu modBytes=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count),(unsigned long)g_ec_gpu.override_submitted_draws,(unsigned long)g_ec_gpu.override_texture_bytes);boot_log("FRAME",frame_line);}

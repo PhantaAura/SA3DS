@@ -75,8 +75,11 @@ def _pixel_rgba(value: int, pixel_format: int) -> tuple[int, int, int, int]:
 class PVMArchive:
     DIRECTORY_ROW_SIZE = 38
 
-    def __init__(self, source: bytes | bytearray | memoryview | Path, label: str | None = None, *, pixel_format_from_pvrt: bool = False):
+    def __init__(self, source: bytes | bytearray | memoryview | Path, label: str | None = None, *, pixel_format_from_pvrt: bool = False,
+                 texture_prefix: int | None = None, allow_twiddled: bool = False):
         self.pixel_format_from_pvrt = pixel_format_from_pvrt
+        self.allow_twiddled = allow_twiddled
+        self.texture_prefix = texture_prefix
         if isinstance(source, Path):
             self.label = label or source.name
             self.data = source.read_bytes()
@@ -120,7 +123,9 @@ class PVMArchive:
 
         entries = []
         off = self.header_end
-        for meta in raw_dir:
+        if self.texture_prefix is not None and not 1 <= self.texture_prefix <= len(raw_dir):
+            raise PVMArchiveError("invalid texture prefix")
+        for meta in raw_dir[:self.texture_prefix]:
             index, name, pf, df, dim, gbix, width, height = meta
             if self.data[off:off + 4] != b"PVRT":
                 raise PVMArchiveError(f"texture {index}: missing PVRT")
@@ -137,7 +142,7 @@ class PVMArchive:
                 pf = p_pf
             if (p_pf, p_df, p_w, p_h) != (pf, df, width, height):
                 raise PVMArchiveError(f"texture {index}: directory/PVRT mismatch")
-            if df != 9:
+            if df != 9 and not (self.allow_twiddled and df == 1 and width == height):
                 raise PVMArchiveError(f"texture {index}: unsupported data format {df}")
             if pf not in (0, 1, 2):
                 raise PVMArchiveError(f"texture {index}: unsupported pixel format {pf}")
@@ -149,9 +154,10 @@ class PVMArchive:
             base_bytes = width * height * 2
             mip_bytes = ((4 * width * height - 1) // 3) * 2
             texel_payload = payload_size - 8
-            if texel_payload not in (base_bytes, base_bytes + 16, mip_bytes + 6):
+            supported_sizes = (base_bytes,) if df == 1 else (base_bytes, base_bytes + 16, mip_bytes + 6)
+            if texel_payload not in supported_sizes:
                 raise PVMArchiveError(
-                    f"texture {index}: unsupported format-9 payload size "
+                    f"texture {index}: unsupported PVRT payload size "
                     f"{texel_payload}; base={base_bytes} mip={mip_bytes + 6}"
                 )
             if texel_payload == base_bytes + 16:
@@ -160,7 +166,7 @@ class PVMArchive:
                     raise PVMArchiveError(f"texture {index}: nonzero base-only padding")
             entries.append(PVMTexture(index, name, pf, df, dim, gbix, width, height, off, payload_size))
             off += 8 + payload_size
-        if off != len(self.data):
+        if self.texture_prefix is None and off != len(self.data):
             raise PVMArchiveError(f"archive trailing bytes: parsed {off}, file {len(self.data)}")
         return tuple(entries)
 
@@ -177,7 +183,7 @@ class PVMArchive:
         out = bytearray(e.width * e.height * 4)
         for y in range(e.height):
             for x in range(e.width):
-                src = y * e.width + x
+                src = _morton2(y, x) if e.data_format == 1 else y * e.width + x
                 value = struct.unpack_from("<H", full, src * 2)[0]
                 rgba = _pixel_rgba(value, e.pixel_format)
                 dst = (y * e.width + x) * 4
