@@ -10,4 +10,8 @@ typedef enum {
 } SA3DSWallResponse;
 SA3DSWallResponse sa3ds_ccl_wall_sample(SA1Vec3 sample, float player_radius,
     float player_half_height, SA1Vec3 extents, float *corrected_z);
+/* Sample task displacement in source order. Both task points are in the
+ * wall frame. Output is the corrected sample, including its X coordinate. */
+SA3DSWallResponse sa3ds_ccl_wall_sweep(SA1Vec3 previous, SA1Vec3 current,
+    float player_radius, float player_half_height, SA1Vec3 extents, SA1Vec3 *corrected);
 #endif

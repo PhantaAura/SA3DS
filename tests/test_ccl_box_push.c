@@ -42,5 +42,13 @@ int main(void){
  assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,nextafterf(-.2f,0)},4,4,extent,&z)==SA3DS_WALL_HARD && z==70.1f);
  assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,70},4,4,extent,&z)==SA3DS_WALL_SOFT && z==73.f);
  assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,120},4,4,extent,&z)==SA3DS_WALL_MISS);
+ SA1Vec3 corrected;
+ assert(sa3ds_ccl_wall_sweep((SA1Vec3){0,-4,72},(SA1Vec3){0,-4,-5},
+     4,4,extent,&corrected)==SA3DS_WALL_HARD);
+ assert(corrected.x==0&&corrected.y==-4&&corrected.z==70.1f);
+ assert(sa3ds_ccl_wall_sweep((SA1Vec3){0,21,70},(SA1Vec3){0,21,70},
+     4,4,extent,&corrected)==SA3DS_WALL_MISS);
+ assert(sa3ds_ccl_wall_sweep((SA1Vec3){0,-4,70},(SA1Vec3){0,-4,70},
+     4,4,extent,&corrected)==SA3DS_WALL_SOFT&&corrected.z==73.f);
  puts("CCL box and form 9 wall push: PASS 419B50 four faces/+X asymmetry/diagonal ties/yaw frame, 419C90 top/underside/side responses, 418D80 receive/inhibit");
 }
