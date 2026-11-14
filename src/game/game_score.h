@@ -16,10 +16,15 @@ typedef struct {
 typedef struct {
     uint32_t score, time_ticks;
     uint16_t rings;
+    uint8_t emblems;
 } SA3DSClearRecord;
 /* PC2004 42A680 case 2 compares each record independently. */
 int sa3ds_clear_record_update(SA3DSClearRecord *record, uint32_t score,
     const uint8_t time[3], uint16_t rings);
+/* Highest unearned mission has priority, even when its condition fails.
+ * Returns the attempted mission (A=0, B=1, C=2), or -1 when all are earned. */
+int sa3ds_clear_emblem(SA3DSClearRecord *record,const uint8_t time[3],
+    uint16_t rings,int *awarded);
 /* Ordinary Sonic Emerald Coast branch of 42A680 / 4266C0. */
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds);

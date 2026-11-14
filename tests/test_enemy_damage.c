@@ -90,6 +90,14 @@ int main(void){
     assert(record.score==4170&&record.time_ticks==5414&&record.rings==2);
     assert(!sa3ds_clear_record_update(&record,4100,slower_time,4));
     assert(record.score==4170&&record.time_ticks==5414&&record.rings==4);
+    int awarded;
+    const uint8_t boundary[]={2,0,0}, below[]={1,59,59};
+    assert(sa3ds_clear_emblem(&record,boundary,50,&awarded)==2&&awarded);
+    assert(sa3ds_clear_emblem(&record,below,49,&awarded)==1&&!awarded);
+    assert(sa3ds_clear_emblem(&record,boundary,50,&awarded)==1&&awarded);
+    assert(sa3ds_clear_emblem(&record,boundary,50,&awarded)==0&&!awarded);
+    assert(sa3ds_clear_emblem(&record,below,0,&awarded)==0&&awarded&&record.emblems==7);
+    assert(sa3ds_clear_emblem(&record,below,50,&awarded)==-1&&!awarded);
     SA3DSClearScore clear;
     sa3ds_clear_score_begin(&clear,50,2,1,30);
     assert(clear.remaining[1]==4100&&clear.remaining[2]==20&&clear.final_score==4170);

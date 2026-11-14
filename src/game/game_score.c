@@ -24,6 +24,20 @@ int sa3ds_clear_record_update(SA3DSClearRecord *record,uint32_t score,
     return best_score;
 }
 
+int sa3ds_clear_emblem(SA3DSClearRecord *record,const uint8_t time[3],
+    uint16_t rings,int *awarded){
+    *awarded=0;
+    for(int mission=2;mission>=0;mission--){
+        unsigned bit=1u<<mission;
+        if(record->emblems&bit)continue;
+        unsigned ticks=((unsigned)time[0]*60+time[1])*60+time[2];
+        *awarded=mission==2||(mission==1?rings>=50:ticks<7200);
+        if(*awarded)record->emblems|=(uint8_t)bit;
+        return mission;
+    }
+    return -1;
+}
+
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds){
     uint32_t time_bonus=5000;
