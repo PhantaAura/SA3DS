@@ -138,9 +138,19 @@ static void mark_contact_edges(SA3DSECCollision*s){
         for(unsigned e=0;e<3;e++){
             SA1Vec3 a=v[e],b=v[(e+1)%3];int32_t key[3];edge_key(a,key);
             int cx=cell_x(s,(a.x+b.x)*.5f),cz=cell_z(s,(a.z+b.z)*.5f),neighbor=0;
-            /*Adjacent bins include tolerance matches across either side of
-             *zero and bin boundaries. Bins are ten times the point tolerance.*/
-            for(int x=-1;x<=1&&!neighbor;x++)for(int y=-1;y<=1&&!neighbor;y++)for(int z=-1;z<=1&&!neighbor;z++){
+            /* A matching endpoint can cross a bin boundary only within
+               .001 units of it. Keep a small margin for float rounding in
+               same_point and compute offsets in the same double bin space. */
+            const double offset[]={ (double)a.x*100.0-key[0],
+                (double)a.y*100.0-key[1], (double)a.z*100.0-key[2] };
+            int low[3],high[3];
+            for(unsigned axis=0;axis<3;axis++){
+                low[axis]=offset[axis]<=0.101?-1:0;
+                high[axis]=offset[axis]>=0.899?1:0;
+            }
+            for(int x=low[0];x<=high[0]&&!neighbor;x++)
+              for(int y=low[1];y<=high[1]&&!neighbor;y++)
+                for(int z=low[2];z<=high[2]&&!neighbor;z++){
                 int32_t qx=key[0]+x,qy=key[1]+y,qz=key[2]+z;
                 for(uint32_t q=heads[edge_bucket(qx,qy,qz,buckets-1)];q!=UINT32_MAX;q=nodes[q].next){
                     EdgeVertex*nkey=&nodes[q];uint32_t j=nkey->triangle;
