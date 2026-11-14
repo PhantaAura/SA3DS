@@ -4557,7 +4557,6 @@ int main(void) {
             }
             if(g_emerald_coast)bind_native_homing();
             SA1Vec3 previous=g_player.pos;
-            uint64_t previous_tick=g_player.sim_frame;
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
             int was_grounded=g_player.grounded;
@@ -4580,9 +4579,12 @@ int main(void) {
                 }
             }
             sa3ds_spring_player_tail(&g_player);
-            if(g_emerald_coast && !numbered_step && !(previous_tick && g_player.sim_frame==1))
+            /* Both movement kernels return immediately after resetting, so a
+               reset leaves sim_frame at zero and must skip the old sweep. */
+            int physics_reset=!numbered_step&&g_player.sim_frame==0;
+            if(g_emerald_coast&&!numbered_step&&!physics_reset)
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
-            if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
+            if(g_ec_full_route&&physics_reset){
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
                 if(g_panel_probe){

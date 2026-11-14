@@ -36,12 +36,12 @@ int main(int argc,char **argv) {
             (void)sa3ds_sonic_animation_select(&runtime,&player,&observation);
         }
         SA1Input input=sa3ds_view_input(step.screen_input);
-        SA1Vec3 before=player.pos;uint64_t previous_tick=player.sim_frame;
+        SA1Vec3 before=player.pos;
         collision.reference_y=player.pos.y;
         SA1SteamFlatDebug debug={0};
         sa1_physics_step_steam_sonic_flat(&player,&input,step.camera_yaw,
             &collision.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&debug);
-        if(!(previous_tick && player.sim_frame==1))sa3ds_ec_collision_resolve_walls(&collision,before,&player);
+        if(player.sim_frame!=0)sa3ds_ec_collision_resolve_walls(&collision,before,&player);
         SA1PlayerState physics_done=player;
         SA3DSSonicAnimationObservation observation=sa3ds_sonic_animation_observe(
             &sync,&player,&SA1_STEAM_SONIC_PARAMETER_EVIDENCE);
