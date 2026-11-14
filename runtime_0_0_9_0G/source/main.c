@@ -1069,17 +1069,46 @@ fail:
     sa3ds_ec_gpu_destroy(&gpu);sa3ds_ec_collision_destroy(&collision);sa3ds_free_file(bytes);return 0;
 }
 
+/* Capture the worst gameplay frames in RAM so SD writes cannot create
+   the stalls this trace is intended to measure. */
+static struct {
+    unsigned frame,act,steps;
+    uint64_t total,simulation,collision,gpu_wait,draw;
+    float x,z;
+} g_ec_stalls[24];
+static int g_ec_stall_trace;
+static uint64_t g_ec_stall_collision;
+
+static void ec_write_stalls(void){
+    if(!g_ec_stall_trace)return;
+    FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_stalls.csv","wb");
+    if(!file)return;
+    fputs("frame,act,steps,total_ms,simulation_ms,collision_ms,gpu_wait_ms,draw_ms,x,z\n",file);
+    for(unsigned i=0;i<24;i++){
+        if(!g_ec_stalls[i].total)continue;
+        fprintf(file,"%u,%u,%u,%llu,%llu,%llu,%llu,%llu,%.2f,%.2f\n",
+            g_ec_stalls[i].frame,g_ec_stalls[i].act,g_ec_stalls[i].steps,
+            (unsigned long long)g_ec_stalls[i].total,(unsigned long long)g_ec_stalls[i].simulation,
+            (unsigned long long)g_ec_stalls[i].collision,(unsigned long long)g_ec_stalls[i].gpu_wait,
+            (unsigned long long)g_ec_stalls[i].draw,g_ec_stalls[i].x,g_ec_stalls[i].z);
+    }
+    fclose(file);
+}
+
 static void ec_refresh_collision_region(void){
     if(!g_ec_full_route||!sa3ds_ec_residency_needs_recenter(&g_ec_collision,g_player.pos))return;
     float x=floorf(g_player.pos.x/256.0f+0.5f)*256.0f;
     float z=floorf(g_player.pos.z/256.0f+0.5f)*256.0f;
     if(g_ec_failed_region_valid&&x==g_ec_failed_region_x&&z==g_ec_failed_region_z)return;
     uint64_t region_start=osGetTime();
-    if(sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player)){
+    int rebuilt=sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player);
+    uint64_t region_ms=osGetTime()-region_start;
+    if(g_ec_stall_trace)g_ec_stall_collision+=region_ms;
+    if(rebuilt){
         g_ec_failed_region_valid=0;
         char line[128];snprintf(line,sizeof(line),"act=%lu center=%.0f,%.0f triangles=%lu buildMs=%llu validatedResident=1",
             (unsigned long)g_ec_act_index,x,z,(unsigned long)g_ec_collision.triangle_count,
-            (unsigned long long)(osGetTime()-region_start));boot_log("REGION",line);
+            (unsigned long long)region_ms);boot_log("REGION",line);
     }else{
         g_ec_failed_region_valid=1;g_ec_failed_region_x=x;g_ec_failed_region_z=z;
         boot_log("REGION","No valid replacement support region; retaining previous geometry without invented support");
@@ -4291,7 +4320,13 @@ int main(void) {
         (g_emerald_coast?"EMERALD COAST: submit first authentic frame":"FULL: submit first game frame"));
     if(g_pose_lab) pose_lab_help(); else if(g_emerald_coast) emerald_coast_help(); else print_help();
 
+    if(g_ec_full_route){
+        FILE *marker=fopen("sdmc:/3ds/SA3DS/emerald_coast_stall_trace.flag","rb");
+        if(marker){g_ec_stall_trace=1;fclose(marker);}
+    }
     while (aptMainLoop()) {
+        uint64_t frame_start=g_ec_stall_trace?osGetTime():0;
+        g_ec_stall_collision=0;
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
         if(g_emerald_coast)mod_toggle_probe_input(g_rendered_frames,&down,&held);
@@ -4761,7 +4796,9 @@ int main(void) {
         char frame_line[160];
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"frame %u begin stage=%d sonic=%d",g_rendered_frames,g_emerald_coast,!g_emerald_coast||g_ec_combined);boot_log("FRAME",frame_line);}
         if (g_boottrace_first_frame) boot_log("ENTER","First C3D_FrameBegin");
+        uint64_t wait_start=g_ec_stall_trace?osGetTime():0;
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        uint64_t draw_start=g_ec_stall_trace?osGetTime():0;
         /*Source menu release is deferred only until all previous menu draws
          *retire; do not free textures still referenced by queued GPU work.*/
         if(g_game_over_release&&!g_game_over_draw){destroy_game_over_art();g_game_over_release=0;}
@@ -4779,6 +4816,7 @@ int main(void) {
         if(!draw_game_over()){fail_screen("Original game-over menu draw failed");break;}
         if(probe_log){snprintf(frame_line,sizeof(frame_line),"draw returned stage=%lu sonic=%lu vertices=%lu ringDraws=%u ringVertices=%lu modDraws=%lu modBytes=%lu",(unsigned long)g_ec_gpu.draw_count,(unsigned long)g_sonic_gpu.frame_draws,(unsigned long)g_sonic_gpu.frame_vertices,g_ring_frame_draws,(unsigned long)(g_ring_frame_draws*g_ring_gpu.vertex_count),(unsigned long)g_ec_gpu.override_submitted_draws,(unsigned long)g_ec_gpu.override_texture_bytes);boot_log("FRAME",frame_line);}
         C3D_FrameEnd(0);
+        uint64_t draw_end=g_ec_stall_trace?osGetTime():0;
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;
         sa3ds_bgm_update();
@@ -4838,12 +4876,33 @@ int main(void) {
         if(g_game_over_draw){} else if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
+        if(g_ec_stall_trace){
+            uint64_t total=osGetTime()-frame_start;
+            if(total>=34){
+                unsigned slot=0;
+                for(unsigned i=1;i<24;i++)
+                    if(g_ec_stalls[i].total<g_ec_stalls[slot].total)slot=i;
+                if(total>g_ec_stalls[slot].total){
+                    g_ec_stalls[slot].frame=g_rendered_frames;
+                    g_ec_stalls[slot].act=g_ec_act_index;
+                    g_ec_stalls[slot].steps=steps;
+                    g_ec_stalls[slot].total=total;
+                    g_ec_stalls[slot].simulation=t0-now_ms;
+                    g_ec_stalls[slot].collision=g_ec_stall_collision;
+                    g_ec_stalls[slot].gpu_wait=draw_start-wait_start;
+                    g_ec_stalls[slot].draw=draw_end-draw_start;
+                    g_ec_stalls[slot].x=g_player.pos.x;
+                    g_ec_stalls[slot].z=g_player.pos.z;
+                }
+            }
+        }
         if(g_ec_clear_fade>45){
             boot_log("GOAL","Results complete and stage faded out");
             break;
         }
     }
 
+    ec_write_stalls();
     cleanup();
     sa3ds_se_exit();sa3ds_bgm_exit();
     C3D_Fini(); romfsExit(); gfxExit();
