@@ -49,6 +49,7 @@ int main(int argc,char **argv){
    unsigned char pending[2046]={0};
    actors[i]=(SA3DSDashPanel){.initialized=1,.cooldown=params.lockout,.last_player=0};
    float lowest=s.pos.y;unsigned tick,air=0;
+   SA1Vec3 reset_from={0};
    for(tick=0;tick<240;tick++){
     if(sa3ds_ec_residency_needs_recenter(&col,s.pos))
      sa3ds_ec_residency_recenter(&col,c,cn,roundf(s.pos.x/256)*256,roundf(s.pos.z/256)*256,&s);
@@ -57,7 +58,7 @@ int main(int argc,char **argv){
     int was_grounded=s.grounded;
     SA1Vec3 prev=s.pos;col.reference_y=s.pos.y;
     sa1_physics_step_steam_sonic_flat(&s,&in,0,&col.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
-    if(s.sim_frame==0)break;
+    if(s.sim_frame==0){reset_from=prev;break;}
     sa3ds_spring_player_tail(&s);
     sa3ds_ec_collision_resolve_walls(&col,prev,&s);
     if(chain){
@@ -90,7 +91,8 @@ int main(int argc,char **argv){
        tick,s.grounded,s.pos.x,s.pos.y,s.pos.z,s.vel.x,s.vel.y,s.vel.z,s.surface_flags);
     lowest=fminf(lowest,s.pos.y);air+=!s.grounded;
    }
-   printf("\n  ticks=%u air=%u minY=%.2f grounded=%d speed=%.1f lock=%d end=%.1f,%.1f,%.1f",tick,air,lowest,s.grounded,params.speed,params.control_timer,s.pos.x,s.pos.y,s.pos.z);
+   printf("\n  outcome=%s ticks=%u air=%u minY=%.2f grounded=%d speed=%.1f lock=%d end=%.1f,%.1f,%.1f",tick==240?"window-complete":"physics-reset",tick,air,lowest,s.grounded,params.speed,params.control_timer,s.pos.x,s.pos.y,s.pos.z);
+   if(tick<240)printf(" resetFrom=%.2f,%.2f,%.2f",reset_from.x,reset_from.y,reset_from.z);
   }
   puts("");sa3ds_ec_collision_destroy(&col);
  }
