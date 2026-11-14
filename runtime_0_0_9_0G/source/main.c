@@ -4584,6 +4584,14 @@ int main(void) {
             int physics_reset=!numbered_step&&g_player.sim_frame==0;
             if(g_emerald_coast&&!numbered_step&&!physics_reset)
                 sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player);
+            if(g_panel_probe&&g_panel_probe_boosts&&!physics_reset&&was_grounded!=g_player.grounded){
+                char note[200];
+                snprintf(note,sizeof(note),"row=%lu tick=%u grounded=%d pos=%.3f,%.3f,%.3f vel=%.3f,%.3f,%.3f flags=%08lx",
+                    (unsigned long)g_panel_probe_row,g_panel_probe_ticks,g_player.grounded,
+                    g_player.pos.x,g_player.pos.y,g_player.pos.z,g_player.vel.x,g_player.vel.y,g_player.vel.z,
+                    (unsigned long)g_player.surface_flags);
+                boot_log("PANEL_SUPPORT",note);
+            }
             if(g_ec_full_route&&physics_reset){
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
