@@ -679,16 +679,28 @@ static void emerald_coast_status(void) {
     printf("\x1b[22;1HCollision:%lu Q:%lu Tests:%lu  ",(unsigned long)g_ec_collision.triangle_count,(unsigned long)g_ec_collision.queries,(unsigned long)g_ec_collision.triangle_tests);
     printf("\x1b[23;1HSonic D:%lu Anim:%u Fr:%.1f    ",(unsigned long)g_sonic_gpu.frame_draws,g_selection.binding.runtime_id,g_selection.sample_frame);
     printf("\x1b[24;1HTick:%llu GPU frames:%u       ",(unsigned long long)g_player.sim_frame,g_rendered_frames);
-    if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
-    else printf("\x1b[25;1HPartial collision/follow camera ");
-    printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
     if(g_ec_goal_result==EC_GOAL_FINISHED){
-        printf("\x1b[23;1HScore bonus: %10lu          ",(unsigned long)g_clear_score.remaining[0]);
-        printf("\x1b[24;1HTime bonus:  %10lu          ",(unsigned long)g_clear_score.remaining[1]);
-        printf("\x1b[25;1HRing bonus:  %10lu          ",(unsigned long)g_clear_score.remaining[2]);
-        printf("\x1b[27;1HStage Clear  Total: %10lu   ",(unsigned long)g_clear_score.total);
+        unsigned visible=g_clear_score.visible;
+        const char *labels[]={"Score bonus","Time bonus","Ring bonus"};
+        for(unsigned i=0;i<3;i++){
+            unsigned row=23+i;
+            if(visible&(SA3DS_CLEAR_SCORE_BONUS<<i))
+                printf("\x1b[%u;1H%-11s %10lu                 ",row,labels[i],(unsigned long)g_clear_score.remaining[i]);
+            else printf("\x1b[%u;1H%-39s",row,"");
+        }
+        if(visible&SA3DS_CLEAR_TOTAL)
+            printf("\x1b[27;1HStage Clear  Total: %10lu         ",(unsigned long)g_clear_score.total);
+        else printf("\x1b[27;1H%-39s","Stage Clear");
+        printf("\x1b[26;1H%-39s","");
+        if(visible&SA3DS_CLEAR_TIME)
+            printf("\x1b[26;1HTime: %02u:%02u.%02u",g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
+        if(visible&SA3DS_CLEAR_RINGS)printf("\x1b[26;18HRings: %d",g_rings.rings);
+    }else{
+        if(g_rings_ready)printf("\x1b[25;1HRings:%5d Ring draws:%3u     ",g_rings.rings,g_ring_frame_draws);
+        else printf("\x1b[25;1HPartial collision/follow camera ");
+        printf("\x1b[26;1HLives:%3d Flow:%u Time:%02u:%02u.%02u ",g_stage_restart.lives,g_stage_restart.state,g_course_clock.time[0],g_course_clock.time[1],g_course_clock.time[2]);
+        printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
     }
-    else printf("\x1b[27;1HCheck:%lu Saves:%u               ",(unsigned long)g_checkpoint_saved_row,g_checkpoint_activations);
     for(unsigned line=0;line<2;line++)
         printf("\x1b[%u;1H%-39s",28+line,g_tikal_remaining?g_tikal_lines[g_tikal_page][line]:"");
 }
@@ -4060,16 +4072,16 @@ int main(void) {
         unsigned steps=(g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             if(g_ec_full_route)g_ec_perf.ticks++;
+            SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
             if(g_ec_goal_result==EC_GOAL_FINISHED){
                 if(g_ec_clear_audio_ticks&&!--g_ec_clear_audio_ticks){
                     int played=sa3ds_bgm_play("sdmc:/3ds/SA3DS/assets/bgm/rndclear.adx");
                     boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
                 }
-                int skip=(down&KEY_A)!=0&&step==0;
-                (void)sa3ds_clear_score_tick(&g_clear_score,skip);
+                unsigned sound=sa3ds_clear_score_tick(&g_clear_score,tick_input.jump_pressed||tick_input.action_pressed);
+                if(sound)sa3ds_se_play(sound);
                 continue;
             }
-            SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
             g_source_frame++;
             if(g_death_probe)g_death_probe_ticks++;
             SA3DSStageRestartResult stage_phase={.run_world=1,.controls_enabled=1};

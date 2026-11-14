@@ -10,10 +10,17 @@ void sa3ds_game_score_add(SA3DSGameScore *score,int32_t award);
 void sa3ds_game_score_tick(SA3DSGameScore *score,int stage_timer_enabled);
 typedef struct {
     uint32_t remaining[3], total;
-    unsigned delay;
+    unsigned phase, timer, visible;
 } SA3DSClearScore;
 /* Ordinary Sonic Emerald Coast branch of 42A680 / 4266C0. */
 void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned rings,
     unsigned minutes,unsigned seconds);
-int sa3ds_clear_score_tick(SA3DSClearScore *clear,int skip);
+enum {
+    SA3DS_CLEAR_TIME=1u, SA3DS_CLEAR_RINGS=2u, SA3DS_CLEAR_SCORE_BONUS=4u,
+    SA3DS_CLEAR_TIME_BONUS=8u, SA3DS_CLEAR_RING_BONUS=16u, SA3DS_CLEAR_TOTAL=32u,
+    SA3DS_CLEAR_REVEAL_SOUND=5, SA3DS_CLEAR_TALLY_SOUND=4
+};
+/* Returns the SE request for this update, or zero. Phase 12 hands off to
+ * the record/emblem sequence. */
+unsigned sa3ds_clear_score_tick(SA3DSClearScore *clear,int advance);
 #endif

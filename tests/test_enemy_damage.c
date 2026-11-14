@@ -85,15 +85,28 @@ int main(void){
     SA3DSClearScore clear;
     sa3ds_clear_score_begin(&clear,50,2,1,30);
     assert(clear.remaining[1]==4100&&clear.remaining[2]==20);
-    for(unsigned tick=0;tick<309;tick++)assert(!sa3ds_clear_score_tick(&clear,0));
-    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==46);
-    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==50);
-    assert(sa3ds_clear_score_tick(&clear,0)&&clear.total==133);
-    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.total==4170);
-    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.total==4170);
+    for(unsigned tick=0;tick<183;tick++)
+        assert(!sa3ds_clear_score_tick(&clear,tick==182)&&!clear.visible);
+    assert(clear.phase==3&&clear.timer==60);
+    for(unsigned tick=0;tick<60;tick++)assert(!sa3ds_clear_score_tick(&clear,0));
+    assert(sa3ds_clear_score_tick(&clear,0)==SA3DS_CLEAR_REVEAL_SOUND);
+    assert(!sa3ds_clear_score_tick(&clear,0)&&clear.visible==SA3DS_CLEAR_TIME);
+    for(unsigned tick=245;tick<349;tick++)sa3ds_clear_score_tick(&clear,0);
+    assert(clear.phase==9&&clear.timer==60&&clear.total==0);
+    assert(sa3ds_clear_score_tick(&clear,0)==SA3DS_CLEAR_TALLY_SOUND&&clear.total==46);
+    assert(sa3ds_clear_score_tick(&clear,0)==SA3DS_CLEAR_TALLY_SOUND&&clear.total==50);
+    assert(sa3ds_clear_score_tick(&clear,0)==SA3DS_CLEAR_TALLY_SOUND&&clear.total==133);
+    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.total==4170&&clear.timer==179);
+    for(unsigned tick=0;tick<10;tick++)assert(!sa3ds_clear_score_tick(&clear,1));
+    assert(clear.phase==10&&clear.timer==169);
+    assert(!sa3ds_clear_score_tick(&clear,1)&&clear.phase==12&&clear.timer==10);
     sa3ds_clear_score_begin(&clear,0,0,0,59);
     assert(clear.remaining[1]==5000&&!sa3ds_clear_score_tick(&clear,1)&&clear.total==0);
     sa3ds_clear_score_begin(&clear,0,0,8,20);
     assert(clear.remaining[1]==0);
+    for(unsigned tick=0;tick<349+61;tick++)sa3ds_clear_score_tick(&clear,0);
+    assert(clear.phase==10&&clear.timer==180);
+    for(unsigned tick=0;tick<181;tick++)sa3ds_clear_score_tick(&clear,0);
+    assert(clear.phase==12&&clear.timer==60);
     puts("Enemy damage: PASS source16-hit cursor/category priority/cache separation, task damage flags, score/bounce gates, strong attributes and strict explosion range; world bounce preserves tilted actor frame; source score/chain/timer boundaries");
 }

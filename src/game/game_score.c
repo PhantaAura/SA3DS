@@ -21,27 +21,74 @@ void sa3ds_clear_score_begin(SA3DSClearScore *clear,uint32_t score,unsigned ring
         unsigned elapsed=minutes<9&&seconds<60?minutes*60+seconds:500;
         time_bonus=elapsed<500?5000-elapsed*10:0;
     }
-    *clear=(SA3DSClearScore){.remaining={score,time_bonus,rings*10u},
-        .delay=309}; /* Init, two opening states, and six 21-tick reveals. */
+    *clear=(SA3DSClearScore){.remaining={score,time_bonus,rings*10u}};
 }
 
-int sa3ds_clear_score_tick(SA3DSClearScore *clear,int skip){
-    if(skip&&clear->delay<=126){
-        for(unsigned i=0;i<3;i++){
-            clear->total+=clear->remaining[i];
-            clear->remaining[i]=0;
+unsigned sa3ds_clear_score_tick(SA3DSClearScore *clear,int advance){
+    unsigned phase=clear->phase;
+    if(advance&&clear->timer>10&&phase>=3&&(phase<10||(phase==10&&clear->timer<170))){
+        if(phase<10){
+            for(unsigned i=0;i<3;i++){
+                clear->total+=clear->remaining[i];
+                clear->remaining[i]=0;
+            }
+            clear->phase=10;
+            clear->timer=179; /* The same update executes case 10. */
+            clear->visible=0;
+        }else{
+            clear->phase=12;
+            clear->timer=10;
+            clear->visible=0;
         }
-        clear->delay=0;
         return 0;
     }
-    if(clear->delay){clear->delay--;return 0;}
-    static const unsigned steps[]={46,83,7};
-    for(unsigned i=0;i<3;i++){
-        if(!clear->remaining[i])continue;
-        uint32_t amount=clear->remaining[i]<steps[i]?clear->remaining[i]:steps[i];
-        clear->remaining[i]-=amount;
-        clear->total+=amount;
-        return 1;
+    switch(phase){
+    case 0:
+        clear->phase=1;
+        clear->timer=180;
+        break;
+    case 1:
+        if(clear->timer)clear->timer--;
+        else clear->phase=2;
+        break;
+    case 2:
+        clear->phase=3;
+        clear->timer=60;
+        break;
+    case 3: case 4: case 5: case 6: case 7: case 8:
+        clear->visible=(1u<<(phase-3))-1;
+        if(clear->timer)clear->timer--;
+        else{
+            clear->phase++;
+            clear->timer=phase==8?60:20;
+            if(phase!=8)return SA3DS_CLEAR_REVEAL_SOUND;
+        }
+        break;
+    case 9: {
+        clear->visible=SA3DS_CLEAR_TOTAL|31u;
+        static const unsigned steps[]={46,83,7};
+        for(unsigned i=0;i<3;i++){
+            if(!clear->remaining[i])continue;
+            uint32_t amount=clear->remaining[i]<steps[i]?clear->remaining[i]:steps[i];
+            clear->remaining[i]-=amount;
+            clear->total+=amount;
+            return SA3DS_CLEAR_TALLY_SOUND;
+        }
+        if(clear->timer)clear->timer--;
+        else{
+            clear->phase=10;
+            clear->timer=180;
+        }
+        break;
+    }
+    case 10:
+        clear->visible=0;
+        if(clear->timer)clear->timer--;
+        else{
+            clear->phase=12;
+            clear->timer=60;
+        }
+        break;
     }
     return 0;
 }
