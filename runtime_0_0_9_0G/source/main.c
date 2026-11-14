@@ -1241,8 +1241,8 @@ static void reset_springs(void){
 static void load_springs(void){
     if(!g_ec_combined||!g_rings_ready||!g_rings.quarter_lut)goto fail;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_movement_objects.sa3dspak",&g_movement_bytes,&g_movement_size)||
-       !sa3ds_movement_objects_open(&g_movement,g_movement_bytes,g_movement_size)||
-       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/spring_visual.sa3dspak",&g_spring_visual_bytes,&g_spring_visual_size)||
+       !sa3ds_movement_objects_open(&g_movement,g_movement_bytes,g_movement_size))goto fail;
+    if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/spring_visual.sa3dspak",&g_spring_visual_bytes,&g_spring_visual_size)||
        !sa3ds_spring_visual_open(&g_spring_visual,g_spring_visual_bytes,g_spring_visual_size))goto fail;
     g_spring_states=calloc(g_movement.count,sizeof(*g_spring_states));
     if(!g_spring_states)goto fail;
@@ -1253,14 +1253,13 @@ static void load_springs(void){
 fail:
     for(unsigned i=0;i<6;i++)sa3ds_ec_gpu_destroy(&g_spring_gpu[i]);
     free(g_spring_states);g_spring_states=NULL;
-    sa3ds_free_file(g_movement_bytes);g_movement_bytes=NULL;
+    if(!g_movement.count){sa3ds_free_file(g_movement_bytes);g_movement_bytes=NULL;}
     sa3ds_free_file(g_spring_visual_bytes);g_spring_visual_bytes=NULL;
-    memset(&g_movement,0,sizeof(g_movement));
     boot_log("SPRINGS","Spring owner resources unavailable; gameplay objects remain incomplete");
 }
 static void tick_springs(void){
-    if(!g_springs_ready)return;
     g_movement_ccl_queued=0;
+    if(!g_springs_ready)return;
     SA1Vec3 ccl_task=sa3ds_ec_task_origin(&g_player);
     SA1Vec3 ccl_up=sa1_vec3_normalize(g_player.ground_normal);
     SA3DSSpringPrimaryCollider collider={.task_origin=ccl_task,
@@ -1342,7 +1341,7 @@ static void reset_panels(void){
     }
 }
 static void load_panels(void){
-    if(!g_springs_ready)goto fail;
+    if(!g_movement.count)return;
     g_panel_states=calloc(g_movement.count,sizeof(*g_panel_states));if(!g_panel_states)goto fail;
     if(!sa3ds_read_file("sdmc:/3ds/SA3DS/assets/panel_visual.sa3dspak",&g_panel_visual_bytes,&g_panel_visual_size)||
        !sa3ds_panel_visual_open(&g_panel_visual,g_panel_visual_bytes,g_panel_visual_size))goto fail;
@@ -1352,7 +1351,7 @@ static void load_panels(void){
 fail:
     for(unsigned i=0;i<3;i++)sa3ds_ec_gpu_destroy(&g_panel_gpu[i]);
     sa3ds_free_file(g_panel_visual_bytes);g_panel_visual_bytes=NULL;
-    boot_log("PANELS","Owner panel resources unavailable; gameplay objects remain incomplete");
+    boot_log("PANELS","Owner panel art unavailable or panel state allocation failed");
 }
 static void destroy_jump_visual(void){
     for(unsigned part=0;part<3;part++)sa3ds_ec_gpu_destroy(&g_jump_gpu[part]);
@@ -1565,7 +1564,7 @@ static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
         unsigned kind=p.type&4095u;
-        if(kind!=40&&(kind!=3||!g_panels_ready))continue;
+        if(kind!=40&&kind!=3)continue;
         SA3DSNativePanel *state=&g_panel_states[i];state->draw=0;
         SA1Vec3 delta=sa1_vec3_sub(sa3ds_ec_task_origin(&g_player),p.position);
         float distance=sa1_vec3_dot(delta,delta);
