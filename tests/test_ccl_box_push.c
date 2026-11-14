@@ -1,4 +1,5 @@
 #include "ccl_box_push.h"
+#include "ccl_wall.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -33,5 +34,13 @@ int main(void){
  SA3DSCCLBody p={0},c={0};SA3DSCCLShape prim={.form=7,.push=0x70},box={.form=3,.push=0x77};
  p.rules.push_receive=0x77;assert(sa3ds_ccl_box_push_enabled(&p,&prim,&c,&box));
  c.rules.push_inhibit=0x70;assert(!sa3ds_ccl_box_push_enabled(&p,&prim,&c,&box));
- puts("CCL box push: PASS 419B50 four faces/+X asymmetry/diagonal ties/yaw frame, 419C90 top/underside/side responses, 418D80 receive/inhibit");
+ float z=17;
+ SA1Vec3 extent={32,20,70};
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){36,0,69},4,4,extent,&z)==SA3DS_WALL_MISS && z==17);
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){0,24,69},4,4,extent,&z)==SA3DS_WALL_MISS);
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,-.2f},4,4,extent,&z)==SA3DS_WALL_MISS);
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,nextafterf(-.2f,0)},4,4,extent,&z)==SA3DS_WALL_HARD && z==70.1f);
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,70},4,4,extent,&z)==SA3DS_WALL_SOFT && z==73.f);
+ assert(sa3ds_ccl_wall_sample((SA1Vec3){0,0,120},4,4,extent,&z)==SA3DS_WALL_MISS);
+ puts("CCL box and form 9 wall push: PASS 419B50 four faces/+X asymmetry/diagonal ties/yaw frame, 419C90 top/underside/side responses, 418D80 receive/inhibit");
 }
