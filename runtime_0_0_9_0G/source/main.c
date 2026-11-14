@@ -1095,6 +1095,32 @@ static void ec_write_stalls(void){
     fclose(file);
 }
 
+enum { EC_REGION_LOG_CAPACITY=24 };
+static struct {
+    uint32_t act,triangles;
+    float x,z;
+    uint64_t build_ms;
+    int rebuilt;
+} g_ec_region_log[EC_REGION_LOG_CAPACITY];
+static uint32_t g_ec_region_log_count;
+
+static void ec_write_region_log(void){
+    uint32_t end=g_ec_region_log_count;
+    if(!end)return;
+    FILE *file=fopen("sdmc:/3ds/SA3DS/pass10_boot.log","ab");
+    if(!file)return;
+    uint32_t first=end>EC_REGION_LOG_CAPACITY?end-EC_REGION_LOG_CAPACITY:0;
+    for(uint32_t i=first;i<end;i++){
+        unsigned slot=i%EC_REGION_LOG_CAPACITY;
+        fprintf(file,"%03u REGION act=%lu center=%.0f,%.0f triangles=%lu buildMs=%llu validatedResident=%d\n",
+            g_boot_steps,(unsigned long)g_ec_region_log[slot].act,
+            g_ec_region_log[slot].x,g_ec_region_log[slot].z,
+            (unsigned long)g_ec_region_log[slot].triangles,
+            (unsigned long long)g_ec_region_log[slot].build_ms,g_ec_region_log[slot].rebuilt);
+    }
+    fclose(file);
+}
+
 static void ec_refresh_collision_region(void){
     if(!g_ec_full_route||!sa3ds_ec_residency_needs_recenter(&g_ec_collision,g_player.pos))return;
     float x=floorf(g_player.pos.x/256.0f+0.5f)*256.0f;
@@ -1104,15 +1130,16 @@ static void ec_refresh_collision_region(void){
     int rebuilt=sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player);
     uint64_t region_ms=osGetTime()-region_start;
     if(g_ec_stall_trace)g_ec_stall_collision+=region_ms;
-    if(rebuilt){
-        g_ec_failed_region_valid=0;
-        char line[128];snprintf(line,sizeof(line),"act=%lu center=%.0f,%.0f triangles=%lu buildMs=%llu validatedResident=1",
-            (unsigned long)g_ec_act_index,x,z,(unsigned long)g_ec_collision.triangle_count,
-            (unsigned long long)region_ms);boot_log("REGION",line);
-    }else{
-        g_ec_failed_region_valid=1;g_ec_failed_region_x=x;g_ec_failed_region_z=z;
-        boot_log("REGION","No valid replacement support region; retaining previous geometry without invented support");
-    }
+    g_ec_failed_region_valid=!rebuilt;
+    if(!rebuilt){g_ec_failed_region_x=x;g_ec_failed_region_z=z;}
+    /* SD append/flush can block the simulation thread at a region boundary. */
+    unsigned slot=g_ec_region_log_count++%EC_REGION_LOG_CAPACITY;
+    g_ec_region_log[slot].act=g_ec_act_index;
+    g_ec_region_log[slot].x=x;
+    g_ec_region_log[slot].z=z;
+    g_ec_region_log[slot].triangles=g_ec_collision.triangle_count;
+    g_ec_region_log[slot].build_ms=region_ms;
+    g_ec_region_log[slot].rebuilt=rebuilt;
 }
 
 static void load_rings(void){
@@ -4903,6 +4930,7 @@ int main(void) {
     }
 
     ec_write_stalls();
+    ec_write_region_log();
     cleanup();
     sa3ds_se_exit();sa3ds_bgm_exit();
     C3D_Fini(); romfsExit(); gfxExit();
