@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
-if [ "$#" -ne 2 ]; then
-    echo 'usage: run_host_dash_panel_path.sh owner_collision.sa3dspak owner_movement.sa3dspak' >&2
+if [ "$#" -ne 2 ] && [ "$#" -ne 3 ]; then
+    echo 'usage: run_host_dash_panel_path.sh owner_collision.sa3dspak owner_movement.sa3dspak [--chain]' >&2
     exit 2
 fi
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/sa3ds-panel-path.XXXXXX")
