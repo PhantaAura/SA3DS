@@ -225,8 +225,8 @@ static SA3DSClearRecord g_ec_clear_record={.time_ticks=359999u};
 static int g_ec_new_score,g_ec_goal_probe;
 static int g_ec_emblem_mission,g_ec_emblem_awarded;
 static SA3DSClearExit g_ec_clear_exit;
-static unsigned g_ec_clear_fade;
-enum { RESULTS_TEXTURES=28, RESULTS_QUADS=88, RESULTS_DIGITS=17 };
+static unsigned g_ec_clear_fade,g_ec_emblem_frame;
+enum { RESULTS_TEXTURES=30, RESULTS_QUADS=88, RESULTS_DIGITS=17 };
 static C3D_Tex g_results_textures[RESULTS_TEXTURES];
 static float g_results_labels[7][4];
 static unsigned g_results_loaded;
@@ -2476,7 +2476,7 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
 static void world_prepare(int restart){
     if(g_world_tasks.slots)whale_world_clear();
     g_ec_goal_result=EC_GOAL_RUNNING;g_ec_clear_audio_ticks=0;g_ec_new_score=0;
-    g_ec_emblem_mission=-1;g_ec_emblem_awarded=0;g_ec_clear_exit=(SA3DSClearExit){0};g_ec_clear_fade=0;
+    g_ec_emblem_mission=-1;g_ec_emblem_awarded=0;g_ec_clear_exit=(SA3DSClearExit){0};g_ec_clear_fade=0;g_ec_emblem_frame=0;
     g_ec_goal_action=g_ec_goal_draw=0;
     g_ec_goal_frame=0;g_finish_tails_draws=0;
     g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
@@ -3245,7 +3245,7 @@ static void destroy_results_art(void){
 }
 
 static int load_results_art(void){
-    if(g_results_loaded==RESULTS_TEXTURES)return 1;
+    if(g_results_loaded>=28)return 1;
     uint8_t *bytes=NULL;
     size_t size=0;
     SA3DSPak package;
@@ -3257,7 +3257,7 @@ static int load_results_art(void){
        sa3dspak_find(&package,"SCORE_LABELS",&labels)!=SA3DSPAK_OK||labels.flags||
        labels.size!=sizeof(g_results_labels)||
        sa3t_open(&archive,colors.data,(size_t)colors.size)!=SA3T_OK||
-       archive.texture_count!=RESULTS_TEXTURES)goto fail;
+       (archive.texture_count!=28&&archive.texture_count!=RESULTS_TEXTURES))goto fail;
     memcpy(g_results_labels,labels.data,sizeof(g_results_labels));
     for(unsigned i=0;i<7;i++)
         for(unsigned j=0;j<4;j++)
@@ -3265,7 +3265,7 @@ static int load_results_art(void){
                g_results_labels[i][j]>(j<2?640.f:4.f))goto fail;
     g_results_vertices=linearAlloc(RESULTS_QUADS*6*sizeof(*g_results_vertices));
     if(!g_results_vertices)goto fail;
-    for(unsigned i=0;i<RESULTS_TEXTURES;i++){
+    for(unsigned i=0;i<archive.texture_count;i++){
         SA3TTexture texture;
         const uint8_t *rgba;
         if(sa3t_texture(&archive,i,&texture,&rgba)!=SA3T_OK||
@@ -3345,16 +3345,28 @@ static void results_mission_label(SA3DSResultsQuad *quads,unsigned *count,
     results_quad(quads,count,texture,x+width/2,352,width,32,0);
 }
 
+/* 4B4200: hold 41 updates, reveal for 30, blink for 120, then fade by .025. */
+static void results_emblem(SA3DSResultsQuad *quads,unsigned *count){
+    results_quad(quads,count,28,320,256,128,128,0);
+    results_quad(quads,count,29,320,288,128,128,0);
+    unsigned earned=!!(g_ec_clear_record.emblems&1)+!!(g_ec_clear_record.emblems&2)+
+        !!(g_ec_clear_record.emblems&4);
+    results_number(quads,count,earned-(g_ec_emblem_frame<72),288,336,1);
+}
+
 static void draw_results(void){
-    if(g_ec_goal_result!=EC_GOAL_FINISHED||g_results_loaded!=RESULTS_TEXTURES)return;
+    if(g_ec_goal_result!=EC_GOAL_FINISHED||g_results_loaded<28)return;
     unsigned phase=g_clear_score.phase,visible=g_clear_score.visible;
     int show_mission=phase==12&&g_ec_clear_exit.phase==1&&g_ec_emblem_mission>=0;
     int show_tally=phase>=3&&phase<=9;
-    if(!show_mission&&!show_tally)return;
+    unsigned frame=g_ec_emblem_frame;
+    int show_emblem=g_results_loaded==RESULTS_TEXTURES&&frame>=42&&frame<231;
+    if(!show_mission&&!show_tally&&!show_emblem)return;
 
     SA3DSResultsQuad quads[RESULTS_QUADS];
     unsigned count=0;
-    if(show_mission){
+    if(show_emblem)results_emblem(quads,&count);
+    else if(show_mission){
         /* 4283C0 mission summary uses SCORE_RESULT_E sprites 0..5. */
         results_panel(quads,&count,240,10,7);
         results_mission_label(quads,&count,7,177);
@@ -3403,8 +3415,11 @@ static void draw_results(void){
     C3D_BufInfo *buffer=C3D_GetBufInfo();
     BufInfo_Init(buffer);
     BufInfo_Add(buffer,g_results_vertices,sizeof(*g_results_vertices),2,0x10);
-    C3D_TexEnvColor(env,UINT32_MAX);
+    unsigned alpha=show_emblem&&frame>191?(232-frame)*255/40:255;
     for(unsigned i=0;i<count;i++){
+        unsigned a=alpha;
+        if(show_emblem&&i>=2&&frame>=72&&frame<=191&&(191-frame)%30<15)a=63;
+        C3D_TexEnvColor(env,(a<<24)|0xffffffu);
         C3D_TexBind(0,&g_results_textures[quads[i].texture]);
         C3D_DrawArrays(GPU_TRIANGLES,i*6,6);
     }
@@ -4330,8 +4345,12 @@ int main(void) {
                     g_stage_restart.fade_alpha=(uint8_t)(alpha>255?255:alpha);
                     g_ec_clear_fade++;
                 }else if(g_clear_score.phase==12){
-                    unsigned request=sa3ds_clear_exit_tick(&g_ec_clear_exit,g_ec_emblem_mission,g_ec_emblem_awarded,0);
+                    unsigned request=sa3ds_clear_exit_tick(&g_ec_clear_exit,g_ec_emblem_mission,g_ec_emblem_awarded,
+                        g_ec_emblem_awarded&&g_ec_emblem_frame<232);
                     if(request==SA3DS_CLEAR_AWARD)update_results_record(1);
+                    if(g_ec_clear_exit.phase>=2&&g_ec_emblem_awarded&&g_ec_emblem_frame<232){
+                        if(++g_ec_emblem_frame==42)sa3ds_se_play(12);
+                    }
                     if(request==SA3DS_CLEAR_LEAVE)g_ec_clear_fade=1;
                 }
                 unsigned sound=sa3ds_clear_score_tick(&g_clear_score,tick_input.jump_pressed||tick_input.action_pressed);

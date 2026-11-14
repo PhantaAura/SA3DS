@@ -10,7 +10,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from tools import sa3dspak, sa3t
-from tools.importers.pc2004_pvm_archive import PVMArchive
+from tools.importers.pc2004_pvm_archive import PVMArchive, _pixel_rgba
 from tools.verify_pc2004_ec_route import verified_reader
 
 
@@ -54,7 +54,23 @@ def build(exe, system, english):
             raise ValueError('unexpected score label anchor')
         labels.extend(struct.pack('<4f', x, y, sx, sy))
 
-    source_hash = hashlib.sha256(b''.join(bytes.fromhex(hashes[name]) for name in names)).hexdigest()
+    # 4B4540 uses the two standalone HYOJI_EMBLEM textures.
+    for index in range(2):
+        name = f'HYOJI_EMBLEM{index}'
+        data = (system / (name + '.PVR')).read_bytes()
+        if (len(data) != 32800 or data[:8] != b'GBIX\x08\0\0\0' or
+                data[16:20] != b'PVRT' or
+                struct.unpack_from('<IBBHHH', data, 20) != (32776, 2, 9, 0, 128, 128)):
+            raise ValueError(f'unexpected emblem texture layout: {name}')
+        hashes[name] = hashlib.sha256(data).hexdigest()
+        rgba = bytearray()
+        for (pixel,) in struct.iter_unpack('<H', data[32:]):
+            rgba.extend(_pixel_rgba(pixel, 2))
+        entries.append(dict(width=128, height=128, source_pixel_format=2,
+                            source_data_format=9,
+                            global_index=struct.unpack_from('<I', data, 8)[0], rgba=rgba))
+
+    source_hash = hashlib.sha256(b''.join(bytes.fromhex(hashes[name]) for name in hashes)).hexdigest()
     textures = sa3t.build(entries, source_hash)
     sa3t.parse(textures)
     metadata = json.dumps({'archives': hashes, 'english': english,
