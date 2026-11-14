@@ -1,11 +1,13 @@
 /* Isolated static-terrain trajectories after a direct Act 1 boost.
  * Optional chaining runs nearby unfiltered dash-panel tasks after movement.
+ * With a SET file, the WALL sweep runs as an isolated response experiment.
  * Other stage tasks, controller input, and retail execution are outside this replay. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "emerald_coast_residency.h"
 #include "dash_panel.h"
+#include "ccl_wall.h"
 #include "spring_player.h"
 #include "steam_flat.h"
 #include "movement.h"
@@ -24,10 +26,47 @@ static SA3DSSpringTrig panel_trig(const SA3DSMovementPlacement *placement){
  }
  return trig;
 }
+/* Host-only decoded form 9 placements. Inputs are little-endian SET rows. */
+static unsigned wall_sweep(const unsigned char *rows, unsigned count,
+    SA1Vec3 previous, SA1PlayerState *player){
+ unsigned hits=0;
+ for(unsigned i=0;i<count;i++){
+  const unsigned char *row=rows+32*i;
+  if(row[0]!=20||row[1]!=0)continue;
+  int16_t yaw;
+  float values[6];
+  memcpy(&yaw,row+4,sizeof yaw);
+  memcpy(values,row+8,sizeof values);
+  SA1Vec3 center={values[0],values[1],values[2]};
+  SA1Vec3 extents={values[3]+10,values[4]+10,values[5]+10};
+  double angle=yaw*(6.283185307179586/65536.0);
+  float sn=(float)sin(angle),cs=(float)cos(angle);
+  SA1Vec3 current=sa3ds_ec_task_origin(player);
+  SA1Vec3 a=sa1_vec3_sub(previous,center),b=sa1_vec3_sub(current,center);
+  SA1Vec3 local_start={a.x*cs-a.z*sn,a.y,a.x*sn+a.z*cs};
+  SA1Vec3 local_end={b.x*cs-b.z*sn,b.y,b.x*sn+b.z*cs};
+  SA1Vec3 corrected;
+  if(sa3ds_ccl_wall_sweep(local_start,local_end,4,4,extents,&corrected)==SA3DS_WALL_MISS)continue;
+  /* 41A580 writes sample X/Z through the yaw transform. This experiment
+     omits native CCL list ordering and the source task-position service. */
+  player->pos.x+=center.x+corrected.x*cs+corrected.z*sn-current.x;
+  player->pos.z+=center.z+corrected.z*cs-corrected.x*sn-current.z;
+  hits++;
+ }
+ return hits;
+}
 int main(int argc,char **argv){
- int chain=argc==4&&!strcmp(argv[3],"--chain");
- if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain]\n",argv[0]);return 2;}
+ int chain=(argc==4||argc==5)&&!strcmp(argv[3],"--chain");
+ if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN]]\n",argv[0]);return 2;}
  size_t cn,mn;void *c=read_blob(argv[1],&cn),*m=read_blob(argv[2],&mn);
+ size_t wall_size=0;
+ unsigned char *wall_set=argc==5?read_blob(argv[4],&wall_size):NULL;
+ uint32_t wall_count=0;
+ if(wall_set){
+  if(wall_size<32)return 2;
+  memcpy(&wall_count,wall_set,sizeof wall_count);
+  if(wall_count>1023||wall_size!=32+(size_t)wall_count*32)return 2;
+ }
  SA3DSMovementObjects objects;if(!sa3ds_movement_objects_open(&objects,m,mn))return 2;
  SA3DSECCollisionArchive arc;if(!sa3ds_ec_collision_archive_open(&arc,c,cn))return 2;
  for(unsigned i=0;i<objects.count;i++){
@@ -56,6 +95,7 @@ int main(int argc,char **argv){
     SA1Input in={0};SA3DSSpringPendingCommand cmd={0};
     sa3ds_spring_player_begin(&s,&cmd,&in);
     int was_grounded=s.grounded;
+    SA1Vec3 previous_task=sa3ds_ec_task_origin(&s);
     SA1Vec3 prev=s.pos;col.reference_y=s.pos.y;
     sa1_physics_step_steam_sonic_flat(&s,&in,0,&col.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
     if(s.sim_frame==0){reset_from=prev;break;}
@@ -86,6 +126,10 @@ int main(int argc,char **argv){
        printf("\n  tick=%u boost row=%u",tick,next.source_row);
      }
     }
+    if(wall_set){
+     unsigned hits=wall_sweep(wall_set+32,wall_count,previous_task,&s);
+     if(hits)printf("\n  tick=%u wall contacts=%u",tick,hits);
+    }
     if(was_grounded!=s.grounded)
      printf("\n  tick=%u grounded=%d pos=%.2f,%.2f,%.2f vel=%.2f,%.2f,%.2f flags=%08x",
        tick,s.grounded,s.pos.x,s.pos.y,s.pos.z,s.vel.x,s.vel.y,s.vel.z,s.surface_flags);
@@ -96,5 +140,5 @@ int main(int argc,char **argv){
   }
   puts("");sa3ds_ec_collision_destroy(&col);
  }
- free(c);free(m);return 0;
+ free(wall_set);free(c);free(m);return 0;
 }
