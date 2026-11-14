@@ -3309,22 +3309,24 @@ static void results_quad(SA3DSResultsQuad *quads,unsigned *count,unsigned textur
 }
 
 /* PC2004 426740 draws these nine sprites using SCORE_BACK. */
-static void results_panel(SA3DSResultsQuad *quads,unsigned *count,float y,float half_height_tiles){
-    const float left=64,right=576;
+static void results_panel(SA3DSResultsQuad *quads,unsigned *count,float y,float half_width_tiles,float half_height_tiles){
+    const float left=320-(half_width_tiles+1)*16;
+    const float right=320+(half_width_tiles+1)*16;
+    const float middle_width=half_width_tiles*32;
     const float extent=(half_height_tiles+1)*16;
     const float top=y-extent,bottom=y+extent;
     if(half_height_tiles>0)
-        results_quad(quads,count,13,320,y,480,half_height_tiles*32,0);
+        results_quad(quads,count,13,320,y,middle_width,half_height_tiles*32,0);
     results_quad(quads,count,14,left,bottom,32,32,0);
     results_quad(quads,count,14,left,top,32,32,1);
     results_quad(quads,count,14,right,top,32,32,2);
     results_quad(quads,count,14,right,bottom,32,32,3);
     if(half_height_tiles>0)
         results_quad(quads,count,15,left,y,32,half_height_tiles*32,0);
-    results_quad(quads,count,15,320,top,32,480,1);
+    results_quad(quads,count,15,320,top,32,middle_width,1);
     if(half_height_tiles>0)
         results_quad(quads,count,15,right,y,32,half_height_tiles*32,2);
-    results_quad(quads,count,15,320,bottom,32,480,3);
+    results_quad(quads,count,15,320,bottom,32,middle_width,3);
 }
 
 static void results_number(SA3DSResultsQuad *quads,unsigned *count,uint32_t number,
@@ -3337,36 +3339,53 @@ static void results_number(SA3DSResultsQuad *quads,unsigned *count,uint32_t numb
     }while(number||minimum);
 }
 
+static void results_mission_label(SA3DSResultsQuad *quads,unsigned *count,
+    unsigned texture,float x){
+    float width=g_results_textures[texture].width;
+    results_quad(quads,count,texture,x+width/2,352,width,32,0);
+}
+
 static void draw_results(void){
+    if(g_ec_goal_result!=EC_GOAL_FINISHED||g_results_loaded!=RESULTS_TEXTURES)return;
     unsigned phase=g_clear_score.phase,visible=g_clear_score.visible;
-    if(g_ec_goal_result!=EC_GOAL_FINISHED||g_results_loaded!=RESULTS_TEXTURES||
-       phase<3||phase>10||(phase==10&&!visible))return;
+    int show_mission=phase==12&&g_ec_clear_exit.phase==1&&g_ec_emblem_mission>=0;
+    int show_tally=phase>=3&&phase<=9;
+    if(!show_mission&&!show_tally)return;
+
     SA3DSResultsQuad quads[RESULTS_QUADS];
     unsigned count=0;
-    results_panel(quads,&count,128,1.5f);
-    results_panel(quads,&count,272,3);
-    results_panel(quads,&count,384,0);
-    for(unsigned i=0;i<6;i++){
-        const float *pos=g_results_labels[i];
-        const C3D_Tex *texture=&g_results_textures[i];
-        float width=texture->width*pos[2],height=texture->height*pos[3];
-        results_quad(quads,&count,i,pos[0]+width/2,pos[1],width,height,0);
-    }
-    if(visible&SA3DS_CLEAR_TIME){
-        results_number(quads,&count,g_course_clock.time[0],320,96,2);
-        results_quad(quads,&count,RESULTS_DIGITS+10,352,80,32,32,0);
-        results_number(quads,&count,g_course_clock.time[1],416,96,2);
-        results_quad(quads,&count,RESULTS_DIGITS+10,448,80,32,32,0);
-        results_number(quads,&count,g_course_clock.time[2],512,96,2);
-    }
-    if(visible&SA3DS_CLEAR_RINGS)
-        results_number(quads,&count,g_rings.rings>0?(unsigned)g_rings.rings:0,512,156,1);
-    static const unsigned y[]={228,274,320};
-    for(unsigned i=0;i<3;i++)
-        if(visible&(SA3DS_CLEAR_SCORE_BONUS<<i))
-            results_number(quads,&count,g_clear_score.remaining[i],512,y[i],1);
-    if(visible&SA3DS_CLEAR_TOTAL)results_number(quads,&count,g_clear_score.total,512,384,1);
+    if(show_mission){
+        /* 4283C0 mission summary uses SCORE_RESULT_E sprites 0..5. */
+        results_panel(quads,&count,240,10,7);
+        results_mission_label(quads,&count,7,177);
+        results_mission_label(quads,&count,8+(unsigned)g_ec_emblem_mission,305);
+        results_mission_label(quads,&count,g_ec_emblem_awarded?12:11,344);
+    }else{
+        results_panel(quads,&count,128,15,1.5f);
+        results_panel(quads,&count,272,15,3);
+        results_panel(quads,&count,384,15,0);
+        for(unsigned i=0;i<6;i++){
+            const float *pos=g_results_labels[i];
+            const C3D_Tex *texture=&g_results_textures[i];
+            float width=texture->width*pos[2],height=texture->height*pos[3];
+            results_quad(quads,&count,i,pos[0]+width/2,pos[1],width,height,0);
+        }
+        if(visible&SA3DS_CLEAR_TIME){
+            results_number(quads,&count,g_course_clock.time[0],320,96,2);
+            results_quad(quads,&count,RESULTS_DIGITS+10,352,80,32,32,0);
+            results_number(quads,&count,g_course_clock.time[1],416,96,2);
+            results_quad(quads,&count,RESULTS_DIGITS+10,448,80,32,32,0);
+            results_number(quads,&count,g_course_clock.time[2],512,96,2);
+        }
+        if(visible&SA3DS_CLEAR_RINGS)
+            results_number(quads,&count,g_rings.rings>0?(unsigned)g_rings.rings:0,512,156,1);
+        static const unsigned y[]={228,274,320};
+        for(unsigned i=0;i<3;i++)
+            if(visible&(SA3DS_CLEAR_SCORE_BONUS<<i))
+                results_number(quads,&count,g_clear_score.remaining[i],512,y[i],1);
+        if(visible&SA3DS_CLEAR_TOTAL)results_number(quads,&count,g_clear_score.total,512,384,1);
 
+    }
     C3D_Mtx identity,projection;
     Mtx_Identity(&identity);
     Mtx_OrthoTilt(&projection,-1,1,-1,1,0,1,false);
