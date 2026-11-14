@@ -3361,12 +3361,19 @@ static void draw_results(void){
     int show_tally=phase>=3&&phase<=9;
     unsigned frame=g_ec_emblem_frame;
     int show_emblem=g_results_loaded==RESULTS_TEXTURES&&frame>=42&&frame<231;
-    if(!show_mission&&!show_tally&&!show_emblem)return;
+    int show_ring_summary=phase==10&&!visible;
+    if(!show_mission&&!show_tally&&!show_emblem&&!show_ring_summary)return;
 
     SA3DSResultsQuad quads[RESULTS_QUADS];
     unsigned count=0;
     if(show_emblem)results_emblem(quads,&count);
-    else if(show_mission){
+    else if(show_ring_summary){
+        /* 4297E0 draws the ring-bank balance. The ordinary Sonic clear
+           leaves both ring-bank counters zero in 42A680. */
+        results_panel(quads,&count,228,7,1);
+        results_quad(quads,&count,16,296,228,64,32,0);
+        results_number(quads,&count,0,344,228,1);
+    }else if(show_mission){
         /* 4283C0 mission summary uses SCORE_RESULT_E sprites 0..5. */
         results_panel(quads,&count,240,10,7);
         results_mission_label(quads,&count,7,177);
