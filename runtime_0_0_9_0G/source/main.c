@@ -344,7 +344,8 @@ static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_sar
 static void reset_saru(void);
 static int g_panels_ready;
 static int g_panel_probe,g_panel_probe_jump;
-static unsigned g_panel_probe_rise,g_panel_probe_landed;
+static unsigned g_panel_probe_rise,g_panel_probe_landed,g_panel_probe_air_ticks;
+static float g_panel_probe_low_y;
 static unsigned g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_mask,g_panel_probe_draws,g_panel_probe_sim_mask;
 static uint32_t g_panel_probe_row;
 static int32_t g_panel_head=-1;
@@ -1974,7 +1975,8 @@ static void begin_panel_probe(void){
     g_player.ground_normal=grounded?floor.normal:(SA1Vec3){0,1,0};g_player.surface_frame_active=false;
     g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
     reset_springs();g_panel_probe=1;g_panel_probe_jump=kind==40;
-    g_panel_probe_rise=g_panel_probe_landed=0;g_panel_probe_ticks=0;
+    g_panel_probe_rise=g_panel_probe_landed=g_panel_probe_air_ticks=0;g_panel_probe_ticks=0;
+    g_panel_probe_low_y=g_player.pos.y;
     g_panel_probe_row=target.source_row;g_panel_probe_boosts=g_panel_probe_mask=g_panel_probe_draws=g_panel_probe_sim_mask=0;
     g_camera.yaw=0;
     boot_log("PANEL_PROBE","BEGIN: explicit original-placement panel fixture; course progress is not being tested");return;
@@ -4584,7 +4586,13 @@ int main(void) {
             if(g_ec_full_route && previous_tick && g_player.sim_frame==1){
                 g_rings.rings=0;reset_selected_zone();
                 if(g_ring_probe){boot_log("RING_PROBE","FAIL: physical death/reset during input-only replay");g_ring_probe=0;g_paused=1;}
-                if(g_panel_probe){boot_log("PANEL_PROBE","FAIL: physical death/reset during fixture");g_panel_probe=0;g_paused=1;}
+                if(g_panel_probe){
+                    char note[160];
+                    snprintf(note,sizeof(note),"FAIL: physical death/reset row=%lu tick=%u boosts=%u air=%u minY=%.2f",
+                        (unsigned long)g_panel_probe_row,g_panel_probe_ticks,g_panel_probe_boosts,
+                        g_panel_probe_air_ticks,g_panel_probe_low_y);
+                    boot_log("PANEL_PROBE",note);g_panel_probe=0;g_paused=1;
+                }
                 if(g_air_attack_probe){boot_log("AIR_ATTACK_PROBE","FAIL: physical death/reset during fixture");g_air_attack_probe=0;g_paused=1;}
             }
             if(g_spring_probe&&g_player.pc2004_action_state_valid){
@@ -4710,6 +4718,10 @@ int main(void) {
                 boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
                 }
             }
+            if(g_panel_probe&&g_panel_probe_boosts){
+                if(!g_player.grounded)g_panel_probe_air_ticks++;
+                g_panel_probe_low_y=fminf(g_panel_probe_low_y,g_player.pos.y);
+            }
             if(g_panel_probe&&g_panel_probe_jump&&g_panel_probe_boosts){
                 if(!g_player.grounded&&g_player.vel.y>0.f)g_panel_probe_rise++;
                 if(g_panel_probe_rise&&g_player.grounded)g_panel_probe_landed++;
@@ -4720,10 +4732,11 @@ int main(void) {
                     g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_rise,g_panel_probe_landed);
                 boot_log("JUMP_PAD_PROBE",note);g_panel_probe=0;g_paused=1;
             }
-            if(g_panel_probe&&!g_panel_probe_jump&&++g_panel_probe_ticks>=32){
-                char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x; explicit placement fixture only",
+            if(g_panel_probe&&!g_panel_probe_jump&&++g_panel_probe_ticks>=180){
+                char note[180];snprintf(note,sizeof(note),"%s: ticks=%u boosts=%u draws=%u simulatedPhases=%02x renderedPhases=%02x air=%u minY=%.2f endGround=%u",
                     g_panel_probe_boosts&&g_panel_probe_draws&&g_panel_probe_sim_mask==255?"PASS":"FAIL",
-                    g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_draws,g_panel_probe_sim_mask,g_panel_probe_mask);
+                    g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_draws,g_panel_probe_sim_mask,g_panel_probe_mask,
+                    g_panel_probe_air_ticks,g_panel_probe_low_y,(unsigned)g_player.grounded);
                 boot_log("PANEL_PROBE",note);g_panel_probe=0;g_paused=1;
             }
             if(g_spring_probe&&++g_spring_probe_ticks>=180){
