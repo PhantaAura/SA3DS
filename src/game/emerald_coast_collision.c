@@ -374,7 +374,10 @@ int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
     s->archive=source;
     s->act_index=act_index;s->center_x=center_x;s->center_z=center_z;
     s->min_x=min_x;s->max_x=max_x;s->min_z=min_z;s->max_z=max_z;
-    s->triangles=calloc(MAX_TRIANGLES,sizeof(*s->triangles));
+    /* Only accepted triangles are written and indexed. Grow the candidate
+       as needed rather than clearing the entire maximum-sized buffer. */
+    uint32_t capacity=256;
+    s->triangles=malloc((size_t)capacity*sizeof(*s->triangles));
     if(!s->triangles)goto fail;
     for(uint32_t i=first;i<first+count;i++){
         const uint8_t*r=b+io+(size_t)i*80;
@@ -393,14 +396,20 @@ int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
                 *points[k]=xform(&matrix,point(b+vo+(size_t)index*12));
                 if(!finite3(*points[k]))goto fail;
             }
-            SA1Vec3 cross=sa1_vec3_cross(sa1_vec3_sub(t.b,t.a),sa1_vec3_sub(t.c,t.a));
-            if(sa1_vec3_length(cross)<0.00001f)continue;
-            t.normal=sa1_vec3_normalize(cross);
             t.min_x=fminf(t.a.x,fminf(t.b.x,t.c.x));t.max_x=fmaxf(t.a.x,fmaxf(t.b.x,t.c.x));
             t.min_z=fminf(t.a.z,fminf(t.b.z,t.c.z));t.max_z=fmaxf(t.a.z,fmaxf(t.b.z,t.c.z));
             if(t.max_x<s->min_x||t.min_x>s->max_x||t.max_z<s->min_z||t.min_z>s->max_z)continue;
+            SA1Vec3 cross=sa1_vec3_cross(sa1_vec3_sub(t.b,t.a),sa1_vec3_sub(t.c,t.a));
+            if(sa1_vec3_length(cross)<0.00001f)continue;
+            t.normal=sa1_vec3_normalize(cross);
             t.source_instance=i;t.source_triangle=j/3;t.flags=r32(r+4);
-            if(s->triangle_count==MAX_TRIANGLES)goto fail;
+            if(s->triangle_count==capacity){
+                if(capacity==MAX_TRIANGLES)goto fail;
+                capacity*=2;
+                SA3DSECTriangle *grown=realloc(s->triangles,(size_t)capacity*sizeof(*grown));
+                if(!grown)goto fail;
+                s->triangles=grown;
+            }
             s->triangles[s->triangle_count++]=t;
         }
     }
