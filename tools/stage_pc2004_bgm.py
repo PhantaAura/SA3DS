@@ -13,6 +13,8 @@ def check_table(exe):
  r=verified_reader(exe)
  for i,name in ((28,b'ecoast1'),(29,b'ecoast2'),(30,b'ecoast3')):
   p,loop=struct.unpack('<II',r(0x910298+i*8,8));assert loop==1 and r(p,8).split(b'\0')[0]==name,(i,name)
+ p,loop=struct.unpack('<II',r(0x910298+75*8,8))
+ assert loop==0 and r(p,9)==b'rndclear\0'
  assert r(0x425421,7)==bytes.fromhex('8b0cc598029100') #425421: mov ecx,[0x910298+eax*8]
 def check_adx(blob,name):
  assert blob[:2]==b'\x80\x00',name
@@ -30,6 +32,11 @@ def stage(exe,game,dest):
  for k in (1,2,3):
   b=(src/f'ecoast{k}.adx').read_bytes();total,ls,le=check_adx(b,k)
   (dest/f'ecoast{k}.adx').write_bytes(b);rows.append((k,total,ls,le,hashlib.sha256(b).hexdigest()[:12]))
+ clear=(src/'rndclear.adx').read_bytes()
+ assert clear[:2]==b'\x80\x00' and clear[4:8]==bytes([3,18,4,2])
+ offset=struct.unpack_from('>H',clear,2)[0]+4
+ assert clear[offset-6:offset]==b'(c)CRI'
+ (dest/'rndclear.adx').write_bytes(clear)
  return rows
 if __name__=='__main__':
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('exe',type=Path);ap.add_argument('game',type=Path);ap.add_argument('dest',type=Path);a=ap.parse_args()

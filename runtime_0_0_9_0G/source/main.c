@@ -114,7 +114,7 @@ static uint8_t *g_ec_collision_bytes;
 static size_t g_ec_collision_size;
 static SA3DSECRoute g_ec_route;
 enum { EC_GOAL_RUNNING, EC_GOAL_WAIT_GROUND, EC_GOAL_FINISHED };
-static unsigned g_ec_goal_result;
+static unsigned g_ec_goal_result,g_ec_clear_audio_ticks;
 static uint8_t g_ec_goal_action,g_ec_goal_draw;
 static float g_ec_goal_frame;
 static uint8_t *g_finish_tails_character_bytes,*g_finish_tails_texture_bytes;
@@ -2444,7 +2444,7 @@ static const SA3DSPierServices g_pier_services={NULL,pier_read_frame,pier_dynami
  *loader would overwrite them.*/
 static void world_prepare(int restart){
     if(g_world_tasks.slots)whale_world_clear();
-    g_ec_goal_result=EC_GOAL_RUNNING;
+    g_ec_goal_result=EC_GOAL_RUNNING;g_ec_clear_audio_ticks=0;
     g_ec_goal_action=g_ec_goal_draw=0;
     g_ec_goal_frame=0;g_finish_tails_draws=0;
     g_ec_goal_lifetime=(SA3DSSetTaskLifetime){0};
@@ -2626,6 +2626,8 @@ static int ec_goal_load(const SA1PlayerState *player,const SA3DSSetClipInput *cl
     if(!g_ec_full_route||!g_ec_route.has_goal||g_ec_act_index!=goal->act_index)return 1;
     if(g_ec_goal_result==EC_GOAL_WAIT_GROUND&&(player->grounded||(player->pc2004_status_flags&2))){
         g_ec_goal_result=EC_GOAL_FINISHED;
+        sa3ds_bgm_stop();
+        g_ec_clear_audio_ticks=5; /* 41437E: delayed music request 0x4B. */
         char note[100];
         snprintf(note,sizeof(note),"Ground condition met at tick %lu. Stage finished.",
             (unsigned long)g_source_frame);
@@ -4049,6 +4051,15 @@ int main(void) {
         unsigned steps=(g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused) ? 0u : sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in);
         for (unsigned step=0;step<steps;step++) {
             if(g_ec_full_route)g_ec_perf.ticks++;
+            if(g_ec_goal_result==EC_GOAL_FINISHED){
+                if(g_ec_clear_audio_ticks&&!--g_ec_clear_audio_ticks){
+                    int played=sa3ds_bgm_play("sdmc:/3ds/SA3DS/assets/bgm/rndclear.adx");
+                    boot_log("GOAL",played?"Stage clear music queued":"Stage clear music unavailable");
+                    g_paused=1;
+                    break;
+                }
+                continue;
+            }
             SA1Input tick_input=sa3ds_wz_tick_input(&g_tick_clock,step);
             g_source_frame++;
             if(g_death_probe)g_death_probe_ticks++;
@@ -4305,7 +4316,7 @@ int main(void) {
             if(!saru_ccl_pass(&physics_done,checkpoint_previous_task)){fail_screen("Native player/NPC CCL failed");break;}
             g_course_clock.enabled=stage_phase.controls_enabled&&g_ec_goal_result==EC_GOAL_RUNNING;
             sa3ds_course_clock_tick(&g_course_clock);
-            if(g_ec_goal_result==EC_GOAL_FINISHED){g_paused=1;steps=step+1;}
+            if(g_ec_goal_result==EC_GOAL_FINISHED)steps=step+1;
             if(g_checkpoint_probe){
                 g_checkpoint_probe_ticks++;
                 if(g_checkpoint_activations&&!g_checkpoint_probe_injected)g_checkpoint_probe_age++;

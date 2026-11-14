@@ -1,3 +1,16 @@
+# WCA117 — Emerald Coast clear music
+
+On grounded completion, the native stage stops the act music and
+requests the original non-looping rndclear track five updates later.
+The owner staging tool extracts it from the local game installation.
+The ADX player queues the final partial buffer and waits for it to drain.
+
+A mocked DSP run with the exact owner track queued all 334721 samples
+without an underrun. Audible playback, the remaining results sequence,
+and the post-clear transition remain open.
+
+---
+
 # WCA116 — Sonic's numbered-panel animations
 
 The normal animation selector now consumes the panel travel and arrival

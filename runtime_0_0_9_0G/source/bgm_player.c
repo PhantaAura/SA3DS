@@ -24,6 +24,7 @@ static int fill(ndspWaveBuf*w){
   if(g.info.loop&&g.state.sample>=g.info.loop_end){
    uint32_t at=sa3ds_adx_loop(&g.info,&g.state);if(!at||fseek(g.file,(long)at,SEEK_SET))return 0;g.loops++;
   }
+  if(g.state.sample>=g.info.total_samples)break;
   size_t bytes=(size_t)g.info.block_size*g.info.channels;
   if(fread(frame,1,bytes,g.file)!=bytes)return 0;
   int16_t tmp[64];if(!sa3ds_adx_decode_frame(&g.info,&g.state,frame,tmp))return 0;
@@ -31,7 +32,11 @@ static int fill(ndspWaveBuf*w){
   else for(unsigned i=0;i<32;i++){out[n*64+i*2]=tmp[i];out[n*64+i*2+1]=tmp[i];}
   n++;g.frames++;
  }
- w->nsamples=n*32;DSP_FlushDataCache(out,n*32*4);return 1;
+ w->nsamples=n*32;
+ if(n&&!g.info.loop&&g.state.sample>=g.info.total_samples)
+  w->nsamples-=g.state.sample-g.info.total_samples;
+ if(w->nsamples)DSP_FlushDataCache(out,w->nsamples*4);
+ return 1;
 }
 int sa3ds_bgm_play(const char*path){
  sa3ds_bgm_stop();
@@ -49,7 +54,7 @@ int sa3ds_bgm_play(const char*path){
  for(unsigned i=0;i<BGM_BUFFERS;i++){
   g.wave[i].data_vaddr=g.pcm+i*BGM_FRAMES_PER_BUFFER*32*2;
   if(!fill(&g.wave[i])){sa3ds_bgm_stop();return 0;}
-  ndspChnWaveBufAdd(0,&g.wave[i]);
+  if(g.wave[i].nsamples)ndspChnWaveBufAdd(0,&g.wave[i]);
  }
  g.playing=1;return 1;
 }
@@ -58,9 +63,13 @@ void sa3ds_bgm_update(void){
  for(unsigned i=0;i<BGM_BUFFERS;i++){
   if(g.wave[i].status!=NDSP_WBUF_DONE)continue;
   if(!fill(&g.wave[i])){sa3ds_bgm_stop();return;}
-  ndspChnWaveBufAdd(0,&g.wave[i]);
+  if(g.wave[i].nsamples)ndspChnWaveBufAdd(0,&g.wave[i]);
  }
- if(!ndspChnIsPlaying(0))g.underruns++;
+ if(!g.info.loop&&g.state.sample>=g.info.total_samples){
+  for(unsigned i=0;i<BGM_BUFFERS;i++)
+   if(g.wave[i].status==NDSP_WBUF_QUEUED||g.wave[i].status==NDSP_WBUF_PLAYING)return;
+  sa3ds_bgm_stop();
+ }else if(!ndspChnIsPlaying(0))g.underruns++;
 }
 void sa3ds_bgm_stop(void){
  if(g.ndsp_ready)ndspChnReset(0);
