@@ -221,7 +221,7 @@ static SA3DSCCLBody g_player_enemy_ccl;
 static SA3DSCCLShape g_player_enemy_shapes[2];
 static SA3DSGameScore g_game_score;
 static SA3DSClearScore g_clear_score;
-enum { RESULTS_TEXTURES=28, RESULTS_QUADS=72, RESULTS_DIGITS=17 };
+enum { RESULTS_TEXTURES=28, RESULTS_QUADS=88, RESULTS_DIGITS=17 };
 static C3D_Tex g_results_textures[RESULTS_TEXTURES];
 static float g_results_labels[7][4];
 static unsigned g_results_loaded;
@@ -3220,23 +3220,52 @@ fail:
     return 0;
 }
 
-typedef struct {unsigned texture;uint32_t color;} SA3DSResultsQuad;
+typedef struct {unsigned texture;} SA3DSResultsQuad;
 
 static void results_quad(SA3DSResultsQuad *quads,unsigned *count,unsigned texture,
-    float x,float y,float width,float height,uint32_t color){
+    float x,float y,float width,float height,unsigned quarter_turns){
     if(*count==RESULTS_QUADS)return;
-    float left=x/320.f-1.f,right=(x+width)/320.f-1.f;
-    float top=1.f-y/240.f,bottom=1.f-(y+height)/240.f;
-    SA3DSLabVertex vertices[6]={{{left,bottom,0},{0,1}},{{right,bottom,0},{1,1}},{{left,top,0},{0,0}},
-        {{left,top,0},{0,0}},{{right,bottom,0},{1,1}},{{right,top,0},{1,0}}};
-    memcpy(g_results_vertices+*count*6,vertices,sizeof(vertices));
-    quads[(*count)++]=(SA3DSResultsQuad){texture,color};
+    static const unsigned corners[]={0,1,2,2,1,3};
+    SA3DSLabVertex *vertices=g_results_vertices+*count*6;
+    for(unsigned i=0;i<6;i++){
+        unsigned corner=corners[i];
+        float u=(float)(corner&1),v=(float)(1u-(corner>>1));
+        float px=(u-.5f)*width,py=(v-.5f)*height;
+        /* Ninja rotates clockwise in its screen coordinate space. */
+        float dx=px,dy=py;
+        switch(quarter_turns){
+        case 1: dx=-py;dy=px;break;
+        case 2: dx=-px;dy=-py;break;
+        case 3: dx=py;dy=-px;break;
+        }
+        vertices[i]=(SA3DSLabVertex){{(x+dx)/320.f-1.f,1.f-(y+dy)/240.f,0},{u,v}};
+    }
+    quads[(*count)++]=(SA3DSResultsQuad){texture};
+}
+
+/* PC2004 426740 draws these nine sprites using SCORE_BACK. */
+static void results_panel(SA3DSResultsQuad *quads,unsigned *count,float y,float half_height_tiles){
+    const float left=64,right=576;
+    const float extent=(half_height_tiles+1)*16;
+    const float top=y-extent,bottom=y+extent;
+    if(half_height_tiles>0)
+        results_quad(quads,count,13,320,y,480,half_height_tiles*32,0);
+    results_quad(quads,count,14,left,bottom,32,32,0);
+    results_quad(quads,count,14,left,top,32,32,1);
+    results_quad(quads,count,14,right,top,32,32,2);
+    results_quad(quads,count,14,right,bottom,32,32,3);
+    if(half_height_tiles>0)
+        results_quad(quads,count,15,left,y,32,half_height_tiles*32,0);
+    results_quad(quads,count,15,320,top,32,480,1);
+    if(half_height_tiles>0)
+        results_quad(quads,count,15,right,y,32,half_height_tiles*32,2);
+    results_quad(quads,count,15,320,bottom,32,480,3);
 }
 
 static void results_number(SA3DSResultsQuad *quads,unsigned *count,uint32_t number,
     float x,float y,unsigned minimum){
     do{
-        results_quad(quads,count,RESULTS_DIGITS+number%10,x,y-16,32,32,UINT32_MAX);
+        results_quad(quads,count,RESULTS_DIGITS+number%10,x+16,y,32,32,0);
         number/=10;
         x-=32;
         if(minimum)minimum--;
@@ -3249,21 +3278,20 @@ static void draw_results(void){
        phase<3||phase>10||(phase==10&&!visible))return;
     SA3DSResultsQuad quads[RESULTS_QUADS];
     unsigned count=0;
-    /* 426740 panel centers and interior extents in the 640x480 source space. */
-    results_quad(quads,&count,13,64,88,512,80,UINT32_MAX);
-    results_quad(quads,&count,13,64,208,512,128,UINT32_MAX);
-    results_quad(quads,&count,13,64,368,512,32,UINT32_MAX);
+    results_panel(quads,&count,128,1.5f);
+    results_panel(quads,&count,272,3);
+    results_panel(quads,&count,384,0);
     for(unsigned i=0;i<6;i++){
         const float *pos=g_results_labels[i];
         const C3D_Tex *texture=&g_results_textures[i];
         float width=texture->width*pos[2],height=texture->height*pos[3];
-        results_quad(quads,&count,i,pos[0],pos[1]-height/2,width,height,UINT32_MAX);
+        results_quad(quads,&count,i,pos[0]+width/2,pos[1],width,height,0);
     }
     if(visible&SA3DS_CLEAR_TIME){
         results_number(quads,&count,g_course_clock.time[0],320,96,2);
-        results_quad(quads,&count,RESULTS_DIGITS+10,336,64,32,32,UINT32_MAX);
+        results_quad(quads,&count,RESULTS_DIGITS+10,352,80,32,32,0);
         results_number(quads,&count,g_course_clock.time[1],416,96,2);
-        results_quad(quads,&count,RESULTS_DIGITS+10,432,64,32,32,UINT32_MAX);
+        results_quad(quads,&count,RESULTS_DIGITS+10,448,80,32,32,0);
         results_number(quads,&count,g_course_clock.time[2],512,96,2);
     }
     if(visible&SA3DS_CLEAR_RINGS)
@@ -3291,8 +3319,8 @@ static void draw_results(void){
     C3D_BufInfo *buffer=C3D_GetBufInfo();
     BufInfo_Init(buffer);
     BufInfo_Add(buffer,g_results_vertices,sizeof(*g_results_vertices),2,0x10);
+    C3D_TexEnvColor(env,UINT32_MAX);
     for(unsigned i=0;i<count;i++){
-        C3D_TexEnvColor(env,quads[i].color);
         C3D_TexBind(0,&g_results_textures[quads[i].texture]);
         C3D_DrawArrays(GPU_TRIANGLES,i*6,6);
     }
