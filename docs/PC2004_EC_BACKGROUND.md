@@ -31,6 +31,29 @@ The private decompilation and exact LLVM disassembly identify:
 - Background clear RGB `0x003946` is selected for both Sonic acts. Act2's
   different state is outside Sonic's two-act background package.
 
+### PC2004 terrain fog
+
+The six imported start/end pairs are inputs to a legacy fog table. The
+original executable takes the following path when stage fog is restored.
+
+- `0x411A20` converts positive distances to negative source Z, applies
+  the RGB color, and rebuilds the table when the distance pair changes.
+- `0x787260` uses the unit numerator if the positive start is at most
+  `end / 256`. The exact executable selects this branch for all six Sonic
+  act/clip rows. This branch skips the fog-factor normalization used for
+  larger starts.
+- `0x794DB0` builds a companion distance table from the encoded end.
+  `0x794E40` selects samples from the two tables. `0x7949F0` translates them
+  to D3D render states when table fog is supported. The start and end
+  written to states `0x24` and `0x25` come from that translation.
+- `0x794EC0` initializes the capability flag that governs the translation
+  and the fog-enable call. The owner EXE verifies the static path.
+  Capturing the active PC2004 mode and state values requires a runtime read.
+
+Use the actual render states or a reconstruction of the active fog path
+before calibrating the 3DS fog curve. Applying a linear ramp directly from
+the package's raw distance pair would bypass the original translation.
+
 The draw callback also saves render-control state, ORs bit2 and clears bit0x40,
 then restores it. Full mapping of these control bits, Z/depth behavior,
 lighting/material/raster precision and global render-order fidelity is not
