@@ -79,6 +79,7 @@
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
+#define EC_BACKGROUND_CLIP_LEVEL 1u
 #define DISPLAY_TRANSFER_FLAGS \
     (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | \
      GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
@@ -1212,8 +1213,8 @@ static int draw_background(const C3D_Mtx *view,const float eye[3]) {
     if(!g_background_ready)return 1;
     SA3DSECBackgroundConfig config;SA3CMatrix actor;
     C3D_Mtx projection,model,mv;
-    if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,1,&config)||
-       !sa3ds_ec_background_transform(&g_background,g_ec_act_index,1,eye,&actor))return 0;
+    if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,EC_BACKGROUND_CLIP_LEVEL,&config)||
+       !sa3ds_ec_background_transform(&g_background,g_ec_act_index,EC_BACKGROUND_CLIP_LEVEL,eye,&actor))return 0;
     Mtx_PerspTilt(&projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
                   config.background_near,config.background_far,false);
     for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
@@ -4848,8 +4849,15 @@ int main(void) {
          *retire; do not free textures still referenced by queued GPU work.*/
         if(g_game_over_release&&!g_game_over_draw){destroy_game_over_art();g_game_over_release=0;}
         if(probe_log)boot_log("FRAME","begin returned");
-        C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,
-            g_pose_lab?0x9EBAD2FFu:CLEAR_COLOR,0);
+        uint32_t clear_color=g_pose_lab?0x9EBAD2FFu:CLEAR_COLOR;
+        if(g_emerald_coast){
+            SA3DSECBackgroundConfig config;
+            uint32_t clear_rgb=0x003946u;
+            if(sa3ds_ec_background_select(&g_background,g_ec_act_index,
+                EC_BACKGROUND_CLIP_LEVEL,&config))clear_rgb=config.clear_rgb;
+            clear_color=(clear_rgb<<8)|0xffu;
+        }
+        C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,clear_color,0);
         C3D_FrameDrawOn(g_target);
         if (g_boottrace_first_frame) boot_log("ENTER","First sample_pose (Sonic + lab draw)");
         if (!(g_emerald_coast&&g_stage_restart.state>=18)&&!sample_pose()) {
