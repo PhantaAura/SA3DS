@@ -360,6 +360,32 @@ int main(int argc,char**argv){
         sa3ds_ec_collision_resolve_walls(&s,wall_free.pos,&wall_free);
         assert(s.wall_hits==walls_before&&wall_free.grounded);
         assert(wall_free.ground_normal.y==0.1737f);
+        /* A confirmed vertical face remains support while the task
+         * orientation is still tilted up toward it. */
+        int checked_steep=0;
+        for(uint32_t ti=0;ti<s.triangle_count;ti++){
+            const SA3DSECTriangle *face=&s.triangles[ti];
+            if(fabsf(face->normal.y)>0.001f)continue;
+            SA1PlayerState steep=p;
+            steep.surface_id=(int32_t)ti;
+            steep.surface_flags=face->flags;
+            steep.ground_normal=sa1_vec3_scale(
+                sa1_vec3_add(face->normal,(SA1Vec3){0,0.75f,0}),0.8f);
+            steep.surface_frame_active=true;
+            SA1Vec3 task=sa1_vec3_scale(sa1_vec3_add(face->a,
+                sa1_vec3_add(face->b,face->c)),1.0f/3.0f);
+            steep.pos=sa1_vec3_add(task,steep.ground_normal);
+            SA1Vec3 previous=sa1_vec3_add(steep.pos,sa1_vec3_scale(face->normal,10));
+            steep.vel=sa1_vec3_sub(steep.pos,previous);
+            walls_before=s.wall_hits;
+            sa3ds_ec_collision_resolve_walls(&s,previous,&steep);
+            assert(steep.grounded&&steep.surface_id==(int32_t)ti);
+            assert(s.wall_hits==walls_before);
+            assert(fabsf(steep.ground_normal.y-0.6f)<0.0001f);
+            checked_steep=1;
+            break;
+        }
+        assert(checked_steep);
         in.jump_pressed=true;in.jump_held=false;s.reference_y=p.pos.y;
         sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);assert(!p.grounded);
         in.jump_pressed=false;int landed=0;for(int i=0;i<120;i++){s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);if(p.grounded){landed=1;break;}}assert(landed);

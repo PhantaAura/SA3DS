@@ -664,6 +664,31 @@ static int sweep_edge(SA1Vec3 previous,SA1Vec3 current,SA1Vec3 a,SA1Vec3 b,
     *fraction=best;*normal=n;return 1;
 }
 
+/* The wall pass can run after a swept support response with a task Up
+ * that is still turning toward the selected face. Test the task origin
+ * against that finite face before applying any support-plane correction. */
+static int retain_steep_support(const SA3DSECTriangle *face, SA1Vec3 up,
+    SA1PlayerState *player) {
+    SA1Vec3 normal=face->normal;
+    if(sa1_vec3_dot(normal,up)<0&&(face->flags&0x800000u))
+        normal=sa1_vec3_scale(normal,-1);
+    SA1Vec3 task=sa1_vec3_sub(player->pos,sa1_vec3_scale(up,SA3DS_EC_CONTROLLER_SUPPORT));
+    float distance=sa1_vec3_dot(sa1_vec3_sub(task,face->a),normal);
+    SA1Vec3 projected=sa1_vec3_sub(task,sa1_vec3_scale(normal,distance));
+    /* Relative to the task origin, the current support query's
+     * [-0.35, 2.35] center range is centered one unit lower. */
+    float range=2.35f-SA3DS_EC_CONTROLLER_SUPPORT;
+    if(fabsf(distance)>range||!inside(face,projected))return 0;
+    if(distance<0){
+        player->pos=sa1_vec3_sub(player->pos,sa1_vec3_scale(normal,distance));
+        float inward=sa1_vec3_dot(player->vel,normal);
+        if(inward<0)player->vel=sa1_vec3_sub(player->vel,sa1_vec3_scale(normal,inward));
+        distance=0;
+    }
+    player->support_distance=SA3DS_EC_CONTROLLER_SUPPORT+distance;
+    return 1;
+}
+
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
     if(!s||!p||!finite3(previous)||!finite3(p->pos))return;
     resolve_floor_crossing(s,previous,p);
@@ -674,6 +699,10 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
      * exact retail arbitration, edge/corner capsules and probes are pending. */
     float radius=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height*0.5f;
     SA1Vec3 up=actor_frame(p).up;
+    int32_t steep_support=-1;
+    if(p->grounded&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count&&
+       s->triangles[p->surface_id].normal.y<=0.45f)
+        steep_support=p->surface_id;
     SA1Vec3 shift=sa1_vec3_scale(up,radius-SA3DS_EC_CONTROLLER_SUPPORT);
     previous=sa1_vec3_add(previous,shift);
     SA1Vec3 center=sa1_vec3_add(p->pos,shift);
@@ -686,7 +715,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
         for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
             uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
             SA3DSECTriangle*t=&s->triangles[ti];s->triangle_tests++;
-            if(fabsf(t->normal.y)>0.45f)continue;
+            if((int32_t)ti==steep_support||fabsf(t->normal.y)>0.45f)continue;
             float old=sa1_vec3_dot(sa1_vec3_sub(previous,t->a),t->normal);
             SA1Vec3 n=old<0?sa1_vec3_scale(t->normal,-1):t->normal;old=fabsf(old);
             float now=sa1_vec3_dot(sa1_vec3_sub(center,t->a),n);
@@ -718,7 +747,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             unsigned c=z*16+x;
             for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
                 uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
-                SA3DSECTriangle*t=&s->triangles[ti];if(fabsf(t->normal.y)>0.45f||!t->wall_edge_mask)continue;
+                SA3DSECTriangle*t=&s->triangles[ti];if((int32_t)ti==steep_support||fabsf(t->normal.y)>0.45f||!t->wall_edge_mask)continue;
                 s->triangle_tests++;
                 for(unsigned e=0;e<3;e++)if(t->wall_edge_mask&(1u<<e)){
                     float q;SA1Vec3 n;
@@ -740,6 +769,14 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
         if(inward<0)p->vel=sa1_vec3_sub(p->vel,sa1_vec3_scale(edge_normal,inward));
         s->wall_hits++;
     }
+    if(steep_support>=0){
+        if(s->wall_hits!=wall_hits_before&&!retain_steep_support(&s->triangles[steep_support],up,p)){
+            sa1_steam_sonic_begin_ground_departure(p);
+            p->jump_ticks=0;
+        }
+        return;
+    }
+
     /* The controller resolves its floor BEFORE this wall pass. An inclined
      * wall can then push a supported actor underneath that same floor. Repair
      * that adapter-ordering inconsistency using imported support.

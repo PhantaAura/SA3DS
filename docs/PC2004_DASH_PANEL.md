@@ -319,3 +319,12 @@ pass on the same tick. The existing position-only experiment
 remains byte-for-byte unchanged. The source tracks the accepted
 polygon normal separately from the smoothed orientation. The
 current port contact frame still conflates those inputs.
+
+The wall pass now recognizes a previously selected steep static face
+by its triangle index. It excludes that face from wall collisions and
+uses its plane and finite extent when another wall correction requires
+support revalidation. The body sweep keeps the smoothed task frame.
+With this change, the task-angle replay retains face 426/148 at tick
+16 and proceeds through tick 17. Tick 18 still fails the confirmation
+speed gate on this alternate trajectory. The native movement step has
+yet to adopt the experimental swept support response.
