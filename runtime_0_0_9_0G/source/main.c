@@ -1714,6 +1714,7 @@ static SA3DSLabVertex *g_tikal_quad;
 static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws,g_tikal_rise;
 static int g_tikal_visible;
 static SA1Vec3 g_tikal_position;
+static float g_tikal_hover_y;
 static void destroy_tikal(void){
     for(unsigned i=0;i<g_tikal_loaded;i++)C3D_TexDelete(&g_tikal_textures[i]);
     g_tikal_loaded=0;
@@ -1792,9 +1793,15 @@ static void tick_tikal(void){
         if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||p.act!=1||(p.type&4095u)!=26)continue;
         SA1Vec3 delta=sa1_vec3_sub(player,p.position);
         if(sa1_vec3_dot(delta,delta)>=115600.f)continue;
-        /* 7A15B5–7A15F6: the final tick changes state before adding height. */
-        g_tikal_rise=was_visible?g_tikal_rise+(g_tikal_rise<59):0;
-        SA1Vec3 hover=sa1_vec3_add(p.position,(SA1Vec3){0,(float)g_tikal_rise/3.f,0});
+        /* 7A15B5–7A15F6 stores the new world Y on each rise tick. Tick 60
+           changes state, then 7A1610 starts testing proximity on tick 61. */
+        if(!was_visible){
+            g_tikal_rise=0;
+            g_tikal_hover_y=p.position.y;
+        }else if(g_tikal_rise<61){
+            if(++g_tikal_rise<60)g_tikal_hover_y+=0.3333333432674408f;
+        }
+        SA1Vec3 hover={p.position.x,g_tikal_hover_y,p.position.z};
         if(g_tikal_remaining||g_tikal_cooldown>300){
             int retreat=g_tikal_cooldown>300;
             float speed=1.f;
@@ -1817,10 +1824,11 @@ static void tick_tikal(void){
         }
         g_tikal_visible=1;
         g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
-        if(g_tikal_hint_ready&&g_tikal_rise==59&&!g_tikal_remaining&&!g_tikal_cooldown&&
+        SA1Vec3 orb_delta=sa1_vec3_sub(player,hover);
+        if(g_tikal_hint_ready&&g_tikal_rise==61&&!g_tikal_remaining&&!g_tikal_cooldown&&
            g_numbered_target<0&&g_player.action_state!=SA1_ACTION_HURT&&
            g_player.action_state!=SA1_ACTION_DEAD&&p.parameters[2]==8.f&&
-           sa1_vec3_dot(delta,delta)<225.f){
+           sa1_vec3_dot(orb_delta,orb_delta)<225.f){
             g_tikal_page=0;g_tikal_orbit=0;g_tikal_remaining=g_tikal_duration[0];
             g_player.vel=(SA1Vec3){0};
             sa3ds_se_play(6);
