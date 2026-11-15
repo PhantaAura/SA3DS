@@ -193,6 +193,23 @@ static float current_frame_step(SA3DSSonicAnimationRuntime *runtime,
     return step;
 }
 
+static void advance_sample_frame(SA3DSSonicAnimationRuntime *runtime,
+                                 const SA1PlayerState *player) {
+    const SA3DSSonicAnimationBinding *binding = &runtime->active_binding;
+    if (binding->property == 9 ||
+        (binding->property == 10 && runtime->speed_scalar_valid)) {
+        /* 44AA02 and 44AAB1 multiply, add to the stored phase, then store
+         * one float. Rounding the speed product first drifts over cycles. */
+        float speed = binding->property == 9 ? local_forward_speed(player) :
+                                               runtime->speed_scalar;
+        runtime->accumulated_sample_frame = (float)(
+            (double)speed * binding->animation_speed + runtime->accumulated_sample_frame);
+        return;
+    }
+    int backed = 0;
+    runtime->accumulated_sample_frame += current_frame_step(runtime, player, &backed);
+}
+
 SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     SA3DSSonicAnimationRuntime *runtime,
     const SA1PlayerState *player,
@@ -386,9 +403,7 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
              * NextAnim writes BOTH request and index (0x446910), no blend. */
             if (runtime->active_binding.property == 4 ||
                 runtime->active_binding.property == 6) {
-                int backed = 0;
-                runtime->accumulated_sample_frame +=
-                    current_frame_step(runtime, player, &backed);
+                advance_sample_frame(runtime, player);
                 if ((runtime->active_binding.property == 6 &&
                      runtime->accumulated_sample_frame < 0.0f) ||
                     (runtime->active_binding.property == 4 &&
@@ -403,9 +418,7 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                 continue;
             }
 
-            int backed = 0;
-            runtime->accumulated_sample_frame +=
-                current_frame_step(runtime, player, &backed);
+            advance_sample_frame(runtime, player);
             if(runtime->active_binding.property==5&&runtime->active_binding.source_frame_count&&
                runtime->accumulated_sample_frame>=(float)(runtime->active_binding.source_frame_count-1))
                 runtime->accumulated_sample_frame=(float)(runtime->active_binding.source_frame_count-1);
@@ -419,8 +432,10 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
                  * modulo would leak unbounded frames into traces/transitions
                  * and eventually lose fractional increments in long runs. */
                 float frames = (float)runtime->active_binding.source_frame_count;
-                runtime->accumulated_sample_frame =
-                    fmodf(runtime->accumulated_sample_frame, frames);
+                if (runtime->accumulated_sample_frame >= frames ||
+                    runtime->accumulated_sample_frame < 0.0f)
+                    runtime->accumulated_sample_frame =
+                        fmodf(runtime->accumulated_sample_frame, frames);
                 if (runtime->accumulated_sample_frame < 0.0f)
                     runtime->accumulated_sample_frame += frames;
             }

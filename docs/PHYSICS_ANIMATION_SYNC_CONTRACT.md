@@ -64,7 +64,11 @@ uses the exact fixed step for those properties. `InitCharacterVars` at
 `CharObj2.Speed.x + 20 * EntityData2[0x38]`; the jump transition at `0x00495E60`
 instead assigns `5.0`. Property 9 multiplies its input by row speed; property 10
 multiplies the scalar by row speed; property 11 uses the scalar directly. SA3DS
-accumulates these steps once per completed physics tick. The verified
+accumulates these steps once per completed physics tick. For properties 9 and
+10, the original instructions at `0x44AA02` and `0x44AAB1` multiply the speed,
+add the prior phase, and then store the result as one float. Native playback
+now keeps the intermediate product in double precision until that store.
+The verified
 flat/upright path supplies the cleared zero residual; unrecovered non-flat
 residual paths retain a flagged `0.5` fallback. The verified `PlayAnimation`
 path blends a frozen source local pose toward destination frame zero only when

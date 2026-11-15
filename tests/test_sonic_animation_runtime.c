@@ -373,8 +373,8 @@ int main(void) {
             assert(loop_s.binding.runtime_id==(kind==0?0:(kind==1?14:15)));
             float frames=kind==0?32.0f:7.0f;
             if(tick){
-                expected_frame+=kind==0?0.5f:(kind==1?1.0f:
-                    (kind==2?-1.4f:(kind==3?38.5f:-38.5f)));
+                if(kind>=2)expected_frame=(float)((double)loop.vel.z*0.7f+expected_frame);
+                else expected_frame+=kind==0?0.5f:1.0f;
                 while(expected_frame>=frames)expected_frame-=frames;
                 while(expected_frame<0)expected_frame+=frames;
             }
@@ -385,6 +385,26 @@ int main(void) {
         }
     }
     puts("PC2004 stored animation phase wrap: PASS (fixed, scalar, signed/multi-wrap speed loops x1000 ticks)");
+
+    for(unsigned run=0;run<2;run++){
+        SA3DSSonicAnimationSync gait_sync={0};
+        SA3DSSonicAnimationRuntime gait_runtime={0};
+        SA1PlayerState gait=base_player();
+        gait.vel.z=run?6.321f:0.321f;
+        float expected_phase=0;
+        for(unsigned tick=0;tick<1000;tick++){
+            gait.sim_frame=tick;
+            SA3DSSonicAnimationObservation gait_observation=observe(&gait_sync,&gait);
+            SA3DSSonicAnimationSelection gait_selection=select_no_mutation(
+                &gait_runtime,&gait,&gait_observation);
+            assert(gait_selection.binding.runtime_id==(run?13:9));
+            if(tick){
+                expected_phase=(float)((double)gait.vel.z*(run?0.5f:3.4f)+expected_phase);
+                if(expected_phase>=(run?33.f:32.f))expected_phase-=run?33.f:32.f;
+            }
+            assert(gait_selection.sample_frame==expected_phase);
+        }
+    }
 
     SA1PlayerState p = base_player();
     SA3DSSonicAnimationSync sync = {0};
