@@ -10,6 +10,7 @@
 #include "pc2004_sphere_sweep.h"
 #include "pc2004_collision_work.h"
 #include "pc2004_motion.h"
+#include "pc2004_task_frame.h"
 #include "steam_player_parameters.h"
 #include "ccl_wall.h"
 #include "spring_player.h"
@@ -223,8 +224,18 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
 }
 
 static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState *before,
-    const SA1Contact *support){
+    const SA1Contact *support, int task_angles){
  SA1SurfaceFrame frame=sa1_surface_frame_make(support->normal,player->surface_forward);
+ if(task_angles){
+  SA1SurfaceFrame previous=sa1_surface_frame_make(player->ground_normal,player->surface_forward);
+  uint16_t task_yaw;
+  if(sa1_pc2004_task_yaw(&previous,&task_yaw)){
+   int32_t target_x,target_z;
+   sa3ds_pc2004_normal_angles(support->normal.x,support->normal.y,support->normal.z,
+       &target_x,&target_z);
+   sa1_pc2004_task_frame_from_angles(&frame,(uint16_t)target_x,task_yaw,(uint16_t)target_z,NULL);
+  }
+ }
  player->grounded=true;
  player->action_state=before->action_state;
  player->pc2004_action_state=before->pc2004_action_state;
@@ -253,8 +264,9 @@ static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState
 
 int main(int argc,char **argv){
  int chain=(argc==4||argc==5)&&!strcmp(argv[3],"--chain");
- int apply_support=chain&&argc==5&&!strcmp(argv[4],"--apply-static-support");
- if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN | --apply-static-support]]\n",argv[0]);return 2;}
+ int task_angles=chain&&argc==5&&!strcmp(argv[4],"--apply-static-task-angles");
+ int apply_support=task_angles||(chain&&argc==5&&!strcmp(argv[4],"--apply-static-support"));
+ if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN | --apply-static-support | --apply-static-task-angles]]\n",argv[0]);return 2;}
  size_t cn,mn;void *c=read_blob(argv[1],&cn),*m=read_blob(argv[2],&mn);
  size_t wall_size=0;
  unsigned char *wall_set=argc==5&&!apply_support?read_blob(argv[4],&wall_size):NULL;
@@ -312,7 +324,7 @@ int main(int argc,char **argv){
      SA1Contact confirmed=report_source_sweep(
          &col,tick,previous_task,previous_up,prev,s.pos,previous_instance,previous_forward);
      if(apply_support&&confirmed.valid){
-      apply_confirmed_support(&s,&before,&confirmed);
+      apply_confirmed_support(&s,&before,&confirmed,task_angles);
       const SA3DSECTriangle *face=&col.triangles[confirmed.surface_id];
       printf("\n  applied static support tick=%u face=%u/%u",
           tick,face->source_instance,face->source_triangle);

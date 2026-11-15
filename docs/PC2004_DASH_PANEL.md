@@ -288,3 +288,18 @@ The replay still loses support at tick 28, and this time the trace
 shows zero per-polygon hits before the wall pass. That trajectory's
 failure occurs earlier than the edge correction seen with the
 previous experimental position updates.
+
+A private trace of the tick-28 miss shows the sweep samples are within
+five units of faces 426/39–44 but outside the expanded polygons. For
+the last support face, 426/41, the first sample is almost on a side
+edge and the later samples move farther past it. The height slab
+therefore does not explain the loss of support on this trajectory.
+
+The host replay's `--chain --apply-static-task-angles` variant keeps
+canonical task yaw when applying confirmed terrain pitch and roll
+instead of projecting the old forward vector. This is a sensitivity
+check using the source rotation convention. It does not reproduce
+449500's angle selection or 444F10's capped angle updates. This variant
+reduces lateral drift enough that it no longer reaches the steep-force
+cross-product threshold on tick 18. It detaches there. The prior
+`--apply-static-support` replay is unchanged.

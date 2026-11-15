@@ -27,6 +27,11 @@ static void frame_cases(void){
     SA1PC2004HomingMath math={.sine=sine};unsigned cases=0;
     for(unsigned i=0;i<5;i++)for(unsigned j=0;j<3;j++)for(unsigned k=0;k<7;k++){
         SA1SurfaceFrame f=encoded(pitch[i],yaw[k],roll[j]);uint16_t recovered;
+        SA1SurfaceFrame constructed;
+        assert(sa1_pc2004_task_frame_from_angles(&constructed,(uint16_t)pitch[i],yaw[k],(uint16_t)roll[j],&math));
+        assert(near(f.forward.x,constructed.forward.x)&&near(f.forward.y,constructed.forward.y)&&near(f.forward.z,constructed.forward.z));
+        assert(near(f.up.x,constructed.up.x)&&near(f.up.y,constructed.up.y)&&near(f.up.z,constructed.up.z));
+        assert(near(f.right.x,constructed.right.x)&&near(f.right.y,constructed.right.y)&&near(f.right.z,constructed.right.z));
         assert(sa1_pc2004_task_yaw(&f,&recovered)&&recovered==yaw[k]);
         uint16_t next=(uint16_t)(yaw[k]+0x800);SA1SurfaceFrame expected=encoded(pitch[i],next,roll[j]);
         assert(sa1_pc2004_task_turn(&f,recovered,next,&math));
