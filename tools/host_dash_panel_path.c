@@ -88,6 +88,7 @@ int main(int argc,char **argv){
    unsigned char pending[2046]={0};
    actors[i]=(SA3DSDashPanel){.initialized=1,.cooldown=params.lockout,.last_player=0};
    float lowest=s.pos.y;unsigned tick,air=0;
+   int reported_apex=0,reported_unsupported_descent=0;
    SA1Vec3 reset_from={0};
    for(tick=0;tick<240;tick++){
     if(sa3ds_ec_residency_needs_recenter(&col,s.pos))
@@ -130,9 +131,26 @@ int main(int argc,char **argv){
      unsigned hits=wall_sweep(wall_set+32,wall_count,previous_task,&s);
      if(hits)printf("\n  tick=%u wall contacts=%u",tick,hits);
     }
-    if(was_grounded!=s.grounded)
-     printf("\n  tick=%u grounded=%d pos=%.2f,%.2f,%.2f vel=%.2f,%.2f,%.2f flags=%08x",
+    int descending=!s.grounded&&s.vel.y<=0;
+    int apex=descending&&!reported_apex;
+    if(s.grounded)reported_apex=reported_unsupported_descent=0;
+    if(was_grounded!=s.grounded||(descending&&!reported_unsupported_descent)){
+     float floor_y;
+     int resident=sa3ds_ec_collision_floor_below(&col,s.pos.x,s.pos.y,s.pos.z,&floor_y);
+     /* Match the original floor helper's resident no-hit sentinel. */
+     int unsupported_descent=descending&&(!resident||floor_y==-1000000.f);
+     if(was_grounded!=s.grounded||apex||unsupported_descent){
+      printf("\n  tick=%u grounded=%d pos=%.2f,%.2f,%.2f vel=%.2f,%.2f,%.2f flags=%08x",
        tick,s.grounded,s.pos.x,s.pos.y,s.pos.z,s.vel.x,s.vel.y,s.vel.z,s.surface_flags);
+      if(!resident)printf(" floorBelow=outside-query-region");
+      else if(floor_y==-1000000.f)printf(" floorBelow=none");
+      else printf(" floorBelow=%.2f",floor_y);
+      if(apex){printf(" firstNonascendingAirTick");reported_apex=1;}
+      if(unsupported_descent){
+       printf(" firstUnsupportedDescent");reported_unsupported_descent=1;
+      }
+     }
+    }
     lowest=fminf(lowest,s.pos.y);air+=!s.grounded;
    }
    printf("\n  outcome=%s ticks=%u air=%u minY=%.2f grounded=%d speed=%.1f lock=%d end=%.1f,%.1f,%.1f",tick==240?"window-complete":"physics-reset",tick,air,lowest,s.grounded,params.speed,params.control_timer,s.pos.x,s.pos.y,s.pos.z);

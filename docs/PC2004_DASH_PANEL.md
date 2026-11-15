@@ -100,3 +100,19 @@ Generated packages are installed in external SD `assets/`; an earlier pair of
 spring files copied one directory too high was moved to the loader's actual
 asset directory after byte comparison, with private backups. Debug fixture
 flags are removed after saving evidence. No owner package or binary enters Git.
+
+
+## Act 1 chained-boost terrain diagnostic
+
+The owner collision and movement packages reproduce a reset in the isolated
+host replay when SET row 0 chains into row 12 on tick 6. Sonic becomes airborne
+on tick 13. The resident floor-below query finds a surface under the first
+descending sample (tick 52), then reports no floor below Sonic on tick 57.
+The replay reaches its reset boundary on tick 137. Starting on row 12 alone
+instead lands and survives the 240-tick window.
+
+The floor probe is a vertical landtable query and uses its normal surface
+filters. It does not certify the player's swept contact or include DynamicCOL,
+native SET scheduling, or the original game's response. The evidence isolates
+a chained approach worth matching against PC2004, and distinguishes a missing
+floor hit from an out-of-region query. It does not establish a gameplay fix.
