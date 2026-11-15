@@ -328,3 +328,12 @@ With this change, the task-angle replay retains face 426/148 at tick
 16 and proceeds through tick 17. Tick 18 still fails the confirmation
 speed gate on this alternate trajectory. The native movement step has
 yet to adopt the experimental swept support response.
+
+The running path now stores the confirmed support normal's vertical
+component separately from the task rotation. This follows 43EE70:
+the accepted face sets player-work Up, while 44C270 still uses the
+task frame for transforming world forces and for its cross product.
+Both the steep-force and the ground acceleration/speed thresholds
+use the stored Up when available. A focused fixture covers a steep
+contact with the actor still tilted up. In the task-angle replay,
+this separation alone leaves the tick-18 loss unchanged.

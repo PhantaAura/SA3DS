@@ -259,6 +259,8 @@ static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState
  player->surface_id=support->surface_id;
  player->surface_flags=support->surface_flags;
  player->support_distance=support->signed_distance;
+ player->support_up_y=support->normal.y;
+ player->support_up_valid=true;
  player->yaw=atan2f(frame.forward.x,frame.forward.z);
 }
 

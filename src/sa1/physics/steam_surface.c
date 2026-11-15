@@ -163,6 +163,8 @@ static void sync_player_frame(SA1PlayerState *player,
     player->ground_slope_radians = sa1_surface_slope_radians(frame->up);
     player->yaw = yaw_from_forward(frame->forward, player->yaw);
     if (contact) {
+        player->support_up_y = contact->normal.y;
+        player->support_up_valid = true;
         player->surface_id = contact->surface_id;
         player->surface_flags = contact->surface_flags;
         player->support_distance = contact->signed_distance;
@@ -265,18 +267,20 @@ static void surface_running(SA1PlayerState *player,
     /* 44C270 crosses csts.tnorm with incoming motion-work displacement.
      * This static path uses the retained task Up and world-space speed. */
     float cross_y = sa1_vec3_cross(frame->up, player->vel).y;
+    float support_up = player->grounded && player->support_up_valid ?
+        player->support_up_y : frame->up.y;
     float forward_scale = 1.0f, side_scale = 1.0f;
     float unstick_bias = 0.0f;
-    if (sa1_sadx_surface_primary_unstick_branch(frame->up.y, cross_y, s.forward)) {
+    if (sa1_sadx_surface_primary_unstick_branch(support_up, cross_y, s.forward)) {
         forward_scale = 0.0f;
         side_scale = 0.0f;
         unstick_bias = -p->weight - gravity_normal;
         gravity_normal = -p->weight;
     } else {
-        sa1_sadx_surface_force_scales(frame->up.y, s.forward, p,
+        sa1_sadx_surface_force_scales(support_up, s.forward, p,
                                       &forward_scale, &side_scale);
         unstick_bias = sa1_sadx_surface_unstick_normal_bias(
-            frame->up.y, s.forward, p->weight);
+            support_up, s.forward, p->weight);
         gravity_normal += unstick_bias;
     }
 
@@ -329,14 +333,14 @@ static void surface_running(SA1PlayerState *player,
                                   side_resistance + g_side},
         .input_force = force,
         .speed_after_turn = {s.forward, s.normal, s.side},
-        .up = frame->up.y, .friction_multiplier = 1.0f,
+        .up = support_up, .friction_multiplier = 1.0f,
         .analog_active = analog.active
     };
     SA1PC2004GroundAccelResult acceleration;
     SA1PC2004LocalVector integrated;
     sa1_pc2004_ground_accel_clamp(&clamp_input, p, &acceleration);
     sa1_pc2004_pgetspeed_local(clamp_input.speed_after_turn,
-        acceleration.add_velocity, analog.active, frame->up.y, 0, p, &integrated);
+        acceleration.add_velocity, analog.active, support_up, 0, p, &integrated);
     s.forward = clampf(integrated.forward, -p->lim_h_spd, p->lim_h_spd);
     s.side = clampf(integrated.side, -p->lim_h_spd, p->lim_h_spd);
     s.normal = clampf(integrated.normal, -p->lim_v_spd, p->lim_v_spd);

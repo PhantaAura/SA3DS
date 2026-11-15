@@ -124,6 +124,14 @@ int main(void) {
     p=player(&world,n);p.vel=sa1_vec3_scale(p.surface_forward,2);
     sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
     near(dbg.normal_unstick_bias,-5*params->weight);
+    /* While the task catches up, Up for the force gate still comes
+       from the polygon. The actual transform uses the task frame. */
+    n=(SA1Vec3){-0.8f,0.6f,0};
+    p=player(&world,n);p.vel=sa1_vec3_scale(p.surface_forward,2);
+    p.support_up_y=-0.07544f;p.support_up_valid=true;
+    sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
+    near(dbg.surface_force_forward_scale,0);
+    near(dbg.normal_unstick_bias,-params->weight*(1-n.y));
     puts("PC2004 ground steering: PASS (mode/Up/friction blend, truncation, runtime run/quick/roll/charge, pre-turn force frame)");
     return 0;
 }

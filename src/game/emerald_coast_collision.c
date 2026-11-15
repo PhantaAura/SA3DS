@@ -596,6 +596,7 @@ static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1Player
     p->ground_normal=frame.up;p->surface_forward=frame.forward;p->surface_right=frame.right;
     p->ground_slope_radians=sa1_surface_slope_radians(frame.up);
     p->surface_id=hit_id;p->surface_flags=t->flags;p->support_distance=r;
+    p->support_up_y=t->normal.y;p->support_up_valid=true;
     p->grounded=true;p->jump_ticks=0;
     if(p->action_state==SA1_ACTION_AIRBORNE){
         float forward=sa1_vec3_dot(p->vel,frame.forward);
@@ -686,6 +687,8 @@ static int retain_steep_support(const SA3DSECTriangle *face, SA1Vec3 up,
         distance=0;
     }
     player->support_distance=SA3DS_EC_CONTROLLER_SUPPORT+distance;
+    player->support_up_y=normal.y;
+    player->support_up_valid=true;
     return 1;
 }
 
@@ -815,6 +818,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             p->ground_slope_radians=sa1_surface_slope_radians(support.up);
             p->surface_id=floor.surface_id;p->surface_flags=floor.surface_flags;
             p->support_distance=floor.signed_distance;
+            p->support_up_y=floor.normal.y;p->support_up_valid=true;
         }
     }
 }

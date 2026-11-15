@@ -63,6 +63,10 @@ typedef struct {
     /* The general task frame remains authoritative through airborne ticks.
      * Cleared by reset or an explicitly selected flat grounded tick. */
     bool surface_frame_active;
+    /* 43EE70 caches terrain-normal Up separately from 43EC90 task Up.
+     * A smoothed task frame can tilt less than the confirmed support. */
+    float support_up_y;
+    bool support_up_valid;
     float support_distance;
     uint32_t surface_flags;
 

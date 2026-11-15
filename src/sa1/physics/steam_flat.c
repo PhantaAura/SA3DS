@@ -432,10 +432,13 @@ void sa1_physics_step_steam_sonic_flat(
     if (surface.valid) {
         player->surface_id = surface.surface_id;
         player->ground_normal = surface.normal;
+        player->support_up_y = surface.normal.y;
+        player->support_up_valid = true;
         player->ground_slope_radians = surface.slope_radians;
     } else {
         player->surface_id = -1;
         player->ground_normal = (SA1Vec3){0.0f, 1.0f, 0.0f};
+        player->support_up_valid = false;
         player->ground_slope_radians = 0.0f;
     }
     if (!player->grounded) {
