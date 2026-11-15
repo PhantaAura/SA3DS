@@ -59,16 +59,31 @@ static void wall_sweep(const unsigned char *rows, unsigned count,
 }
 /* 453820 keeps at most 16 hits in collision face order per object,
    then selects the first hit with the lowest final plane height. */
-static void report_source_selection(unsigned tick, uint32_t instance,
-    uint32_t face, unsigned count, const SA3DSSweepHit *hit){
+static void report_source_selection(SA3DSECCollision *collision, unsigned tick,
+    uint32_t instance, uint32_t face, unsigned count, const SA3DSSweepHit *hit,
+    SA1Vec3 corrected_sum){
  if(!count)return;
  printf("\n  source object tick=%u polygon=%u/%u recorded=%u endHeight=%.4f",
      tick,instance,face,count,hit->end_height);
+ SA1Vec3 normal={hit->signed_normal[0],hit->signed_normal[1],hit->signed_normal[2]};
+ SA1Vec3 tangent={hit->delta_xz[0],hit->delta_xz[1],hit->delta_xz[2]};
+ SA1Vec3 point={hit->plane_point[0],hit->plane_point[1],hit->plane_point[2]};
+ SA1Vec3 task=sa1_pc2004_collision_support_position(
+     sa1_vec3_scale(corrected_sum,1.0f/count),tangent,point,normal);
+ SA1Vec3 support_center=sa1_vec3_add(task,sa1_vec3_scale(normal,SA3DS_EC_CONTROLLER_SUPPORT));
+ SA1Contact support=sa3ds_ec_collision_contact(collision,support_center,
+     sa1_vec3_scale(normal,-1),2.35f);
+ printf(" projectedTask=%.3f,%.3f,%.3f normalY=%.4f projectedSupport=%d",
+     task.x,task.y,task.z,normal.y,support.valid);
+ if(support.valid&&support.surface_id>=0){
+  const SA3DSECTriangle *triangle=&collision->triangles[support.surface_id];
+  printf(" projectedFace=%u/%u",triangle->source_instance,triangle->source_triangle);
+ }
 }
 
 /* This uses the port's movement and static candidates as sweep inputs.
    It skips the original object scheduler and response arbitration. */
-static void report_source_sweep(const SA3DSECCollision *collision, unsigned tick,
+static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
     SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 previous, SA1Vec3 end){
  SA1Vec3 delta=sa1_vec3_sub(end,previous);
  float radius=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height*0.5f;
@@ -78,12 +93,14 @@ static void report_source_sweep(const SA3DSECCollision *collision, unsigned tick
  unsigned hits=0, object_hits=0;
  uint32_t instance=UINT32_MAX, selected_face=0;
  SA3DSSweepHit selected={0};
+ SA1Vec3 corrected_sum={0};
  for(uint32_t i=0;i<collision->triangle_count;i++){
   const SA3DSECTriangle *t=&collision->triangles[i];
   if(t->source_instance!=instance){
-   report_source_selection(tick,instance,selected_face,object_hits,&selected);
+   report_source_selection(collision,tick,instance,selected_face,object_hits,&selected,corrected_sum);
    instance=t->source_instance;
    object_hits=0;
+   corrected_sum=(SA1Vec3){0};
   }
   if(object_hits==16||(t->flags&0x400002))continue;
   /* The primitive expands the triangle by four percent around its centroid. */
@@ -107,10 +124,12 @@ static void report_source_sweep(const SA3DSECCollision *collision, unsigned tick
    selected=hit;
    selected_face=t->source_triangle;
   }
+  corrected_sum=sa1_vec3_add(corrected_sum,
+      (SA1Vec3){hit.corrected[0],hit.corrected[1],hit.corrected[2]});
   object_hits++;
   hits++;
  }
- report_source_selection(tick,instance,selected_face,object_hits,&selected);
+ report_source_selection(collision,tick,instance,selected_face,object_hits,&selected,corrected_sum);
  if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);
 }
 

@@ -159,3 +159,23 @@ the next selected face is 1.657 units above the point. The tolerance change
 was discarded. The source trace identifies a sweep/endpoint mismatch.
 The next step is to reproduce the selected face's pushback and support
 update in the collision step, including the step's object arbitration.
+
+The ordinary static-support branch at 449EE5 advances the averaged
+radius-corrected center by the selected face's tangent step, then
+projects it onto the selected plane using 788D40. The body-offset
+addition and subtraction cancel before the static task position write.
+Applying that position calculation to the tick-13 sweep gives task
+position (2204.667, 20.638, 256.112). After converting it to the port's
+one-unit support center, the existing port query reports support on the
+same face, 426/9. The replay reports this corrected query alongside the
+unchanged gameplay trajectory. The calculation assumes the response
+branch was entered and does not decide its entry, orientation update,
+or write gate.
+
+In a temporary host experiment that reapplied port ground state after
+each successful projected query, the first two corrections recovered
+support on faces 426/9 and 426/13. The player detached at tick 16 on
+face 426/148. That face passes the source ground-side gate, but its
+normal Y is 0.1649, below the port point probe's 0.45 cutoff. The
+experiment never traverses the loop and uses port frame/velocity
+updates, so it is not a candidate for enabling in native gameplay.

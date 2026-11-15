@@ -48,3 +48,29 @@ int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity
         (double)gravity.y * normal.y + (double)gravity.z * normal.z;
     return force_ground_side || candidate_gravity_dot < old_gravity_dot;
 }
+
+SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
+    SA1Vec3 tangent_step, SA1Vec3 plane_point, SA1Vec3 plane_normal) {
+    /* 788D40 projects the center plus tangential displacement onto the
+     * selected face. The later body-offset addition and subtraction cancel
+     * for static support before the task-position write. */
+    SA1Vec3 end = {
+        corrected_center.x + tangent_step.x,
+        corrected_center.y + tangent_step.y,
+        corrected_center.z + tangent_step.z,
+    };
+    float offset =
+        (end.x - plane_point.x) * plane_normal.x +
+        (end.y - plane_point.y) * plane_normal.y +
+        (end.z - plane_point.z) * plane_normal.z;
+    float normal_squared =
+        plane_normal.x * plane_normal.x +
+        plane_normal.y * plane_normal.y +
+        plane_normal.z * plane_normal.z;
+    float distance = offset / normal_squared;
+    return (SA1Vec3){
+        end.x - distance * plane_normal.x,
+        end.y - distance * plane_normal.y,
+        end.z - distance * plane_normal.z,
+    };
+}

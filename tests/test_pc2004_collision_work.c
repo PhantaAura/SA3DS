@@ -57,6 +57,12 @@ int main(void) {
     assert(sa1_pc2004_collision_ground_side((SA1Vec3){1,0,0},up,gravity,0));
     assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0));
 
+    SA1Vec3 projected = sa1_pc2004_collision_support_position(
+        (SA1Vec3){3,8,1}, (SA1Vec3){2,2,3}, (SA1Vec3){0,2,0},
+        (SA1Vec3){-2,2,0});
+    assert(nearf(projected.x,6.5f) && nearf(projected.y,8.5f) &&
+           nearf(projected.z,4.0f));
+
     puts("PC 2004 collision-work layout/init tests: PASS");
     return 0;
 }
