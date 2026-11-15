@@ -247,6 +247,17 @@ static void dynamic_residency_cases(SA3DSECCollision*s){
     transform.m[12]=0;
     assert(sa3ds_ec_dynamic_add(&set,2,1,points,3,indices,3,&transform));
     assert(sa3ds_ec_collision_apply_dynamic(s,NULL)&&s->triangle_count==static_count+1);
+    SA3DSECCollision reopened;
+    assert(sa3ds_ec_collision_open_archive_region_dynamic(&reopened,&s->archive,s->act_index,
+        s->center_x,s->center_z,&set));
+    assert(reopened.triangle_count==s->triangle_count&&reopened.reference_count==s->reference_count);
+    assert(memcmp(reopened.cells,s->cells,sizeof s->cells)==0);
+    assert(memcmp(reopened.references,s->references,s->reference_count*sizeof(*s->references))==0);
+    for(uint32_t i=0;i<s->triangle_count;i++){
+        assert(reopened.triangles[i].wall_edge_mask==s->triangles[i].wall_edge_mask);
+        assert(reopened.triangles[i].support_edge_mask==s->triangles[i].support_edge_mask);
+    }
+    sa3ds_ec_collision_destroy(&reopened);
     SA1PlayerState player={.surface_id=(int32_t)static_count};
     assert(sa3ds_ec_dynamic_remove(&set,1));
     references=s->references;

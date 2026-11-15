@@ -37,7 +37,7 @@ static void compare(SA3DSECCollision*s,const char*label){
  double legacy_ms=0,optimized_ms=0;
  for(unsigned pass=0;pass<1;pass++){
   reset_masks(&old);clock_t start=clock();legacy_contact_edges(&old);legacy_ms+=(double)(clock()-start)*1000/CLOCKS_PER_SEC;
-  reset_masks(s);start=clock();mark_contact_edges(s);optimized_ms+=(double)(clock()-start)*1000/CLOCKS_PER_SEC;
+  reset_masks(s);start=clock();assert(mark_contact_edges(s));optimized_ms+=(double)(clock()-start)*1000/CLOCKS_PER_SEC;
   assert(!memcmp(old.triangles,s->triangles,bytes));
  }
  printf("Edges %s: exact %u triangles; host legacy %.3f ms -> optimized %.3f ms (single pass; not hardware)\n",label,s->triangle_count,legacy_ms,optimized_ms);

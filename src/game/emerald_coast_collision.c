@@ -114,9 +114,10 @@ static uint32_t edge_bucket(int32_t x,int32_t y,int32_t z,uint32_t mask){
     uint32_t h=(uint32_t)x*73856093u^(uint32_t)y*19349663u^(uint32_t)z*83492791u;
     h^=h>>16;return h&mask;
 }
-static void mark_contact_edges(SA3DSECCollision*s){
+static int build_index(SA3DSECCollision*s);
+static int mark_contact_edges(SA3DSECCollision*s){
     uint32_t count=s->triangle_count*3u,buckets=1;
-    if(!count)return;
+    if(!count)return 1;
     while(buckets<count*2u)buckets*=2u;
     EdgeVertex*nodes=malloc((size_t)count*sizeof(*nodes));
     uint32_t*heads=malloc((size_t)buckets*sizeof(*heads));
@@ -171,11 +172,14 @@ static void mark_contact_edges(SA3DSECCollision*s){
             if(support&&neighbor)t->support_edge_mask|=(uint8_t)(1u<<e);
         }
     }
-    free(nodes);free(heads);return;
+    free(nodes);free(heads);return 1;
 fallback:
     /*No masks have been touched during index construction. Memory pressure
      *or coordinates outside the index domain retain the existing scan.*/
-    free(nodes);free(heads);mark_contact_edges_linear(s);
+    free(nodes);free(heads);
+    if(!s->references&&!build_index(s))return 0;
+    mark_contact_edges_linear(s);
+    return 1;
 }
 static SA1Vec3 edge_point(const SA3DSECTriangle*t,unsigned e);
 /* Uniform-grid references for every resident triangle (static + dynamic). */
@@ -297,7 +301,7 @@ int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
         if(same&&(extra>=old_extra||memcmp(&s->triangles[s->static_triangle_count+extra],t,sizeof(*t))))same=0;
         extra++;
     }
-    if(same&&extra==old_extra)return 1;
+    if(same&&extra==old_extra)return s->references||build_index(s);
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;triangle=s->triangles[p->surface_id].source_triangle;
@@ -439,12 +443,11 @@ int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
     SA3DSECTriangle *compact=realloc(s->triangles,(size_t)compact_count*sizeof(*s->triangles));
     if(compact)s->triangles=compact;
     s->static_triangle_count=s->triangle_count;
-    if(!build_index(s))goto fail;
-    mark_contact_edges(s);
+    /* Static contact masks ignore DynamicCOL owners. Build the shared grid
+       after classifying the static edges and appending resident DynamicCOL. */
+    if(!mark_contact_edges(s))goto fail;
     s->dynamic=dynamic;
-    /* The static index already covers the region when no DynamicCOL
-       triangles are registered. Object-support planes are queried separately. */
-    if(dynamic&&dynamic->triangle_count&&!sa3ds_ec_collision_apply_dynamic(s,NULL))goto fail;
+    if(!sa3ds_ec_collision_apply_dynamic(s,NULL))goto fail;
     if(!s->triangle_count)goto fail;
     s->world=(SA1PhysicsWorld){.query_surface=sa3ds_ec_collision_surface,
         .query_contact=sa3ds_ec_collision_contact,.context=s,
