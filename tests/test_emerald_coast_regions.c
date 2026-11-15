@@ -32,6 +32,12 @@ static void resolve_pair(SA3DSECCollision *base,SA3DSECCollision *region,SA1Vec3
         fprintf(stderr,"region contact mismatch prev=(%g,%g,%g) current=(%g,%g,%g) origin=(%g,%g,%g) got=%d,%d expected=%d\n",previous.x,previous.y,previous.z,current.x,current.y,current.z,origin.x,origin.y,origin.z,a.grounded,b.grounded,expect_grounded);
     assert(a.grounded==b.grounded&&a.grounded==expect_grounded);
     assert(a.action_state==b.action_state);
+    if(grounded&&!expect_grounded){
+        assert(a.pc2004_action_state_valid&&a.pc2004_action_state==12);
+        assert(b.pc2004_action_state_valid&&b.pc2004_action_state==12);
+        assert(a.animation_airborne_request_valid&&a.animation_airborne_request==18);
+        assert(b.animation_airborne_request_valid&&b.animation_airborne_request==18);
+    }
 }
 static void compare_region(SA3DSECCollision *base,SA3DSECCollision *region,SA1Vec3 origin){
     assert(base->triangle_count==region->triangle_count&&base->reference_count==region->reference_count);

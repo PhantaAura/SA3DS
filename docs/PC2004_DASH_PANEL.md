@@ -191,3 +191,15 @@ Tick 28 still has a real wall correction followed by an incorrect
 support handoff. The checked-in build uses the ordinary controller and
 still detaches at tick 13. The experimental steep-face changes are
 used only to investigate the remaining loop response.
+
+The tick-28 wall correction in the private replay comes from edge 0
+of face 416/101 at sweep fraction 0.9311. Its response normal aligns
+0.9129 with the actor's Up. After this correction the projected
+point on face 426/41 is within the support distance but outside the
+finite triangle, including when expanded by the source sweep's four
+percent. Suppressing the individual edge merely moves the collision
+to tick 29. A real fix needs the source's cross-object response rather
+than an exception for that edge. The wall pass now uses the same
+ground-departure action and animation transition as the controller
+when revalidation finds no support. Its height fallback also handles
+dynamic platforms, which have no static triangle index.

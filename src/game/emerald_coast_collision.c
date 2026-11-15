@@ -757,13 +757,15 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
             if(surface.valid){
                 SA1Vec3 point={p->pos.x,surface.ground_y,p->pos.z};
                 float distance=sa1_vec3_dot(sa1_vec3_sub(p->pos,point),surface.normal);
-                SA3DSECTriangle*t=&s->triangles[surface.surface_id];
+                /* Dynamic platform surfaces carry no landtable index. */
+                uint32_t flags=surface.surface_id>=0?s->triangles[surface.surface_id].flags:1u;
                 floor=(SA1Contact){.point=point,.normal=surface.normal,.signed_distance=distance,
-                    .distance=fabsf(distance),.surface_id=surface.surface_id,.surface_flags=t->flags,.valid=true};
+                    .distance=fabsf(distance),.surface_id=surface.surface_id,.surface_flags=flags,.valid=true};
             }
         }
         if(!floor.valid){
-            p->grounded=false;if(p->action_state!=SA1_ACTION_HURT&&p->action_state!=SA1_ACTION_DEAD)p->action_state=SA1_ACTION_AIRBORNE;p->jump_ticks=0;
+            sa1_steam_sonic_begin_ground_departure(p);
+            p->jump_ticks=0;
         }else{
             if(floor.signed_distance<SA3DS_EC_CONTROLLER_SUPPORT){
                 p->pos=sa1_vec3_add(p->pos,sa1_vec3_scale(floor.normal,
