@@ -116,3 +116,17 @@ filters. It does not certify the player's swept contact or include DynamicCOL,
 native SET scheduling, or the original game's response. The evidence isolates
 a chained approach worth matching against PC2004, and distinguishes a missing
 floor hit from an out-of-region query. It does not establish a gameplay fix.
+
+The optional SET WALL experiment now reports the source row and response
+for each applied correction. In the row 0 fixture, the experiment applies
+hard corrections from rows 191, 283 and 533 on the first tick, then soft
+corrections from row 533. It leaves the pad chain before row 12 and resets
+on tick 47. WALL response can materially change this approach. That experiment
+uses SET order and lacks the original CCL scheduling and activation gates,
+so its result does not justify enabling those corrections in the native game.
+
+Separately, the static sweep reached the ramp segment in source collision
+instance 426. At the loss-of-support tick the tested plane crossings either
+fell outside the finite triangles or were on the plane the controller was
+already leaving. Removing the sweep's descending-Y gate experimentally left
+the failing trajectory unchanged. The gate remains in the runtime.

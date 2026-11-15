@@ -27,9 +27,8 @@ static SA3DSSpringTrig panel_trig(const SA3DSMovementPlacement *placement){
  return trig;
 }
 /* Host-only decoded form 9 placements. Inputs are little-endian SET rows. */
-static unsigned wall_sweep(const unsigned char *rows, unsigned count,
-    SA1Vec3 previous, SA1PlayerState *player){
- unsigned hits=0;
+static void wall_sweep(const unsigned char *rows, unsigned count,
+    SA1Vec3 previous, SA1PlayerState *player, unsigned tick){
  for(unsigned i=0;i<count;i++){
   const unsigned char *row=rows+32*i;
   if(row[0]!=20||row[1]!=0)continue;
@@ -46,14 +45,14 @@ static unsigned wall_sweep(const unsigned char *rows, unsigned count,
   SA1Vec3 local_start={a.x*cs-a.z*sn,a.y,a.x*sn+a.z*cs};
   SA1Vec3 local_end={b.x*cs-b.z*sn,b.y,b.x*sn+b.z*cs};
   SA1Vec3 corrected;
-  if(sa3ds_ccl_wall_sweep(local_start,local_end,4,4,extents,&corrected)==SA3DS_WALL_MISS)continue;
+  SA3DSWallResponse response=sa3ds_ccl_wall_sweep(local_start,local_end,4,4,extents,&corrected);
+  if(response==SA3DS_WALL_MISS)continue;
+  printf("\n  tick=%u wall row=%u response=%s",tick,i,response==SA3DS_WALL_HARD?"hard":"soft");
   /* 41A580 writes sample X/Z through the yaw transform. This experiment
      omits native CCL list ordering and the source task-position service. */
   player->pos.x+=center.x+corrected.x*cs+corrected.z*sn-current.x;
   player->pos.z+=center.z+corrected.z*cs-corrected.x*sn-current.z;
-  hits++;
  }
- return hits;
 }
 int main(int argc,char **argv){
  int chain=(argc==4||argc==5)&&!strcmp(argv[3],"--chain");
@@ -127,10 +126,7 @@ int main(int argc,char **argv){
        printf("\n  tick=%u boost row=%u",tick,next.source_row);
      }
     }
-    if(wall_set){
-     unsigned hits=wall_sweep(wall_set+32,wall_count,previous_task,&s);
-     if(hits)printf("\n  tick=%u wall contacts=%u",tick,hits);
-    }
+    if(wall_set)wall_sweep(wall_set+32,wall_count,previous_task,&s,tick);
     int descending=!s.grounded&&s.vel.y<=0;
     int apex=descending&&!reported_apex;
     if(s.grounded)reported_apex=reported_unsupported_descent=0;
