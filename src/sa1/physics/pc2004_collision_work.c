@@ -109,13 +109,13 @@ void sa1_pc2004_collision_response_order(size_t count, size_t promoted,
     if (previous < count && previous != promoted) order[next] = previous;
 }
 
-SA1Vec3 sa1_pc2004_fast_support_probe_center(SA1Vec3 task, SA1Vec3 up,
-    SA1Vec3 pushback, float local_vertical_speed, float pos_error) {
-    float height = 4.0f - (local_vertical_speed <= 0.0f ? pos_error : 0.0f);
+SA1Vec3 sa1_pc2004_fast_ground_probe_center(SA1Vec3 origin, SA1Vec3 up,
+    float height, float local_vertical_speed, float pos_error) {
+    if (local_vertical_speed <= 0.0f) height -= pos_error;
     return (SA1Vec3){
-        task.x + pushback.x + up.x * height,
-        task.y + pushback.y + up.y * height,
-        task.z + pushback.z + up.z * height,
+        origin.x + up.x * height,
+        origin.y + up.y * height,
+        origin.z + up.z * height,
     };
 }
 

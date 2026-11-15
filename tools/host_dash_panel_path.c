@@ -67,8 +67,9 @@ static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t c
  if(sa1_vec3_dot(delta,forward)<parameters->dash_speed||
     (triangles[0].flags&0x4000))return;
  float vertical=sa1_vec3_dot(delta,up);
- SA1Vec3 center=sa1_pc2004_fast_support_probe_center(task,up,
-     sa1_vec3_sub(corrected,start),vertical,parameters->pos_error);
+ SA1Vec3 origin_task=sa1_vec3_add(task,sa1_vec3_sub(corrected,start));
+ SA1Vec3 center=sa1_pc2004_fast_ground_probe_center(origin_task,up,
+     4.0f,vertical,parameters->pos_error);
  const float origin[]={center.x,center.y,center.z};
  unsigned hits=0;
  uint32_t face=0;
@@ -139,8 +140,15 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
     SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 previous, SA1Vec3 end,
     uint32_t previous_instance, SA1Vec3 forward){
  SA1Vec3 delta=sa1_vec3_sub(end,previous);
- float radius=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height*0.5f;
- SA1Vec3 center=sa1_vec3_add(previous_task,sa1_vec3_scale(previous_up,radius));
+ const SA1SteamPlayerParameters *parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+ float radius=parameters->height*0.5f;
+ int fast=sa1_vec3_dot(delta,forward)>=parameters->dash_speed;
+ float vertical_speed=sa1_vec3_dot(delta,previous_up);
+ SA1Vec3 center=fast ? sa1_pc2004_fast_ground_probe_center(previous_task,previous_up,
+     radius,vertical_speed,parameters->pos_error)
+     : sa1_vec3_add(previous_task,sa1_vec3_scale(previous_up,radius));
+ printf("\n  source sweep origin tick=%u centerHeight=%.4f fast=%d",tick,
+     sa1_vec3_dot(sa1_vec3_sub(center,previous_task),previous_up),fast);
  const float start[]={center.x,center.y,center.z};
  float movement[]={delta.x,delta.y,delta.z};
  enum { OBJECT_LIMIT=1024 };

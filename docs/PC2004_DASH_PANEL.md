@@ -233,3 +233,14 @@ accepts that face, and projection using the confirmation sweep
 gives (2204.307, 20.425, 256.112). The probe takes its frame and
 velocity from the port replay. It does not simulate the full
 candidate response, special flags, or original runtime scheduling.
+
+The initial sweep also invokes 43C7D0. For this fast grounded
+fixture, the nonpositive local vertical speed lowers the center by
+Sonic's 2-unit position error. The sphere radius stays 5. Rerunning
+tick 13 with the corrected center height of 3 still selects 426/9
+and leaves the prepass length unchanged. The confirmation sweep
+now records five hits and projects to (2204.408, 20.485, 256.112).
+These values supersede the confirmation values above, which used
+an unadjusted center on the first sweep. The fast branch is scoped
+to the replay's ordinary grounded frame and uses the port
+displacement as its estimate of local velocity.
