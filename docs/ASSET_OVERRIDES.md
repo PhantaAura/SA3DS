@@ -7,10 +7,16 @@ Default assets stay active unless the owner explicitly enables a valid override.
 
 ## Install and switch
 
-Place the owner-generated file at:
+Place each owner-generated file in `sdmc:/3ds/SA3DS/mods/` using the
+in-game act number in its filename.
 
-- `sdmc:/3ds/SA3DS/mods/emerald_coast.sa3mod`
-- `sdmc:/3ds/SA3DS/mods/emerald_coast.enabled` containing `1` to opt in.
+- `emerald_coast_act1.sa3mod` for Act 1 (converter `--act 0`).
+- `emerald_coast_act2.sa3mod` for Act 2 (converter `--act 1`).
+- `emerald_coast.enabled` containing `1` to opt in for both acts.
+
+The previous `emerald_coast.sa3mod` filename is still accepted when the active
+act has no named file. A present but invalid act file falls back to original
+textures. The package must match the active act and its original archive hash.
 
 With the enabled marker absent, empty or different from `1`, boot uses the
 original assets. In Emerald Coast, **SELECT + D-pad Up** enables/disables the
@@ -22,8 +28,8 @@ is excluded from the fixed-step clock; ordinary simulation still runs at60Hz.
 
 Missing, truncated, corrupt, wrong-act, wrong-archive, wrong-index and mismatched
 size files fall back to the original texture. The main runtime clears an earlier
-override before attempting a reload. One file targets one act; entering the
-other act restores originals when the file's act/hash does not match. This is a
+override before attempting a reload. Each file targets one act. On act changes the loader looks up the replacement
+again and applies it only if validation succeeds. This is a
 small asset override foundation, not a DLL mod loader or a full mod manager.
 
 ## Convert an existing local Dreamcast texture

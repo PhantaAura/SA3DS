@@ -40,6 +40,7 @@
 #include <citro3d.h>
 #include <float.h>
 #include <math.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1033,8 +1034,13 @@ static void ec_apply_texture_override(void){
     }
     C3D_FrameSync();
     sa3ds_ec_gpu_clear_texture_override(&g_ec_gpu);
-    FILE *file=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.sa3mod","rb");
-    if(!file){boot_log("MOD","Replacement missing; original textures retained");return;}
+    char path[96];
+    snprintf(path,sizeof(path),"sdmc:/3ds/SA3DS/mods/emerald_coast_act%lu.sa3mod",
+        (unsigned long)g_ec_act_index+1);
+    FILE *file=fopen(path,"rb");
+    if(!file&&errno==ENOENT)
+        file=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.sa3mod","rb");
+    if(!file){boot_log("MOD","Replacement unavailable; original textures retained");return;}
     long length=0;
     if(fseek(file,0,SEEK_END)||((length=ftell(file))<=0)||
        (unsigned long)length>SA3DS_TEXTURE_OVERRIDE_MAX_BYTES||fseek(file,0,SEEK_SET)){
