@@ -93,9 +93,10 @@ static uint16_t choose_runtime_id(const SA1PlayerState *player,
     case SA3DS_SONIC_ANIM_GROUNDED_JOG_TO_RUN:
     case SA3DS_SONIC_ANIM_GROUNDED_RUN_PLUS: {
         /* DoSonicGroundAnimation's selector at 0x00495CD0 uses the signed
-         * local speed plus five times the acceleration residual. */
-        float speed = local_forward_speed(player) +
-            player->animation_accel_residual * 5.0f;
+         * local speed plus five times the acceleration residual. The source
+         * stores the sum as a float before comparing against the thresholds. */
+        float speed = (float)((double)player->animation_accel_residual * 5.0 +
+            local_forward_speed(player));
         if (speed <= SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jog_speed) return 9;
         if (speed <= SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed) return 10;
         if (speed <= SA1_STEAM_SONIC_PARAMETER_EVIDENCE.rush_speed) return 11;
@@ -320,8 +321,8 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
         runtime->speed_scalar = player->spindash_charge;
         runtime->speed_scalar_valid = 1;
     } else if (requested_id >= 9 && requested_id <= 13) {
-        runtime->speed_scalar = local_forward_speed(player) +
-            player->animation_accel_residual * 20.0f;
+        runtime->speed_scalar = (float)((double)player->animation_accel_residual * 20.0 +
+            local_forward_speed(player));
         runtime->speed_scalar_valid =
             player->animation_accel_residual_valid ? 1 : 0;
     } else if (requested_id == 14 &&

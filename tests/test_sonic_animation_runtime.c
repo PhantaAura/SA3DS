@@ -177,6 +177,27 @@ int main(void) {
         assert(case_s.binding.runtime_id==ground_cases[i].id);
     }
 
+    /* 495CEB stores the sum, not the product. These source-sized inputs
+     * round to the threshold only when the multiply retains precision. */
+    static const struct { float forward, residual; uint16_t id; } rounded_cases[] = {
+        {0x1.0c7bbap+0f,-0x1.e25088p-4f,9},
+        {0x1.8b86c8p+0f,-0x1.fbfca8p-6f,10},
+        {0x1.2da696p+1f,-0x1.733c9ap-7f,11},
+    };
+    for(size_t i=0;i<sizeof(rounded_cases)/sizeof(rounded_cases[0]);i++){
+        SA3DSSonicAnimationSync case_sync={0};
+        SA3DSSonicAnimationRuntime case_runtime={0};
+        SA1PlayerState case_player=base_player();
+        case_player.vel.z=rounded_cases[i].forward;
+        case_player.animation_accel_residual=rounded_cases[i].residual;
+        SA3DSSonicAnimationObservation case_observation=observe(&case_sync,&case_player);
+        SA3DSSonicAnimationSelection selection=select_no_mutation(
+            &case_runtime,&case_player,&case_observation);
+        assert(selection.binding.runtime_id==rounded_cases[i].id);
+        assert(case_runtime.speed_scalar==(float)((double)case_player.animation_accel_residual*20.0+
+            case_player.vel.z));
+    }
+
     /* 0x494FF0 tests signed local Speed.x against EXACT zero before the
      * landing branch calls 0x495CD0. These are executable-derived selector
      * fixtures, not captured retail terrain traces. */
