@@ -4071,6 +4071,17 @@ static int init_scene(void) {
 }
 
 static int sample_pose(void) {
+    float terrain_near=0.1f,terrain_far=5000.0f;
+    if(g_emerald_coast){
+        SA3DSECBackgroundConfig config;
+        if(sa3ds_ec_background_select(&g_background,g_ec_act_index,
+            EC_BACKGROUND_CLIP_LEVEL,&config)){
+            terrain_near=config.terrain_near;
+            terrain_far=config.terrain_far;
+        }
+        Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
+            terrain_near,terrain_far,false);
+    }
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
     if(!g_cam4_active)camera_legacy_view();
     if (g_emerald_coast) {
@@ -4083,7 +4094,7 @@ static int sample_pose(void) {
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
         if(g_ec_gpu.full_act){
             sa3ds_ec_gpu_set_view(&g_ec_gpu,g_cam_eye,g_cam_target,C3D_AngleFromDegrees(55.0f),
-                C3D_AspectRatioTop,0.1f,5000.0f);
+                C3D_AspectRatioTop,terrain_near,terrain_far);
         }
         float background_eye[3]={g_ec_combined?g_cam_eye[0]:0.0f,
             g_ec_combined?g_cam_eye[1]:95.0f,
