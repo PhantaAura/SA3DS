@@ -31,6 +31,17 @@ The private decompilation and exact LLVM disassembly identify:
 - Background clear RGB `0x003946` is selected for both Sonic acts. Act2's
   different state is outside Sonic's two-act background package.
 
+### Gameplay projection
+
+The stage camera initializer at `0x438260` sets the standard gameplay angle
+to `0x31C7`. The focal-length setter at `0x7815C0` divides that binary angle
+by two as an integer, then uses viewport width divided by twice the tangent
+of the half angle. This makes the default angle horizontal. SA3DS preserves
+the horizontal span on the full-width 400×240 viewport and derives the vertical
+angle for that shape. Terrain, background, and native terrain culling use the
+same angle with their respective clip ranges. Scripted angle changes and the
+final raster result still require comparison.
+
 ### PC2004 terrain fog
 
 The six imported start/end pairs are inputs to a legacy fog table. The

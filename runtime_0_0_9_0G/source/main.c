@@ -875,7 +875,16 @@ static uint32_t ec_render_clip_level(void) {
     return g_rings_ready ? g_rings.clip_level : EC_DEFAULT_CLIP_LEVEL;
 }
 
-static float g_ec_terrain_near, g_ec_terrain_far;
+static float g_ec_terrain_near, g_ec_terrain_far, g_ec_fov_y;
+
+static float ec_default_vertical_fov(void) {
+    /* PC2004 camera init (438260) sets the horizontal angle in BAMS.
+       The focal-length setter (7815C0) halves it with integer division.
+       Preserve that horizontal angle on the wider 3DS viewport. */
+    const unsigned horizontal_bams=0x31c7u;
+    float half_x=(float)(horizontal_bams/2u)*(2.0f*PI/65536.0f);
+    return 2.0f*atanf(tanf(half_x)/C3D_AspectRatioTop);
+}
 
 static void ec_update_terrain_projection(void) {
     SA3DSECBackgroundConfig config;
@@ -886,7 +895,8 @@ static void ec_update_terrain_projection(void) {
         g_ec_terrain_near=config.terrain_near;
         g_ec_terrain_far=config.terrain_far;
     }
-    Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
+    g_ec_fov_y=ec_default_vertical_fov();
+    Mtx_PerspTilt(&g_projection,g_ec_fov_y,C3D_AspectRatioTop,
         g_ec_terrain_near,g_ec_terrain_far,false);
 }
 
@@ -1236,7 +1246,7 @@ static int draw_background(const C3D_Mtx *view,const float eye[3]) {
     C3D_Mtx projection,model,mv;
     if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,ec_render_clip_level(),&config)||
        !sa3ds_ec_background_transform(&g_background,g_ec_act_index,ec_render_clip_level(),eye,&actor))return 0;
-    Mtx_PerspTilt(&projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
+    Mtx_PerspTilt(&projection,g_ec_fov_y,C3D_AspectRatioTop,
                   config.background_near,config.background_far,false);
     for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
         actor.m[row],actor.m[4+row],actor.m[8+row],actor.m[12+row]);
@@ -4104,7 +4114,7 @@ static int sample_pose(void) {
         }else Mtx_LookAt(&stage_mv,FVec3_New(0.0f,95.0f,-260.0f),
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
         if(g_ec_gpu.full_act){
-            sa3ds_ec_gpu_set_view(&g_ec_gpu,g_cam_eye,g_cam_target,C3D_AngleFromDegrees(55.0f),
+            sa3ds_ec_gpu_set_view(&g_ec_gpu,g_cam_eye,g_cam_target,g_ec_fov_y,
                 C3D_AspectRatioTop,g_ec_terrain_near,g_ec_terrain_far);
         }
         float background_eye[3]={g_ec_combined?g_cam_eye[0]:0.0f,

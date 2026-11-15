@@ -21,6 +21,8 @@ SIGNATURES={
  'BG texture list':(0x4F6E42,'68d4b30301'),
  'original background roots':(0x4F6E5B,'6870b20301e8cb16f1ff687cb30301e8c116f1ff'),
  'fog disable before background':(0x4F6E20,'e81badf1ff'),
+ 'stage camera default horizontal angle':(0x438312,'c70598cab203c7310000e8afabfcff'),
+ 'camera focal length from integer half angle':(0x7815C0,'8b442404992bc2d1f88bc8e860680000dcc0d83de4f9d003d91de0f9d003'),
  'fog restore after background':(0x4F6E92,'e859acf1ff'),
 }
 def verify(path):
