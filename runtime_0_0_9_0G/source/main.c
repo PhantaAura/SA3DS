@@ -1714,7 +1714,7 @@ static SA3DSLabVertex *g_tikal_quad;
 static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws,g_tikal_rise;
 static int g_tikal_visible;
 static SA1Vec3 g_tikal_position;
-static float g_tikal_hover_y;
+static float g_tikal_hover_y,g_tikal_size,g_tikal_alpha;
 static void destroy_tikal(void){
     for(unsigned i=0;i<g_tikal_loaded;i++)C3D_TexDelete(&g_tikal_textures[i]);
     g_tikal_loaded=0;
@@ -1798,8 +1798,16 @@ static void tick_tikal(void){
         if(!was_visible){
             g_tikal_rise=0;
             g_tikal_hover_y=p.position.y;
+            g_tikal_size=g_tikal_alpha=0.f;
         }else if(g_tikal_rise<61){
-            if(++g_tikal_rise<60)g_tikal_hover_y+=0.3333333432674408f;
+            if(++g_tikal_rise<60){
+                g_tikal_hover_y+=0.3333333432674408f;
+                g_tikal_size+=0.06666667014360428f;
+                g_tikal_alpha+=0.013333333656191826f;
+            }else if(g_tikal_rise==60){
+                g_tikal_size=4.f;
+                g_tikal_alpha=0.8f;
+            }
         }
         SA1Vec3 hover={p.position.x,g_tikal_hover_y,p.position.z};
         if(g_tikal_remaining||g_tikal_cooldown>300){
@@ -1830,6 +1838,7 @@ static void tick_tikal(void){
            g_player.action_state!=SA1_ACTION_DEAD&&p.parameters[2]==8.f&&
            sa1_vec3_dot(orb_delta,orb_delta)<225.f){
             g_tikal_page=0;g_tikal_orbit=0;g_tikal_remaining=g_tikal_duration[0];
+            g_tikal_alpha=1.f; /* 7A1688–7A16A4 */
             g_player.vel=(SA1Vec3){0};
             sa3ds_se_play(6);
             int voice=sa3ds_voice_play(g_tikal_voice);
@@ -1856,8 +1865,11 @@ static void begin_tikal_probe(void){
     }
 }
 static void draw_tikal(void){
-    if(!g_tikal_visible||g_tikal_loaded!=8||g_ec_act_index!=1)return;
+    if(!g_tikal_visible||g_tikal_loaded!=8||g_ec_act_index!=1||g_tikal_size<=0.f)return;
     C3D_Mtx model;Mtx_Identity(&model);
+    /* 4A366D scales the 64-pixel frame by size/32. The quad is eight
+       units across at size 4, so scale its camera-facing X/Y by size/4. */
+    Mtx_Scale(&model,g_tikal_size*0.25f,g_tikal_size*0.25f,1.f);
     for(unsigned i=0;i<3;i++)model.r[i].w=g_ec_view.r[i].x*g_tikal_position.x+
         g_ec_view.r[i].y*g_tikal_position.y+g_ec_view.r[i].z*g_tikal_position.z+g_ec_view.r[i].w;
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&model);
@@ -1865,7 +1877,10 @@ static void draw_tikal(void){
     C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_COLOR);
     C3D_AlphaBlend(GPU_BLEND_ADD,GPU_BLEND_ADD,GPU_SRC_ALPHA,GPU_ONE,GPU_ONE,GPU_ONE);
     C3D_TexEnv *env=C3D_GetTexEnv(0);C3D_TexEnvInit(env);
-    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,0,0);C3D_TexEnvFunc(env,C3D_Both,GPU_REPLACE);
+    C3D_TexEnvSrc(env,C3D_Both,GPU_TEXTURE0,GPU_CONSTANT,0);
+    C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
+    unsigned alpha=(unsigned)(g_tikal_alpha*255.f+0.5f);
+    C3D_TexEnvColor(env,(alpha<<24)|0xffffffu);
     C3D_TexBind(0,&g_tikal_textures[g_tikal_frame/2]);
     C3D_BufInfo *buffer=C3D_GetBufInfo();BufInfo_Init(buffer);
     BufInfo_Add(buffer,g_tikal_quad,sizeof(*g_tikal_quad),2,0x10);
