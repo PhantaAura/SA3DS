@@ -31,6 +31,19 @@ int main(void) {
     const SA1SteamPlayerParameters *params=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SA1PC2004LocalVector old={10,2,4}, transformed={0,-2,8}, v;
     v=sa1_pc2004_ground_turn_velocity(old,transformed,SA1_PC2004_TURN_GENERAL,1,1,1);
+    SA1PC2004LocalVector reset=sa1_pc2004_grounded_reset_speed(
+        (SA1PC2004LocalVector){0.009f,1,-0.044f},0,params->run_accel);
+    near(reset.forward,0);near(reset.normal,0);near(reset.side,0);
+    reset=sa1_pc2004_grounded_reset_speed(
+        (SA1PC2004LocalVector){0.009f,1,-0.044f},4,params->run_accel);
+    near(reset.forward,0.009f);near(reset.normal,0);near(reset.side,-0.044f);
+    reset=sa1_pc2004_grounded_reset_speed(
+        (SA1PC2004LocalVector){0.01f,1,-0.9f},0,1);
+    near(reset.forward,0.01f);near(reset.side,0);
+    float outside=nextafterf(0.9f,1.0f);
+    reset=sa1_pc2004_grounded_reset_speed(
+        (SA1PC2004LocalVector){-0.01f,1,outside},0,1);
+    near(reset.forward,-0.01f);near(reset.side,outside);
     near(v.forward,9.9f);near(v.normal,1.96f);near(v.side,4.04f);
     v=sa1_pc2004_ground_turn_velocity(old,transformed,SA1_PC2004_TURN_GENERAL,1,.4f,1);
     near(v.forward,5);near(v.normal,0);near(v.side,6);

@@ -9,6 +9,7 @@
 #include "dash_panel.h"
 #include "pc2004_sphere_sweep.h"
 #include "pc2004_collision_work.h"
+#include "pc2004_motion.h"
 #include "steam_player_parameters.h"
 #include "ccl_wall.h"
 #include "spring_player.h"
@@ -232,7 +233,13 @@ static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState
  player->animation_airborne_request_valid=before->animation_airborne_request_valid;
  player->jump_ticks=before->jump_ticks;
  player->pos=sa1_vec3_add(support->point,sa1_vec3_scale(frame.up,SA3DS_EC_CONTROLLER_SUPPORT));
- player->vel=sa1_project_on_plane(player->vel,frame.up);
+ SA1PC2004LocalVector local={
+     sa1_vec3_dot(player->vel,frame.forward),sa1_vec3_dot(player->vel,frame.up),
+     sa1_vec3_dot(player->vel,frame.right),
+ };
+ local=sa1_pc2004_grounded_reset_speed(local,0,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_accel);
+ player->vel=sa1_vec3_add(sa1_vec3_scale(frame.forward,local.forward),
+     sa1_vec3_scale(frame.right,local.side));
  player->ground_normal=frame.up;
  player->ground_slope_radians=sa1_surface_slope_radians(frame.up);
  player->surface_forward=frame.forward;

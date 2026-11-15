@@ -140,6 +140,17 @@ SA1PC2004LocalVector sa1_pc2004_pgetinertia_add_velocity(
     return out;
 }
 
+SA1PC2004LocalVector sa1_pc2004_grounded_reset_speed(
+    SA1PC2004LocalVector local, unsigned player_flags, float run_accel) {
+    local.normal = 0.0f;
+    if ((player_flags & 0x0Cu) == 0) {
+        if (local.forward > -0.01f && local.forward < 0.01f) local.forward = 0.0f;
+        double side_threshold = (double)run_accel * (double)0.9f;
+        if (local.side >= -side_threshold && local.side <= side_threshold) local.side = 0.0f;
+    }
+    return local;
+}
+
 float sa1_pc2004_integrate_axis_no_cross(float speed, float add_velocity,
                                          int *clamped_out) {
     float next = speed + add_velocity;

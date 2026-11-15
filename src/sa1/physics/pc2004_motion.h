@@ -9,6 +9,12 @@ typedef struct {
     float side;
 } SA1PC2004LocalVector;
 
+/* Grounded 43EE70 writeback after the caller transforms resolved world
+ * displacement into the new task frame. Player-work flags 0x0C bypass
+ * the tangential dead zones but still clear normal speed. */
+SA1PC2004LocalVector sa1_pc2004_grounded_reset_speed(
+    SA1PC2004LocalVector local, unsigned player_flags, float run_accel);
+
 typedef struct {
     /* taskwk status low bits 0/1 are the grounded/support flags tested by
      * PGetBreak/PGetInertia. */

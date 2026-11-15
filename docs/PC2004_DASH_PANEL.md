@@ -278,3 +278,13 @@ The opt-in replay now accepts the confirmed face at tick 18 and keeps
 support through tick 27. It detaches at tick 28 and later resets. The
 ordinary replay still needs integration of the swept support response
 to traverse the entrance.
+
+The opt-in replay also applies the ordinary grounded velocity writeback
+from PResetPosition (43EE70). It clears local normal speed and snaps
+forward speed strictly inside ±0.01 and side speed inside or at
+±(0.9 × run_accel), with the source work-flag bypass for the two
+tangential tests. The side comparison retains the product precision.
+The replay still loses support at tick 28, and this time the trace
+shows zero per-polygon hits before the wall pass. That trajectory's
+failure occurs earlier than the edge correction seen with the
+previous experimental position updates.
