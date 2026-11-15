@@ -79,7 +79,7 @@
 #include "../../src/sa1/physics/steam_player_parameters.h"
 
 #define CLEAR_COLOR 0xF8FAFCFFu
-#define EC_BACKGROUND_CLIP_LEVEL 1u
+#define EC_DEFAULT_CLIP_LEVEL 1u
 #define DISPLAY_TRANSFER_FLAGS \
     (GX_TRANSFER_FLIP_VERT(0) | GX_TRANSFER_OUT_TILED(0) | GX_TRANSFER_RAW_COPY(0) | \
      GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGBA8) | GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB8) | \
@@ -871,6 +871,25 @@ static int load_owner_packages(void) {
     return 1;
 }
 
+static uint32_t ec_render_clip_level(void) {
+    return g_rings_ready ? g_rings.clip_level : EC_DEFAULT_CLIP_LEVEL;
+}
+
+static float g_ec_terrain_near, g_ec_terrain_far;
+
+static void ec_update_terrain_projection(void) {
+    SA3DSECBackgroundConfig config;
+    g_ec_terrain_near=0.1f;
+    g_ec_terrain_far=5000.0f;
+    if(sa3ds_ec_background_select(&g_background,g_ec_act_index,
+        ec_render_clip_level(),&config)){
+        g_ec_terrain_near=config.terrain_near;
+        g_ec_terrain_far=config.terrain_far;
+    }
+    Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
+        g_ec_terrain_near,g_ec_terrain_far,false);
+}
+
 static void ec_world_bounds(SA3DSECCollision *collision,const SA3DSECVisual *visual){
     float min_x=1e30f,max_x=-1e30f,min_z=1e30f,max_z=-1e30f;
     for(uint32_t i=0;i<visual->instance_count;i++){
@@ -1056,6 +1075,7 @@ static int ec_change_act(uint32_t act){
     g_ec_gpu.visual=&g_ec_visual;
     g_ec_collision=collision;g_ec_collision.world.context=&g_ec_collision;
     g_ec_act_index=act;g_ec_failed_region_valid=0;
+    ec_update_terrain_projection();
     if(g_bgm_started)start_stage_bgm();
     ec_apply_texture_override();
     memset(&g_ec_perf,0,sizeof(g_ec_perf));
@@ -1213,8 +1233,8 @@ static int draw_background(const C3D_Mtx *view,const float eye[3]) {
     if(!g_background_ready)return 1;
     SA3DSECBackgroundConfig config;SA3CMatrix actor;
     C3D_Mtx projection,model,mv;
-    if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,EC_BACKGROUND_CLIP_LEVEL,&config)||
-       !sa3ds_ec_background_transform(&g_background,g_ec_act_index,EC_BACKGROUND_CLIP_LEVEL,eye,&actor))return 0;
+    if(!sa3ds_ec_background_select(&g_background,g_ec_act_index,ec_render_clip_level(),&config)||
+       !sa3ds_ec_background_transform(&g_background,g_ec_act_index,ec_render_clip_level(),eye,&actor))return 0;
     Mtx_PerspTilt(&projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
                   config.background_near,config.background_far,false);
     for(unsigned row=0;row<4;row++)model.r[row]=FVec4_New(
@@ -4031,6 +4051,7 @@ static int init_scene(void) {
         }
         load_rings();
         load_background();
+        ec_update_terrain_projection();
         load_springs();
         load_panels();
         load_jump_visual();
@@ -4071,17 +4092,6 @@ static int init_scene(void) {
 }
 
 static int sample_pose(void) {
-    float terrain_near=0.1f,terrain_far=5000.0f;
-    if(g_emerald_coast){
-        SA3DSECBackgroundConfig config;
-        if(sa3ds_ec_background_select(&g_background,g_ec_act_index,
-            EC_BACKGROUND_CLIP_LEVEL,&config)){
-            terrain_near=config.terrain_near;
-            terrain_far=config.terrain_far;
-        }
-        Mtx_PerspTilt(&g_projection,C3D_AngleFromDegrees(55.0f),C3D_AspectRatioTop,
-            terrain_near,terrain_far,false);
-    }
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_projection,&g_projection);
     if(!g_cam4_active)camera_legacy_view();
     if (g_emerald_coast) {
@@ -4094,7 +4104,7 @@ static int sample_pose(void) {
             FVec3_New(0.0f,15.0f,80.0f),FVec3_New(0.0f,1.0f,0.0f),false);
         if(g_ec_gpu.full_act){
             sa3ds_ec_gpu_set_view(&g_ec_gpu,g_cam_eye,g_cam_target,C3D_AngleFromDegrees(55.0f),
-                C3D_AspectRatioTop,terrain_near,terrain_far);
+                C3D_AspectRatioTop,g_ec_terrain_near,g_ec_terrain_far);
         }
         float background_eye[3]={g_ec_combined?g_cam_eye[0]:0.0f,
             g_ec_combined?g_cam_eye[1]:95.0f,
@@ -4865,7 +4875,7 @@ int main(void) {
             SA3DSECBackgroundConfig config;
             uint32_t clear_rgb=0x003946u;
             if(sa3ds_ec_background_select(&g_background,g_ec_act_index,
-                EC_BACKGROUND_CLIP_LEVEL,&config))clear_rgb=config.clear_rgb;
+                ec_render_clip_level(),&config))clear_rgb=config.clear_rgb;
             clear_color=(clear_rgb<<8)|0xffu;
         }
         C3D_RenderTargetClear(g_target,C3D_CLEAR_ALL,clear_color,0);
