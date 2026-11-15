@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Build owner-side Emerald Coast visual packages from exact PC2004 sources.
+"""Build owner-side stage visual packages from exact PC2004 sources.
+
+Emerald Coast is the default. Other executable LandTable stages can select
+explicit source acts with --level-id and --act.
 
 Outputs contain Sega-derived geometry/material/texture pixels and are therefore
 owner-side generated artifacts.  They MUST NOT be included in SA3DS code-only
@@ -114,8 +117,9 @@ def parse_material_chunk(blob: bytes) -> dict:
 
 
 def build_visual_chunk(dec: PC2004StageDecoder, act: int, texture_count: int,
-                       source_vertex_map: list[tuple[int, int]] | None = None):
-    table = dec.landtable(EMERALD_COAST_LEVEL_ID, act)
+                       source_vertex_map: list[tuple[int, int]] | None = None,
+                       *, level_id: int = EMERALD_COAST_LEVEL_ID):
+    table = dec.landtable(level_id, act)
     rows = dec.collisions(table)
     objects = [(r, dec.object(r.object_va)) for r in rows]
     model_vas = sorted({o.model_va for _r, o in objects if o.model_va})
@@ -353,24 +357,28 @@ def build_sa3t(pvm: PVMArchive) -> bytes:
     return pkg
 
 
-def build_act_package(dec: PC2004StageDecoder, act: int, pvm_bytes: bytes, set_sources=None, cam_sources=None):
-    table = dec.landtable(EMERALD_COAST_LEVEL_ID, act)
+def build_act_package(dec: PC2004StageDecoder, act: int, pvm_bytes: bytes,
+                      set_sources=None, cam_sources=None, *, level_id: int = EMERALD_COAST_LEVEL_ID):
+    emerald_coast = level_id == EMERALD_COAST_LEVEL_ID
+    if not emerald_coast and (set_sources is not None or cam_sources is not None):
+        raise DecodeError("SET/CAM bindings require an Emerald Coast act")
+    table = dec.landtable(level_id, act)
     if not table.texture_archive:
         raise DecodeError("act has no resolved texture archive")
     pvm = PVMArchive(pvm_bytes, table.texture_archive + ".PVM")
-    visual, materials, vis_meta = build_visual_chunk(dec, act, pvm.texture_count)
+    visual, materials, vis_meta = build_visual_chunk(dec, act, pvm.texture_count, level_id=level_id)
     material_blob = build_material_chunk(materials)
     texture_blob = build_sa3t(pvm)
     visual_check = parse_visual_chunk(visual)
     material_check = parse_material_chunk(material_blob)
     texture_check = sa3t.parse(texture_blob)
     metadata = {
-        "format": "SA3DS Emerald Coast visual package",
+        "format": "SA3DS Emerald Coast visual package" if emerald_coast else "SA3DS PC2004 stage visual package",
         "version": "0.0.9.1B",
         "source_profile": "SADX_PC_2004_CANONICAL",
         "source_exe_sha256": dec.sha256,
-        "level_id": EMERALD_COAST_LEVEL_ID,
-        "level": "Emerald Coast",
+        "level_id": level_id,
+        "level": "Emerald Coast" if emerald_coast else f"PC2004 level {level_id}",
         **vis_meta,
         "pvm": pvm.metadata(),
         "neutral_validation": {
@@ -438,11 +446,24 @@ def main(argv=None):
     ap.add_argument("system_source", type=Path, help="owner system directory or ZIP")
     ap.add_argument("output_dir", type=Path)
     ap.add_argument("--report", type=Path)
-    ap.add_argument("--act", type=int, choices=(0,1,2), action="append", help="convert only this act; repeat to select several (default: all)")
+    ap.add_argument("--level-id", type=int, default=EMERALD_COAST_LEVEL_ID,
+                    help="PC2004 LandTable level ID (default: Emerald Coast)")
+    ap.add_argument("--act", type=int, choices=range(8), action="append",
+                    help="zero-based source act; repeat to select several (default: all Emerald Coast acts)")
     ap.add_argument("--with-set", action="store_true", help="embed decoded SET placement bank for each act (0.0.9.1C)")
     ap.add_argument("--with-cam", action="store_true", help="embed lossless CAM setup records for each act (0.0.9.1D)")
     args = ap.parse_args(argv)
     try:
+        emerald_coast = args.level_id == EMERALD_COAST_LEVEL_ID
+        if not 0 <= args.level_id < 256:
+            raise DecodeError("level ID must be in 0..255")
+        if not emerald_coast and (args.act is None or args.with_set or args.with_cam):
+            raise DecodeError("other levels require explicit --act values and support visual data only")
+        if emerald_coast and args.act and max(args.act)>2:
+            raise DecodeError("Emerald Coast supports source acts 0..2")
+        if args.output_dir.resolve().is_relative_to(ROOT) or (
+                args.report and args.report.resolve().is_relative_to(ROOT)):
+            raise DecodeError("owner-generated data and reports must stay outside the code tree")
         dec = PC2004StageDecoder(args.exe)
         args.output_dir.mkdir(parents=True, exist_ok=True)
         reports = []
@@ -458,13 +479,17 @@ def main(argv=None):
             found_cams = list_cam_sources(args.system_source,set().union(*(cam_names[a] for a in selected_acts)))
             cam_by_act = {a: [s for s in found_cams if s.name[5:7] == f"{a:02d}"] for a in selected_acts}
         for act in selected_acts:
-            table = dec.landtable(EMERALD_COAST_LEVEL_ID, act)
+            table = dec.landtable(args.level_id, act)
             if not table.texture_archive:
                 raise DecodeError(f"act {act}: texture archive unresolved")
             pvm_bytes = read_source(args.system_source, table.texture_archive + ".PVM")
             pak, report = build_act_package(dec, act, pvm_bytes, set_by_act[act] if set_by_act is not None else None,
-                                            cam_by_act[act] if cam_by_act is not None else None)
-            out = args.output_dir / f"emerald_coast_act{act}.sa3dspak"
+                                            cam_by_act[act] if cam_by_act is not None else None,
+                                            level_id=args.level_id)
+            stem = "emerald_coast" if emerald_coast else f"level{args.level_id:02d}"
+            out = args.output_dir / f"{stem}_act{act}.sa3dspak"
+            if out.resolve().is_relative_to(ROOT):
+                raise DecodeError("owner-generated data must stay outside the code tree")
             out.write_bytes(pak)
             report = {**report, "output": str(out), "package_bytes": len(pak), "package_sha256": hashlib.sha256(pak).hexdigest()}
             reports.append(report)
