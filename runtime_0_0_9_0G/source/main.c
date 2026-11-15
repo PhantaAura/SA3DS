@@ -489,7 +489,7 @@ static int boot_menu(void) {
     if (autoboot) { int selected=fgetc(autoboot);fclose(autoboot);return selected=='W'?3:6; }
     consoleSelect(&g_boot_console);
     printf("\x1b[2J\x1b[1;1H");
-    printf("SA3DS Pass10A Pose Lab\n\n");
+    printf("SA3DS %s\n\n",SA3DS_BUILD_REVISION);
     printf("Select ONE test:\n\n");
     printf("B = GPU-only colored screen\n");
     printf("X = Sonic assets without GPU\n");
@@ -4236,7 +4236,7 @@ int main(void) {
     /* Stable console buffer: independent of the Citro3D TOP render target. */
     gfxSetDoubleBuffering(GFX_BOTTOM,false);
     consoleInit(GFX_BOTTOM,&g_boot_console);
-    boot_log("BEGIN","Pass10A Pose Lab / CPUUpload2 base launched");
+    boot_log("BEGIN","SA3DS " SA3DS_BUILD_REVISION " launched");
     int mode=boot_menu();
     if (!mode) { gfxExit(); return 0; }
 

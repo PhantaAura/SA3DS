@@ -19,14 +19,15 @@ ROMFS       := romfs
 ifeq ($(ASSET_SOURCE),sd)
 ROMFS       := romfs_sd
 endif
-APP_TITLE   := SA3DS Pass10A Pose Lab
-APP_DESCRIPTION := Frozen Sonic ACTION geometry parity lab
+SA3DS_BUILD_REVISION ?= unknown
+APP_TITLE   := Sonic Adventure 3DS
+APP_DESCRIPTION := Emerald Coast development build ($(SA3DS_BUILD_REVISION))
 APP_AUTHOR  := SA3DS project
 
 ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 CFLAGS := -g -Wall -Wextra -Werror=implicit-function-declaration -O2 -mword-relocations \
           -ffunction-sections $(ARCH)
-CFLAGS += $(INCLUDE) -D__3DS__
+CFLAGS += $(INCLUDE) -D__3DS__ -DSA3DS_BUILD_REVISION=\"$(SA3DS_BUILD_REVISION)\"
 ASFLAGS := -g $(ARCH)
 LDFLAGS = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS := -lcitro3d -lctru -lm

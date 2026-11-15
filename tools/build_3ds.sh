@@ -28,7 +28,11 @@ cp "$root/$runtime/Makefile" "$stage/project/$runtime/Makefile"
 cp -R "$root/$runtime/include" "$stage/project/$runtime/include"
 cp -R "$root/$runtime/source" "$stage/project/$runtime/source"
 cp -R "$root/$runtime/romfs_sd" "$stage/project/$runtime/romfs_sd"
-make -C "$stage/project/$runtime" ASSET_SOURCE=sd \
+revision="$(git -C "$root" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)"
+if [ "$revision" != unknown ] && ! git -C "$root" diff --quiet HEAD --; then
+  revision="$revision-dirty"
+fi
+make -C "$stage/project/$runtime" ASSET_SOURCE=sd SA3DS_BUILD_REVISION="$revision" \
   DEVKITPRO="$DEVKITPRO" DEVKITARM="$DEVKITARM"
 
 target="sa3ds_0_0_9_0G_white_zone_validation"
@@ -38,7 +42,7 @@ for ext in 3dsx elf smdh map; do
     source_file="$stage/project/$runtime/build/$target.map"
   fi
   if [ -f "$source_file" ]; then
-    cp "$source_file" "$output_dir/SA3DS_Pass11B_Audited.$ext"
+    cp "$source_file" "$output_dir/SA3DS.$ext"
   fi
 done
-echo "Built code-only artifacts in $output_dir"
+echo "Built SA3DS ($revision) code-only artifacts in $output_dir"
