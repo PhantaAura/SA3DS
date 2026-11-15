@@ -1095,24 +1095,25 @@ fail:
    the stalls this trace is intended to measure. */
 static struct {
     unsigned frame,act,steps;
-    uint64_t total,simulation,collision,gpu_wait,draw;
+    uint64_t total,simulation,region_build,gpu_wait,draw,bgm,bottom_screen;
     float x,z;
 } g_ec_stalls[24];
 static int g_ec_stall_trace;
-static uint64_t g_ec_stall_collision;
+static uint64_t g_ec_stall_region_build;
 
 static void ec_write_stalls(void){
     if(!g_ec_stall_trace)return;
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_stalls.csv","wb");
     if(!file)return;
-    fputs("frame,act,steps,total_ms,simulation_ms,collision_ms,gpu_wait_ms,draw_ms,x,z\n",file);
+    fputs("frame,act,steps,total_ms,simulation_ms,region_build_ms,gpu_wait_ms,draw_ms,bgm_ms,bottom_screen_ms,x,z\n",file);
     for(unsigned i=0;i<24;i++){
         if(!g_ec_stalls[i].total)continue;
-        fprintf(file,"%u,%u,%u,%llu,%llu,%llu,%llu,%llu,%.2f,%.2f\n",
+        fprintf(file,"%u,%u,%u,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%.2f,%.2f\n",
             g_ec_stalls[i].frame,g_ec_stalls[i].act,g_ec_stalls[i].steps,
             (unsigned long long)g_ec_stalls[i].total,(unsigned long long)g_ec_stalls[i].simulation,
-            (unsigned long long)g_ec_stalls[i].collision,(unsigned long long)g_ec_stalls[i].gpu_wait,
-            (unsigned long long)g_ec_stalls[i].draw,g_ec_stalls[i].x,g_ec_stalls[i].z);
+            (unsigned long long)g_ec_stalls[i].region_build,(unsigned long long)g_ec_stalls[i].gpu_wait,
+            (unsigned long long)g_ec_stalls[i].draw,(unsigned long long)g_ec_stalls[i].bgm,
+            (unsigned long long)g_ec_stalls[i].bottom_screen,g_ec_stalls[i].x,g_ec_stalls[i].z);
     }
     fclose(file);
 }
@@ -1151,7 +1152,7 @@ static void ec_refresh_collision_region(void){
     uint64_t region_start=osGetTime();
     int rebuilt=sa3ds_ec_residency_recenter(&g_ec_collision,g_ec_collision_bytes,g_ec_collision_size,x,z,&g_player);
     uint64_t region_ms=osGetTime()-region_start;
-    if(g_ec_stall_trace)g_ec_stall_collision+=region_ms;
+    if(g_ec_stall_trace)g_ec_stall_region_build+=region_ms;
     g_ec_failed_region_valid=!rebuilt;
     if(!rebuilt){g_ec_failed_region_x=x;g_ec_failed_region_z=z;}
     /* SD append/flush can block the simulation thread at a region boundary. */
@@ -4372,7 +4373,7 @@ int main(void) {
     }
     while (aptMainLoop()) {
         uint64_t frame_start=g_ec_stall_trace?osGetTime():0;
-        g_ec_stall_collision=0;
+        g_ec_stall_region_build=0;
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
         if(g_emerald_coast)mod_toggle_probe_input(g_rendered_frames,&down,&held);
@@ -4893,7 +4894,9 @@ int main(void) {
         uint64_t draw_end=g_ec_stall_trace?osGetTime():0;
         if(probe_log)boot_log("FRAME","end returned");
         g_rendered_frames++;
+        uint64_t bgm_start=g_ec_stall_trace?osGetTime():0;
         sa3ds_bgm_update();
+        uint64_t bgm_end=g_ec_stall_trace?osGetTime():0;
         if(g_emerald_coast)mod_toggle_probe_frame(g_rendered_frames);
         if(g_rendered_frames==600&&g_bgm_started){SA3DSBgmStats b;sa3ds_bgm_stats(&b);char note[140];
             snprintf(note,sizeof(note),"600 frames: ready=%d playing=%d adxFrames=%lu sample=%lu loops=%lu underruns=%lu",b.ready,b.playing,
@@ -4947,11 +4950,13 @@ int main(void) {
             "frame=%u tick=%llu pos=%.3f,%.3f,%.3f grounded=%d wall=%lu linear=%lu",
             g_rendered_frames,(unsigned long long)g_player.sim_frame,g_player.pos.x,g_player.pos.y,g_player.pos.z,
             g_player.grounded,(unsigned long)g_ec_collision.wall_hits,(unsigned long)linearSpaceFree());boot_log("PLAY",frame_line);}
+        uint64_t bottom_start=g_ec_stall_trace?osGetTime():0;
         if(g_game_over_draw){} else if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();
         gfxFlushBuffers();
         gfxScreenSwapBuffers(GFX_BOTTOM,false);
         if(g_ec_stall_trace){
-            uint64_t total=osGetTime()-frame_start;
+            uint64_t frame_end=osGetTime();
+            uint64_t total=frame_end-frame_start;
             if(total>=34){
                 unsigned slot=0;
                 for(unsigned i=1;i<24;i++)
@@ -4962,9 +4967,11 @@ int main(void) {
                     g_ec_stalls[slot].steps=steps;
                     g_ec_stalls[slot].total=total;
                     g_ec_stalls[slot].simulation=t0-now_ms;
-                    g_ec_stalls[slot].collision=g_ec_stall_collision;
+                    g_ec_stalls[slot].region_build=g_ec_stall_region_build;
                     g_ec_stalls[slot].gpu_wait=draw_start-wait_start;
                     g_ec_stalls[slot].draw=draw_end-draw_start;
+                    g_ec_stalls[slot].bgm=bgm_end-bgm_start;
+                    g_ec_stalls[slot].bottom_screen=frame_end-bottom_start;
                     g_ec_stalls[slot].x=g_player.pos.x;
                     g_ec_stalls[slot].z=g_player.pos.z;
                 }
