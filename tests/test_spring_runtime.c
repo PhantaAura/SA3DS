@@ -49,9 +49,18 @@ int main(void){
         in.paused=0;in.skip_update=1;
         assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
         assert(!memcmp(&a,&saved,sizeof(a))&&!out.draw);
-        in.skip_update=0;a.action=2;saved=a;in.player_grounded=0;
-        assert(!sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
-        assert(!memcmp(&a,&saved,sizeof(a))&&!out.launched);
+        in.skip_update=0;a.action=2;in.player_grounded=0;
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
+        assert(a.action==1&&out.launch_rejected&&!out.launched&&out.draw);
+        in.collision_player=-1;in.player_grounded=1;
+        for(unsigned tick=0;!out.enqueue_collision&&tick<12;tick++){
+            assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out));
+            assert(!out.launched);
+        }
+        assert(out.enqueue_collision);
+        in.collision_player=0;
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out)&&a.action==2);
+        assert(sa3ds_spring_actor_tick(&a,&p,&trig,&in,&out)&&out.launched);
     }
     for(unsigned kind=1;kind<=2;kind++){
         SA3DSMovementPlacement p=placement(kind);

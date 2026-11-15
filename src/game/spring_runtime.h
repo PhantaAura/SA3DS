@@ -22,12 +22,12 @@ typedef struct {
     void *sine_context;
 } SA3DSSpringTickInput;
 typedef struct {
-    uint8_t enqueue_collision, draw, launched, player_index;
+    uint8_t enqueue_collision, draw, launched, player_index, launch_rejected;
     SA3DSSpringLaunch launch;
 } SA3DSSpringTickResult;
 void sa3ds_spring_actor_reset(SA3DSSpringActor *actor);
-/* Transactional failure (including unsupported off-ground getter scratch)
- * leaves actor unchanged and clears result. No guessed collision arbitration. */
+/* Invalid arguments leave actor unchanged. Unsupported launch preparation
+ * consumes the contact and returns to collision polling after cooldown. */
 int sa3ds_spring_actor_tick(SA3DSSpringActor *actor,
     const SA3DSMovementPlacement *placement,const SA3DSSpringTrig *trig,
     const SA3DSSpringTickInput *input,SA3DSSpringTickResult *out);

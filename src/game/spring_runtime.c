@@ -60,9 +60,13 @@ int sa3ds_spring_actor_tick(SA3DSSpringActor *a,const SA3DSMovementPlacement *p,
     }else{
         /* State2 executes on the FOLLOWING object tick. Source does not pass
          * this state through the active-state global-pause check. */
-        if(!sa3ds_spring_launch_prepare(p,trig,in->player_task_origin,
-            in->player_grounded,in->player_local_forward,&result.launch))return 0;
-        result.launched=result.draw=1;result.player_index=next.player_index;
+        result.draw=1;
+        result.player_index=next.player_index;
+        result.launched=sa3ds_spring_launch_prepare(p,trig,in->player_task_origin,
+            in->player_grounded,in->player_local_forward,&result.launch);
+        result.launch_rejected=!result.launched;
+        /* Consume this contact even when the launch context is unsupported.
+         * A later launch must follow a fresh collision report. */
         next.action=1;next.cooldown=(p->type&4095)==2?5:0;
     }
     *a=next;*out=result;return 1;

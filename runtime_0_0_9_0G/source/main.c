@@ -169,7 +169,7 @@ static void clear_scatter(void);
 static int draw_scatter(void);
 static int scatter_ccl_pass(void);
 static void spawn_scatter(const SA3DSPlayerDamageResult *requests);
-typedef struct {SA3DSSpringActor actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw,unsupported;int32_t next,previous;} SA3DSNativeSpring;
+typedef struct {SA3DSSpringActor actor;SA3DSSpringTrig trig;uint8_t loaded,pending_hit,draw;int32_t next,previous;} SA3DSNativeSpring;
 static SA3DSMovementObjects g_movement;
 static SA3DSNumberedPanels g_numbered_panels;
 static SA3DSECVisual g_numbered_visual;
@@ -1299,9 +1299,6 @@ static void tick_springs(void){
     for(int32_t i=g_spring_head;i>=0;i=g_spring_states[i].next){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,(uint32_t)i,&p);
         unsigned kind=p.type&4095u;SA3DSNativeSpring *state=&g_spring_states[i];
-        /* Unresolved getter scratch is not a deferred launch request. Keep
-         * the object visible, but quarantine it until its normal unload. */
-        if(state->unsupported){state->draw=1;continue;}
         SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
         SA1Vec3 forward=g_player.surface_frame_active?g_player.surface_forward:
             (SA1Vec3){sinf(g_player.yaw),0,cosf(g_player.yaw)};
@@ -1311,11 +1308,10 @@ static void tick_springs(void){
             .player_task_origin=task,.sine=spring_source_sin,.sine_context=&g_rings};
         SA3DSSpringTickResult result;
         if(!sa3ds_spring_actor_tick(&state->actor,&p,&state->trig,&input,&result)){
-            boot_log("SPRINGS","Unsupported launch context: quarantined until unload; no delayed launch");state->unsupported=1;
-            if(g_spring_probe)g_spring_probe_unsupported++;
             state->pending_hit=0;state->draw=1;continue;
         }
         state->draw=result.draw;state->pending_hit=0;
+        if(result.launch_rejected&&g_spring_probe)g_spring_probe_unsupported++;
         if(result.launched){
             if(sa3ds_spring_player_apply(&g_player,&p,&state->trig,&result.launch,
                     SA3DS_EC_CONTROLLER_SUPPORT,&g_spring_pending)){
