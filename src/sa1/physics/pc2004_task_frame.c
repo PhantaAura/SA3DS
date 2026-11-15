@@ -22,10 +22,19 @@ int sa1_pc2004_task_turn(SA1SurfaceFrame*f,uint16_t old,uint16_t next,const SA1P
     *f=next_frame;return 1;
 }
 
-static uint16_t toward_zero(uint16_t u){
-    int d=(int16_t)(uint16_t)(0-u);
-    return d>0x800?(uint16_t)(u+0x800):d< -0x800?(uint16_t)(u-0x800):0;
+static uint16_t approach_angle(uint16_t from,uint16_t to,int step){
+    int delta=(int16_t)(uint16_t)(to-from);
+    if(delta>step)return (uint16_t)(from+step);
+    if(delta< -step)return (uint16_t)(from-step);
+    return to;
 }
+
+static void support_angles(SA1Vec3 up,uint16_t *x,uint16_t *z){
+    double nz=fmax(-1.,fmin(1.,up.z));
+    *x=(uint16_t)(int32_t)lround(asin(nz)*(65536./TAU));
+    *z=hypot(up.x,up.y)<1e-6?0:(uint16_t)(int32_t)lround(atan2(-(double)up.x,up.y)*(65536./TAU));
+}
+
 static double frame_sine(const SA1PC2004HomingMath*m,uint16_t a){return m&&m->sine?m->sine(m->context,a):sin(a*(TAU/65536.));}
 int sa1_pc2004_task_frame_from_angles(SA1SurfaceFrame *f,uint16_t x,
     uint16_t y,uint16_t z,const SA1PC2004HomingMath *m){
@@ -42,8 +51,37 @@ int sa1_pc2004_task_frame_from_angles(SA1SurfaceFrame *f,uint16_t x,
 
 int sa1_pc2004_task_relax_up(SA1SurfaceFrame*f,const SA1PC2004HomingMath*m){
     uint16_t y;if(!sa1_pc2004_task_yaw(f,&y))return 0;
-    double nz=fmax(-1.,fmin(1.,f->up.z));
-    uint16_t x=(uint16_t)(int32_t)lround(asin(nz)*(65536./TAU));
-    uint16_t z=hypot(f->up.x,f->up.y)<1e-6?0:(uint16_t)(int32_t)lround(atan2(-(double)f->up.x,f->up.y)*(65536./TAU));
-    return sa1_pc2004_task_frame_from_angles(f,toward_zero(x),y,toward_zero(z),m);
+    uint16_t x,z;
+    support_angles(f->up,&x,&z);
+    return sa1_pc2004_task_frame_from_angles(f,approach_angle(x,0,0x800),y,
+        approach_angle(z,0,0x800),m);
+}
+
+int sa1_pc2004_task_approach_support(SA1SurfaceFrame *frame, SA1Vec3 normal,
+    uint16_t target_x, uint16_t target_z, float forward_speed,
+    const SA1SteamPlayerParameters *p, const SA1PC2004HomingMath *math){
+    uint16_t yaw;
+    if(!p||!finite3(normal)||!sa1_pc2004_task_yaw(frame,&yaw))return 0;
+
+    /* For world-down gravity the source smooths faces with a lower or
+     * equal Up.Y. Other faces set the target angles immediately. */
+    if(normal.y<=frame->up.y){
+        float local_forward=sa1_vec3_dot(frame->forward,normal);
+        float local_side=sa1_vec3_dot(frame->right,normal);
+        float local_up=sa1_vec3_dot(frame->up,normal);
+        float horizontal=sqrtf(local_forward*local_forward+local_side*local_side);
+        int step=(int)(atan2((double)horizontal,local_up)*(65536.0*0.15915497620314795));
+        if(forward_speed<p->dash_speed){
+            if(forward_speed<p->jog_speed)step=0x400;
+            else {
+                int cap=forward_speed<p->run_speed?0x1000:forward_speed<p->rush_speed?0x1500:0x2000;
+                if(step>cap)step=cap;
+            }
+        }
+        uint16_t old_x,old_z;
+        support_angles(frame->up,&old_x,&old_z);
+        target_x=approach_angle(old_x,target_x,step);
+        target_z=approach_angle(old_z,target_z,step);
+    }
+    return sa1_pc2004_task_frame_from_angles(frame,target_x,yaw,target_z,math);
 }

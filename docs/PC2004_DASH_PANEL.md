@@ -303,3 +303,19 @@ check using the source rotation convention. It does not reproduce
 reduces lateral drift enough that it no longer reaches the steep-force
 cross-product threshold on tick 18. It detaches there. The prior
 `--apply-static-support` replay is unchanged.
+
+The task-angle replay now also exercises the ordinary supported
+444F10 angle step. The code chooses immediate writeback for a
+more upward face. Otherwise it computes the shortest turn from
+the current frame to the face normal and applies the jog, run,
+rush and dash speed limits to X and Z while retaining yaw.
+This check uses canonical port angles and an already selected
+target. The source's target history and special status paths
+remain outside the replay.
+
+With the angle step enabled, the row 0 → 12 replay gets a valid
+confirmation at tick 16 but loses that support during the wall
+pass on the same tick. The existing position-only experiment
+remains byte-for-byte unchanged. The source tracks the accepted
+polygon normal separately from the smoothed orientation. The
+current port contact frame still conflates those inputs.

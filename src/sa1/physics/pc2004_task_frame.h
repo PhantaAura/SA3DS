@@ -2,6 +2,7 @@
 #define SA1_PC2004_TASK_FRAME_H
 #include "surface_frame.h"
 #include "pc2004_homing.h"
+#include "steam_player_parameters.h"
 /*43EC90 physical rotation Rz(Z)*Rx(X)*Ry(-Y): columns are forward,up,
  * negative port-right. Invert its canonical principal-X representation.
  * At the source4B8E80 normal pole Z=0. Inverse quantization rounds a stored
@@ -15,6 +16,12 @@ int sa1_pc2004_task_turn(SA1SurfaceFrame *frame,uint16_t old_yaw,uint16_t new_ya
 /* Construct the 43EC90 task frame from raw X/Y/Z BAMS. */
 int sa1_pc2004_task_frame_from_angles(SA1SurfaceFrame *frame,uint16_t x,
     uint16_t y,uint16_t z,const SA1PC2004HomingMath *math);
+/* Ordinary supported 444F10 update. The caller supplies the chosen
+ * target angles and normal. The existing frame supplies canonical
+ * incoming task angles, with its raw yaw retained. */
+int sa1_pc2004_task_approach_support(SA1SurfaceFrame *frame, SA1Vec3 normal,
+    uint16_t target_x, uint16_t target_z, float forward_speed,
+    const SA1SteamPlayerParameters *parameters, const SA1PC2004HomingMath *math);
 /*443AD0 default-world-gravity canonical X/Z approach by800 BAMS. Caller
  * retains world velocity and task foot origin while changing this basis. */
 int sa1_pc2004_task_relax_up(SA1SurfaceFrame *frame,const SA1PC2004HomingMath *math);

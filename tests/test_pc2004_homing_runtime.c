@@ -42,6 +42,18 @@ static void frame_cases(void){
         SA1SurfaceFrame f=encoded(sign*0x4000,yaw[k],0);uint16_t recovered;
         assert(sa1_pc2004_task_yaw(&f,&recovered)&&recovered==yaw[k]);cases++;
     }
+    const SA1SteamPlayerParameters *params=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
+    SA1SurfaceFrame flat=encoded(0,0x1234,0), steep=encoded(0,0x1234,0x9000);
+    SA1SurfaceFrame smoothed=flat;
+    assert(sa1_pc2004_task_approach_support(&smoothed,steep.up,0,0x9000,0,params,&math));
+    SA1SurfaceFrame expected=encoded(0,0x1234,-0x400);
+    assert(near(smoothed.up.x,expected.up.x)&&near(smoothed.forward.z,expected.forward.z));
+    smoothed=flat;
+    assert(sa1_pc2004_task_approach_support(&smoothed,steep.up,0,0x9000,params->run_speed,params,&math));
+    expected=encoded(0,0x1234,-0x1500);
+    assert(near(smoothed.up.x,expected.up.x)&&near(smoothed.forward.z,expected.forward.z));
+    assert(sa1_pc2004_task_approach_support(&steep,flat.up,0,0,0,params,&math));
+    assert(near(steep.up.x,flat.up.x)&&near(steep.up.y,flat.up.y));
     printf("Canonical task-frame inverse/turn: PASS %u independent Rz*Rx*Ry matrix cases including normal poles; source angle history not proven\n",cases);
 }
 static SA1PlayerState airborne(SA1PhysicsWorld*w){
