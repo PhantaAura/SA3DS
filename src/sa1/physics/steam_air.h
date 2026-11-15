@@ -46,6 +46,9 @@ int sa1_steam_sonic_apply_jump_hold_surface(SA1PlayerState *player,
                                             const SA1SurfaceFrame *frame,
                                             int jump_held);
 
+/* Save the incoming velocity and action before projecting a landing. */
+void sa1_steam_sonic_capture_landing(SA1PlayerState *player);
+
 /* Flat-world specialization of Steam PGetAccelerationAir (0x004DDEC0) plus
  * the relevant PGetSpeed integration. */
 void sa1_steam_sonic_air_step(SA1PlayerState *player,

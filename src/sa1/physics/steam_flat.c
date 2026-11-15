@@ -405,18 +405,7 @@ void sa1_physics_step_steam_sonic_flat(
         player->pos.y <= surface.ground_y + 1.6f) {
         int landed_from_air = !player->grounded &&
                               player->action_state == SA1_ACTION_AIRBORNE;
-        if (landed_from_air) {
-            /* Retail motionwk+8 is world Y, separate from the local normal
-             * zeroed by PResetPosition. Preserve the corresponding velocity
-             * before this static-floor adapter destroys it. */
-            player->animation_landing_world_y = player->vel.y;
-            player->animation_landing_air_action =
-                (player->pc2004_action_state_valid &&
-                 (player->pc2004_action_state == 8 ||
-                  player->pc2004_action_state == 12)) ?
-                player->pc2004_action_state : (player->ball_form ? 8 : 12);
-            player->animation_landing_valid = isfinite(player->vel.y);
-        }
+        if (landed_from_air) sa1_steam_sonic_capture_landing(player);
         player->pos.y = surface.ground_y + 1.0f;
         player->vel.y = 0.0f;
         player->grounded = true;

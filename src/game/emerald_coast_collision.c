@@ -3,6 +3,7 @@
 #include "sa3c_pose.h"
 #include "pc2004_sphere_sweep.h"
 #include "../sa1/physics/surface_frame.h"
+#include "../sa1/physics/steam_air.h"
 #include "../sa1/physics/steam_player_parameters.h"
 #include <math.h>
 #include <stdlib.h>
@@ -586,6 +587,7 @@ static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1Player
         }
     }
     if(hit_id<0)return;
+    sa1_steam_sonic_capture_landing(p);
     SA3DSECTriangle*t=&s->triangles[hit_id];
     p->pos=sa1_vec3_add(previous,sa1_vec3_scale(motion,best));
     float inward=sa1_vec3_dot(p->vel,t->normal);
@@ -595,7 +597,16 @@ static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1Player
     p->ground_slope_radians=sa1_surface_slope_radians(frame.up);
     p->surface_id=hit_id;p->surface_flags=t->flags;p->support_distance=r;
     p->grounded=true;p->jump_ticks=0;
-    if(p->action_state==SA1_ACTION_AIRBORNE){p->action_state=SA1_ACTION_GROUNDED;p->ball_form=false;}
+    if(p->action_state==SA1_ACTION_AIRBORNE){
+        float forward=sa1_vec3_dot(p->vel,frame.forward);
+        p->action_state=SA1_ACTION_GROUNDED;
+        p->ball_form=false;
+        p->pc2004_action_state=(p->animation_input_active||forward!=0.0f)?2:1;
+        p->pc2004_action_state_valid=true;
+        p->animation_airborne_request_valid=false;
+        p->animation_forward_speed=forward;
+        p->animation_forward_speed_valid=isfinite(forward);
+    }
 }
 
 static SA1Vec3 edge_point(const SA3DSECTriangle*t,unsigned e){

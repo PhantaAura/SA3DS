@@ -394,6 +394,15 @@ int main(int argc,char**argv){
         assert(fabsf(p.pos.x-s.world.reset_position.x)<0.001f);
         assert(fabsf(p.pos.z-s.world.reset_position.z)<0.001f);
         puts("Emerald Coast collision synthetic floor/jump/landing/swept-wall/slope/bounds: PASS");
+        SA1PlayerState drop={.pos={0,-6,20},.vel={0,-16,0},
+            .action_state=SA1_ACTION_AIRBORNE,.pc2004_action_state=8,
+            .pc2004_action_state_valid=true,.ball_form=true,
+            .animation_airborne_request_valid=true};
+        sa3ds_ec_collision_resolve_walls(&s,(SA1Vec3){0,10,20},&drop);
+        assert(drop.grounded&&drop.action_state==SA1_ACTION_GROUNDED&&!drop.ball_form);
+        assert(drop.animation_landing_valid&&drop.animation_landing_world_y==-16);
+        assert(drop.animation_landing_air_action==8&&!drop.animation_airborne_request_valid);
+        assert(drop.pc2004_action_state_valid&&drop.pc2004_action_state==1);
         dynamic_residency_cases(&s);
     }
     sa3ds_ec_collision_destroy(&s);b[n-1]^=1;assert(!sa3ds_ec_collision_open(&s,b,n));free(b);return 0;

@@ -422,3 +422,14 @@ void sa1_steam_sonic_noinput_step_surface(SA1PlayerState *player,
         clampf(next.side,-p->lim_h_spd,p->lim_h_spd)};
     player->vel=frame_to_world(frame,speed);
 }
+
+void sa1_steam_sonic_capture_landing(SA1PlayerState *player) {
+    if (player->action_state != SA1_ACTION_AIRBORNE) return;
+    /* Retail motionwk+8 keeps world Y before the support projection. */
+    player->animation_landing_world_y = player->vel.y;
+    player->animation_landing_air_action =
+        (player->pc2004_action_state_valid &&
+         (player->pc2004_action_state == 8 || player->pc2004_action_state == 12)) ?
+        player->pc2004_action_state : (player->ball_form ? 8 : 12);
+    player->animation_landing_valid = isfinite(player->vel.y);
+}
