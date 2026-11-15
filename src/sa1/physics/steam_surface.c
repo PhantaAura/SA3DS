@@ -260,24 +260,30 @@ static void surface_running(SA1PlayerState *player,
     SA1Vec3 gravity_world = {0.0f, -p->weight, 0.0f};
     float g_forward = sa1_vec3_dot(gravity_world, frame->forward);
     float g_side = sa1_vec3_dot(gravity_world, frame->right);
-    float weight = p->weight > 1e-6f ? p->weight : 1.0f;
+    float gravity_normal = sa1_vec3_dot(gravity_world, frame->up);
 
-    /* 0.0.8.8: replace the hand-tuned 0.0.8.7 slope factors with the
-     * recovered PGetAcceleration branch shape.  The original routine scales
-     * local forward/side force based on Up and speed after transforming the
-     * gravity/collision force into player space.  Our contact frame supplies
-     * the local axes; exact collision-force ordering remains an evidence gap. */
+    /* 44C270 crosses csts.tnorm with incoming motion-work displacement.
+     * This static path uses the retained task Up and world-space speed. */
+    float cross_y = sa1_vec3_cross(frame->up, player->vel).y;
     float forward_scale = 1.0f, side_scale = 1.0f;
-    sa1_sadx_surface_force_scales(frame->up.y, s.forward, p,
-                                  &forward_scale, &side_scale);
+    float unstick_bias = 0.0f;
+    if (sa1_sadx_surface_primary_unstick_branch(frame->up.y, cross_y, s.forward)) {
+        forward_scale = 0.0f;
+        side_scale = 0.0f;
+        unstick_bias = -p->weight - gravity_normal;
+        gravity_normal = -p->weight;
+    } else {
+        sa1_sadx_surface_force_scales(frame->up.y, s.forward, p,
+                                      &forward_scale, &side_scale);
+        unstick_bias = sa1_sadx_surface_unstick_normal_bias(
+            frame->up.y, s.forward, p->weight);
+        gravity_normal += unstick_bias;
+    }
+
     g_forward *= forward_scale;
     g_side *= side_scale;
-
-    float normal_force = sa1_vec3_dot(gravity_world, frame->up) +
-                         s.normal * p->air_resist_y;
+    float normal_force = gravity_normal + s.normal * p->air_resist_y;
     float side_resistance = s.side * p->air_resist_z;
-    float unstick_bias = sa1_sadx_surface_unstick_normal_bias(
-        frame->up.y, s.forward, weight);
 
     float force = 0.0f;
     if (analog.active) {

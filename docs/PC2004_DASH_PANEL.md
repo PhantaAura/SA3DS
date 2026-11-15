@@ -264,3 +264,17 @@ A private trace of the controller before position integration measures
 +0.006035388 in its current local frame on the same tick. This confirms
 the positive sign comes from the port's movement state at that point,
 rather than from subtracting two rounded world positions.
+
+The ordinary running controller now applies the 44C270 steep-surface
+force branches. The primary branch checks the absolute world-Y component
+of the cross product between collision-work Up and incoming motion.
+When it fires, the local gravity contribution becomes (0, -weight, 0).
+The other steep branches subtract their respective weight multiples
+from the transformed normal component. Drag is added after that step.
+The port maps the source inputs to its retained task frame and current
+world velocity for this ordinary path.
+
+The opt-in replay now accepts the confirmed face at tick 18 and keeps
+support through tick 27. It detaches at tick 28 and later resets. The
+ordinary replay still needs integration of the swept support response
+to traverse the entrance.

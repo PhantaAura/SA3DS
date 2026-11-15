@@ -95,6 +95,22 @@ int main(void) {
     sa1_physics_step_steam_sonic_surface(&p,&input,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
     near(dbg.tangent_gravity_forward,-params->weight*.5f);
     near(dbg.tangent_gravity_side,0);
+    /* A steep wall with sideways sweep motion replaces local gravity
+       with (0,-weight,0) before the ordinary resistance and clamp. */
+    n=(SA1Vec3){-0.99715f,-0.07544f,0};
+    p=player(&world,n);p.vel=sa1_vec3_scale(p.surface_forward,2);
+    SA1Input neutral={0};
+    sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
+    near(dbg.tangent_gravity_forward,0);
+    near(dbg.tangent_gravity_side,0);
+    near(dbg.normal_unstick_bias,-params->weight*(1-n.y));
+
+    /* Without the cross-product gate, the farther-inverted interval
+       applies the five-weight bias to the transformed normal force. */
+    n=(SA1Vec3){0,-0.45f,-0.89302855f};
+    p=player(&world,n);p.vel=sa1_vec3_scale(p.surface_forward,2);
+    sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
+    near(dbg.normal_unstick_bias,-5*params->weight);
     puts("PC2004 ground steering: PASS (mode/Up/friction blend, truncation, runtime run/quick/roll/charge, pre-turn force frame)");
     return 0;
 }

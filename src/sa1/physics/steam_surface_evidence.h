@@ -29,20 +29,14 @@ void sa1_sadx_surface_force_scales(float up_y,
                                    float *out_forward_scale,
                                    float *out_side_scale);
 
-/* First exact 2004 PGetAcceleration unstick branch. It depends on a cross
- * product involving an internal retail vector whose portable semantic mapping
- * is not locked yet, so the runtime records this evidence but does not invent
- * a substitute vector.
- */
+/* 44C270 normal-force override uses the absolute Y of the cross
+ * product between collision-work Up and incoming world motion. */
 int sa1_sadx_surface_primary_unstick_branch(float up_y,
                                             float cross_y_abs,
                                             float forward_speed);
 
-/* Additional local-normal acceleration visible in exact 2004
- * PGetAcceleration for sufficiently fast inverted/steep movement. Applying it
- * to actual support loss still depends on the PSetPosition/PResetPosition
- * collision reconstruction.
- */
+/* Additional local-normal acceleration in the fallback branches of
+ * 44C270 for sufficiently fast inverted/steep movement. */
 float sa1_sadx_surface_unstick_normal_bias(float up_y,
                                            float forward_speed,
                                            float weight);
