@@ -179,3 +179,15 @@ face 426/148. That face passes the source ground-side gate, but its
 normal Y is 0.1649, below the port point probe's 0.45 cutoff. The
 experiment never traverses the loop and uses port frame/velocity
 updates, so it is not a candidate for enabling in native gameplay.
+
+The port's wall pass used to re-query support even on frames when it
+made no correction. In the temporary face-relative replay, that
+fallback silently replaced the descending loop normal (Y = -0.813)
+with a near-upright normal (Y = 0.994) on tick 27. The wall pass now
+preserves steep support on correction-free frames. Upright support
+still goes through the existing ledge check. With the same private
+sweep experiment, the actor retains the loop face through tick 27.
+Tick 28 still has a real wall correction followed by an incorrect
+support handoff. The checked-in build uses the ordinary controller and
+still detaches at tick 13. The experimental steep-face changes are
+used only to investigate the remaining loop response.

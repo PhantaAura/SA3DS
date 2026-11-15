@@ -667,6 +667,7 @@ static int sweep_edge(SA1Vec3 previous,SA1Vec3 current,SA1Vec3 a,SA1Vec3 b,
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
     if(!s||!p||!finite3(previous)||!finite3(p->pos))return;
     resolve_floor_crossing(s,previous,p);
+    unsigned wall_hits_before=s->wall_hits;
     /* Normal PSetPosition uses task + rotated (0,height/2,0), radius height/2.
      * Bridge from the inherited 1-unit support center without changing its
      * movement convention. Planar sliding is still a partial contact adapter;
@@ -741,11 +742,11 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
     }
     /* The controller resolves its floor BEFORE this wall pass. An inclined
      * wall can then push a supported actor underneath that same floor. Repair
-     * that adapter-ordering inconsistency using imported support, not gravity
-     * or movement tuning. Do not snap airborne actors or invent missing floors.
-     * The exact retail joint-polygon arbitration remains unresolved; the
-     * finite edge capsules above are a bounded port safety correction. */
-    if(p->grounded){
+     * that adapter-ordering inconsistency using imported support.
+     * The upright probes cannot validate steep support. Preserve that
+     * contact when the wall pass made no correction, while still checking
+     * ordinary support for ledge departures. */
+    if(p->grounded&&(up.y>0.45f||s->wall_hits!=wall_hits_before)){
         SA1Vec3 probe=sa1_vec3_scale(actor_frame(p).up,-1);
         SA1Contact floor=sa3ds_ec_collision_contact(s,p->pos,probe,2.35f);
         if(!floor.valid){

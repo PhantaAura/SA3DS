@@ -351,6 +351,15 @@ int main(int argc,char**argv){
         assert(sa3ds_ec_collision_spawn(&s,0,20,1));assert(fabsf(s.world.reset_position.y-1)<0.0001f);
         SA1PlayerState p;sa1_player_reset(&p,&s.world);SA1Input in={0};
         for(int i=0;i<60;i++){s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);assert(p.grounded);assert(fabsf(p.pos.y-1)<0.001f);}
+        /* An idle wall pass must preserve the contact already selected by
+         * movement, even if its fallback height probe finds a flatter face. */
+        SA1PlayerState wall_free=p;
+        wall_free.ground_normal=(SA1Vec3){0.9848f,0.1737f,0};
+        wall_free.surface_frame_active=true;
+        unsigned walls_before=s.wall_hits;
+        sa3ds_ec_collision_resolve_walls(&s,wall_free.pos,&wall_free);
+        assert(s.wall_hits==walls_before&&wall_free.grounded);
+        assert(wall_free.ground_normal.y==0.1737f);
         in.jump_pressed=true;in.jump_held=false;s.reference_y=p.pos.y;
         sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);assert(!p.grounded);
         in.jump_pressed=false;int landed=0;for(int i=0;i<120;i++){s.reference_y=p.pos.y;sa1_physics_step_steam_sonic_flat(&p,&in,0,&s.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);if(p.grounded){landed=1;break;}}assert(landed);
