@@ -148,3 +148,14 @@ exception. Applied to the host replay's first detachment with ordinary
 gravity, the gate accepts all five reported ramp candidates. This rules
 out the source angle gate as the reason those particular candidates
 would be discarded. Candidate ordering and native response remain open.
+
+On the same replay, the port's endpoint support query returns no contact
+at tick 13. Applying the 453820 per-object selection rule to the static
+sweep hits selects face 426/9 (final plane height 3.0437). The port's
+support center is 0.831 units below that face, beyond the point query's
+0.35-unit penetration limit. A private host experiment increasing that
+limit to 1.0 keeps support through tick 13 but loses it at tick 16, when
+the next selected face is 1.657 units above the point. The tolerance change
+was discarded. The source trace identifies a sweep/endpoint mismatch.
+The next step is to reproduce the selected face's pushback and support
+update in the collision step, including the step's object arbitration.
