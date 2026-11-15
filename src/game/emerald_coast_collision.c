@@ -280,16 +280,27 @@ int sa3ds_ec_object_support_inside(const SA3DSECObjectSupport*o,float px,float p
     }
     return 1;
 }
+static int dynamic_triangle_in_region(const SA3DSECCollision*s,const SA3DSECTriangle*t){
+    return !(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z);
+}
+
 int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
     if(!s||!s->triangles)return 0;
+    const SA3DSECDynamicSet*set=s->dynamic;
+    uint32_t extra=0,old_extra=s->triangle_count-s->static_triangle_count;
+    int same=1;
+    if(set)for(uint32_t i=0;i<set->triangle_count;i++){
+        const SA3DSECTriangle*t=&set->triangles[i];
+        if(!dynamic_triangle_in_region(s,t))continue;
+        /* Compare the exact resident sequence, including owner IDs and masks.
+         * A different order can affect contact arbitration at shared edges. */
+        if(same&&(extra>=old_extra||memcmp(&s->triangles[s->static_triangle_count+extra],t,sizeof(*t))))same=0;
+        extra++;
+    }
+    if(same&&extra==old_extra)return 1;
     uint32_t instance=UINT32_MAX,triangle=UINT32_MAX;
     if(p&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;triangle=s->triangles[p->surface_id].source_triangle;
-    }
-    const SA3DSECDynamicSet*set=s->dynamic;uint32_t extra=0;
-    if(set)for(uint32_t i=0;i<set->triangle_count;i++){
-        const SA3DSECTriangle*t=&set->triangles[i];
-        if(!(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z))extra++;
     }
     uint32_t count=s->static_triangle_count+extra;
     SA3DSECTriangle*grown=realloc(s->triangles,(size_t)(count?count:1)*sizeof(*grown));
@@ -297,7 +308,7 @@ int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
     s->triangles=grown;s->triangle_count=s->static_triangle_count;
     if(set)for(uint32_t i=0;i<set->triangle_count;i++){
         const SA3DSECTriangle*t=&set->triangles[i];
-        if(!(t->max_x<s->min_x||t->min_x>s->max_x||t->max_z<s->min_z||t->min_z>s->max_z))s->triangles[s->triangle_count++]=*t;
+        if(dynamic_triangle_in_region(s,t))memcpy(&s->triangles[s->triangle_count++],t,sizeof(*t));
     }
     if(!build_index(s))return 0;
     if(p&&instance!=UINT32_MAX){

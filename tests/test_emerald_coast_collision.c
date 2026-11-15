@@ -230,6 +230,34 @@ static void camera_ray_cases(void){
     float c[3]={0,-40,0},f[3]={0,-20,0};assert(!sa3ds_ec_collision_camera_ray(&s,c,f,4));
     puts("Stage camera ray (4370C0 -> 439620 port): PASS floor clip, miss leaves ray, water flag skipped");
 }
+static void dynamic_residency_cases(SA3DSECCollision*s){
+    SA3DSECDynamicSet set={0};
+    const float points[][3]={{0,5,0},{0,5,20},{20,5,0}};
+    const uint16_t indices[]={0,1,2};
+    SA3CMatrix transform={0};
+    transform.m[0]=transform.m[5]=transform.m[10]=transform.m[15]=1;
+    transform.m[12]=600;
+    s->dynamic=&set;
+    uint32_t static_count=s->static_triangle_count;
+    uint32_t serial=s->query_serial;
+    uint32_t *references=s->references;
+    assert(sa3ds_ec_dynamic_add(&set,1,1,points,3,indices,3,&transform));
+    assert(sa3ds_ec_collision_apply_dynamic(s,NULL));
+    assert(s->triangle_count==static_count&&s->references==references&&s->query_serial==serial);
+    transform.m[12]=0;
+    assert(sa3ds_ec_dynamic_add(&set,2,1,points,3,indices,3,&transform));
+    assert(sa3ds_ec_collision_apply_dynamic(s,NULL)&&s->triangle_count==static_count+1);
+    SA1PlayerState player={.surface_id=(int32_t)static_count};
+    assert(sa3ds_ec_dynamic_remove(&set,1));
+    references=s->references;
+    assert(sa3ds_ec_collision_apply_dynamic(s,&player));
+    assert(s->references==references&&player.surface_id==(int32_t)static_count);
+    assert(sa3ds_ec_dynamic_remove(&set,2));
+    assert(sa3ds_ec_collision_apply_dynamic(s,&player));
+    assert(s->triangle_count==static_count&&player.surface_id==-1);
+    s->dynamic=NULL;
+}
+
 int main(int argc,char**argv){
     npc_floor_cases();camera_ray_cases();
     assert(argc>=2);size_t n;unsigned char*b=load(argv[1],&n);SA3DSECCollision s;
@@ -355,6 +383,7 @@ int main(int argc,char**argv){
         assert(fabsf(p.pos.x-s.world.reset_position.x)<0.001f);
         assert(fabsf(p.pos.z-s.world.reset_position.z)<0.001f);
         puts("Emerald Coast collision synthetic floor/jump/landing/swept-wall/slope/bounds: PASS");
+        dynamic_residency_cases(&s);
     }
     sa3ds_ec_collision_destroy(&s);b[n-1]^=1;assert(!sa3ds_ec_collision_open(&s,b,n));free(b);return 0;
 }
