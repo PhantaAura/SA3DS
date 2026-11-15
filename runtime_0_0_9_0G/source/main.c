@@ -1711,7 +1711,7 @@ static int draw_panels(void){
 }
 static C3D_Tex g_tikal_textures[8];
 static SA3DSLabVertex *g_tikal_quad;
-static unsigned g_tikal_loaded,g_tikal_frame,g_tikal_draws,g_tikal_rise;
+static unsigned g_tikal_loaded,g_tikal_sprite_tick,g_tikal_draws,g_tikal_rise;
 static int g_tikal_visible;
 static SA1Vec3 g_tikal_position;
 static float g_tikal_hover_y,g_tikal_size,g_tikal_alpha;
@@ -1836,7 +1836,7 @@ static void tick_tikal(void){
             g_tikal_position=hover;
         }
         g_tikal_visible=1;
-        g_tikal_frame=was_visible?(g_tikal_frame+1u)%16u:0;
+        g_tikal_sprite_tick=was_visible?(g_tikal_sprite_tick+1u)%64u:0;
         SA1Vec3 orb_delta=sa1_vec3_sub(player,hover);
         if(g_tikal_hint_ready&&g_tikal_rise==61&&!g_tikal_remaining&&!g_tikal_cooldown&&
            g_numbered_target<0&&g_player.action_state!=SA1_ACTION_HURT&&
@@ -1875,8 +1875,15 @@ static void draw_tikal(void){
     /* 4A366D scales the 64-pixel frame by size/32. The quad is eight
        units across at size 4, so scale its camera-facing X/Y by size/4. */
     Mtx_Scale(&model,g_tikal_size*0.25f,g_tikal_size*0.25f,1.f);
-    for(unsigned i=0;i<3;i++)model.r[i].w=g_ec_view.r[i].x*g_tikal_position.x+
-        g_ec_view.r[i].y*g_tikal_position.y+g_ec_view.r[i].z*g_tikal_position.z+g_ec_view.r[i].w;
+    /* 4A39F0 adds the child sprite's two sine offsets to the parent
+       position. Keep them visual so the hint trigger uses the parent. */
+    SA1Vec3 sprite=g_tikal_position;
+    float sway=(float)spring_source_sin(&g_rings,(uint16_t)(g_tikal_sprite_tick*0x400u))*0.25f;
+    sprite.x+=sway;
+    sprite.z+=sway;
+    sprite.y+=(float)spring_source_sin(&g_rings,(uint16_t)(g_tikal_sprite_tick*0x1000u))*0.25f;
+    for(unsigned i=0;i<3;i++)model.r[i].w=g_ec_view.r[i].x*sprite.x+
+        g_ec_view.r[i].y*sprite.y+g_ec_view.r[i].z*sprite.z+g_ec_view.r[i].w;
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER,g_u_modelview,&model);
     C3D_CullFace(GPU_CULL_NONE);
     C3D_DepthTest(true,GPU_GREATER,GPU_WRITE_COLOR);
@@ -1886,7 +1893,7 @@ static void draw_tikal(void){
     C3D_TexEnvFunc(env,C3D_Both,GPU_MODULATE);
     unsigned alpha=(unsigned)(g_tikal_alpha*255.f+0.5f);
     C3D_TexEnvColor(env,(alpha<<24)|0xffffffu);
-    C3D_TexBind(0,&g_tikal_textures[g_tikal_frame/2]);
+    C3D_TexBind(0,&g_tikal_textures[(g_tikal_sprite_tick/2u)%8u]);
     C3D_BufInfo *buffer=C3D_GetBufInfo();BufInfo_Init(buffer);
     BufInfo_Add(buffer,g_tikal_quad,sizeof(*g_tikal_quad),2,0x10);
     C3D_DrawArrays(GPU_TRIANGLES,0,6);
