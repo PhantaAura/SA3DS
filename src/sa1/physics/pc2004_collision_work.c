@@ -74,3 +74,37 @@ SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
         end.z - distance * plane_normal.z,
     };
 }
+
+float sa1_pc2004_collision_prepass_length(
+    SA1Vec3 up, SA1Vec3 gravity, SA1Vec3 motion, int supported,
+    const SA1PC2004CollisionCandidate *candidates, size_t count) {
+    float length = sqrtf(motion.x * motion.x + motion.y * motion.y + motion.z * motion.z);
+    if (length == 0.0f) return length;
+    float closest = 1000.0f;
+    int found = 0;
+    for (size_t i = 0; i < count; i++) {
+        const SA1PC2004CollisionCandidate *candidate = &candidates[i];
+        int ground_side = sa1_pc2004_collision_ground_side(up, candidate->normal, gravity, 0);
+        double inward = (double)motion.x * candidate->normal.x +
+            (double)motion.y * candidate->normal.y +
+            (double)motion.z * candidate->normal.z;
+        if (supported ? (!ground_side && inward < 0.0) : ground_side) {
+            if (candidate->corrected_distance < closest) {
+                closest = candidate->corrected_distance;
+                found = 1;
+            }
+        }
+    }
+    return found && closest < length ? closest : length;
+}
+
+void sa1_pc2004_collision_response_order(size_t count, size_t promoted,
+    size_t previous, int moving_support, size_t *order) {
+    size_t next = 0;
+    if (promoted < count) order[next++] = promoted;
+    for (size_t i = 0; i < count; i++) {
+        size_t index = moving_support ? i : count - 1 - i;
+        if (index != promoted && index != previous) order[next++] = index;
+    }
+    if (previous < count && previous != promoted) order[next] = previous;
+}

@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -62,6 +63,26 @@ int main(void) {
         (SA1Vec3){-2,2,0});
     assert(nearf(projected.x,6.5f) && nearf(projected.y,8.5f) &&
            nearf(projected.z,4.0f));
+
+    const SA1PC2004CollisionCandidate candidates[] = {
+        {{0,1,0}, 1.5f}, {{-1,0,0}, 3.0f},
+        {{1,0,0}, 0.5f}, {{0,0,1}, 1.0f},
+    };
+    SA1Vec3 motion = {5,0,0};
+    assert(nearf(sa1_pc2004_collision_prepass_length(up,gravity,motion,1,candidates,4),3.0f));
+    assert(nearf(sa1_pc2004_collision_prepass_length(up,gravity,motion,0,candidates,4),1.5f));
+    assert(nearf(sa1_pc2004_collision_prepass_length(up,gravity,(SA1Vec3){3,0,0},1,candidates,4),3.0f));
+    assert(nearf(sa1_pc2004_collision_prepass_length(up,gravity,motion,1,NULL,0),5.0f));
+    size_t order[5];
+    sa1_pc2004_collision_response_order(5,1,3,0,order);
+    assert(memcmp(order,(size_t[]){1,4,2,0,3},sizeof order)==0);
+    sa1_pc2004_collision_response_order(5,1,3,1,order);
+    assert(memcmp(order,(size_t[]){1,0,2,4,3},sizeof order)==0);
+    sa1_pc2004_collision_response_order(5,3,3,0,order);
+    assert(memcmp(order,(size_t[]){3,4,2,1,0},sizeof order)==0);
+    sa1_pc2004_collision_response_order(5,SIZE_MAX,SIZE_MAX,0,order);
+    assert(memcmp(order,(size_t[]){4,3,2,1,0},sizeof order)==0);
+    sa1_pc2004_collision_response_order(0,SIZE_MAX,SIZE_MAX,0,NULL);
 
     puts("PC 2004 collision-work layout/init tests: PASS");
     return 0;

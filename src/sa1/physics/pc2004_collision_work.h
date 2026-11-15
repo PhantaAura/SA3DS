@@ -80,4 +80,23 @@ int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity
 SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
     SA1Vec3 tangent_step, SA1Vec3 plane_point, SA1Vec3 plane_normal);
 
+/* Candidate from the first pass. The distance uses the radius-corrected
+ * center returned by 453820, measured from the original sweep center. */
+typedef struct {
+    SA1Vec3 normal;
+    float corrected_distance;
+} SA1PC2004CollisionCandidate;
+
+/* Return the clipped length for the 43CCE0/43D180 prepass. A strictly
+ * shorter result promotes that object's entry in the second pass. */
+float sa1_pc2004_collision_prepass_length(
+    SA1Vec3 up, SA1Vec3 gravity, SA1Vec3 motion, int supported,
+    const SA1PC2004CollisionCandidate *candidates, size_t count);
+
+/* Produce input indices in second-pass order. promoted and previous may
+ * be SIZE_MAX. Input is filtered and contains one entry per collision
+ * identity; order has room for count indices. */
+void sa1_pc2004_collision_response_order(size_t count, size_t promoted,
+    size_t previous, int moving_support, size_t *order);
+
 #endif

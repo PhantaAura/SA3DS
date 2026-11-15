@@ -203,3 +203,22 @@ than an exception for that edge. The wall pass now uses the same
 ground-departure action and animation transition as the controller
 when revalidation finds no support. Its height fallback also handles
 dynamic platforms, which have no static triangle index.
+
+The collision step runs two passes over the objects gathered by
+450C10. The first pass uses the current travel length. With the
+incoming low ground bits set, 43CCE0 can shorten that length for an
+opposing non-ground-side face. With those bits clear, 43D180 can
+shorten it for a ground-side face. Both use the distance between the
+sweep center and a face's radius-corrected point. The last object that
+shortens the first-pass displacement leads the response pass. The
+rest are traversed in reverse input order for static support and
+forward input order for a moving support task. The previous support
+identity moves to the end unless it was promoted.
+
+In the Act 1 row 0 → 12 replay, the five hits on object 426 leave the
+grounded prepass length at 12.5125 on tick 13. This narrows
+the first-detachment investigation to the support response rather
+than a length clamp within that object. The host trace propagates length
+clamps in resident object order and reports response order for the
+objects it hit. It omits the source's object discovery, mutable
+velocity side effects and ordered re-sweeps.
