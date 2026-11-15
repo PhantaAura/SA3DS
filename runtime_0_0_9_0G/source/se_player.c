@@ -14,13 +14,13 @@ static struct {
  int ready;uint8_t*bank[8];size_t bank_size[8];SA3DSSeThreshold thresh[80];size_t thresh_count;
  int16_t*pcm;ndspWaveBuf wave[SE_VOICES];unsigned next;uint32_t played,missing,truncated;
 } g;
-static uint8_t*read_all(const char*path,size_t*size){
+static uint8_t*read_all(const char*path,size_t*size,size_t limit){
  FILE*f=fopen(path,"rb");if(!f)return NULL;fseek(f,0,SEEK_END);long n=ftell(f);fseek(f,0,SEEK_SET);
- uint8_t*b=n>0?malloc((size_t)n):NULL;if(b&&fread(b,1,(size_t)n,f)!=(size_t)n){free(b);b=NULL;}fclose(f);if(b)*size=(size_t)n;return b;
+ uint8_t*b=n>0&&(unsigned long)n<=limit?malloc((size_t)n):NULL;if(b&&fread(b,1,(size_t)n,f)!=(size_t)n){free(b);b=NULL;}fclose(f);if(b)*size=(size_t)n;return b;
 }
 int sa3ds_se_init(const char*dir){
  if(g.ready)return 1;
- char path[160];snprintf(path,sizeof path,"%s/se_map.sa3dspak",dir);size_t n=0;uint8_t*map=read_all(path,&n);if(!map)return 0;
+ char path[160];snprintf(path,sizeof path,"%s/se_map.sa3dspak",dir);size_t n=0;uint8_t*map=read_all(path,&n,SIZE_MAX);if(!map)return 0;
  SA3DSPak pak;SA3DSPakChunk t,s;int ok=sa3dspak_open(&pak,map,n)==SA3DSPAK_OK&&sa3dspak_find(&pak,"SE_THRESH",&t)==SA3DSPAK_OK&&
   sa3dspak_find(&pak,"SE_SLOTS",&s)==SA3DSPAK_OK&&t.size%8==0&&t.size/8<=80&&s.size%32==0;
  if(ok){
@@ -29,7 +29,7 @@ int sa3ds_se_init(const char*dir){
    uint8_t slot=s.data[i*32];char name[32];memcpy(name,s.data+i*32+1,31);name[31]=0;
    if(slot>=8)continue;
    snprintf(path,sizeof path,"%s/%s.dat",dir,name);
-   g.bank[slot]=read_all(path,&g.bank_size[slot]);if(!g.bank[slot]||!sa3ds_sound_bank_count(g.bank[slot],g.bank_size[slot]))ok=0;
+   g.bank[slot]=read_all(path,&g.bank_size[slot],SIZE_MAX);if(!g.bank[slot]||!sa3ds_sound_bank_count(g.bank[slot],g.bank_size[slot]))ok=0;
   }
  }
  free(map);
@@ -39,15 +39,43 @@ int sa3ds_se_init(const char*dir){
  g.ready=1;return 1;
 }
 static int16_t*g_voice_pcm;static ndspWaveBuf g_voice_wave;static uint32_t g_voice_played,g_voice_missing;
+static struct {
+ uint8_t *bytes;
+ size_t size;
+ uint32_t number;
+} g_preloaded_voice;
+
+static uint8_t *read_voice(uint32_t number,size_t *size,size_t limit){
+ char path[96];
+ snprintf(path,sizeof path,"sdmc:/3ds/SA3DS/assets/voice/%04lu.adx",(unsigned long)number);
+ return read_all(path,size,limit);
+}
+
+void sa3ds_voice_preload(uint32_t number){
+ if(!g.ready||number>9999||(g_preloaded_voice.bytes&&g_preloaded_voice.number==number))return;
+ /* Keep at most one compressed clip. Larger files retain SD reads on demand and can still use the ordinary playback limit. */
+ size_t size=0;
+ uint8_t *bytes=read_voice(number,&size,320u*1024u);
+ SA3DSAdxInfo info;
+ if(!bytes||!sa3ds_adx_open(&info,bytes,size)){free(bytes);return;}
+ free(g_preloaded_voice.bytes);
+ g_preloaded_voice.bytes=bytes;
+ g_preloaded_voice.size=size;
+ g_preloaded_voice.number=number;
+}
+
 /*425500/425575: voice N plays SoundData\VOICE_??\WMA\%04d (the owner Steam
  *install stores these as ADX); staged to sdmc:/3ds/SA3DS/assets/voice.*/
 int sa3ds_voice_play(uint32_t number){
  if(!g.ready||number>9999)return 0;
- char path[96];snprintf(path,sizeof path,"sdmc:/3ds/SA3DS/assets/voice/%04lu.adx",(unsigned long)number);
- size_t n=0;uint8_t*b=read_all(path,&n);SA3DSAdxInfo in;
- if(!b||!sa3ds_adx_open(&in,b,n)){free(b);g_voice_missing++;return 0;}
+ size_t n=g_preloaded_voice.size;
+ const uint8_t *b=g_preloaded_voice.number==number?g_preloaded_voice.bytes:NULL;
+ uint8_t *local=NULL;
+ if(!b){local=read_voice(number,&n,SIZE_MAX);b=local;}
+ SA3DSAdxInfo in;
+ if(!b||!sa3ds_adx_open(&in,b,n)){free(local);g_voice_missing++;return 0;}
  if(!g_voice_pcm)g_voice_pcm=linearAlloc(SE_MAX_SAMPLES*2);
- if(!g_voice_pcm){free(b);return 0;}
+ if(!g_voice_pcm){free(local);return 0;}
  ndspChnWaveBufClear(9);ndspChnSetInterp(9,NDSP_INTERP_LINEAR);ndspChnSetFormat(9,NDSP_FORMAT_MONO_PCM16);
  SA3DSAdxState st;memset(&st,0,sizeof st);size_t pos=in.data_offset,fb=(size_t)in.block_size*in.channels;uint32_t k=0;int16_t tmp[64];
  while(st.sample<in.total_samples&&pos+fb<=n&&k+32<=SE_MAX_SAMPLES){
@@ -55,7 +83,7 @@ int sa3ds_voice_play(uint32_t number){
   pos+=fb;for(unsigned i=0;i<32;i++)g_voice_pcm[k+i]=in.channels==2?(int16_t)((tmp[i*2]+tmp[i*2+1])/2):tmp[i];
   k+=32;
  }
- free(b);if(k>in.total_samples)k=in.total_samples;if(!k)return 0;
+ free(local);if(k>in.total_samples)k=in.total_samples;if(!k)return 0;
  DSP_FlushDataCache(g_voice_pcm,k*2);ndspChnSetRate(9,(float)in.rate);float mix[12]={0};mix[0]=mix[1]=1.0f;ndspChnSetMix(9,mix);
  memset(&g_voice_wave,0,sizeof g_voice_wave);g_voice_wave.data_vaddr=g_voice_pcm;g_voice_wave.nsamples=k;ndspChnWaveBufAdd(9,&g_voice_wave);
  g_voice_played++;return 1;
@@ -85,6 +113,8 @@ int sa3ds_se_play(uint32_t id){
  ndspChnWaveBufAdd(1+v,&g.wave[v]);g.played++;return 1;
 }
 void sa3ds_se_exit(void){
+ free(g_preloaded_voice.bytes);
+ memset(&g_preloaded_voice,0,sizeof g_preloaded_voice);
  for(unsigned v=0;v<SE_VOICES&&g.ready;v++)ndspChnReset(1+v);
  for(unsigned i=0;i<8;i++){free(g.bank[i]);g.bank[i]=NULL;}
  if(g.pcm){linearFree(g.pcm);g.pcm=NULL;}if(g_voice_pcm){ndspChnReset(9);linearFree(g_voice_pcm);g_voice_pcm=NULL;}g.ready=0;

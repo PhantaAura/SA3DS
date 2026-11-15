@@ -3816,6 +3816,7 @@ static void start_stage_bgm(void){
     char path[96];snprintf(path,sizeof(path),"sdmc:/3ds/SA3DS/assets/bgm/ecoast%lu.adx",(unsigned long)g_ec_act_index+1);
     int ok=sa3ds_bgm_play(path);g_bgm_started=1;
     {static int se_tried;if(!se_tried){se_tried=1;boot_log("SE",sa3ds_se_init("sdmc:/3ds/SA3DS/assets/se")?"Owner SE banks loaded (COMMON/EC01/CHECK/ENEMY/EC05/SONIC)":"Owner SE banks unavailable; effects silent");}}
+    if(g_ec_act_index==1&&g_tikal_hint_ready)sa3ds_voice_preload(g_tikal_voice);
     char note[140];snprintf(note,sizeof(note),"%s %s",ok?"Streaming owner ADX":"Owner ADX missing/invalid, silent:",path);boot_log("BGM",note);
 }
 static void load_camera_regions(void){
