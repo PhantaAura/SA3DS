@@ -7,6 +7,8 @@
 #include <math.h>
 #include "emerald_coast_residency.h"
 #include "dash_panel.h"
+#include "pc2004_sphere_sweep.h"
+#include "steam_player_parameters.h"
 #include "ccl_wall.h"
 #include "spring_player.h"
 #include "steam_flat.h"
@@ -54,6 +56,37 @@ static void wall_sweep(const unsigned char *rows, unsigned count,
   player->pos.z+=center.z+corrected.z*cs-corrected.x*sn-current.z;
  }
 }
+/* Compare the detached tick with the original per-polygon primitive.
+   This skips the source candidate scheduler and response arbitration. */
+static void report_source_sweep(const SA3DSECCollision *collision, unsigned tick,
+    SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 delta){
+ float radius=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.height*0.5f;
+ SA1Vec3 center=sa1_vec3_add(previous_task,sa1_vec3_scale(previous_up,radius));
+ const float start[]={center.x,center.y,center.z};
+ const float movement[]={delta.x,delta.y,delta.z};
+ unsigned hits=0;
+ for(uint32_t i=0;i<collision->triangle_count;i++){
+  const SA3DSECTriangle *t=&collision->triangles[i];
+  /* The primitive expands the triangle by four percent around its centroid. */
+  float margin_x=radius+0.04f*(t->max_x-t->min_x);
+  float margin_z=radius+0.04f*(t->max_z-t->min_z);
+  if(t->max_x<fminf(center.x,center.x+delta.x)-margin_x||
+     t->min_x>fmaxf(center.x,center.x+delta.x)+margin_x||
+     t->max_z<fminf(center.z,center.z+delta.z)-margin_z||
+     t->min_z>fmaxf(center.z,center.z+delta.z)+margin_z)continue;
+  SA3DSSweepTriangle triangle={.v={{t->a.x,t->a.y,t->a.z},{t->b.x,t->b.y,t->b.z},
+      {t->c.x,t->c.y,t->c.z}},.flags=t->flags};
+  SA3DSSweepHit hit;
+  if(!sa3ds_pc2004_sweep_triangle(&triangle,start,movement,radius,&hit))continue;
+  SA1Vec3 normal={hit.signed_normal[0],hit.signed_normal[1],hit.signed_normal[2]};
+  printf("\n  source sweep tick=%u polygon=%u/%u alignment=%.4f height=%.3f->%.3f",
+      tick,t->source_instance,t->source_triangle,sa1_vec3_dot(normal,previous_up),
+      hit.start_height,hit.end_height);
+  hits++;
+ }
+ if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);
+}
+
 int main(int argc,char **argv){
  int chain=(argc==4||argc==5)&&!strcmp(argv[3],"--chain");
  if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN]]\n",argv[0]);return 2;}
@@ -87,7 +120,7 @@ int main(int argc,char **argv){
    unsigned char pending[2046]={0};
    actors[i]=(SA3DSDashPanel){.initialized=1,.cooldown=params.lockout,.last_player=0};
    float lowest=s.pos.y;unsigned tick,air=0;
-   int reported_apex=0,reported_unsupported_descent=0;
+   int reported_apex=0,reported_unsupported_descent=0,reported_source_sweep=0;
    SA1Vec3 reset_from={0};
    for(tick=0;tick<240;tick++){
     if(sa3ds_ec_residency_needs_recenter(&col,s.pos))
@@ -96,10 +129,15 @@ int main(int argc,char **argv){
     sa3ds_spring_player_begin(&s,&cmd,&in);
     int was_grounded=s.grounded;
     SA1Vec3 previous_task=sa3ds_ec_task_origin(&s);
+    SA1Vec3 previous_up=s.ground_normal;
     SA1Vec3 prev=s.pos;col.reference_y=s.pos.y;
     sa1_physics_step_steam_sonic_flat(&s,&in,0,&col.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
     if(s.sim_frame==0){reset_from=prev;break;}
     sa3ds_spring_player_tail(&s);
+    if(chain&&!reported_source_sweep&&was_grounded&&!s.grounded){
+     report_source_sweep(&col,tick,previous_task,previous_up,sa1_vec3_sub(s.pos,prev));
+     reported_source_sweep=1;
+    }
     sa3ds_ec_collision_resolve_walls(&col,prev,&s);
     if(chain){
      SA3CMatrix model;

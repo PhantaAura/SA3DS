@@ -130,3 +130,12 @@ instance 426. At the loss-of-support tick the tested plane crossings either
 fell outside the finite triangles or were on the plane the controller was
 already leaving. Removing the sweep's descending-Y gate experimentally left
 the failing trajectory unchanged. The gate remains in the runtime.
+
+The chained replay also compares its first lost-ground tick against the
+PC2004 per-polygon sphere sweep, evaluated from the port's pose and velocity
+at the normal Sonic body radius. On the row 0 → 12 route, the sweep sees five
+faces of the same ramp on tick 13, including faces with normal alignment
+above 0.96. The imported ramp is present and the per-polygon sweep can hit
+it. The host replay still resets. This comparison does not run the retail
+candidate scheduler or apply the original response, which remain necessary
+to reproduce the loop without changing collision tolerances blindly.
