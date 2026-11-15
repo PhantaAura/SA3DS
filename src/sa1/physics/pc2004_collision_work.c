@@ -1,5 +1,6 @@
 #include "pc2004_collision_work.h"
 
+#include <math.h>
 #include <string.h>
 
 void sa1_pc2004_collision_work_init(
@@ -28,4 +29,22 @@ void sa1_pc2004_collision_work_mirror_static_contact(
     work->selected_nmb = selected_index;
     work->normal = contact->normal;
     work->onpoly = contact->point;
+}
+
+int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity,
+                                     int force_ground_side) {
+    /* 438410 stores the dot as a float before acos, then truncates BAMS. */
+    float alignment = (float)((double)up.x * normal.x +
+        (double)up.y * normal.y + (double)up.z * normal.z);
+    if (!isfinite(alignment)) return 0;
+    if (alignment >= 1.0f) return 1;
+    if (alignment > -1.0f) {
+        double angle = acos((double)alignment) * (65536.0 * 0.15915497620314795);
+        if (angle < 0x2c01) return 1;
+    }
+    float old_gravity_dot = (float)((double)gravity.x * up.x +
+        (double)gravity.y * up.y + (double)gravity.z * up.z);
+    double candidate_gravity_dot = (double)gravity.x * normal.x +
+        (double)gravity.y * normal.y + (double)gravity.z * normal.z;
+    return force_ground_side || candidate_gravity_dot < old_gravity_dot;
 }

@@ -139,3 +139,12 @@ above 0.96. The imported ramp is present and the per-polygon sweep can hit
 it. The host replay still resets. This comparison does not run the retail
 candidate scheduler or apply the original response, which remain necessary
 to reproduce the loop without changing collision tolerances blindly.
+
+The source ground-side gate at 43CCE0/43D180 compares the new normal to
+the actor's prior Up angle (through 438410). It accepts angles through
+0x2C00 BAMS, or accepts a larger angle when the candidate normal points
+more against gravity. The 43D360 response has an additional object flag
+exception. Applied to the host replay's first detachment with ordinary
+gravity, the gate accepts all five reported ramp candidates. This rules
+out the source angle gate as the reason those particular candidates
+would be discarded. Candidate ordering and native response remain open.

@@ -68,4 +68,10 @@ void sa1_pc2004_collision_work_mirror_static_contact(
     const SA1Contact *contact,
     uint16_t selected_index);
 
+/* Ground-side candidate gate shared by 43CCE0, 43D180 and 43D360.
+ * Normals are unit length. Gravity is supplied in world space. The
+ * object flag 0x4000 exception applies to the 43D360 response only. */
+int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity,
+                                     int force_ground_side);
+
 #endif

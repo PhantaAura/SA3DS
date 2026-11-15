@@ -8,6 +8,7 @@
 #include "emerald_coast_residency.h"
 #include "dash_panel.h"
 #include "pc2004_sphere_sweep.h"
+#include "pc2004_collision_work.h"
 #include "steam_player_parameters.h"
 #include "ccl_wall.h"
 #include "spring_player.h"
@@ -79,9 +80,10 @@ static void report_source_sweep(const SA3DSECCollision *collision, unsigned tick
   SA3DSSweepHit hit;
   if(!sa3ds_pc2004_sweep_triangle(&triangle,start,movement,radius,&hit))continue;
   SA1Vec3 normal={hit.signed_normal[0],hit.signed_normal[1],hit.signed_normal[2]};
-  printf("\n  source sweep tick=%u polygon=%u/%u alignment=%.4f height=%.3f->%.3f",
+  printf("\n  source sweep tick=%u polygon=%u/%u alignment=%.4f height=%.3f->%.3f groundSide=%d",
       tick,t->source_instance,t->source_triangle,sa1_vec3_dot(normal,previous_up),
-      hit.start_height,hit.end_height);
+      hit.start_height,hit.end_height,
+      sa1_pc2004_collision_ground_side(previous_up,normal,(SA1Vec3){0,-1,0},0));
   hits++;
  }
  if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);

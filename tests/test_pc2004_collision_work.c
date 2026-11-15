@@ -50,6 +50,13 @@ int main(void) {
     assert(nearf(w.normal2.x, 0.0f) && nearf(w.pshbk.x, 0.0f));
     assert(nearf(w.anaspdh.x, 0.0f) && nearf(w.anaspdv.x, 0.0f));
 
+    SA1Vec3 up={0,1,0}, gravity={0,-1,0};
+    assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){0.8660254f,0.5f,0},gravity,0));
+    assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){0.9238795f,0.3826834f,0},gravity,0));
+    assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,1));
+    assert(sa1_pc2004_collision_ground_side((SA1Vec3){1,0,0},up,gravity,0));
+    assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0));
+
     puts("PC 2004 collision-work layout/init tests: PASS");
     return 0;
 }
