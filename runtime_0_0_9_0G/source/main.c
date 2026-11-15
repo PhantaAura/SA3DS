@@ -459,6 +459,39 @@ static void boot_log(const char *phase, const char *detail) {
     fclose(f);
 }
 
+/* Keep recent movement events in RAM during ordinary play. Explicit probes
+   still need immediate evidence when they pause without exiting. */
+enum { MOVEMENT_LOG_CAPACITY=32 };
+static struct {
+    const char *phase;
+    unsigned boot_step;
+    char detail[180];
+} g_movement_log[MOVEMENT_LOG_CAPACITY];
+static unsigned g_movement_log_next,g_movement_log_count;
+
+static void log_movement_event(const char *phase,const char *detail,int probe){
+    if(probe){boot_log(phase,detail);return;}
+    unsigned slot=g_movement_log_next;
+    g_movement_log[slot].phase=phase;
+    g_movement_log[slot].boot_step=g_boot_steps;
+    snprintf(g_movement_log[slot].detail,sizeof(g_movement_log[slot].detail),"%s",detail);
+    g_movement_log_next=(slot+1)%MOVEMENT_LOG_CAPACITY;
+    if(g_movement_log_count<MOVEMENT_LOG_CAPACITY)g_movement_log_count++;
+}
+
+static void flush_movement_log(void){
+    if(!g_movement_log_count)return;
+    FILE *file=fopen("sdmc:/3ds/SA3DS/pass10_boot.log","ab");
+    if(!file)return;
+    unsigned first=(g_movement_log_next+MOVEMENT_LOG_CAPACITY-g_movement_log_count)%MOVEMENT_LOG_CAPACITY;
+    for(unsigned i=0;i<g_movement_log_count;i++){
+        unsigned slot=(first+i)%MOVEMENT_LOG_CAPACITY;
+        fprintf(file,"%03u %s %s\n",g_movement_log[slot].boot_step,
+            g_movement_log[slot].phase,g_movement_log[slot].detail);
+    }
+    fclose(file);
+}
+
 static void boot_checkpoint(const char *step) {
     ++g_boot_steps;
     consoleSelect(&g_boot_console);
@@ -1352,7 +1385,7 @@ static void tick_springs(void){
                 char note[180];snprintf(note,sizeof(note),"tick=%llu row=%lu kind=%u command=%u task=%.3f,%.3f,%.3f velocity=%.3f,%.3f,%.3f",
                     (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,kind,result.launch.command.command,
                     result.launch.position.x,result.launch.position.y,result.launch.position.z,
-                    g_player.vel.x,g_player.vel.y,g_player.vel.z);boot_log("SPRING_LAUNCH",note);
+                    g_player.vel.x,g_player.vel.y,g_player.vel.z);log_movement_event("SPRING_LAUNCH",note,g_spring_probe);
             }
         }
         if(result.enqueue_collision&&g_movement_ccl_queued<256){
@@ -1467,7 +1500,7 @@ static void tick_jump_pad(uint32_t index,const SA3DSMovementPlacement *p,
             snprintf(note,sizeof(note),"tick=%llu row=%lu control=%d velocity=%.3f,%.3f,%.3f",
                 (unsigned long long)g_player.sim_frame,(unsigned long)p->source_row,
                 g_player.pc2004_control_timer,g_player.vel.x,g_player.vel.y,g_player.vel.z);
-            boot_log("JUMP_PAD_LAUNCH",note);
+            log_movement_event("JUMP_PAD_LAUNCH",note,g_panel_probe);
             if(g_panel_probe&&g_panel_probe_jump&&p->source_row==g_panel_probe_row)g_panel_probe_boosts++;
             sa3ds_se_play(0x2e2);
         }
@@ -1637,7 +1670,7 @@ static void tick_panels(const SA1PlayerState *queued_player,SA1Vec3 previous){
             char note[160];snprintf(note,sizeof(note),"tick=%llu row=%lu speed=%.3f lockout=%ld control=%d velocity=%.3f,%.3f,%.3f",
                 (unsigned long long)g_player.sim_frame,(unsigned long)p.source_row,result.parameters.speed,
                 (long)result.parameters.lockout,g_player.pc2004_control_timer,g_player.vel.x,g_player.vel.y,g_player.vel.z);
-            boot_log("PANEL_BOOST",note);sa3ds_se_play(0x2e2); /*7A461D*/
+            log_movement_event("PANEL_BOOST",note,g_panel_probe);sa3ds_se_play(0x2e2); /*7A461D*/
             if(g_panel_probe&&p.source_row==g_panel_probe_row)g_panel_probe_boosts++;
         }
         if(result.enqueue_collision&&g_movement_ccl_queued<256){
@@ -4995,6 +5028,7 @@ int main(void) {
 
     ec_write_stalls();
     ec_write_region_log();
+    flush_movement_log();
     cleanup();
     sa3ds_se_exit();sa3ds_bgm_exit();
     C3D_Fini(); romfsExit(); gfxExit();
