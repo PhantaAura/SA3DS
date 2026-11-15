@@ -108,3 +108,28 @@ void sa1_pc2004_collision_response_order(size_t count, size_t promoted,
     }
     if (previous < count && previous != promoted) order[next] = previous;
 }
+
+SA1Vec3 sa1_pc2004_fast_support_probe_center(SA1Vec3 task, SA1Vec3 up,
+    SA1Vec3 pushback, float local_vertical_speed, float pos_error) {
+    float height = 4.0f - (local_vertical_speed <= 0.0f ? pos_error : 0.0f);
+    return (SA1Vec3){
+        task.x + pushback.x + up.x * height,
+        task.y + pushback.y + up.y * height,
+        task.z + pushback.z + up.z * height,
+    };
+}
+
+int sa1_pc2004_collision_support_speed(SA1Vec3 travel, SA1Vec3 normal,
+    float run_speed, float local_vertical_speed, unsigned low_ground_bits,
+    uint32_t flags) {
+    if (local_vertical_speed > 0.0f && low_ground_bits != 0) return 0;
+
+    double length = sqrt((double)travel.x * travel.x +
+        (double)travel.y * travel.y + (double)travel.z * travel.z);
+    if (length == 0.0 || length < run_speed || (flags & 0x4000u) != 0) return 1;
+
+    double alignment = (double)(float)(travel.x / length) * normal.x +
+        (double)(float)(travel.y / length) * normal.y +
+        (double)(float)(travel.z / length) * normal.z;
+    return alignment <= 0.52;
+}

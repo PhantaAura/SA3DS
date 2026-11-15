@@ -222,3 +222,14 @@ than a length clamp within that object. The host trace propagates length
 clamps in resident object order and reports response order for the
 objects it hit. It omits the source's object discovery, mutable
 velocity side effects and ordered re-sweeps.
+
+For ordinary supported Sonic at or above dash speed, 444640
+re-sweeps the candidate with a radius of 5.1. It starts from the
+task origin plus the task-frame probe offset, with the first
+sweep's averaged radius correction relative to its starting center.
+On the row 0 → 12 replay at tick 13, the reconstructed fast probe
+records four hits and still selects 426/9. The final speed gate
+accepts that face, and projection using the confirmation sweep
+gives (2204.307, 20.425, 256.112). The probe takes its frame and
+velocity from the port replay. It does not simulate the full
+candidate response, special flags, or original runtime scheduling.

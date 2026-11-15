@@ -84,6 +84,20 @@ int main(void) {
     assert(memcmp(order,(size_t[]){4,3,2,1,0},sizeof order)==0);
     sa1_pc2004_collision_response_order(0,SIZE_MAX,SIZE_MAX,0,NULL);
 
+    SA1Vec3 probe = sa1_pc2004_fast_support_probe_center(
+        (SA1Vec3){1,2,3}, (SA1Vec3){0,0.8f,0.6f}, (SA1Vec3){0,1,0}, -0.1f, 2);
+    assert(nearf(probe.x,1) && nearf(probe.y,4.6f) && nearf(probe.z,4.2f));
+    probe = sa1_pc2004_fast_support_probe_center((SA1Vec3){0},up,(SA1Vec3){0},0,2);
+    assert(nearf(probe.y,2));
+    probe = sa1_pc2004_fast_support_probe_center((SA1Vec3){0},up,(SA1Vec3){0},1,2);
+    assert(nearf(probe.y,4));
+    assert(sa1_pc2004_collision_support_speed(motion,up,1.39f,0,1,0));
+    assert(!sa1_pc2004_collision_support_speed(motion,up,1.39f,0.01f,1,0));
+    assert(sa1_pc2004_collision_support_speed(motion,up,1.39f,0.01f,0,0));
+    assert(!sa1_pc2004_collision_support_speed(motion,(SA1Vec3){1,0,0},5,0,1,0));
+    assert(sa1_pc2004_collision_support_speed(motion,(SA1Vec3){1,0,0},5,0,1,0x4000));
+    assert(sa1_pc2004_collision_support_speed(motion,(SA1Vec3){1,0,0},5.1f,0,1,0));
+
     puts("PC 2004 collision-work layout/init tests: PASS");
     return 0;
 }

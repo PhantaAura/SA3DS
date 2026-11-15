@@ -99,4 +99,17 @@ float sa1_pc2004_collision_prepass_length(
 void sa1_pc2004_collision_response_order(size_t count, size_t promoted,
     size_t previous, int moving_support, size_t *order);
 
+/* Ordinary supported Sonic at or above dash speed. 444640 starts the
+ * confirmation sweep at task + Up * (4 + probe_offset) + pushback,
+ * where pushback is the averaged corrected center minus the first center.
+ * The confirmation radius is 5.1 in this specialization. */
+SA1Vec3 sa1_pc2004_fast_support_probe_center(SA1Vec3 task, SA1Vec3 up,
+    SA1Vec3 pushback, float local_vertical_speed, float pos_error);
+
+/* Final speed gate after geometric confirmation in 449EE5 position response.
+ * low_ground_bits is the current player-work status masked to bits 0 and 1. */
+int sa1_pc2004_collision_support_speed(SA1Vec3 travel, SA1Vec3 normal,
+    float run_speed, float local_vertical_speed, unsigned low_ground_bits,
+    uint32_t flags);
+
 #endif
