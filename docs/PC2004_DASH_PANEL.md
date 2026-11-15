@@ -244,3 +244,23 @@ These values supersede the confirmation values above, which used
 an unadjusted center on the first sweep. The fast branch is scoped
 to the replay's ordinary grounded frame and uses the port
 displacement as its estimate of local velocity.
+
+To apply that isolated response in the host replay, run
+`host_dash_panel_path COLLISION_PAK MOVEMENT_PAK --chain --apply-static-support`.
+On a lost-support frame it accepts a confirmed ground-side face
+only when one object hit and the prepass left travel unchanged.
+The confirmation position then feeds the port's usual ground-frame
+update and wall pass. This mode is independent of the SET WALL
+experiment and is off by default.
+
+For rows 0 → 12, the replay applies the correction at ticks 13,
+14, 16 and 17. At tick 18 the confirmation still finds the loop
+but the port displacement produces +0.006071 local vertical
+speed. This rejects the grounded position response. The replay
+has not reconstructed the original player's local velocity at
+that point, so using the displacement sign is a source of drift
+to resolve before attempting to enable this mode in gameplay.
+A private trace of the controller before position integration measures
++0.006035388 in its current local frame on the same tick. This confirms
+the positive sign comes from the port's movement state at that point,
+rather than from subtracting two rounded world positions.

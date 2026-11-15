@@ -61,7 +61,7 @@ static void wall_sweep(const unsigned char *rows, unsigned count,
    is re-swept, using the same resident polygon iteration as the trace. */
 static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t count,
     const float movement[3], SA1Vec3 start, SA1Vec3 task, SA1Vec3 up,
-    SA1Vec3 forward, SA1Vec3 corrected){
+    SA1Vec3 forward, SA1Vec3 corrected, int32_t first_index, SA1Contact *confirmed){
  const SA1SteamPlayerParameters *parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
  SA1Vec3 delta={movement[0],movement[1],movement[2]};
  if(sa1_vec3_dot(delta,forward)<parameters->dash_speed||
@@ -72,29 +72,36 @@ static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t c
      4.0f,vertical,parameters->pos_error);
  const float origin[]={center.x,center.y,center.z};
  SA3DSSweepObject object={0};
- uint32_t face=0;
+ size_t face=0;
  for(size_t i=0;i<count&&object.count<SA3DS_PC2004_SWEEP_MAX_HITS;i++){
   const SA3DSECTriangle *t=&triangles[i];
   SA3DSSweepTriangle triangle={.v={{t->a.x,t->a.y,t->a.z},{t->b.x,t->b.y,t->b.z},
       {t->c.x,t->c.y,t->c.z}},.flags=t->flags};
   SA3DSSweepHit hit;
   if(!sa3ds_pc2004_sweep_triangle(&triangle,origin,movement,5.1f,&hit))continue;
-  if(sa3ds_pc2004_sweep_record(&object,&hit))face=t->source_triangle;
+  if(sa3ds_pc2004_sweep_record(&object,&hit))face=i;
  }
  printf(" fastReprobeHits=%u",object.count);
  if(object.count){
   SA3DSSweepHit selected=object.selected;
   SA1Vec3 corrected_sum={object.corrected_sum[0],object.corrected_sum[1],object.corrected_sum[2]};
   SA1Vec3 normal={selected.signed_normal[0],selected.signed_normal[1],selected.signed_normal[2]};
-  printf(" fastReprobeFace=%u/%u speedGate=%d",triangles[0].source_instance,face,
-      sa1_pc2004_collision_support_speed(delta,normal,parameters->run_speed,
-          vertical,1,triangles[0].flags));
+  const SA3DSECTriangle *triangle=&triangles[face];
+  int speed_gate=sa1_pc2004_collision_support_speed(
+      delta,normal,parameters->run_speed,vertical,1,triangle->flags);
+  printf(" fastReprobeFace=%u/%u speedGate=%d",
+      triangle->source_instance,triangle->source_triangle,speed_gate);
+  if(!speed_gate)printf(" localVertical=%.6f",vertical);
   SA1Vec3 projected=sa1_pc2004_collision_support_position(
       sa1_vec3_scale(corrected_sum,1.0f/object.count),
       (SA1Vec3){selected.delta_xz[0],selected.delta_xz[1],selected.delta_xz[2]},
       (SA1Vec3){selected.plane_point[0],selected.plane_point[1],selected.plane_point[2]},
       normal);
   printf(" reprobeTask=%.3f,%.3f,%.3f",projected.x,projected.y,projected.z);
+  if(speed_gate&&sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},0))
+   *confirmed=(SA1Contact){.point=projected,.normal=normal,
+       .signed_distance=SA3DS_EC_CONTROLLER_SUPPORT,.surface_id=first_index+(int32_t)face,
+       .surface_flags=triangle->flags,.valid=true};
  }
 }
 
@@ -130,7 +137,7 @@ static float report_source_selection(SA3DSECCollision *collision, unsigned tick,
 /* This uses the port's movement and static candidates as sweep inputs.
    Clip propagation uses resident object order. The original broad phase
    and the second-pass collision response are outside this trace. */
-static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
+static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick,
     SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 previous, SA1Vec3 end,
     uint32_t previous_instance, SA1Vec3 forward){
  SA1Vec3 delta=sa1_vec3_sub(end,previous);
@@ -148,6 +155,7 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
  enum { OBJECT_LIMIT=1024 };
  uint32_t object_ids[OBJECT_LIMIT];
  size_t object_count=0, promoted=SIZE_MAX, previous_index=SIZE_MAX;
+ SA1Contact confirmed={0};
  unsigned hits=0;
  SA3DSSweepObject object={0};
  uint32_t object_start=0;
@@ -164,7 +172,7 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
         object.count,&object.selected,corrected_sum,previous_up,movement,candidates);
     report_fast_support_probe(&collision->triangles[object_start],i-object_start,
         movement,center,previous_task,previous_up,forward,
-        sa1_vec3_scale(corrected_sum,1.0f/object.count));
+        sa1_vec3_scale(corrected_sum,1.0f/object.count),(int32_t)object_start,&confirmed);
     if(clipped<current){
      for(unsigned axis=0;axis<3;axis++)movement[axis]*=clipped/current;
      promoted=object_count;
@@ -208,14 +216,41 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
   for(size_t i=0;i<object_count;i++)printf("%s%u",i?",":"",object_ids[order[i]]);
  }
  if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);
+ /* Applying an isolated confirmation is only comparable while no other
+    object or prepass clamp needs to take part in the response. */
+ return object_count==1&&promoted==SIZE_MAX ? confirmed : (SA1Contact){0};
+}
+
+static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState *before,
+    const SA1Contact *support){
+ SA1SurfaceFrame frame=sa1_surface_frame_make(support->normal,player->surface_forward);
+ player->grounded=true;
+ player->action_state=before->action_state;
+ player->pc2004_action_state=before->pc2004_action_state;
+ player->pc2004_action_state_valid=before->pc2004_action_state_valid;
+ player->animation_airborne_request=before->animation_airborne_request;
+ player->animation_airborne_request_valid=before->animation_airborne_request_valid;
+ player->jump_ticks=before->jump_ticks;
+ player->pos=sa1_vec3_add(support->point,sa1_vec3_scale(frame.up,SA3DS_EC_CONTROLLER_SUPPORT));
+ player->vel=sa1_project_on_plane(player->vel,frame.up);
+ player->ground_normal=frame.up;
+ player->ground_slope_radians=sa1_surface_slope_radians(frame.up);
+ player->surface_forward=frame.forward;
+ player->surface_right=frame.right;
+ player->surface_frame_active=true;
+ player->surface_id=support->surface_id;
+ player->surface_flags=support->surface_flags;
+ player->support_distance=support->signed_distance;
+ player->yaw=atan2f(frame.forward.x,frame.forward.z);
 }
 
 int main(int argc,char **argv){
  int chain=(argc==4||argc==5)&&!strcmp(argv[3],"--chain");
- if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN]]\n",argv[0]);return 2;}
+ int apply_support=chain&&argc==5&&!strcmp(argv[4],"--apply-static-support");
+ if(argc!=3&&!chain){fprintf(stderr,"usage: %s owner_collision.sa3dspak owner_movement.sa3dspak [--chain [SET0100S.BIN | --apply-static-support]]\n",argv[0]);return 2;}
  size_t cn,mn;void *c=read_blob(argv[1],&cn),*m=read_blob(argv[2],&mn);
  size_t wall_size=0;
- unsigned char *wall_set=argc==5?read_blob(argv[4],&wall_size):NULL;
+ unsigned char *wall_set=argc==5&&!apply_support?read_blob(argv[4],&wall_size):NULL;
  uint32_t wall_count=0;
  if(wall_set){
   if(wall_size<32)return 2;
@@ -250,6 +285,7 @@ int main(int argc,char **argv){
      sa3ds_ec_residency_recenter(&col,c,cn,roundf(s.pos.x/256)*256,roundf(s.pos.z/256)*256,&s);
     SA1Input in={0};SA3DSSpringPendingCommand cmd={0};
     sa3ds_spring_player_begin(&s,&cmd,&in);
+    SA1PlayerState before=s;
     int was_grounded=s.grounded;
     SA1Vec3 previous_task=sa3ds_ec_task_origin(&s);
     uint32_t previous_instance=s.surface_id>=0&&(uint32_t)s.surface_id<col.triangle_count ?
@@ -259,14 +295,21 @@ int main(int argc,char **argv){
     sa1_physics_step_steam_sonic_flat(&s,&in,0,&col.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
     if(s.sim_frame==0){reset_from=prev;break;}
     sa3ds_spring_player_tail(&s);
-    if(chain&&!reported_source_sweep&&was_grounded&&!s.grounded){
+    if(chain&&(apply_support||!reported_source_sweep)&&was_grounded&&!s.grounded){
      SA1Contact end_support=sa3ds_ec_collision_contact(&col,s.pos,
          sa1_vec3_scale(previous_up,-1),2.35f);
      printf("\n  support probe tick=%u valid=%d",tick,end_support.valid);
      if(end_support.valid)
       printf(" distance=%.4f alignment=%.4f",end_support.signed_distance,
           sa1_vec3_dot(previous_up,end_support.normal));
-     report_source_sweep(&col,tick,previous_task,previous_up,prev,s.pos,previous_instance,previous_forward);
+     SA1Contact confirmed=report_source_sweep(
+         &col,tick,previous_task,previous_up,prev,s.pos,previous_instance,previous_forward);
+     if(apply_support&&confirmed.valid){
+      apply_confirmed_support(&s,&before,&confirmed);
+      const SA3DSECTriangle *face=&col.triangles[confirmed.surface_id];
+      printf("\n  applied static support tick=%u face=%u/%u",
+          tick,face->source_instance,face->source_triangle);
+     }
      reported_source_sweep=1;
     }
     sa3ds_ec_collision_resolve_walls(&col,prev,&s);
