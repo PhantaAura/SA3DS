@@ -132,6 +132,14 @@ int main(void) {
     sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
     near(dbg.surface_force_forward_scale,0);
     near(dbg.normal_unstick_bias,-params->weight*(1-n.y));
+    /* The cross-product gate uses the retained motion-work vector,
+       distinct from the velocity projected by the support adapter. */
+    p=player(&world,n);p.vel=sa1_vec3_scale(p.surface_forward,2);
+    p.support_up_y=-0.07544f;p.support_up_valid=true;
+    p.pc2004_world_motion=(SA1Vec3){2,0,0};p.pc2004_world_motion_valid=true;
+    sa1_physics_step_steam_sonic_surface(&p,&neutral,0,&world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&dbg);
+    near(dbg.surface_force_forward_scale,1);
+    near(dbg.normal_unstick_bias,0);
     puts("PC2004 ground steering: PASS (mode/Up/friction blend, truncation, runtime run/quick/roll/charge, pre-turn force frame)");
     return 0;
 }

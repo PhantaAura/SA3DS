@@ -48,6 +48,7 @@ static int direct_speed(SA1PlayerState *p,const SA3DSMovementPlacement *placemen
     SA1Vec3 velocity=sa1_vec3_add(sa1_vec3_scale(frame.forward,speed),sa1_vec3_scale(frame.up,lift));
     if(!isfinite(velocity.x)||!isfinite(velocity.y)||!isfinite(velocity.z))return 0;
     p->pos=sa1_vec3_add(task,sa1_vec3_scale(frame.up,support));
+    p->pc2004_world_motion=velocity;p->pc2004_world_motion_valid=true;
     p->vel=velocity;p->ground_normal=frame.up;p->surface_forward=frame.forward;
     p->surface_right=frame.right;p->surface_frame_active=true;
     if(frame.forward.x*frame.forward.x+frame.forward.z*frame.forward.z>1e-8f)

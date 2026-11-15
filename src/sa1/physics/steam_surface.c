@@ -264,9 +264,11 @@ static void surface_running(SA1PlayerState *player,
     float g_side = sa1_vec3_dot(gravity_world, frame->right);
     float gravity_normal = sa1_vec3_dot(gravity_world, frame->up);
 
-    /* 44C270 crosses csts.tnorm with incoming motion-work displacement.
-     * This static path uses the retained task Up and world-space speed. */
-    float cross_y = sa1_vec3_cross(frame->up, player->vel).y;
+    /* 44C270 reads the previous motion-work displacement even after
+     * 43EE70 has removed its local normal component for player speed. */
+    SA1Vec3 world_motion = player->pc2004_world_motion_valid ?
+        player->pc2004_world_motion : player->vel;
+    float cross_y = sa1_vec3_cross(frame->up, world_motion).y;
     float support_up = player->grounded && player->support_up_valid ?
         player->support_up_y : frame->up.y;
     float forward_scale = 1.0f, side_scale = 1.0f;
@@ -726,6 +728,8 @@ void sa1_physics_step_steam_sonic_surface(
     /* Source49AA48 strength uses the selected action/ball, never the action
      * rewritten by the following terrain landing/departure resolution. */
     sa1_player_capture_ccl_state(player);
+    player->pc2004_world_motion = player->vel;
+    player->pc2004_world_motion_valid = true;
     player->pos = sa1_vec3_add(player->pos, player->vel);
 
     if (player->grounded) {

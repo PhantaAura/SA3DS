@@ -337,3 +337,13 @@ Both the steep-force and the ground acceleration/speed thresholds
 use the stored Up when available. A focused fixture covers a steep
 contact with the actor still tilted up. In the task-angle replay,
 this separation alone leaves the tick-18 loss unchanged.
+
+44C270 takes the motion-work world displacement for its cross
+product. 43EE70 reads that vector to write local speed and leaves
+the world vector in motion work. The port now stores the motion
+vector before support has projected local velocity, and direct
+dash-panel and spring launches seed it as well. A focused fixture
+shows that the retained vector controls the cross-product branch
+independently of the projected velocity. The task-angle replay
+still detaches at tick 18, so this input distinction does not
+account for that remaining trajectory mismatch.

@@ -67,6 +67,10 @@ typedef struct {
      * A smoothed task frame can tilt less than the confirmed support. */
     float support_up_y;
     bool support_up_valid;
+    /* Incoming motion-work speed for 44C270. PResetPosition rewrites
+     * local speed while retaining this world-space vector. */
+    SA1Vec3 pc2004_world_motion;
+    bool pc2004_world_motion_valid;
     float support_distance;
     uint32_t surface_flags;
 

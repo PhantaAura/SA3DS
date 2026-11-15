@@ -17,6 +17,8 @@ int sa3ds_spring_player_apply(SA1PlayerState *p,
         (p->action_state==SA1_ACTION_SPINDASH_CHARGE?0x400u:0u);
     p->pos=sa1_vec3_add(launch->position,sa1_vec3_scale(frame.up,support));
     p->vel=launch->world_velocity;
+    p->pc2004_world_motion=launch->world_velocity;
+    p->pc2004_world_motion_valid=true;
     p->ground_normal=frame.up;p->surface_forward=frame.forward;p->surface_right=frame.right;
     p->surface_frame_active=true;
     if(frame.forward.x*frame.forward.x+frame.forward.z*frame.forward.z>1e-8f)
