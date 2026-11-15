@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build pointer-free Emerald Coast collision data from exact owner sonic.exe.
+"""Build pointer-free PC2004 stage collision data from exact owner sonic.exe.
 
 Generated .sa3dspak files contain Sega-derived stage geometry and therefore are
 owner-side build products.  Do NOT put them in distributable SA3DS source/code
@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from tools.importers.pc2004_chrmodels import DecodeError
-from tools.importers.pc2004_stage import PC2004StageDecoder, EMERALD_COAST_ACTS
+from tools.importers.pc2004_stage import PC2004StageDecoder, EMERALD_COAST_ACTS, EMERALD_COAST_LEVEL_ID, LEVEL_STRIDE
 from tools import sa3dspak
 
 MAGIC = b"SA3DECOL"
@@ -35,8 +35,11 @@ def align16(value: int) -> int:
     return (value + 15) & ~15
 
 
-def build_collision_chunk(dec: PC2004StageDecoder):
-    tables = dec.emerald_coast_landtables()
+def build_collision_chunk(dec: PC2004StageDecoder, *, level_id: int = EMERALD_COAST_LEVEL_ID,
+                          acts: tuple[int, ...] = EMERALD_COAST_ACTS):
+    if not acts or len(set(acts)) != len(acts):
+        raise DecodeError("select at least one act without duplicates")
+    tables = [dec.landtable(level_id, act) for act in acts]
     act_rows = []
     instance_source = []
     model_vas: set[int] = set()
@@ -116,8 +119,8 @@ def build_collision_chunk(dec: PC2004StageDecoder):
         "format": "SA3DECOL",
         "version": [VERSION_MAJOR, VERSION_MINOR],
         "source_profile": "SADX_PC_2004_CANONICAL",
-        "level": "Emerald Coast",
-        "acts": list(EMERALD_COAST_ACTS),
+        "level": "Emerald Coast" if level_id == EMERALD_COAST_LEVEL_ID else f"PC2004 level {level_id}",
+        "acts": list(acts),
         "counts": {
             "models": len(model_rows),
             "instances": len(instance_rows),
@@ -127,6 +130,8 @@ def build_collision_chunk(dec: PC2004StageDecoder):
         },
         "source_addresses_in_runtime_payload": False,
     }
+    if level_id != EMERALD_COAST_LEVEL_ID:
+        meta["level_id"] = level_id
     return bytes(blob), meta
 
 
@@ -137,8 +142,8 @@ def parse_collision_chunk(blob: bytes):
      act_off, model_off, instance_off, vertex_off, index_off) = HEADER.unpack_from(blob)
     if magic != MAGIC or major != VERSION_MAJOR:
         raise DecodeError("bad SA3DECOL magic/version")
-    if acts != 3:
-        raise DecodeError("unexpected Emerald Coast act count")
+    if not 1 <= acts <= LEVEL_STRIDE:
+        raise DecodeError("invalid source act count")
     regions = [
         (act_off, acts * ACT.size),
         (model_off, models * MODEL.size),
@@ -151,6 +156,9 @@ def parse_collision_chunk(blob: bytes):
         if off < last or off + size > len(blob):
             raise DecodeError("SA3DECOL region out of bounds/order")
         last = off + size
+    ids = [ACT.unpack_from(blob, act_off + i * ACT.size)[0] for i in range(acts)]
+    if len(set(ids)) != acts or any(act >= LEVEL_STRIDE for act in ids):
+        raise DecodeError("invalid or duplicate source act ID")
     if indices % 3:
         raise DecodeError("collision index count is not triangles")
     if vertices >= 65536:
@@ -175,18 +183,25 @@ def main(argv=None):
     ap.add_argument("exe", type=Path, help="exact supported 2004 sonic.exe")
     ap.add_argument("output", type=Path, help="owner-side .sa3dspak output")
     ap.add_argument("--report", type=Path)
+    ap.add_argument("--level-id", type=int, default=EMERALD_COAST_LEVEL_ID,
+                    help="PC2004 LandTable level ID (default: Emerald Coast)")
+    ap.add_argument("--act", type=int, choices=range(LEVEL_STRIDE), action="append",
+                    help="zero-based source act; repeat to select several (default: all Emerald Coast acts)")
     args = ap.parse_args(argv)
     try:
+        if args.level_id != EMERALD_COAST_LEVEL_ID and args.act is None:
+            raise DecodeError("other levels require explicit --act values")
+        if args.output.resolve().is_relative_to(ROOT) or (
+                args.report and args.report.resolve().is_relative_to(ROOT)):
+            raise DecodeError("owner-generated data and reports must stay outside the code tree")
         dec = PC2004StageDecoder(args.exe)
-        collision, meta = build_collision_chunk(dec)
+        acts = tuple(dict.fromkeys(args.act)) if args.act is not None else EMERALD_COAST_ACTS
+        collision, meta = build_collision_chunk(dec, level_id=args.level_id, acts=acts)
         # Self-validate the source-neutral chunk before packaging.
         neutral = parse_collision_chunk(collision)
-        inventory = dec.emerald_coast_inventory()
-        metadata = {
-            **meta,
-            "neutral": neutral,
-            "inventory": inventory,
-        }
+        metadata = {**meta, "neutral": neutral}
+        if args.level_id == EMERALD_COAST_LEVEL_ID and acts == EMERALD_COAST_ACTS:
+            metadata["inventory"] = dec.emerald_coast_inventory()
         pak_meta = json.dumps(metadata, sort_keys=True, separators=(",", ":")).encode() + b"\n"
         pak = sa3dspak.build([
             ("METADATA", pak_meta, 0),
