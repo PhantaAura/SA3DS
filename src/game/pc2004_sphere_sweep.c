@@ -89,17 +89,32 @@ int sa3ds_pc2004_sweep_triangle(const SA3DSSweepTriangle*t,const float s[3],cons
  q[0]=0;q[1]=ld[1];q[2]=0;apply_inverse(&m,q,h.delta_y);
  *out=h;return 1;
 }
-int sa3ds_pc2004_sweep(const SA3DSSweepTriangle*t,size_t count,const float s[3],const float d[3],float r,
- SA3DSSweepHit*chosen,int*index){
- int hits=0,best=-1;SA3DSSweepHit h,keep;memset(&keep,0,sizeof(keep));
- for(size_t i=0;i<count&&hits<16;i++){
-  if(!sa3ds_pc2004_sweep_triangle(&t[i],s,d,r,&h))continue;
-  if(best<0||h.end_height<keep.end_height){keep=h;best=hits;}
-  hits++;
- }
- if(hits&&chosen)*chosen=keep;
- if(index)*index=best;
- return hits;
+int sa3ds_pc2004_sweep_record(SA3DSSweepObject *object, const SA3DSSweepHit *hit) {
+    if (object->count == SA3DS_PC2004_SWEEP_MAX_HITS) return 0;
+    int selected = object->count == 0 || hit->end_height < object->selected.end_height;
+    if (selected) {
+        object->selected = *hit;
+        object->selected_hit_index = object->count;
+    }
+    for (unsigned axis = 0; axis < 3; axis++) {
+        object->corrected_sum[axis] += hit->corrected[axis];
+    }
+    object->count++;
+    return selected;
+}
+
+int sa3ds_pc2004_sweep(const SA3DSSweepTriangle *triangles, size_t count,
+    const float start[3], const float delta[3], float radius,
+    SA3DSSweepHit *chosen, int *index) {
+    SA3DSSweepObject object = {0};
+    for (size_t i = 0; i < count && object.count < SA3DS_PC2004_SWEEP_MAX_HITS; i++) {
+        SA3DSSweepHit hit;
+        if (sa3ds_pc2004_sweep_triangle(&triangles[i], start, delta, radius, &hit))
+            sa3ds_pc2004_sweep_record(&object, &hit);
+    }
+    if (object.count && chosen) *chosen = object.selected;
+    if (index) *index = object.count ? (int)object.selected_hit_index : -1;
+    return (int)object.count;
 }
 int sa3ds_pc2004_camera_ray(const SA3DSSweepTriangle*t,const uint32_t*ids,size_t count,float s[3],float d[3],float r){
  if(!t||!ids||!s||!d)return 0;

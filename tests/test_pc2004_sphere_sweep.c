@@ -31,6 +31,21 @@ int main(void){
  /*List: chosen hit has the smallest end height.*/
  SA3DSSweepTriangle two[2]={floor,{{{-50,-3,-50},{50,-3,-50},{0,-3,50}},0}};
  int idx;assert(sa3ds_pc2004_sweep(two,2,s,d,4,&h,&idx)==2);
+ /* Object results keep the first tie and ignore hits past the source cap. */
+ SA3DSSweepObject object={0};
+ SA3DSSweepHit first={.corrected={1,3,0},.end_height=4};
+ SA3DSSweepHit lower={.corrected={3,5,0},.end_height=2};
+ SA3DSSweepHit tied={.corrected={5,7,0},.end_height=2};
+ assert(sa3ds_pc2004_sweep_record(&object,&first));
+ assert(sa3ds_pc2004_sweep_record(&object,&lower));
+ assert(!sa3ds_pc2004_sweep_record(&object,&tied));
+ assert(object.selected_hit_index==1&&object.selected.corrected[1]==5);
+ assert(object.corrected_sum[0]==9&&object.corrected_sum[1]==15);
+ for(unsigned i=3;i<SA3DS_PC2004_SWEEP_MAX_HITS;i++)
+  assert(!sa3ds_pc2004_sweep_record(&object,&tied));
+ first.end_height=0;
+ assert(!sa3ds_pc2004_sweep_record(&object,&first));
+ assert(object.count==SA3DS_PC2004_SWEEP_MAX_HITS&&object.selected_hit_index==1);
  /*Camera ray: wall clips start to radius in front, delta keeps the slide part.*/
  SA3DSSweepTriangle objs[2]={wall,floor};uint32_t ids[2]={7,9};
  float cs[3]={20,10,3},cd[3]={-30,0,4};

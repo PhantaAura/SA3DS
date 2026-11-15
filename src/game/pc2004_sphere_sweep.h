@@ -21,6 +21,17 @@ void sa3ds_pc2004_normal_angles(float x,float y,float z,int32_t *angle_x,int32_t
 /*Returns1 on a hit and fills out.*/
 int sa3ds_pc2004_sweep_triangle(const SA3DSSweepTriangle *triangle,const float start[3],const float delta[3],
  float radius,SA3DSSweepHit *out);
+enum { SA3DS_PC2004_SWEEP_MAX_HITS = 16 };
+typedef struct {
+    SA3DSSweepHit selected;
+    float corrected_sum[3];
+    unsigned count, selected_hit_index;
+} SA3DSSweepObject;
+
+/* Accumulate an object's hits in source face order. Zero-initialize the
+ * accumulator before each object. Returns 1 if this hit becomes selected. */
+int sa3ds_pc2004_sweep_record(SA3DSSweepObject *object, const SA3DSSweepHit *hit);
+
 /*Whole candidate list: up to16 hits are recorded in order; the chosen one has
  *the smallest end height (strict <, first wins). Returns the hit count.*/
 int sa3ds_pc2004_sweep(const SA3DSSweepTriangle *triangles,size_t count,const float start[3],const float delta[3],

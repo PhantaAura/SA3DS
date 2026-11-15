@@ -71,32 +71,26 @@ static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t c
  SA1Vec3 center=sa1_pc2004_fast_ground_probe_center(origin_task,up,
      4.0f,vertical,parameters->pos_error);
  const float origin[]={center.x,center.y,center.z};
- unsigned hits=0;
+ SA3DSSweepObject object={0};
  uint32_t face=0;
- SA3DSSweepHit selected={0};
- SA1Vec3 corrected_sum={0};
- for(size_t i=0;i<count&&hits<16;i++){
+ for(size_t i=0;i<count&&object.count<SA3DS_PC2004_SWEEP_MAX_HITS;i++){
   const SA3DSECTriangle *t=&triangles[i];
   SA3DSSweepTriangle triangle={.v={{t->a.x,t->a.y,t->a.z},{t->b.x,t->b.y,t->b.z},
       {t->c.x,t->c.y,t->c.z}},.flags=t->flags};
   SA3DSSweepHit hit;
   if(!sa3ds_pc2004_sweep_triangle(&triangle,origin,movement,5.1f,&hit))continue;
-  if(!hits||hit.end_height<selected.end_height){
-   selected=hit;
-   face=t->source_triangle;
-  }
-  corrected_sum=sa1_vec3_add(corrected_sum,
-      (SA1Vec3){hit.corrected[0],hit.corrected[1],hit.corrected[2]});
-  hits++;
+  if(sa3ds_pc2004_sweep_record(&object,&hit))face=t->source_triangle;
  }
- printf(" fastReprobeHits=%u",hits);
- if(hits){
+ printf(" fastReprobeHits=%u",object.count);
+ if(object.count){
+  SA3DSSweepHit selected=object.selected;
+  SA1Vec3 corrected_sum={object.corrected_sum[0],object.corrected_sum[1],object.corrected_sum[2]};
   SA1Vec3 normal={selected.signed_normal[0],selected.signed_normal[1],selected.signed_normal[2]};
   printf(" fastReprobeFace=%u/%u speedGate=%d",triangles[0].source_instance,face,
       sa1_pc2004_collision_support_speed(delta,normal,parameters->run_speed,
           vertical,1,triangles[0].flags));
   SA1Vec3 projected=sa1_pc2004_collision_support_position(
-      sa1_vec3_scale(corrected_sum,1.0f/hits),
+      sa1_vec3_scale(corrected_sum,1.0f/object.count),
       (SA1Vec3){selected.delta_xz[0],selected.delta_xz[1],selected.delta_xz[2]},
       (SA1Vec3){selected.plane_point[0],selected.plane_point[1],selected.plane_point[2]},
       normal);
@@ -154,23 +148,23 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
  enum { OBJECT_LIMIT=1024 };
  uint32_t object_ids[OBJECT_LIMIT];
  size_t object_count=0, promoted=SIZE_MAX, previous_index=SIZE_MAX;
- unsigned hits=0, object_hits=0;
+ unsigned hits=0;
+ SA3DSSweepObject object={0};
  uint32_t object_start=0;
  uint32_t instance=UINT32_MAX, selected_face=0;
- SA3DSSweepHit selected={0};
- SA1Vec3 corrected_sum={0};
- SA1PC2004CollisionCandidate candidates[16];
+ SA1PC2004CollisionCandidate candidates[SA3DS_PC2004_SWEEP_MAX_HITS];
  for(uint32_t i=0;i<=collision->triangle_count;i++){
   const SA3DSECTriangle *t=i<collision->triangle_count ? &collision->triangles[i] : NULL;
   if(!t||t->source_instance!=instance){
-   if(object_hits){
+   if(object.count){
+    SA1Vec3 corrected_sum={object.corrected_sum[0],object.corrected_sum[1],object.corrected_sum[2]};
     if(object_count==OBJECT_LIMIT)break;
     float current=sa1_vec3_length((SA1Vec3){movement[0],movement[1],movement[2]});
     float clipped=report_source_selection(collision,tick,instance,selected_face,
-        object_hits,&selected,corrected_sum,previous_up,movement,candidates);
+        object.count,&object.selected,corrected_sum,previous_up,movement,candidates);
     report_fast_support_probe(&collision->triangles[object_start],i-object_start,
         movement,center,previous_task,previous_up,forward,
-        sa1_vec3_scale(corrected_sum,1.0f/object_hits));
+        sa1_vec3_scale(corrected_sum,1.0f/object.count));
     if(clipped<current){
      for(unsigned axis=0;axis<3;axis++)movement[axis]*=clipped/current;
      promoted=object_count;
@@ -181,10 +175,9 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
    if(!t)break;
    instance=t->source_instance;
    object_start=i;
-   object_hits=0;
-   corrected_sum=(SA1Vec3){0};
+   object=(SA3DSSweepObject){0};
   }
-  if(object_hits==16||(t->flags&0x400002))continue;
+  if(object.count==SA3DS_PC2004_SWEEP_MAX_HITS||(t->flags&0x400002))continue;
   /* The primitive expands the triangle by four percent around its centroid. */
   float margin_x=radius+0.04f*(t->max_x-t->min_x);
   float margin_z=radius+0.04f*(t->max_z-t->min_z);
@@ -202,15 +195,10 @@ static void report_source_sweep(SA3DSECCollision *collision, unsigned tick,
       tick,t->source_instance,t->source_triangle,sa1_vec3_dot(normal,previous_up),
       hit.start_height,hit.end_height,port_distance,
       sa1_pc2004_collision_ground_side(previous_up,normal,(SA1Vec3){0,-1,0},0));
-  if(object_hits==0||hit.end_height<selected.end_height){
-   selected=hit;
-   selected_face=t->source_triangle;
-  }
   SA1Vec3 corrected={hit.corrected[0],hit.corrected[1],hit.corrected[2]};
-  candidates[object_hits]=(SA1PC2004CollisionCandidate){normal,
+  candidates[object.count]=(SA1PC2004CollisionCandidate){normal,
       sa1_vec3_length(sa1_vec3_sub(corrected,center))};
-  corrected_sum=sa1_vec3_add(corrected_sum,corrected);
-  object_hits++;
+  if(sa3ds_pc2004_sweep_record(&object,&hit))selected_face=t->source_triangle;
   hits++;
  }
  if(object_count){
