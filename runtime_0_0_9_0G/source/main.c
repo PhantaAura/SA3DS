@@ -1788,11 +1788,13 @@ static void tick_tikal(void){
     if(g_tikal_loaded!=8||g_ec_act_index!=1||
        (g_tikal_cooldown&&g_tikal_cooldown<=300))return;
     SA1Vec3 player=sa3ds_ec_task_origin(&g_player);
+    int retreat=g_tikal_cooldown>300;
+    int following=g_tikal_remaining||retreat;
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;
         if(!sa3ds_movement_objects_placement(&g_movement,i,&p)||p.act!=1||(p.type&4095u)!=26)continue;
         SA1Vec3 delta=sa1_vec3_sub(player,p.position);
-        if(sa1_vec3_dot(delta,delta)>=115600.f)continue;
+        if(!following&&sa1_vec3_dot(delta,delta)>=115600.f)continue;
         /* 7A15B5–7A15F6 stores the new world Y on each rise tick. Tick 60
            changes state, then 7A1610 starts testing proximity on tick 61. */
         if(!was_visible){
@@ -1810,19 +1812,22 @@ static void tick_tikal(void){
             }
         }
         SA1Vec3 hover={p.position.x,g_tikal_hover_y,p.position.z};
-        if(g_tikal_remaining||g_tikal_cooldown>300){
-            int retreat=g_tikal_cooldown>300;
+        if(following){
             float speed=1.f;
             unsigned angle_step=0x2b7u;
             if(retreat){
-                g_tikal_retreat_speed+=0.0791666657f;
+                /* 7A1823 uses the unstored speed for the angle calculation. */
+                double next_speed=(double)g_tikal_retreat_speed+0.0791666657f;
+                g_tikal_retreat_speed=(float)next_speed;
                 speed=g_tikal_retreat_speed;
-                angle_step=(unsigned)(speed*(65536.f/94.247757f));
+                angle_step=(unsigned)(next_speed*(65536.0/94.24775695800781));
             }
             g_tikal_orbit=(uint16_t)(g_tikal_orbit+angle_step);
             float sine=(float)spring_source_sin(&g_rings,g_tikal_orbit);
             float cosine=(float)spring_source_sin(&g_rings,(uint16_t)(g_tikal_orbit+0x4000u));
-            float height=retreat?hover.y+0.5f:player.y+5.f+2.5f*sine;
+            /* 7A181C/7A1893 start from current orb Y, so the retreat
+               climbs while orbiting Sonic instead of returning to hover Y. */
+            float height=retreat?g_tikal_position.y+0.5f:player.y+5.f+2.5f*sine;
             SA1Vec3 target={player.x+15.f*sine,height,player.z+15.f*cosine};
             SA1Vec3 travel=sa1_vec3_sub(target,g_tikal_position);
             if(sa1_vec3_dot(travel,travel)>0.f)
