@@ -4892,7 +4892,7 @@ int main(void) {
                     SA1_STEAM_SONIC_PARAMETER_EVIDENCE.rad,0,1,g_rings.clip_level,step+1==steps);
                 for(unsigned k=0;k<collected&&k<3;k++)sa3ds_se_play(7); /*AddRings+PlaySound(7); 424590 allows 3 per frame*/
                 if(collected){char note[96];snprintf(note,sizeof(note),"tick=%llu collected=%u rings=%d",
-                    (unsigned long long)g_player.sim_frame,collected,g_rings.rings);boot_log("RINGS",note);}
+                    (unsigned long long)g_player.sim_frame,collected,g_rings.rings);log_movement_event("RINGS",note,g_ring_probe);}
             }
             if(g_ring_probe){
                 if(g_ring_probe_tick%120==0){char note[144];snprintf(note,sizeof(note),
