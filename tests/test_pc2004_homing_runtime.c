@@ -44,6 +44,18 @@ static void frame_cases(void){
     }
     const SA1SteamPlayerParameters *params=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SA1SurfaceFrame flat=encoded(0,0x1234,0), steep=encoded(0,0x1234,0x9000);
+    uint16_t target_x,target_z;
+    SA1Vec3 normal={.6f,.6928203f,.4f};
+    assert(sa1_pc2004_task_ordinary_support_target(&flat,normal,&target_x,&target_z));
+    assert(target_x==0x10c4&&target_z==0xe5c9);
+    normal.y=-normal.y;
+    SA1SurfaceFrame pitch_side=encoded(0x3800,0x1234,0);
+    assert(sa1_pc2004_task_ordinary_support_target(&pitch_side,normal,&target_x,&target_z));
+    assert(target_x==0x6f3c&&target_z==0xe5c9);
+    assert(sa1_pc2004_task_ordinary_support_target(&flat,normal,&target_x,&target_z));
+    assert(target_x==0x10c4&&target_z==0x9a37);
+    assert(sa1_pc2004_task_ordinary_support_target(&flat,(SA1Vec3){0,-1,0},&target_x,&target_z));
+    assert(target_x==0&&target_z==0x8000);
     SA1SurfaceFrame smoothed=flat;
     assert(sa1_pc2004_task_approach_support(&smoothed,steep.up,0,0x9000,0,params,&math));
     SA1SurfaceFrame expected=encoded(0,0x1234,-0x400);

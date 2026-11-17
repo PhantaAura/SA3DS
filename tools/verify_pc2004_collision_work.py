@@ -26,6 +26,13 @@ SIGNATURES = {
     "general_angles": (0x00449546, "8b53148955348b531c895538"),
     "general_height_load": (0x00449555, "d98010010000"),
     "general_height_half": (0x00449563, "d80d98cc7d00"),
+    # 449500 ordinary support target: asin scaling and reflected-angle selection.
+    "support_pitch_asin": (0x0044A088, "d94550e890af1f00dc0dd0cc7d00dc0dc8cc7d00e89fa21f00"),
+    "support_roll_asin": (0x0044A0A7, "e874af1f00dc0dd0cc7d00dc0de8cc7d00e883a21f00"),
+    "support_reflected_angle_compare": (0x0044A106, "3bc87d17"),
+    "support_wrap_distance": (0x004383B0, "8b4424082b4424046685c07d02f7d80fb7c0"),
+    "support_positive_turn_ratio": (0x007DCCC8, "0ae3e4b4305fc43f"),
+    "support_negative_turn_ratio": (0x007DCCE8, "0ae3e4b4305fc4bf"),
     # Candidate polygon resolver and two arbitration helpers.
     "candidate_polygon_call": (0x00449710, "e80ba10000"),
     "candidate_arbitrate_a": (0x00449740, "e89b35ffff"),

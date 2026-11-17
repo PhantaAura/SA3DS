@@ -35,6 +35,28 @@ static void support_angles(SA1Vec3 up,uint16_t *x,uint16_t *z){
     *z=hypot(up.x,up.y)<1e-6?0:(uint16_t)(int32_t)lround(atan2(-(double)up.x,up.y)*(65536./TAU));
 }
 
+static int wrapped_distance(uint16_t from,uint16_t to){
+    int delta=(int16_t)(uint16_t)(to-from);
+    return delta<0?-delta:delta;
+}
+
+int sa1_pc2004_task_ordinary_support_target(const SA1SurfaceFrame *frame,SA1Vec3 normal,
+    uint16_t *x,uint16_t *z){
+    if(!frame||!frame->valid||!finite3(frame->up)||!finite3(normal)||!x||!z)return 0;
+    const double bams=65536.0*0.15915497620314795;
+    uint16_t pitch=(uint16_t)(int32_t)(asin(fmax(-1.,fmin(1.,normal.z)))*bams);
+    uint16_t roll=(uint16_t)(int32_t)(-asin(fmax(-1.,fmin(1.,normal.x)))*bams);
+    if(normal.y<0.0f){
+        uint16_t old_x,old_z;
+        support_angles(frame->up,&old_x,&old_z);
+        uint16_t opposite_x=(uint16_t)(0x8000u-pitch),opposite_z=(uint16_t)(0x8000u-roll);
+        /* 44A106: strict X comparison. Equal distances choose reflected Z. */
+        if(wrapped_distance(old_x,opposite_x)<wrapped_distance(old_z,opposite_z))pitch=opposite_x;
+        else roll=opposite_z;
+    }
+    *x=pitch;*z=roll;return 1;
+}
+
 static double frame_sine(const SA1PC2004HomingMath*m,uint16_t a){return m&&m->sine?m->sine(m->context,a):sin(a*(TAU/65536.));}
 int sa1_pc2004_task_frame_from_angles(SA1SurfaceFrame *f,uint16_t x,
     uint16_t y,uint16_t z,const SA1PC2004HomingMath *m){

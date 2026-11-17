@@ -228,12 +228,10 @@ static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState
  SA1SurfaceFrame frame=sa1_surface_frame_make(support->normal,player->surface_forward);
  if(task_angles){
   SA1SurfaceFrame previous=sa1_surface_frame_make(player->ground_normal,player->surface_forward);
-  int32_t target_x,target_z;
-  sa3ds_pc2004_normal_angles(support->normal.x,support->normal.y,support->normal.z,
-      &target_x,&target_z);
+  uint16_t target_x,target_z;
   float forward_speed=sa1_vec3_dot(player->vel,previous.forward);
-  if(sa1_pc2004_task_approach_support(&previous,support->normal,
-      (uint16_t)target_x,(uint16_t)target_z,forward_speed,
+  if(sa1_pc2004_task_ordinary_support_target(&previous,support->normal,&target_x,&target_z)&&
+      sa1_pc2004_task_approach_support(&previous,support->normal,target_x,target_z,forward_speed,
       &SA1_STEAM_SONIC_PARAMETER_EVIDENCE,NULL))frame=previous;
  }
  player->grounded=true;

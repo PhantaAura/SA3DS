@@ -347,3 +347,17 @@ shows that the retained vector controls the cross-product branch
 independently of the projected velocity. The task-angle replay
 still detaches at tick 18, so this input distinction does not
 account for that remaining trajectory mismatch.
+
+The task-angle replay now uses the ordinary 449500 angle target. It
+truncates the scaled arcsines of normal Z and negative normal X. On an
+underside face it reflects one angle through 0x8000, comparing wrapped
+distances from incoming X/Z and choosing reflected Z on equality. The
+probe derives incoming X/Z from the port frame. It still lacks the
+original raw angle history, special attribute branches and stationary
+hold gate.
+
+The owner replay retains 426/20 on tick 17. On tick 18 the confirmation
+finds four hits and selects 426/23, but the speed gate rejects the
+port's positive local vertical value of 0.005993. The angle-target
+change alone does not resolve this detachment. The experiment remains
+limited to the host replay.

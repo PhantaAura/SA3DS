@@ -16,6 +16,10 @@ int sa1_pc2004_task_turn(SA1SurfaceFrame *frame,uint16_t old_yaw,uint16_t new_ya
 /* Construct the 43EC90 task frame from raw X/Y/Z BAMS. */
 int sa1_pc2004_task_frame_from_angles(SA1SurfaceFrame *frame,uint16_t x,
     uint16_t y,uint16_t z,const SA1PC2004HomingMath *math);
+/* Ordinary 449500 angle target, using the port frame's canonical incoming X/Z.
+ * Work flag 0x2000 and special surface flags use other source branches. */
+int sa1_pc2004_task_ordinary_support_target(const SA1SurfaceFrame *frame,SA1Vec3 normal,
+    uint16_t *x,uint16_t *z);
 /* Ordinary supported 444F10 update. The caller supplies the chosen
  * target angles and normal. The existing frame supplies canonical
  * incoming task angles, with its raw yaw retained. */
