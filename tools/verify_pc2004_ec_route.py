@@ -26,6 +26,8 @@ SIGNATURES={
  'Sonic start array selection':(0x41491D,'bfc8a59000'),
  'start row stride20':(0x414964,'83c714'),
  'movement Y argument':(0x43ECEA,'668b4e1866f7d90fb7d133c9e825613400'),
+ 'Sonic stage task registration':(0x4157F4,'68b0a94900eb0568c07e62006a016a07e85760ffff'),
+ 'Sonic registration before death check':(0x415A25,'e896fdffff'),
  'death check stage task registration':(0x415A2A,'6880ae44006a016a02e8285effff'),
  'death check ticks existing children first':(0x44AE90,'e88b05fcff'),
  'death check task gate':(0x44AEA0,'8b430c85c00f855c0100008b4320f64004040f854f010000'),
@@ -87,7 +89,7 @@ def verify_death_surfaces(path):
                 assert (bx-ax)*(cz-az) != (bz-az)*(cx-ax)
         if act == 1:
             assert surfaces[0].points[0][1] < 0 < surfaces[1].points[0][1]
-    print('PC2004 Emerald Coast death zones: PASS (four finite quads, character masks, transforms, and stage-task geometry gate; native dispatch pending)')
+    print('PC2004 Emerald Coast death zones: PASS (four finite quads, character masks, transforms, and stage-task geometry gate and list-1 registration; static evidence only)')
 
 
 if __name__=='__main__':

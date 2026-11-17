@@ -16,6 +16,9 @@ assert 'if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);' in main
 assert 'g_pose_lab || (g_emerald_coast&&!g_ec_combined) || g_paused' in main
 assert 'sa3ds_ec_collision_resolve_walls(&g_ec_collision,previous,&g_player)' in main
 assert 'g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world()' in main
+assert main.index('g_ec_full_route&&!tick_stage_fall_death()') < main.index(
+    'sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,world')
+assert 'if(g_stage_fall_death.child.active||g_stage_fall_death.parent_status4)' in main
 assert 'sa3ds_ec_model_transform(&g_player,&actor);' in main
 assert 'Mtx_Multiply(&sonic_mv,&g_ec_view,&model);' in main
 assert 'g_ec_model_lift' not in main

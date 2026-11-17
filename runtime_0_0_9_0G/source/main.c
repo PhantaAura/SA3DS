@@ -248,6 +248,7 @@ static SA3DSPlayerDamageResult g_player_damage_requests;
 static int g_player_damage_blocked;
 typedef struct SA3DSNativeDeath{struct SA3DSNativeDeath*next;SA3DSPlayerDeathTask task;} SA3DSNativeDeath;
 static SA3DSNativeDeath*g_death_head;
+static SA3DSStageFallDeath g_stage_fall_death;
 typedef struct SA3DSNativeProtection{struct SA3DSNativeProtection*next;SA3DSPlayerProtectionTask task;} SA3DSNativeProtection;
 static SA3DSNativeProtection*g_protection_head;
 static unsigned g_protection_created,g_protection_finished;
@@ -3310,6 +3311,7 @@ static int tick_native_protection(void){
     return 1;
 }
 static void clear_native_death(void){
+    g_stage_fall_death=(SA3DSStageFallDeath){0};
     while(g_death_head){SA3DSNativeDeath*n=g_death_head;g_death_head=n->next;free(n);}
 }
 static int spawn_native_death(void){
@@ -3328,6 +3330,21 @@ static int tick_native_death(void){
         }
         if(out.destroy){*link=n->next;free(n);continue;}
         link=&n->next;
+    }
+    return 1;
+}
+static int tick_stage_fall_death(void){
+    SA3DSPlayerDeathTaskResult out;
+    int hit=!g_stage_fall_death.child.active&&!g_stage_fall_death.parent_status4&&
+        sa3ds_ec_route_death_zone(&g_ec_route,g_ec_act_index,0,sa3ds_ec_task_origin(&g_player));
+    if(!sa3ds_stage_fall_death_tick(&g_stage_fall_death,hit,&out))return 0;
+    if(out.started){
+        sa3ds_se_play(0x5df); /*446A21: Sonic's ordinary fall cue.*/
+        log_movement_event("FALL_DEATH","Source death mesh queued the stage death child",0);
+    }
+    if(out.stage_request){
+        g_stage_restart.request=out.stage_request;
+        boot_log("FALL_DEATH","Source death child requested stage reload");
     }
     return 1;
 }
@@ -4574,6 +4591,8 @@ int main(void) {
                 }
                 if(!tick_native_protection()){fail_screen("Source respawn protection task failed");break;}
                 if(!tick_native_death()){fail_screen("Source death task failed");break;}
+                /* 415A2A inserts the detector at the head of Sonic's list 1. */
+                if(g_ec_full_route&&!tick_stage_fall_death()){fail_screen("Source fall task failed");break;}
             }
             uint32_t previous_extra_lives=g_rings.extra_lives;
             SA3DSWCAReplayStep wca={0};
@@ -4690,9 +4709,20 @@ int main(void) {
             SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
             int was_grounded=g_player.grounded;
             int numbered_step=step_numbered_panels(&tick_input);
-            if(!numbered_step)sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,
-                g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world(),
-                &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+            if(!numbered_step){
+                const SA1PhysicsWorld *world=g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world();
+                SA1PhysicsWorld fall_world;
+                if(g_stage_fall_death.child.active||g_stage_fall_death.parent_status4){
+                    /* A source death already owns the reload. Keep simulating
+                     * through the fall and fade without the lab's bounds reset. */
+                    fall_world=*world;
+                    fall_world.reset_min_x=fall_world.reset_min_y=fall_world.reset_min_z=-INFINITY;
+                    fall_world.reset_max_x=fall_world.reset_max_z=INFINITY;
+                    world=&fall_world;
+                }
+                sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,world,
+                    &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
+            }
             /*495F61: jump start plays 0x11 (0x307 only when 03B18DB5 is set).*/
             if(g_emerald_coast&&was_grounded&&!g_player.grounded&&tick_input.jump_pressed)sa3ds_se_play(0x11);
             if(g_player.pc2004_homing_failed){fail_screen("Native source homing context/frame failed");break;}

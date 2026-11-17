@@ -35,6 +35,16 @@ int main(void){
     assert(sa3ds_player_death_task_tick(&task,0,1,&death)&&!death.stage_request);
     task=(SA3DSPlayerDeathTask){.active=1};assert(sa3ds_player_death_task_tick(&task,1,0,&death));assert(death.destroy&&!death.stage_request&&task.counter==1);
     task=(SA3DSPlayerDeathTask){.active=1,.counter=UINT32_MAX};assert(sa3ds_player_death_task_tick(&task,0,0,&death));assert(death.stage_request==2&&task.counter==0&&!death.parent_status4);
+    SA3DSStageFallDeath fall={0};
+    assert(sa3ds_stage_fall_death_tick(&fall,0,&death)&&!death.started&&!fall.child.active);
+    assert(sa3ds_stage_fall_death_tick(&fall,1,&death)&&death.started&&fall.child.active&&fall.child.counter==0);
+    for(unsigned n=1;n<=121;n++){
+        assert(sa3ds_stage_fall_death_tick(&fall,n%2,&death));
+        assert(!death.started&&!death.stage_request&&fall.child.counter==n);
+    }
+    assert(sa3ds_stage_fall_death_tick(&fall,1,&death)&&death.stage_request==2&&fall.parent_status4);
+    uint8_t fall_request=death.stage_request;
+    assert(sa3ds_stage_fall_death_tick(&fall,1,&death)&&!death.started&&!death.stage_request&&!fall.child.active);
     SA3DSPlayerDamageState state={.status=0xffff,.next_command=50};uint16_t sound;uint8_t channel;
     assert(sa3ds_player_death_command(&state,0,&sound,&channel));assert(state.action==86&&state.animation==86&&state.status==0xdaff&&state.next_command==50&&sound==0x5de&&channel==0);
     assert(sa3ds_player_death_command(&state,1,&sound,&channel)&&sound==0x7fe&&channel==1);
@@ -59,7 +69,7 @@ int main(void){
     assert(air&&ground&&clamps&&p.pc2004_hurt_timer==0&&p.pc2004_action_state==86);
     SA3DSStageRestart flow;SA3DSStageRestartResult phase;sa3ds_stage_restart_init(&flow);assert(flow.lives==4);
     assert(sa3ds_stage_restart_begin(&flow,1,&phase)&&phase.run_world&&phase.process_requests&&phase.controls_enabled);
-    flow.request=2;assert(sa3ds_stage_restart_end(&flow,&phase)&&flow.state==6);
+    flow.request=fall_request;assert(sa3ds_stage_restart_end(&flow,&phase)&&flow.state==6);
     unsigned out=0,in=0,recover=0;
     do{assert(sa3ds_stage_restart_begin(&flow,1,&phase));out++;}while(!phase.clear_world&&out<100);
     assert(out==46&&flow.state==2&&flow.lives==3&&phase.clear_rings&&!phase.run_world&&flow.fade_alpha==255);

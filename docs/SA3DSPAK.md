@@ -38,8 +38,11 @@ header is `<8sI>` with magic `SA3DECDE` and a row count. Each row uses
 `<IIf12f>` for act, character mask, world height and the XZ coordinates of
 two triangles in source order. Previous route packs remain readable.
 The portable query mirrors the finite projection and inclusive 30-unit
-vertical window of PC2004's stage task at 0x44AE80. The native task still
-needs to consume that query and dispatch the death request.
+vertical window of PC2004's stage task at 0x44AE80. The native full-route
+profile queries the bank before Sonic's update and queues the stage death
+child on contact. After 122 child updates it requests the existing fade,
+life loss and checkpoint reload. Earlier packs lack these meshes and still
+use the provisional bounds reset.
 
 Visual packages accept the four required chunks and optional single `SET` and
 `CAMERA` banks. These optional banks are CRC-checked and retained, but their

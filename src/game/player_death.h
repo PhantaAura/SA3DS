@@ -2,10 +2,17 @@
 #define SA3DS_PLAYER_DEATH_H
 #include "player_damage.h"
 typedef struct {uint32_t counter;uint8_t active;} SA3DSPlayerDeathTask;
-typedef struct {uint8_t stage_request,parent_status4,audio_cleanup,destroy;} SA3DSPlayerDeathTaskResult;
+typedef struct {uint8_t stage_request,parent_status4,audio_cleanup,destroy,started;} SA3DSPlayerDeathTaskResult;
 /*440C80: call in list0 BEFORE the next Sonic update. A newly allocated head
  * is not visited by the snapshot-next task walker in its creation update.*/
 int sa3ds_player_death_task_tick(SA3DSPlayerDeathTask *task,int special_mode,int has_parent,
+    SA3DSPlayerDeathTaskResult *out);
+typedef struct {
+    SA3DSPlayerDeathTask child;
+    uint8_t parent_status4;
+} SA3DSStageFallDeath;
+/* 44AE80: tick an existing child before checking whether to add one. */
+int sa3ds_stage_fall_death_tick(SA3DSStageFallDeath *fall,int mesh_hit,
     SA3DSPlayerDeathTaskResult *out);
 /*Ordinary495FA0 command50. Does not erase source status1000/command provenance.
  * Audio return uses the same channel convention as player_damage.*/

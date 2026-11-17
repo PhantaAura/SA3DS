@@ -7,6 +7,21 @@ int sa3ds_player_death_task_tick(SA3DSPlayerDeathTask*t,int special,int parent,S
     else if(special){r->destroy=1;t->active=0;}
     return 1;
 }
+int sa3ds_stage_fall_death_tick(SA3DSStageFallDeath *fall,int mesh_hit,
+    SA3DSPlayerDeathTaskResult *out){
+    if(!fall||!out)return 0;
+    if(fall->child.active){
+        if(!sa3ds_player_death_task_tick(&fall->child,0,1,out))return 0;
+        fall->parent_status4|=out->parent_status4;
+        return 1;
+    }
+    *out=(SA3DSPlayerDeathTaskResult){0};
+    if(mesh_hit&&!fall->parent_status4){
+        fall->child=(SA3DSPlayerDeathTask){.active=1};
+        out->started=1;
+    }
+    return 1;
+}
 int sa3ds_player_death_command(SA3DSPlayerDamageState*s,int alternate,uint16_t*sound,uint8_t*channel){
     if(!s||!sound||!channel||!(s->status&0x1000)||s->next_command!=50)return 0;
     s->action=86;s->animation=86;s->status&=0xdaffu;
