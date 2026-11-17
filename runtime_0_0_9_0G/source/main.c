@@ -1112,7 +1112,7 @@ static int ec_change_act(uint32_t act){
     SA3DSECCollision collision={0};SA3DSECGpu gpu={0};
     if(!sa3ds_read_file(path,&bytes,&size))return 0;
     if(sa3ds_ec_visual_open(&visual,bytes,size)!=SA3DS_EC_VISUAL_OK||
-       !sa3ds_ec_collision_open_region(&collision,g_ec_collision_bytes,g_ec_collision_size,
+       !sa3ds_ec_collision_open_archive_region(&collision,&g_ec_collision.archive,
             act,start->task_origin.x,start->task_origin.z))goto fail;
     ec_world_bounds(&collision,&visual);
     C3D_FrameSync(); /* Retire submissions before replacing GPU-owned resources. */
