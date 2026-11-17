@@ -2,10 +2,12 @@
 """Exact-owner witnesses for Sonic's Emerald Coast act0->1 route, not gameplay parity."""
 from pathlib import Path
 import hashlib
+import math
 import struct
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from tools.verify_pc2004_collision_work import PROFILE_SHA256,parse_pe,va_to_off
+from tools.importers.pc2004_stage import PC2004StageDecoder
 
 SIGNATURES={
  'Emerald Coast level task':(0x90BF3C,'606d4f00'),
@@ -24,6 +26,12 @@ SIGNATURES={
  'Sonic start array selection':(0x41491D,'bfc8a59000'),
  'start row stride20':(0x414964,'83c714'),
  'movement Y argument':(0x43ECEA,'668b4e1866f7d90fb7d133c9e825613400'),
+ 'death-zone level table':(0x4751CD,'8b049508599100'),
+ 'death-zone act lookup':(0x4751E7,'8b3488'),
+ 'death-zone character mask filter':(0x475225,'853e7412'),
+ 'death-zone model projection and match branch':(0x47522F,'e8dc12feff83c40885c07515'),
+ 'death-zone end-of-list result':(0x475245,'5eb801000000'),
+ 'death-zone match result':(0x475250,'5e33c0'),
 }
 
 def verified_reader(path):
@@ -51,7 +59,29 @@ def route_rows(path):
     radius=struct.unpack('<f',read(0x7E0988,4))[0]
     return starts,[(0,1,*center,radius)]
 
+def verify_death_surfaces(path):
+    decoder = PC2004StageDecoder(Path(path))
+    for act, expected_count in enumerate((1, 2, 1)):
+        surfaces = decoder.emerald_coast_death_surfaces(act)
+        assert len(surfaces) == expected_count
+        for surface in surfaces:
+            assert surface.character_mask == 0xff
+            assert len(surface.points) == 4 and len(surface.triangles) == 2
+            assert {index for tri in surface.triangles for index in tri} == set(range(4))
+            assert all(math.isfinite(value) for point in surface.points for value in point)
+            assert len({point[1] for point in surface.points}) == 1
+            for a, b, c in surface.triangles:
+                ax, _, az = surface.points[a]
+                bx, _, bz = surface.points[b]
+                cx, _, cz = surface.points[c]
+                assert (bx-ax)*(cz-az) != (bz-az)*(cx-ax)
+        if act == 1:
+            assert surfaces[0].points[0][1] < 0 < surfaces[1].points[0][1]
+    print('PC2004 Emerald Coast death zones: PASS (four decoded finite source quads, character masks and transforms; trigger semantics pending)')
+
+
 if __name__=='__main__':
     if len(sys.argv)!=2:raise SystemExit('usage: verify_pc2004_ec_route.py OWNER_SONIC_EXE')
     starts,edges=route_rows(sys.argv[1])
     print('PC2004 Emerald Coast Sonic route: PASS (exact source task dispatch, strict distance handoff and two original starts; no retail gameplay trace)')
+    verify_death_surfaces(sys.argv[1])

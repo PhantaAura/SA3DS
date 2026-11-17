@@ -39,6 +39,7 @@ EXPECTED_EXE_SHA256 = "6b0937caa0151287c182fcd8cd02b89ea464bd33a13a081c1220fa791
 EXPECTED_IMAGE_BASE = 0x00400000
 
 LANDTABLE_TABLE_VA = 0x0097DA08
+DEATH_ZONE_TABLE_VA = 0x00915908
 LEVEL_STRIDE = 8
 EMERALD_COAST_LEVEL_ID = 1
 EMERALD_COAST_ACTS = (0, 1, 2)
@@ -78,6 +79,13 @@ class CollisionRecord:
     object_va: int
     field_1c: int
     surface_flags: int
+
+
+@dataclass(frozen=True)
+class DeathZoneSurface:
+    character_mask: int
+    points: tuple[tuple[float, float, float], ...]
+    triangles: tuple[tuple[int, int, int], ...]
 
 
 @dataclass(frozen=True)
@@ -401,6 +409,29 @@ class PC2004StageDecoder:
         for i in range(model.meshset_count):
             out.extend(self.mesh_triangles(model, self.meshset(model, i)))
         return out
+
+    def emerald_coast_death_surfaces(self, act: int) -> list[DeathZoneSurface]:
+        """Decode the finite death-bound meshes in source world coordinates."""
+        if act not in EMERALD_COAST_ACTS:
+            raise DecodeError(f"invalid Emerald Coast act {act}")
+        (act_table,) = struct.unpack("<I", self.pe.read_bytes(
+            DEATH_ZONE_TABLE_VA + EMERALD_COAST_LEVEL_ID * 4, 4))
+        (row_va,) = struct.unpack("<I", self.pe.read_bytes(act_table + act * 4, 4))
+        surfaces = []
+        while True:
+            mask, object_va = struct.unpack("<II", self.pe.read_bytes(row_va, 8))
+            if object_va == 0:
+                return surfaces
+            obj = self.object(object_va)
+            if not obj.model_va or obj.child_va or obj.sibling_va or obj.flags & 6 != 6:
+                raise DecodeError(f"unsupported Emerald Coast death-bound object {object_va:#x}")
+            model = self.model(obj.model_va)
+            points = self.model_points(model)
+            if not obj.flags & 1:
+                x, y, z = obj.position
+                points = [(px + x, py + y, pz + z) for px, py, pz in points]
+            surfaces.append(DeathZoneSurface(mask, tuple(points), tuple(self.model_triangles(model))))
+            row_va += 8
 
     def emerald_coast_inventory(self) -> dict:
         acts = []
