@@ -63,8 +63,14 @@ int sa3ds_ec_route_next(const SA3DSECRoute*r,uint32_t act,SA1Vec3 p,uint32_t*nex
     for(uint32_t i=0;i<r->edge_count;i++){
         const SA3DSECActEdge*edge=&r->edges[i];
         if(edge->from_act!=act)continue;
-        float dx=p.x-edge->center.x,dy=p.y-edge->center.y,dz=p.z-edge->center.z;
-        if(sqrtf(dx*dx+dy*dy+dz*dz)<edge->radius){*next=edge->to_act;return 1;}
+        double dx=(double)p.x-edge->center.x;
+        double dy=(double)p.y-edge->center.y;
+        double dz=(double)p.z-edge->center.z;
+        /* 4F6D0B stores the squared distance once before sqrt. The
+         * following x87 comparison uses the unrounded root. */
+        volatile double xx=dx*dx,yy=dy*dy,zz=dz*dz;
+        float squared=(float)(xx+yy+zz);
+        if(sqrt((double)squared)<edge->radius){*next=edge->to_act;return 1;}
     }
     return 0;
 }

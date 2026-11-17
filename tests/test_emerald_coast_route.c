@@ -32,6 +32,13 @@ int main(int argc,char **argv){
     next=99;assert(!sa3ds_ec_route_next(&route,0,(SA1Vec3){522,30,-60},&next)&&next==99);
     assert(!sa3ds_ec_route_next(&route,0,(SA1Vec3){500,52,-60},&next));
     assert(sa3ds_ec_route_next(&route,0,(SA1Vec3){521.999f,30,-60},&next));
+    /* This input's root rounds up to 22 as float32. PC2004 compares the
+       wider root against 22 and activates the handoff. */
+    SA3DSECRoute boundary=route;
+    boundary.edges[0].center=(SA1Vec3){0};
+    float near_edge=nextafterf(22.0f,0.0f);
+    assert(sa3ds_ec_route_next(&boundary,0,(SA1Vec3){near_edge,0.007f,0},&next)&&next==1);
+    assert(!sa3ds_ec_route_next(&boundary,0,(SA1Vec3){near_edge,0.01f,0},&next));
     assert(!sa3ds_ec_route_next(&route,1,(SA1Vec3){500,30,-60},&next));
     assert(!sa3ds_ec_route_next(&route,0,(SA1Vec3){NAN,30,-60},&next));
     assert(!sa3ds_ec_route_next(&route,0,(SA1Vec3){500,30,-60},NULL));

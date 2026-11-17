@@ -16,6 +16,7 @@ SIGNATURES={
  'handoff center Z':(0x4F6CDF,'d90534af7e00'),
  'handoff center Y':(0x4F6CE9,'d90530af7e00'),
  'handoff center X':(0x4F6CF2,'d9052caf7e00'),
+ 'handoff squared distance float store':(0x4F6D0B,'d91c24ddd8ddd8ddd8'),
  'handoff distance and radius':(0x4F6D14,'e8d7042900d81d88097e00'),
  'strict handoff comparison':(0x4F6D24,'7a2d'),
  'advance by one act':(0x4F6D43,'6a01e836ecf1ff'),
