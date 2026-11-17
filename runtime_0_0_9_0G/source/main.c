@@ -2613,13 +2613,14 @@ static int world_set_flags(int restart,uint32_t count,const uint16_t*types,const
     for(uint32_t i=0;i<count;i++){if(!current[i])set[i].flags=0,set[i].loads=0;flags[i]=set[i].flags;}
     return 1;
 }
-static void world_apply_dynamic(void){
-    if(!g_ec_collision.triangles||g_ec_dynamic_applied==g_ec_dynamic.changes)return;
+static int world_apply_dynamic(void){
+    if(!g_ec_collision.triangles||g_ec_dynamic_applied==g_ec_dynamic.changes)return 1;
     g_ec_collision.dynamic=&g_ec_dynamic;
-    if(!sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player)){g_whale_error=1;return;}
+    if(!sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player))return 0;
     g_ec_dynamic_applied=g_ec_dynamic.changes;
     /* Newly registered pier triangles may make a previously empty window usable. */
     g_ec_failed_region_valid=0;
+    return 1;
 }
 static int pier_read_frame(void*context,SA3DSPierFrame*f);
 static int pier_dynamic_add(void*context,uint32_t task,const SA3DSPierPlacement*p);
@@ -2670,7 +2671,8 @@ static void world_prepare(int restart){
     }
     if(!world_prepare_cubes(restart)){g_whale_error=1;return;}
     if(!world_prepare_itemboxes(restart)){g_whale_error=1;return;}
-    g_ec_dynamic_applied=g_ec_dynamic.changes-1u;world_apply_dynamic();
+    g_ec_dynamic_applied=g_ec_dynamic.changes-1u;
+    if(!world_apply_dynamic())g_whale_error=1;
 }
 static void destroy_whale(void){
     if(g_whale_gpu_ready){C3D_FrameSync();sa3ds_whale_gpu_destroy(&g_whale_gpu);}
@@ -2876,7 +2878,7 @@ static int tick_world(const SA1PlayerState*done){
     int goal_active=g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index;
     if(goal_active&&!world_tasks_ensure())return 0;
     if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready)){
-        world_apply_dynamic();
+        (void)world_apply_dynamic();
         return !g_whale_error;
     }
     SA3DSSetClipInput clip;float center[3];world_clip_frame(done,&clip,center);
@@ -2905,7 +2907,10 @@ static int tick_world(const SA1PlayerState*done){
         if(!sa3ds_itemboxes_load(&g_iboxes))return 0;
     }
     if(!sa3ds_owned_tasks_run(&g_world_tasks,NULL)||g_whale_error)return 0;
-    world_apply_dynamic();return !g_whale_error;
+    /* A failed rebuild leaves the last applied grid valid. Its generation
+     * stays pending, so the next world tick can retry without stopping play. */
+    (void)world_apply_dynamic();
+    return 1;
 }
 /*418B60 clear for every live whale body, then player-vs-whale sphere pairs.
  *Category2 against Sonic has no push; first-sphere damage feeds status4.*/

@@ -81,3 +81,8 @@ the live grid. If a required allocation fails, the previous triangle
 array and index remain paired and the player's support index stays
 valid for a retry. A host fixture forces the grid allocation failure
 after staging and checks both preservation and successful retry.
+
+During play, the world update keeps the last collision generation
+when a DynamicCOL rebuild fails and retries the pending generation
+on the next tick. Setup still checks for a successful initial build,
+and task-execution errors still propagate to the stage error screen.
