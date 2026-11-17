@@ -1143,26 +1143,29 @@ fail:
 /* Capture the worst gameplay frames in RAM so SD writes cannot create
    the stalls this trace is intended to measure. */
 static struct {
-    unsigned frame,act,steps;
-    uint64_t total,simulation,region_build,gpu_wait,draw,bgm,bottom_screen;
+    unsigned frame,act,steps,dynamic_updates,dynamic_failures;
+    uint64_t total,simulation,region_build,gpu_wait,draw,bgm,bottom_screen,dynamic_update;
     float x,z;
 } g_ec_stalls[24];
 static int g_ec_stall_trace;
-static uint64_t g_ec_stall_region_build;
+static uint64_t g_ec_stall_region_build,g_ec_stall_dynamic_update;
+static unsigned g_ec_stall_dynamic_updates,g_ec_stall_dynamic_failures;
 
 static void ec_write_stalls(void){
     if(!g_ec_stall_trace)return;
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_stalls.csv","wb");
     if(!file)return;
-    fputs("frame,act,steps,total_ms,simulation_ms,region_build_ms,gpu_wait_ms,draw_ms,bgm_ms,bottom_screen_ms,x,z\n",file);
+    fputs("frame,act,steps,total_ms,simulation_ms,region_build_ms,gpu_wait_ms,draw_ms,bgm_ms,bottom_screen_ms,x,z,dynamic_update_ms,dynamic_updates,dynamic_failures\n",file);
     for(unsigned i=0;i<24;i++){
         if(!g_ec_stalls[i].total)continue;
-        fprintf(file,"%u,%u,%u,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%.2f,%.2f\n",
+        fprintf(file,"%u,%u,%u,%llu,%llu,%llu,%llu,%llu,%llu,%llu,%.2f,%.2f,%llu,%u,%u\n",
             g_ec_stalls[i].frame,g_ec_stalls[i].act,g_ec_stalls[i].steps,
             (unsigned long long)g_ec_stalls[i].total,(unsigned long long)g_ec_stalls[i].simulation,
             (unsigned long long)g_ec_stalls[i].region_build,(unsigned long long)g_ec_stalls[i].gpu_wait,
             (unsigned long long)g_ec_stalls[i].draw,(unsigned long long)g_ec_stalls[i].bgm,
-            (unsigned long long)g_ec_stalls[i].bottom_screen,g_ec_stalls[i].x,g_ec_stalls[i].z);
+            (unsigned long long)g_ec_stalls[i].bottom_screen,g_ec_stalls[i].x,g_ec_stalls[i].z,
+            (unsigned long long)g_ec_stalls[i].dynamic_update,
+            g_ec_stalls[i].dynamic_updates,g_ec_stalls[i].dynamic_failures);
     }
     fclose(file);
 }
@@ -2616,7 +2619,14 @@ static int world_set_flags(int restart,uint32_t count,const uint16_t*types,const
 static int world_apply_dynamic(void){
     if(!g_ec_collision.triangles||g_ec_dynamic_applied==g_ec_dynamic.changes)return 1;
     g_ec_collision.dynamic=&g_ec_dynamic;
-    if(!sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player))return 0;
+    uint64_t start=g_ec_stall_trace?osGetTime():0;
+    int applied=sa3ds_ec_collision_apply_dynamic(&g_ec_collision,&g_player);
+    if(g_ec_stall_trace){
+        g_ec_stall_dynamic_update+=osGetTime()-start;
+        g_ec_stall_dynamic_updates++;
+        if(!applied)g_ec_stall_dynamic_failures++;
+    }
+    if(!applied)return 0;
     g_ec_dynamic_applied=g_ec_dynamic.changes;
     /* Newly registered pier triangles may make a previously empty window usable. */
     g_ec_failed_region_valid=0;
@@ -4464,6 +4474,9 @@ int main(void) {
     while (aptMainLoop()) {
         uint64_t frame_start=g_ec_stall_trace?osGetTime():0;
         g_ec_stall_region_build=0;
+        g_ec_stall_dynamic_update=0;
+        g_ec_stall_dynamic_updates=0;
+        g_ec_stall_dynamic_failures=0;
         hidScanInput();
         u32 down=hidKeysDown(), held=hidKeysHeld(), up=hidKeysUp();
         if(g_emerald_coast)mod_toggle_probe_input(g_rendered_frames,&down,&held);
@@ -5058,6 +5071,9 @@ int main(void) {
                     g_ec_stalls[slot].total=total;
                     g_ec_stalls[slot].simulation=t0-now_ms;
                     g_ec_stalls[slot].region_build=g_ec_stall_region_build;
+                    g_ec_stalls[slot].dynamic_update=g_ec_stall_dynamic_update;
+                    g_ec_stalls[slot].dynamic_updates=g_ec_stall_dynamic_updates;
+                    g_ec_stalls[slot].dynamic_failures=g_ec_stall_dynamic_failures;
                     g_ec_stalls[slot].gpu_wait=draw_start-wait_start;
                     g_ec_stalls[slot].draw=draw_end-draw_start;
                     g_ec_stalls[slot].bgm=bgm_end-bgm_start;

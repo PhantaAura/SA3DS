@@ -86,3 +86,10 @@ During play, the world update keeps the last collision generation
 when a DynamicCOL rebuild fails and retries the pending generation
 on the next tick. Setup still checks for a successful initial build,
 and task-execution errors still propagate to the stage error screen.
+
+The opt-in stall trace (`emerald_coast_stall_trace.flag` next to the
+native executable) appends dynamic collision update milliseconds,
+attempts, and failures to `emerald_coast_stalls.csv`. This measures
+only generation changes that reach the updater, including checks
+that determine a rebuild is unnecessary. Region loads have their own
+timing. The report continues to buffer samples in RAM and writes on exit.
