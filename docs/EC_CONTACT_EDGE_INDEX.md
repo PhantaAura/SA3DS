@@ -53,3 +53,14 @@ The observed Old3DS freeze report remains open. Full rebuild cost includes
 model transforms, allocation/grid construction, surface remap and SD logging;
 GPU submit stalls remain visible too. Improvement of one pass does not prove
 elimination of sudden freezes or retail-equivalent terrain/camera behavior.
+
+The resident grid now records one bit per reference for candidates
+with `abs(normal.y) <= 0.45`. Wall face and edge passes visit those
+references in original grid order. The bitset is rebuilt with the
+static/dynamic grid and uses the full scan if its allocation fails.
+The floor, support, and camera queries still walk the full grid.
+
+On the owner-data Act 1 host dash-panel replay, all movement output
+and 588 wall contacts matched the previous build. Summed collision
+triangle checks decreased from 1,386,450 to 1,276,487 (7.9%). Those
+counts reflect host work. Old 3DS frame timing remains unmeasured.

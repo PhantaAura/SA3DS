@@ -40,6 +40,9 @@ typedef struct {
     uint32_t triangle_count,instance_count;
     uint32_t cells[SA3DS_EC_GRID_SIDE*SA3DS_EC_GRID_SIDE+1u];
     uint32_t *references,*visited;
+    /* Optional bit per grid reference. Wall queries preserve grid order
+     * while skipping references to non-wall triangles. */
+    uint32_t *wall_ref_bits;
     uint32_t reference_count,query_serial,queries,triangle_tests,wall_hits;
     float reference_y;
     /* Grid cells are local to this bounded region; triangle/player positions
