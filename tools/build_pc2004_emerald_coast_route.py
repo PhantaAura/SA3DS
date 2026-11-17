@@ -10,11 +10,27 @@ from tools import sa3dspak
 from tools.verify_pc2004_ec_route import route_rows, verified_reader, PROFILE_SHA256
 from tools.build_pc2004_emerald_coast_visual import read_source
 from tools.importers.pc2004_set import read_set_source
+from tools.importers.pc2004_stage import PC2004StageDecoder
 HEADER=struct.Struct('<8sHHIIIII')
 START=struct.Struct('<IIfffI')
 EDGE=struct.Struct('<IIffff')
 GOAL=struct.Struct('<IIIfffff')
 GOAL_ANGLES=struct.Struct('<3hH')
+DEATH_HEADER=struct.Struct('<8sI')
+DEATH_SURFACE=struct.Struct('<IIf12f')
+
+
+def build_death_zones(decoder, acts):
+    rows = []
+    for act in acts:
+        for surface in decoder.emerald_coast_death_surfaces(act):
+            heights = {point[1] for point in surface.points}
+            if len(heights) != 1 or len(surface.triangles) != 2:
+                raise ValueError('expected a horizontal death-bound quad')
+            xz = [component for tri in surface.triangles for index in tri
+                  for component in (surface.points[index][0], surface.points[index][2])]
+            rows.append(DEATH_SURFACE.pack(act, surface.character_mask, heights.pop(), *xz))
+    return DEATH_HEADER.pack(b'SA3DECDE', len(rows)) + b''.join(rows)
 
 def goal_row(exe, system):
     read = verified_reader(exe)
@@ -46,7 +62,7 @@ def goal_row(exe, system):
     return (1, index, row.type_word, *row.position,
             (row.parameters[0] + add) * scale, load_distance, *row.angle_words)
 
-def build(starts,edges,goal=None):
+def build(starts,edges,goal=None,death_zones=None):
     start_offset=HEADER.size;edge_offset=start_offset+len(starts)*START.size
     end=edge_offset+len(edges)*EDGE.size
     minor=2 if goal else 0
@@ -60,7 +76,10 @@ def build(starts,edges,goal=None):
     metadata=json.dumps({'source_profile':'SADX_PC_2004_CANONICAL','source_sha256':PROFILE_SHA256,
         'character':'Sonic','stage':1,'required_acts':[0,1],
         'authority':'EXACT-EXECUTABLE STATIC EVIDENCE; NOT RETAIL TRACE VERIFIED'},sort_keys=True).encode()
-    return sa3dspak.build([('METADATA',metadata,0),('ROUTE',bytes(data),0)])
+    chunks = [('METADATA',metadata,0),('ROUTE',bytes(data),0)]
+    if death_zones is not None:
+        chunks.append(('DEATH_ZONES',death_zones,0))
+    return sa3dspak.build(chunks)
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -72,6 +91,7 @@ def main():
     starts,edges=route_rows(args.sonic_exe)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     goal=goal_row(args.sonic_exe,args.system or args.sonic_exe.parent/'system')
-    args.output.write_bytes(build(starts,edges,goal))
+    death_zones = build_death_zones(PC2004StageDecoder(args.sonic_exe), (row[0] for row in starts))
+    args.output.write_bytes(build(starts,edges,goal,death_zones))
     print(f'Owner route package: {len(starts)} source starts,{len(edges)} source act handoff, O BZ finish row {goal[1]}; {args.output}')
 if __name__=='__main__':main()

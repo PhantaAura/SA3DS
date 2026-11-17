@@ -12,7 +12,18 @@ int main(int argc,char **argv){
     if(argc==3&&!strcmp(argv[2],"reject")){assert(!sa3ds_ec_route_open(&route,bytes,(size_t)n));assert(!route.start_count&&!route.edge_count);free(bytes);return 0;}
     assert(sa3ds_ec_route_open(&route,bytes,(size_t)n));free(bytes);
     assert(route.start_count==2&&route.edge_count==1);
-    assert(route.has_goal==(argc==3));
+    int death=argc==3&&!strcmp(argv[2],"death");
+    assert(route.has_goal==(argc==3&&!death));
+    assert(route.death_zone_count==(unsigned)death);
+    assert(sa3ds_ec_route_death_zone(&route,1,0,(SA1Vec3){10,100,10})==death);
+    if(death){
+        assert(sa3ds_ec_route_death_zone(&route,1,0,(SA1Vec3){20,70,20}));
+        assert(!sa3ds_ec_route_death_zone(&route,1,0,(SA1Vec3){10,nextafterf(70,0),10}));
+        assert(!sa3ds_ec_route_death_zone(&route,1,0,(SA1Vec3){10,nextafterf(100,INFINITY),10}));
+        assert(!sa3ds_ec_route_death_zone(&route,1,0,(SA1Vec3){10,95,21}));
+        assert(!sa3ds_ec_route_death_zone(&route,0,0,(SA1Vec3){10,95,10}));
+        assert(!sa3ds_ec_route_death_zone(&route,1,1,(SA1Vec3){10,95,10}));
+    }
     if(route.has_goal){
         assert(route.goal.act_index==1&&route.goal.source_row==99&&route.goal.type==81);
         assert(route.goal.center.x==900&&route.goal.center.y==50&&route.goal.center.z==600);

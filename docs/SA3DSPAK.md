@@ -33,6 +33,14 @@ second-act O BZ profile and all bounds. Minor0 remains readable for starts
 and handoff. Minor2 appends the three original 16-bit SET angle words
 and one reserved zero word after the goal row.
 
+Newly generated route packs also carry `DEATH_ZONES`. Its little-endian
+header is `<8sI>` with magic `SA3DECDE` and a row count. Each row uses
+`<IIf12f>` for act, character mask, world height and the XZ coordinates of
+two triangles in source order. Previous route packs remain readable.
+The portable query mirrors the finite projection and inclusive 30-unit
+vertical window of PC2004's stage task at 0x44AE80. The native task still
+needs to consume that query and dispatch the death request.
+
 Visual packages accept the four required chunks and optional single `SET` and
 `CAMERA` banks. These optional banks are CRC-checked and retained, but their
 presence alone does not activate gameplay objects or original cameras.

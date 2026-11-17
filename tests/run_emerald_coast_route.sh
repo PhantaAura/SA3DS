@@ -9,4 +9,5 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/game -Isrc/sa3dspak \
 "$tmp/test" "$tmp/route.sa3dspak"
 "$tmp/test" "$tmp/route.sa3dspak-goal" goal
 "$tmp/test" "$tmp/route.sa3dspak-oriented" oriented
+"$tmp/test" "$tmp/route.sa3dspak-death" death
 for bad in "$tmp"/route.sa3dspak.*; do "$tmp/test" "$bad" reject; done

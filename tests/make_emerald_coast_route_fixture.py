@@ -4,7 +4,7 @@ import struct
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from tools import sa3dspak
-from tools.build_pc2004_emerald_coast_route import HEADER,START,EDGE,GOAL,GOAL_ANGLES
+from tools.build_pc2004_emerald_coast_route import HEADER,START,EDGE,GOAL,GOAL_ANGLES,DEATH_HEADER,DEATH_SURFACE
 starts=[(0,0,10,20,30,0x6000),(1,0,-10,100,-20,0x4000)]
 edges=[(0,1,500,30,-60,22)]
 so=32;eo=so+len(starts)*24
@@ -35,3 +35,8 @@ for name,off,fmt,value in [('version',8,'H',2),('flags',10,'H',1),('level',12,'I
  ('from',eo,'I',7),('to',eo+4,'I',7),('self',eo+4,'I',0),
  ('radius',eo+20,'f',-1),('infinite',eo+20,'f',float('inf'))]:
  bad=bytearray(body);struct.pack_into('<'+fmt,bad,off,value);write('.'+name,bad)
+death = DEATH_HEADER.pack(b'SA3DECDE', 1) + DEATH_SURFACE.pack(
+    1, 1, 100, 0, 0, 20, 0, 0, 20, 20, 0, 20, 20, 0, 20)
+for suffix, zone in [('-death', death), ('.invalid-death', death[:-1])]:
+    path.with_name(path.name+suffix).write_bytes(sa3dspak.build(
+        [('ROUTE',bytes(body),0),('DEATH_ZONES',zone,0)]))

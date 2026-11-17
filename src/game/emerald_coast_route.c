@@ -12,6 +12,31 @@ const SA3DSECStart *sa3ds_ec_route_start(const SA3DSECRoute*r,uint32_t act){
     for(uint32_t i=0;i<r->start_count;i++)if(r->starts[i].act_index==act)return &r->starts[i];
     return NULL;
 }
+static double cross_xz(const float a[2],const float b[2],float x,float z){
+    return ((double)x-a[0])*((double)b[1]-a[1])-((double)z-a[1])*((double)b[0]-a[0]);
+}
+static int load_death_zones(SA3DSECRoute *route,const SA3DSPakChunk *chunk){
+    if(chunk->flags||chunk->size<12||memcmp(chunk->data,"SA3DECDE",8))return 0;
+    uint32_t count=r32(chunk->data+8);
+    if(!count||count>SA3DS_EC_ROUTE_MAX_DEATH_ZONES||chunk->size!=12u+60u*count)return 0;
+    for(uint32_t i=0;i<count;i++){
+        const uint8_t *p=chunk->data+12u+i*60u;
+        SA3DSECDeathZone *zone=&route->death_zones[i];
+        zone->act=r32(p);zone->character_mask=r32(p+4);zone->height=rf(p+8);
+        if(!sa3ds_ec_route_start(route,zone->act)||!zone->character_mask||!isfinite(zone->height))return 0;
+        p+=12;
+        for(unsigned t=0;t<2;t++){
+            float (*tri)[2]=zone->xz[t];
+            for(unsigned v=0;v<3;v++,p+=8){
+                tri[v][0]=rf(p);tri[v][1]=rf(p+4);
+                if(!isfinite(tri[v][0])||!isfinite(tri[v][1]))return 0;
+            }
+            if(cross_xz(tri[0],tri[1],tri[2][0],tri[2][1])==0.0)return 0;
+        }
+    }
+    route->death_zone_count=count;
+    return 1;
+}
 int sa3ds_ec_route_open(SA3DSECRoute*out,const void*data,size_t size){
     if(!out)return 0;
     memset(out,0,sizeof(*out));SA3DSPak pak;SA3DSPakChunk chunk;
@@ -56,6 +81,7 @@ int sa3ds_ec_route_open(SA3DSECRoute*out,const void*data,size_t size){
         }
         route.has_goal=1;
     }
+    if(sa3dspak_find(&pak,"DEATH_ZONES",&chunk)==SA3DSPAK_OK&&!load_death_zones(&route,&chunk))return 0;
     *out=route;return 1;
 }
 int sa3ds_ec_route_next(const SA3DSECRoute*r,uint32_t act,SA1Vec3 p,uint32_t*next){
@@ -71,6 +97,23 @@ int sa3ds_ec_route_next(const SA3DSECRoute*r,uint32_t act,SA1Vec3 p,uint32_t*nex
         volatile double xx=dx*dx,yy=dy*dy,zz=dz*dz;
         float squared=(float)(xx+yy+zz);
         if(sqrt((double)squared)<edge->radius){*next=edge->to_act;return 1;}
+    }
+    return 0;
+}
+int sa3ds_ec_route_death_zone(const SA3DSECRoute *route,uint32_t act,uint32_t character,SA1Vec3 p){
+    if(!route||character>=32||!finite3(p)||route->death_zone_count>SA3DS_EC_ROUTE_MAX_DEATH_ZONES)return 0;
+    for(uint32_t i=0;i<route->death_zone_count;i++){
+        const SA3DSECDeathZone *zone=&route->death_zones[i];
+        double depth=(double)zone->height-p.y;
+        if(zone->act!=act||!(zone->character_mask&(UINT32_C(1)<<character))||depth<0.0||depth>30.0)continue;
+        for(unsigned t=0;t<2;t++){
+            const float (*tri)[2]=zone->xz[t];
+            float a=(float)cross_xz(tri[0],tri[1],p.x,p.z);
+            float b=(float)cross_xz(tri[1],tri[2],p.x,p.z);
+            float c=(float)cross_xz(tri[2],tri[0],p.x,p.z);
+            /* 456510 compares all three edge-sign products, including zero. */
+            if((double)a*b>=0.0&&(double)b*c>=0.0&&(double)c*a>=0.0)return 1;
+        }
     }
     return 0;
 }

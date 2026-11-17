@@ -26,6 +26,16 @@ SIGNATURES={
  'Sonic start array selection':(0x41491D,'bfc8a59000'),
  'start row stride20':(0x414964,'83c714'),
  'movement Y argument':(0x43ECEA,'668b4e1866f7d90fb7d133c9e825613400'),
+ 'death check stage task registration':(0x415A2A,'6880ae44006a016a02e8285effff'),
+ 'death check ticks existing children first':(0x44AE90,'e88b05fcff'),
+ 'death check task gate':(0x44AEA0,'8b430c85c00f855c0100008b4320f64004040f854f010000'),
+ 'death check mesh projection':(0x44AF50,'e8bbb5000083c40885c07433'),
+ 'death check upper and lower results':(0x44AF5C,'8b44241c85c0752b8b44243c85c07423'),
+ 'death check distance and call':(0x44AF6C,'d9442414d864244cd9e1d81dc8f17d00dfe0f6c4417a0c6a008bc3e864bbffff'),
+ 'death check distance limit':(0x7DF1C8,'0000f041'),
+ 'death task constructor invokes source executor':(0x446AF0,'5068800c44006a08e8434efcff'),
+ 'death task Sonic dispatch entry':(0x446AA8,'036a4400'),
+ 'fall-death sound':(0x446A21,'68df050000e845d3fdff'),
  'death-zone level table':(0x4751CD,'8b049508599100'),
  'death-zone act lookup':(0x4751E7,'8b3488'),
  'death-zone character mask filter':(0x475225,'853e7412'),
@@ -77,7 +87,7 @@ def verify_death_surfaces(path):
                 assert (bx-ax)*(cz-az) != (bz-az)*(cx-ax)
         if act == 1:
             assert surfaces[0].points[0][1] < 0 < surfaces[1].points[0][1]
-    print('PC2004 Emerald Coast death zones: PASS (four decoded finite source quads, character masks and transforms; trigger semantics pending)')
+    print('PC2004 Emerald Coast death zones: PASS (four finite quads, character masks, transforms, and stage-task geometry gate; native dispatch pending)')
 
 
 if __name__=='__main__':
