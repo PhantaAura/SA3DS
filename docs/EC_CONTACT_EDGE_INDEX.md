@@ -64,3 +64,13 @@ On the owner-data Act 1 host dash-panel replay, all movement output
 and 588 wall contacts matched the previous build. Summed collision
 triangle checks decreased from 1,386,450 to 1,276,487 (7.9%). Those
 counts reflect host work. Old 3DS frame timing remains unmeasured.
+
+Support, floor-height selection for the controller, and swept landings
+now share a second mask over the same grid order for normals with
+`normal.y > 0.45`. The independent NPC floor query keeps its broader
+upward-normal search. A single optional allocation stores both masks.
+
+The same owner Act 1 replay retained identical movement and all 588
+wall contacts. Collision triangle checks fell from 1,276,487 to
+595,576 (53.3% fewer than the wall-only mask). The replay measures
+triangle visits, not elapsed time or freeze frequency on an Old 3DS.

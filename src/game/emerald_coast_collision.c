@@ -198,21 +198,26 @@ static int build_index(SA3DSECCollision*s){
     references=malloc((size_t)(s->cells[256]?s->cells[256]:1)*sizeof(*references));
     visited=calloc(s->triangle_count?s->triangle_count:1,sizeof(*visited));
     if(!references||!visited){free(references);free(visited);return 0;}
-    uint32_t *wall_bits=calloc((s->cells[256]+31)/32+1,sizeof(*wall_bits));
+    size_t words=(s->cells[256]+31)/32+1;
+    uint32_t *wall_bits=calloc(words*2,sizeof(*wall_bits));
+    uint32_t *support_bits=wall_bits?wall_bits+words:NULL;
     uint32_t cursor[256];memcpy(cursor,s->cells,sizeof(cursor));
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
         int x0=cell_x(s,t->min_x),x1=cell_x(s,t->max_x);
         int z0=cell_z(s,t->min_z),z1=cell_z(s,t->max_z);
-        int wall=wall_bits&&fabsf(t->normal.y)<=0.45f;
+        uint32_t *bits=NULL;
+        if(t->normal.y>0.45f)bits=support_bits;
+        else if(t->normal.y>=-0.45f)bits=wall_bits;
         for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
             uint32_t ref=cursor[z*16+x]++;
             references[ref]=i;
-            if(wall)wall_bits[ref/32]|=1u<<(ref%32);
+            if(bits)bits[ref/32]|=1u<<(ref%32);
         }
     }
     free(s->references);free(s->visited);free(s->wall_ref_bits);
     s->references=references;s->visited=visited;s->wall_ref_bits=wall_bits;
+    s->support_ref_bits=support_bits;
     s->reference_count=s->cells[256];s->query_serial=0;
     return 1;
 }
@@ -469,6 +474,20 @@ int sa3ds_ec_collision_open_archive_region_dynamic(SA3DSECCollision*s,
 fail:sa3ds_ec_collision_destroy(s);return 0;
 }
 
+static uint32_t next_marked_reference(const uint32_t *bits,uint32_t first,uint32_t end){
+    if(!bits)return first;
+    while(first<end){
+        uint32_t base=first&~31u;
+        uint32_t word=bits[first/32]&(UINT32_MAX<<(first%32));
+        if(word){
+            uint32_t next=base+(uint32_t)__builtin_ctz(word);
+            return next<end?next:end;
+        }
+        first=base+32;
+    }
+    return end;
+}
+
 int sa3ds_ec_collision_floor_below_frame(SA3DSECCollision*s,float x,float ceiling,float z,float*height,SA1Vec3*normal){
     if(!s||!height||!s->triangles||!isfinite(x)||!isfinite(z)||!isfinite(ceiling)||
        hypotf(x-s->center_x,z-s->center_z)>490.f)return 0;
@@ -491,7 +510,9 @@ SA1Surface sa3ds_ec_collision_surface(void*ctx,float x,float z){
     SA3DSECCollision*s=ctx;SA1Surface result={0};float best=1e30f;
     if(!s||!isfinite(x)||!isfinite(z)||x<s->min_x||x>s->max_x||z<s->min_z||z>s->max_z)return result;
     s->queries++;unsigned c=cell_z(s,z)*16+cell_x(s,x);
-    for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+    uint32_t end=s->cells[c+1];
+    for(uint32_t j=next_marked_reference(s->support_ref_bits,s->cells[c],end);
+        j<end;j=next_marked_reference(s->support_ref_bits,j+1,end)){
         SA3DSECTriangle*t=&s->triangles[s->references[j]];s->triangle_tests++;
         if(t->normal.y<=0.45f||x<t->min_x||x>t->max_x||z<t->min_z||z>t->max_z)continue;
         float y=t->a.y-(t->normal.x*(x-t->a.x)+t->normal.z*(z-t->a.z))/t->normal.y;
@@ -520,7 +541,9 @@ SA1Contact sa3ds_ec_collision_contact(void*ctx,SA1Vec3 p,SA1Vec3 probe,float ran
     int x0=cell_x(s,p.x-range),x1=cell_x(s,p.x+range),z0=cell_z(s,p.z-range),z1=cell_z(s,p.z+range);
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
       unsigned c=(unsigned)z*16u+(unsigned)x;
-      for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+      uint32_t end=s->cells[c+1];
+      for(uint32_t j=next_marked_reference(s->support_ref_bits,s->cells[c],end);
+          j<end;j=next_marked_reference(s->support_ref_bits,j+1,end)){
         uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
         SA3DSECTriangle*t=&s->triangles[ti];s->triangle_tests++;
         float d=sa1_vec3_dot(sa1_vec3_sub(p,t->a),t->normal);
@@ -582,7 +605,9 @@ static void resolve_floor_crossing(SA3DSECCollision*s,SA1Vec3 previous,SA1Player
     s->queries++;
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
         unsigned c=z*16+x;
-        for(uint32_t j=s->cells[c];j<s->cells[c+1];j++){
+        uint32_t end=s->cells[c+1];
+        for(uint32_t j=next_marked_reference(s->support_ref_bits,s->cells[c],end);
+            j<end;j=next_marked_reference(s->support_ref_bits,j+1,end)){
             uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;
             s->visited[ti]=s->query_serial;s->triangle_tests++;
             SA3DSECTriangle*t=&s->triangles[ti];if(t->normal.y<=0.45f)continue;
@@ -703,19 +728,6 @@ static int retain_steep_support(const SA3DSECTriangle *face, SA1Vec3 up,
     return 1;
 }
 
-static uint32_t next_wall_reference(const SA3DSECCollision *s,uint32_t first,uint32_t end){
-    if(!s->wall_ref_bits)return first;
-    while(first<end){
-        uint32_t base=first&~31u;
-        uint32_t word=s->wall_ref_bits[first/32]&(UINT32_MAX<<(first%32));
-        if(word){
-            uint32_t next=base+(uint32_t)__builtin_ctz(word);
-            return next<end?next:end;
-        }
-        first=base+32;
-    }
-    return end;
-}
 
 void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1PlayerState*p){
     if(!s||!p||!finite3(previous)||!finite3(p->pos))return;
@@ -741,7 +753,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
     for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
         unsigned c=z*16+x;
         uint32_t end=s->cells[c+1];
-        for(uint32_t j=next_wall_reference(s,s->cells[c],end);j<end;j=next_wall_reference(s,j+1,end)){
+        for(uint32_t j=next_marked_reference(s->wall_ref_bits,s->cells[c],end);j<end;j=next_marked_reference(s->wall_ref_bits,j+1,end)){
             uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
             SA3DSECTriangle*t=&s->triangles[ti];s->triangle_tests++;
             if((int32_t)ti==steep_support||fabsf(t->normal.y)>0.45f)continue;
@@ -775,7 +787,7 @@ void sa3ds_ec_collision_resolve_walls(SA3DSECCollision*s,SA1Vec3 previous,SA1Pla
         for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++){
             unsigned c=z*16+x;
             uint32_t end=s->cells[c+1];
-            for(uint32_t j=next_wall_reference(s,s->cells[c],end);j<end;j=next_wall_reference(s,j+1,end)){
+            for(uint32_t j=next_marked_reference(s->wall_ref_bits,s->cells[c],end);j<end;j=next_marked_reference(s->wall_ref_bits,j+1,end)){
                 uint32_t ti=s->references[j];if(s->visited[ti]==s->query_serial)continue;s->visited[ti]=s->query_serial;
                 SA3DSECTriangle*t=&s->triangles[ti];if((int32_t)ti==steep_support||fabsf(t->normal.y)>0.45f||!t->wall_edge_mask)continue;
                 s->triangle_tests++;
