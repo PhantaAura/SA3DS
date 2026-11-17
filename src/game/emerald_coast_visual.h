@@ -10,7 +10,8 @@ typedef enum {
     SA3DS_EC_VISUAL_OK=0, SA3DS_EC_VISUAL_ERR_ARGUMENT,
     SA3DS_EC_VISUAL_ERR_PACKAGE, SA3DS_EC_VISUAL_ERR_MISSING_CHUNK,
     SA3DS_EC_VISUAL_ERR_FORMAT, SA3DS_EC_VISUAL_ERR_BOUNDS,
-    SA3DS_EC_VISUAL_ERR_REFERENCE, SA3DS_EC_VISUAL_ERR_NONFINITE
+    SA3DS_EC_VISUAL_ERR_REFERENCE, SA3DS_EC_VISUAL_ERR_NONFINITE,
+    SA3DS_EC_VISUAL_ERR_STAGE
 } SA3DSECVisualResult;
 
 typedef struct {
@@ -42,6 +43,9 @@ typedef struct {
 } SA3DSECVisual;
 
 SA3DSECVisualResult sa3ds_ec_visual_open(SA3DSECVisual *out,const void *data,size_t size);
+/* Enforce the identity of tagged stage packs. Earlier packs have zero padding. */
+SA3DSECVisualResult sa3ds_ec_visual_open_stage(SA3DSECVisual *out,const void *data,size_t size,
+    uint32_t level_id,uint32_t act);
 int sa3ds_ec_model(const SA3DSECVisual *v,uint32_t i,SA3DSECModel *out);
 int sa3ds_ec_mesh(const SA3DSECVisual *v,uint32_t i,SA3DSECMesh *out);
 int sa3ds_ec_instance(const SA3DSECVisual *v,uint32_t i,SA3DSECInstance *out);

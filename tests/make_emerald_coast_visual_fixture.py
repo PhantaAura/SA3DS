@@ -13,6 +13,8 @@ mo=a16(vh.size); meo=a16(mo+model.size); io=a16(meo+mesh.size)
 vo=a16(io+inst.size); xo=a16(vo+3*vertex.size); size=xo+6
 g=bytearray(size)
 vh.pack_into(g,0,b'SA3DVIS\0',1,0,1,1,1,3,3,mo,meo,io,vo,xo)
+if len(sys.argv)>2:
+    struct.pack_into('<4sII',g,vh.size,b'STAG',1,1)
 model.pack_into(g,mo,0,1,0,3,0,3,0,0,0,2,-1,0)
 mesh.pack_into(g,meo,0,0,0,3,0xC000,0,1,1)
 inst.pack_into(g,io,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,2)

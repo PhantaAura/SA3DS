@@ -36,6 +36,12 @@ The visual geometry stores:
 - raw source primitive/type-material fields;
 - raw object and LandTable surface flags on instances.
 
+Generated stage packages store `STAG` at header byte 52, followed by the
+little-endian 32-bit PC2004 level ID and zero-based act. The Emerald Coast
+loader checks both fields at startup and at an act change. Earlier stage
+packages with zero-filled header padding still load. Model, prop and background
+packages use the generic visual reader.
+
 The converter deterministically expands Basic strips/quads into triangle lists
 using the same conventions already pinned by the Sonic character pipeline.
 

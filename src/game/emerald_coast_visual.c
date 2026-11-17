@@ -116,4 +116,14 @@ SA3DSECVisualResult sa3ds_ec_visual_open(SA3DSECVisual*out,const void*data,size_
     for(uint32_t i=0;i<out->index_count;i++){uint16_t x;sa3ds_ec_index(out,i,&x);if(x>=out->vertex_count)return SA3DS_EC_VISUAL_ERR_REFERENCE;}
     return SA3DS_EC_VISUAL_OK;
 }
-const char*sa3ds_ec_visual_result_name(SA3DSECVisualResult r){static const char*n[]={"ok","invalid argument","invalid package","missing chunk","invalid format","out of bounds","invalid reference","nonfinite value"};return (unsigned)r<sizeof(n)/sizeof(n[0])?n[r]:"unknown";}
+SA3DSECVisualResult sa3ds_ec_visual_open_stage(SA3DSECVisual *out,const void *data,size_t size,
+    uint32_t level_id,uint32_t act){
+    SA3DSECVisualResult result=sa3ds_ec_visual_open(out,data,size);
+    if(result!=SA3DS_EC_VISUAL_OK)return result;
+    const uint8_t *tag=out->geometry+52;
+    if(r32(tag)==0&&r32(tag+4)==0&&r32(tag+8)==0)return SA3DS_EC_VISUAL_OK;
+    if(memcmp(tag,"STAG",4)!=0||r32(tag+4)!=level_id||r32(tag+8)!=act)
+        return SA3DS_EC_VISUAL_ERR_STAGE;
+    return SA3DS_EC_VISUAL_OK;
+}
+const char*sa3ds_ec_visual_result_name(SA3DSECVisualResult r){static const char*n[]={"ok","invalid argument","invalid package","missing chunk","invalid format","out of bounds","invalid reference","nonfinite value","stage identity mismatch"};return (unsigned)r<sizeof(n)/sizeof(n[0])?n[r]:"unknown";}

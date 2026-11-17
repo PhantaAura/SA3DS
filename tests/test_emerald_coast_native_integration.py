@@ -8,7 +8,8 @@ mk=(root/'runtime_0_0_9_0G/Makefile').read_text()
 
 assert 'if (down&KEY_R) return 6;' in main
 assert 'sdmc:/3ds/SA3DS/assets/emerald_coast_act0.sa3dspak' in main
-assert 'sa3ds_ec_visual_open(&g_ec_visual' in main
+assert 'sa3ds_ec_visual_open_stage(&g_ec_visual' in main
+assert 'sa3ds_ec_visual_open_stage(&visual,bytes,size' in main
 assert 'sa3ds_ec_gpu_init(&g_ec_gpu,&g_ec_visual,500.0f' in main
 assert 'if (!sa3ds_ec_gpu_draw(&g_ec_gpu,0)) return 0;' in main
 assert 'if (!g_ec_combined) return sa3ds_ec_gpu_draw(&g_ec_gpu,1);' in main

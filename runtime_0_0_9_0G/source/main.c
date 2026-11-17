@@ -112,6 +112,7 @@ static SA3DSActionPreflightReport g_action_report;
 static SA3DSLabGpu g_lab_gpu;
 static uint8_t *g_ec_bytes;
 static size_t g_ec_size;
+enum { PC2004_EMERALD_COAST_LEVEL_ID=1 };
 static uint8_t *g_ec_collision_bytes;
 static size_t g_ec_collision_size;
 static SA3DSECRoute g_ec_route;
@@ -974,7 +975,8 @@ static int load_emerald_coast_package(void) {
     boot_checkpoint("Loading Emerald Coast owner act package from SD");
     if(!sa3ds_read_file(path,&g_ec_bytes,&g_ec_size))return 0;
     boot_checkpoint("Validating Emerald Coast package and references");
-    SA3DSECVisualResult result=sa3ds_ec_visual_open(&g_ec_visual,g_ec_bytes,g_ec_size);
+    SA3DSECVisualResult result=sa3ds_ec_visual_open_stage(&g_ec_visual,g_ec_bytes,g_ec_size,
+        PC2004_EMERALD_COAST_LEVEL_ID,g_ec_act_index);
     if(result!=SA3DS_EC_VISUAL_OK){
         printf("\nEmerald Coast visual: %s\n",sa3ds_ec_visual_result_name(result));return 0;
     }
@@ -1111,8 +1113,13 @@ static int ec_change_act(uint32_t act){
     uint8_t *bytes=NULL;size_t size=0;SA3DSECVisual visual;
     SA3DSECCollision collision={0};SA3DSECGpu gpu={0};
     if(!sa3ds_read_file(path,&bytes,&size))return 0;
-    if(sa3ds_ec_visual_open(&visual,bytes,size)!=SA3DS_EC_VISUAL_OK||
-       !sa3ds_ec_collision_open_archive_region(&collision,&g_ec_collision.archive,
+    SA3DSECVisualResult result=sa3ds_ec_visual_open_stage(&visual,bytes,size,
+        PC2004_EMERALD_COAST_LEVEL_ID,act);
+    if(result!=SA3DS_EC_VISUAL_OK){
+        boot_log("ACT",sa3ds_ec_visual_result_name(result));
+        goto fail;
+    }
+    if(!sa3ds_ec_collision_open_archive_region(&collision,&g_ec_collision.archive,
             act,start->task_origin.x,start->task_origin.z))goto fail;
     ec_world_bounds(&collision,&visual);
     C3D_FrameSync(); /* Retire submissions before replacing GPU-owned resources. */

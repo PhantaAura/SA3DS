@@ -23,6 +23,8 @@ for suffix,extra in [('set',[('SET',b'opaque bank',0)]),('cam',[('CAMERA',b'opaq
 PYFIX
   for variant in set cam both; do "$tmp" "$fixture.$variant" synthetic; done
   for variant in duplicate unknown; do "$tmp" "$fixture.$variant" reject; done
+  python3 tests/make_emerald_coast_visual_fixture.py "$fixture" tagged
+  "$tmp" "$fixture" tagged
 elif [ "$#" -eq 1 ]; then
   "$tmp" "$1"
 else

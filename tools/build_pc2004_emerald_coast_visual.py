@@ -367,6 +367,10 @@ def build_act_package(dec: PC2004StageDecoder, act: int, pvm_bytes: bytes,
         raise DecodeError("act has no resolved texture archive")
     pvm = PVMArchive(pvm_bytes, table.texture_archive + ".PVM")
     visual, materials, vis_meta = build_visual_chunk(dec, act, pvm.texture_count, level_id=level_id)
+    # Tag stage packs in the existing 12-byte SA3DVIS header padding.
+    # Model-only callers of build_visual_chunk leave this padding zero.
+    tag = struct.pack("<4sII", b"STAG", level_id, act)
+    visual = b"".join((visual[:VIS_HEADER.size], tag, memoryview(visual)[VIS_HEADER.size + len(tag):]))
     material_blob = build_material_chunk(materials)
     texture_blob = build_sa3t(pvm)
     visual_check = parse_visual_chunk(visual)

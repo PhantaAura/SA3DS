@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import sys
+import struct,sys
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from tools.importers.pc2004_stage import PC2004StageDecoder,EMERALD_COAST_LEVEL_ID
 from tools.importers.pc2004_pvm_archive import PVMArchive
@@ -47,5 +47,6 @@ for act,want in expected_visual.items():
  mat_blob=build_material_chunk(mats);assert parse_material_chunk(mat_blob)['count']==len(mats)
  pak,report=build_act_package(dec,act,p.data);info=sa3dspak.parse(pak)
  assert [c['type'] for c in info['chunks']]==['METADATA','GEOMETRY','MATERIALS','TEXTURES']
+ geom=info['chunks'][1]['data'];assert struct.unpack_from('<4sII',geom,52)==(b'STAG',EMERALD_COAST_LEVEL_ID,act)
  tex=[c for c in info['chunks'] if c['type']=='TEXTURES'][0]['data'];assert len(sa3t.parse(tex)['textures'])==p.texture_count
 print('PC2004 Emerald Coast visual/material/PVM decode tests: PASS')
