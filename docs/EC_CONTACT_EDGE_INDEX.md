@@ -74,3 +74,10 @@ The same owner Act 1 replay retained identical movement and all 588
 wall contacts. Collision triangle checks fell from 1,276,487 to
 595,576 (53.3% fewer than the wall-only mask). The replay measures
 triangle visits, not elapsed time or freeze frequency on an Old 3DS.
+
+A dynamic collision rebuild stages incoming triangles and prepares
+new cell offsets, references, visit marks, and masks before replacing
+the live grid. If a required allocation fails, the previous triangle
+array and index remain paired and the player's support index stays
+valid for a retry. A host fixture forces the grid allocation failure
+after staging and checks both preservation and successful retry.

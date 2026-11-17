@@ -4,8 +4,16 @@
  * a test-only API to the runtime. No owner geometry is embedded here.*/
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
+static unsigned fail_malloc_countdown;
+static void *collision_test_malloc(size_t size){
+    if(fail_malloc_countdown&&!--fail_malloc_countdown)return NULL;
+    return malloc(size);
+}
+#define malloc collision_test_malloc
 #include "../src/game/emerald_coast_collision.c"
+#undef malloc
 static void legacy_contact_edges(SA3DSECCollision*s){
     for(uint32_t i=0;i<s->triangle_count;i++){
         SA3DSECTriangle*t=&s->triangles[i];
@@ -56,6 +64,29 @@ static void thresholds(void){
  }
  compare(&s,"class/tolerance/opposed/overlap");
 }
+static void dynamic_rebuild_failure(SA3DSECCollision *s){
+    SA3DSECDynamicSet dynamic={0};
+    const float vertices[][3]={{0,50,0},{0,50,12},{12,50,0}};
+    const uint16_t indices[]={0,1,2};
+    SA3CMatrix transform={0};
+    transform.m[0]=transform.m[5]=transform.m[10]=transform.m[15]=1;
+    s->dynamic=&dynamic;
+    assert(sa3ds_ec_dynamic_add(&dynamic,1,1,vertices,3,indices,3,&transform));
+    SA3DSECCollision before=*s;
+    SA1PlayerState player={.surface_id=0};
+    /* Stage the new geometry, then fail the required grid allocation. */
+    fail_malloc_countdown=2;
+    assert(!sa3ds_ec_collision_apply_dynamic(s,&player));
+    assert(!fail_malloc_countdown);
+    assert(s->triangles==before.triangles&&s->triangle_count==before.triangle_count);
+    assert(s->references==before.references&&s->visited==before.visited);
+    assert(s->wall_ref_bits==before.wall_ref_bits&&s->support_ref_bits==before.support_ref_bits);
+    assert(!memcmp(s->cells,before.cells,sizeof(s->cells)));
+    assert(s->query_serial==before.query_serial&&player.surface_id==0);
+    assert(sa3ds_ec_collision_apply_dynamic(s,&player));
+    assert(s->triangle_count==before.triangle_count+1&&player.surface_id==0);
+    s->dynamic=NULL;
+}
 int main(int argc,char**argv){
  assert(argc>=2&&(argc==2||(argc-2)%3==0));thresholds();
  FILE*f=fopen(argv[1],"rb");assert(f);fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);
@@ -67,7 +98,9 @@ int main(int argc,char**argv){
   unsigned act=argc==2?(unsigned)synthetic[i][0]:(unsigned)strtoul(argv[2+i*3],NULL,10);
   float x=argc==2?synthetic[i][1]:strtof(argv[3+i*3],NULL),z=argc==2?synthetic[i][2]:strtof(argv[4+i*3],NULL);
   SA3DSECCollision s;assert(sa3ds_ec_collision_open_archive_region(&s,&archive,act,x,z));
-  char label[80];snprintf(label,sizeof(label),"act%u center(%g,%g)",act,x,z);compare(&s,label);sa3ds_ec_collision_destroy(&s);
+  char label[80];snprintf(label,sizeof(label),"act%u center(%g,%g)",act,x,z);compare(&s,label);
+  if(argc==2&&i==0)dynamic_rebuild_failure(&s);
+  sa3ds_ec_collision_destroy(&s);
  }
  free(bytes);puts("Contact edge optimization: PASS exact legacy masks/triangle bytes; contact equations unchanged");return 0;
 }

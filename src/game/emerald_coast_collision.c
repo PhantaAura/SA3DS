@@ -184,26 +184,28 @@ fallback:
 }
 static SA1Vec3 edge_point(const SA3DSECTriangle*t,unsigned e);
 /* Uniform-grid references for every resident triangle (static + dynamic). */
-static int build_index(SA3DSECCollision*s){
+static int rebuild_index(SA3DSECCollision*s,uint32_t kept,
+    const SA3DSECTriangle *extra,uint32_t extra_count){
+    uint32_t count=kept+extra_count;
+    uint32_t cells[257]={0};
     uint32_t*references=NULL,*visited=NULL;
-    memset(s->cells,0,sizeof(s->cells));
-    for(uint32_t i=0;i<s->triangle_count;i++){
-        SA3DSECTriangle*t=&s->triangles[i];
+    for(uint32_t i=0;i<count;i++){
+        const SA3DSECTriangle *t=i<kept?&s->triangles[i]:&extra[i-kept];
         int x0=cell_x(s,t->min_x),x1=cell_x(s,t->max_x);
         int z0=cell_z(s,t->min_z),z1=cell_z(s,t->max_z);
-        for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++)s->cells[z*16+x+1]++;
+        for(int z=z0;z<=z1;z++)for(int x=x0;x<=x1;x++)cells[z*16+x+1]++;
     }
-    for(unsigned i=1;i<=256;i++)s->cells[i]+=s->cells[i-1];
-    if(s->cells[256]>MAX_REFERENCES)return 0;
-    references=malloc((size_t)(s->cells[256]?s->cells[256]:1)*sizeof(*references));
-    visited=calloc(s->triangle_count?s->triangle_count:1,sizeof(*visited));
+    for(unsigned i=1;i<=256;i++)cells[i]+=cells[i-1];
+    if(cells[256]>MAX_REFERENCES)return 0;
+    references=malloc((size_t)(cells[256]?cells[256]:1)*sizeof(*references));
+    visited=calloc(count?count:1,sizeof(*visited));
     if(!references||!visited){free(references);free(visited);return 0;}
-    size_t words=(s->cells[256]+31)/32+1;
+    size_t words=(cells[256]+31)/32+1;
     uint32_t *wall_bits=calloc(words*2,sizeof(*wall_bits));
     uint32_t *support_bits=wall_bits?wall_bits+words:NULL;
-    uint32_t cursor[256];memcpy(cursor,s->cells,sizeof(cursor));
-    for(uint32_t i=0;i<s->triangle_count;i++){
-        SA3DSECTriangle*t=&s->triangles[i];
+    uint32_t cursor[256];memcpy(cursor,cells,sizeof(cursor));
+    for(uint32_t i=0;i<count;i++){
+        const SA3DSECTriangle *t=i<kept?&s->triangles[i]:&extra[i-kept];
         int x0=cell_x(s,t->min_x),x1=cell_x(s,t->max_x);
         int z0=cell_z(s,t->min_z),z1=cell_z(s,t->max_z);
         uint32_t *bits=NULL;
@@ -215,11 +217,29 @@ static int build_index(SA3DSECCollision*s){
             if(bits)bits[ref/32]|=1u<<(ref%32);
         }
     }
+    if(kept!=s->triangle_count||extra_count){
+        /* The replacement grid is ready before the triangle array
+         * changes. Only incoming dynamic triangles need staging. */
+        SA3DSECTriangle *triangles=realloc(s->triangles,
+            (size_t)(count?count:1)*sizeof(*triangles));
+        if(!triangles){
+            free(references);free(visited);free(wall_bits);
+            return 0;
+        }
+        s->triangles=triangles;
+        if(extra_count)memcpy(&triangles[kept],extra,(size_t)extra_count*sizeof(*extra));
+        s->triangle_count=count;
+    }
     free(s->references);free(s->visited);free(s->wall_ref_bits);
+    memcpy(s->cells,cells,sizeof(cells));
     s->references=references;s->visited=visited;s->wall_ref_bits=wall_bits;
     s->support_ref_bits=support_bits;
-    s->reference_count=s->cells[256];s->query_serial=0;
+    s->reference_count=cells[256];s->query_serial=0;
     return 1;
+}
+
+static int build_index(SA3DSECCollision*s){
+    return rebuild_index(s,s->triangle_count,NULL,0);
 }
 void sa3ds_ec_dynamic_clear(SA3DSECDynamicSet*set){if(set){set->triangle_count=set->owner_count=0;set->changes++;}}
 int sa3ds_ec_dynamic_add(SA3DSECDynamicSet*set,uint32_t owner,uint32_t flags,const float(*points)[3],
@@ -323,15 +343,16 @@ int sa3ds_ec_collision_apply_dynamic(SA3DSECCollision*s,SA1PlayerState*p){
     if(p&&p->surface_id>=0&&(uint32_t)p->surface_id<s->triangle_count){
         instance=s->triangles[p->surface_id].source_instance;triangle=s->triangles[p->surface_id].source_triangle;
     }
-    uint32_t count=s->static_triangle_count+extra;
-    SA3DSECTriangle*grown=realloc(s->triangles,(size_t)(count?count:1)*sizeof(*grown));
-    if(!grown)return 0;
-    s->triangles=grown;s->triangle_count=s->static_triangle_count;
+    SA3DSECTriangle *staged=extra?malloc((size_t)extra*sizeof(*staged)):NULL;
+    if(extra&&!staged)return 0;
+    uint32_t next=0;
     if(set)for(uint32_t i=0;i<set->triangle_count;i++){
-        const SA3DSECTriangle*t=&set->triangles[i];
-        if(dynamic_triangle_in_region(s,t))memcpy(&s->triangles[s->triangle_count++],t,sizeof(*t));
+        const SA3DSECTriangle *t=&set->triangles[i];
+        if(dynamic_triangle_in_region(s,t))memcpy(&staged[next++],t,sizeof(*t));
     }
-    if(!build_index(s))return 0;
+    int rebuilt=rebuild_index(s,s->static_triangle_count,staged,extra);
+    free(staged);
+    if(!rebuilt)return 0;
     if(p&&instance!=UINT32_MAX){
         p->surface_id=-1;
         for(uint32_t i=0;i<s->triangle_count;i++)
