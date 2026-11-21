@@ -3,6 +3,9 @@
 import pathlib
 import struct
 import sys
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "tools"))
 import sa3dspak
@@ -17,6 +20,26 @@ def refresh_header(blob):
     struct.pack_into("<I", blob, 44, 0)
     struct.pack_into("<I", blob, 44, sa3dspak.crc32(blob[:sa3dspak.HEADER_SIZE]))
 
+def check_pack_publish():
+    with TemporaryDirectory() as folder:
+        output = pathlib.Path(folder) / "example.sa3dspak"
+        old = sa3dspak.build([("METADATA", b"previous", 0)])
+        output.write_bytes(old)
+        args = SimpleNamespace(output=output, source_profile="synthetic", chunk=[])
+        with patch.object(sa3dspak.os, "replace", side_effect=OSError("simulated publish error")):
+            try:
+                sa3dspak.command_pack(args)
+            except OSError:
+                pass
+            else:
+                raise AssertionError("publish error did not propagate")
+        assert output.read_bytes() == old
+        assert list(output.parent.iterdir()) == [output]
+        sa3dspak.command_pack(args)
+        assert output.read_bytes() != old
+        assert len(sa3dspak.parse(output.read_bytes())["chunks"]) == 1
+        assert list(output.parent.iterdir()) == [output]
+
 def main():
     valid = bytearray(sa3dspak.build([("METADATA", b"{}\n", 0)]))
     sa3dspak.parse(valid)
@@ -29,5 +52,7 @@ def main():
     bad = bytearray(valid); struct.pack_into("<Q", bad, sa3dspak.HEADER_SIZE + 16, len(bad) + 1); refresh_header(bad); rejected(bad)
     bad = bytearray(valid); struct.pack_into("<I", bad, sa3dspak.HEADER_SIZE + 32, 0); refresh_header(bad); rejected(bad)
     print("8 malformed package cases: PASS")
+    check_pack_publish()
+    print("package publication and failed replacement cleanup: PASS")
 
 if __name__ == "__main__": main()

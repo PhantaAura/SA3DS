@@ -3,9 +3,11 @@
 import argparse
 import binascii
 import json
+import os
 import pathlib
 import struct
 import sys
+import tempfile
 
 MAGIC = b"SA3DSPAK"
 VERSION = (1, 0)
@@ -87,7 +89,15 @@ def command_pack(args):
         if "=" not in item: raise PakError("--chunk requires TYPE=PATH")
         chunk_type, path = item.split("=", 1)
         chunks.append((chunk_type.upper(), pathlib.Path(path).read_bytes(), 0))
-    pathlib.Path(args.output).write_bytes(build(chunks))
+    package = build(chunks)
+    output = pathlib.Path(args.output).resolve()
+    with tempfile.TemporaryDirectory(dir=output.parent) as folder:
+        staged = pathlib.Path(folder) / output.name
+        with staged.open("wb") as stream:
+            stream.write(package)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(staged, output)
     print("packed %d chunks -> %s" % (len(chunks), args.output))
 
 def command_validate(args):
