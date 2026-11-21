@@ -160,6 +160,20 @@ static void report_response_sweep(const SA3DSECCollision *collision,unsigned tic
       sa1_vec3_dot(up,normal),
       sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},selected->flags),
       selected->flags);
+  SA1Vec3 motion={movement[0],movement[1],movement[2]};
+  float speed=sa1_vec3_length(motion);
+  float toward=speed>0.0f?sa1_vec3_dot(sa1_vec3_scale(motion,1.0f/speed),normal):0.0f;
+  float vertical=sa1_vec3_dot(motion,up);
+  int speed_gate=sa1_pc2004_collision_support_speed(motion,normal,
+      SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed,vertical,1,selected->flags);
+  SA1Vec3 corrected={object.corrected_sum[0],object.corrected_sum[1],object.corrected_sum[2]};
+  SA1Vec3 projected=sa1_pc2004_collision_support_position(
+      sa1_vec3_scale(corrected,1.0f/object.count),
+      (SA1Vec3){object.selected.delta_xz[0],object.selected.delta_xz[1],object.selected.delta_xz[2]},
+      (SA1Vec3){object.selected.plane_point[0],object.selected.plane_point[1],object.selected.plane_point[2]},
+      normal);
+  printf(" speed=%.6f motionDot=%.6f speedGate=%d normal=%.6f,%.6f,%.6f baseTask=%.6f,%.6f,%.6f",
+      speed,toward,speed_gate,normal.x,normal.y,normal.z,projected.x,projected.y,projected.z);
  }
 }
 

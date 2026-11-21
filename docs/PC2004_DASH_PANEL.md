@@ -393,3 +393,15 @@ confirmation miss on 416 does not establish rejection of that object.
 These observations still use the original response inputs for each
 object. Mutable position, velocity, and normal changes between objects
 remain to be implemented.
+
+WCA202 records the speed-direction gate and ordinary projected task
+position for those ordered hits. At tick 22 the motion length is 7.163459.
+For 416/82 the normalized motion dot normal is 0.285932 and the existing
+source speed gate accepts it. Its projected task is
+(2194.963135, 89.354767, 258.045715). For 426/31 the dot is -0.300151,
+the speed gate accepts, and the independently projected task is
+(2195.467285, 89.157028, 260.657532). These positions use the same
+incoming sweep state. The first position must participate in a mutable
+response before the next object's sweep can establish the final support.
+A confirmation miss alone is therefore insufficient to remove 416
+from the replay's response list.
