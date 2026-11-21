@@ -1051,11 +1051,18 @@ static void ec_apply_texture_override(void){
     }
     uint8_t *bytes=malloc((size_t)length);
     if(!bytes){fclose(file);boot_log("MOD","Replacement allocation failed; original textures retained");return;}
-    int complete=fread(bytes,1,(size_t)length,file)==(size_t)length;
-    fclose(file);
+    size_t bytes_read=fread(bytes,1,(size_t)length,file);
+    /* Check EOF too: the file may have grown since the size check. */
+    int complete=bytes_read==(size_t)length&&fgetc(file)==EOF&&feof(file)&&!ferror(file);
+    if(fclose(file)!=0)complete=0;
+    if(!complete){
+        free(bytes);
+        boot_log("MOD","Replacement file changed size or could not be read; original textures retained");
+        return;
+    }
     SA3DSTextureOverride replacement;
-    SA3DSTextureOverrideResult result=complete?sa3ds_texture_override_open(
-        &replacement,bytes,(size_t)length,g_ec_act_index,&g_ec_visual.textures):SA3DS_TEXTURE_OVERRIDE_HEADER;
+    SA3DSTextureOverrideResult result=sa3ds_texture_override_open(
+        &replacement,bytes,(size_t)length,g_ec_act_index,&g_ec_visual.textures);
     if(result==SA3DS_TEXTURE_OVERRIDE_OK&&sa3ds_ec_gpu_set_texture_override(
             &g_ec_gpu,&replacement,log_texture_stage,NULL)){
         char note[128];snprintf(note,sizeof(note),"External texture active: act=%lu texture=%lu bytes=%lu",
