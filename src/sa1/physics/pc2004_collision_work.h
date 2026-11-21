@@ -76,7 +76,8 @@ int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity
 
 /* Position in the ordinary 449EE5 support response, before the task-position
  * write gate. corrected_center is the sweep's average radius-corrected point,
- * tangent_step comes from the selected face, and plane_normal is nonzero. */
+ * tangent_step comes from the selected face. The plane passes through its
+ * plane_point and uses the post-angle-update task Up as plane_normal. */
 SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
     SA1Vec3 tangent_step, SA1Vec3 plane_point, SA1Vec3 plane_normal);
 

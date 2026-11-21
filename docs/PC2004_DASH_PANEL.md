@@ -422,3 +422,17 @@ gates pass. Its projected task is
 and zero movement change the next selected polygon. The original angle
 update, response entry gates and 43D360 displacement effects must join
 this state transfer before enabling a mutable response in gameplay.
+
+WCA204 adds the ordinary task-angle update to a second carried-response
+preview. The source at 44A384/44A39C/44A3BC copies the updated task Up
+(csts+1C..24) into the plane passed to 788D40. Thus its projection
+normal comes from the task orientation, while its plane point comes
+from the selected polygon. The task-angle confirmation preview now
+uses that task Up as well.
+
+At tick 22, the rotating preview's first projected task on 416 is
+(2194.547119, 89.427338, 257.685486). Its subsequent stationary sweep
+on 426 finds no polygon. This supersedes any inference of a successful
+handoff from the fixed-orientation preview. The trajectory still holds
+through tick 21 and detaches at tick 22. Response-entry gates and
+43D360 effects remain outside this preview.

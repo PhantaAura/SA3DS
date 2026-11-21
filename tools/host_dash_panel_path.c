@@ -63,7 +63,7 @@ static void wall_sweep(const unsigned char *rows, unsigned count,
    is re-swept, using the same resident polygon iteration as the trace. */
 static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t count,
     const float movement[3], SA1Vec3 start, SA1Vec3 task, SA1Vec3 up,
-    SA1Vec3 forward, SA1Vec3 corrected, int32_t first_index, SA1Contact *confirmed){
+    SA1Vec3 forward, SA1Vec3 corrected, int32_t first_index, SA1Contact *confirmed,int task_angles){
  const SA1SteamPlayerParameters *parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
  SA1Vec3 delta={movement[0],movement[1],movement[2]};
  if(sa1_vec3_dot(delta,forward)<parameters->dash_speed||
@@ -94,11 +94,19 @@ static void report_fast_support_probe(const SA3DSECTriangle *triangles, size_t c
   printf(" fastReprobeFace=%u/%u speedGate=%d",
       triangle->source_instance,triangle->source_triangle,speed_gate);
   if(!speed_gate)printf(" localVertical=%.6f",vertical);
+  SA1Vec3 projection_normal=normal;
+  if(task_angles){
+   SA1SurfaceFrame response_frame=sa1_surface_frame_make(up,forward);
+   uint16_t x,z;
+   if(sa1_pc2004_task_ordinary_support_target(&response_frame,normal,&x,&z)&&
+      sa1_pc2004_task_approach_support(&response_frame,normal,x,z,
+          sa1_vec3_dot(delta,forward),parameters,NULL))projection_normal=response_frame.up;
+  }
   SA1Vec3 projected=sa1_pc2004_collision_support_position(
       sa1_vec3_scale(corrected_sum,1.0f/object.count),
       (SA1Vec3){selected.delta_xz[0],selected.delta_xz[1],selected.delta_xz[2]},
       (SA1Vec3){selected.plane_point[0],selected.plane_point[1],selected.plane_point[2]},
-      normal);
+      projection_normal);
   printf(" reprobeTask=%.3f,%.3f,%.3f",projected.x,projected.y,projected.z);
   if(speed_gate&&sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},0))
    *confirmed=(SA1Contact){.point=projected,.normal=normal,
@@ -140,7 +148,7 @@ static float report_source_selection(SA3DSECCollision *collision, unsigned tick,
    Keep this observation separate from applying a mutable object response. */
 static SA1Contact report_response_sweep(const SA3DSECCollision *collision,unsigned tick,
     uint32_t instance,const float start[3],const float movement[3],float radius,
-    SA1Vec3 up,int carried){
+    SA1Vec3 up,int carried,SA1SurfaceFrame *response_frame,float forward_speed){
  SA1Contact support={0};
  SA3DSSweepObject object={0};
  const SA3DSECTriangle *selected=NULL;
@@ -154,7 +162,7 @@ static SA1Contact report_response_sweep(const SA3DSECCollision *collision,unsign
      sa3ds_pc2004_sweep_record(&object,&hit))selected=t;
  }
  printf("\n  %sresponse sweep tick=%u object=%u hits=%u",
-     carried?"fixed-frame carried ":"",tick,instance,object.count);
+     carried==2?"rotating carried ":carried?"fixed-frame carried ":"",tick,instance,object.count);
  if(selected){
   SA1Vec3 normal={object.selected.signed_normal[0],object.selected.signed_normal[1],
       object.selected.signed_normal[2]};
@@ -168,16 +176,24 @@ static SA1Contact report_response_sweep(const SA3DSECCollision *collision,unsign
   float vertical=sa1_vec3_dot(motion,up);
   int speed_gate=sa1_pc2004_collision_support_speed(motion,normal,
       SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed,vertical,1,selected->flags);
+  int accepted=speed_gate&&sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},selected->flags);
+  SA1Vec3 projection_normal=normal;
+  if(response_frame&&accepted){
+   uint16_t x,z;
+   if(!sa1_pc2004_task_ordinary_support_target(response_frame,normal,&x,&z)||
+      !sa1_pc2004_task_approach_support(response_frame,normal,x,z,forward_speed,
+          &SA1_STEAM_SONIC_PARAMETER_EVIDENCE,NULL))return support;
+   projection_normal=response_frame->up;
+  }
   SA1Vec3 corrected={object.corrected_sum[0],object.corrected_sum[1],object.corrected_sum[2]};
   SA1Vec3 projected=sa1_pc2004_collision_support_position(
       sa1_vec3_scale(corrected,1.0f/object.count),
       (SA1Vec3){object.selected.delta_xz[0],object.selected.delta_xz[1],object.selected.delta_xz[2]},
       (SA1Vec3){object.selected.plane_point[0],object.selected.plane_point[1],object.selected.plane_point[2]},
-      normal);
+      projection_normal);
   printf(" speed=%.6f motionDot=%.6f speedGate=%d normal=%.6f,%.6f,%.6f baseTask=%.6f,%.6f,%.6f",
       speed,toward,speed_gate,normal.x,normal.y,normal.z,projected.x,projected.y,projected.z);
-  support=(SA1Contact){.point=projected,.normal=normal,.valid=speed_gate&&
-      sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},selected->flags)};
+  support=(SA1Contact){.point=projected,.normal=normal,.valid=accepted};
  }
  return support;
 }
@@ -187,7 +203,7 @@ static SA1Contact report_response_sweep(const SA3DSECCollision *collision,unsign
    and the second-pass collision response are outside this trace. */
 static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick,
     SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 delta, SA1Vec3 end,
-    uint32_t previous_instance, SA1Vec3 forward){
+    uint32_t previous_instance, SA1Vec3 forward,int task_angles){
  const SA1SteamPlayerParameters *parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
  float radius=parameters->height*0.5f;
  int fast=sa1_vec3_dot(delta,forward)>=parameters->dash_speed;
@@ -219,7 +235,7 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
         object.count,&object.selected,corrected_sum,previous_up,movement,candidates);
     report_fast_support_probe(&collision->triangles[object_start],i-object_start,
         movement,center,previous_task,previous_up,forward,
-        sa1_vec3_scale(corrected_sum,1.0f/object.count),(int32_t)object_start,&confirmed);
+        sa1_vec3_scale(corrected_sum,1.0f/object.count),(int32_t)object_start,&confirmed,task_angles);
     if(clipped<current){
      for(unsigned axis=0;axis<3;axis++)movement[axis]*=clipped/current;
      promoted=object_count;
@@ -263,7 +279,7 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
   for(size_t i=0;i<object_count;i++)printf("%s%u",i?",":"",object_ids[order[i]]);
   if(object_count>1){
    for(size_t i=0;i<object_count;i++)
-    report_response_sweep(collision,tick,object_ids[order[i]],start,movement,radius,previous_up,0);
+    report_response_sweep(collision,tick,object_ids[order[i]],start,movement,radius,previous_up,0,NULL,0);
    /* Isolate 44A3xx's position/speed write while retaining the incoming
       task orientation. Rotation and all mutable response gates remain open. */
    float carried_start[3]={start[0],start[1],start[2]};
@@ -271,9 +287,23 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
    SA1Vec3 body_offset=sa1_vec3_sub(center,previous_task);
    for(size_t i=0;i<object_count;i++){
     SA1Contact support=report_response_sweep(collision,tick,object_ids[order[i]],
-        carried_start,carried_movement,radius,previous_up,1);
+        carried_start,carried_movement,radius,previous_up,1,NULL,0);
     if(support.valid){
      SA1Vec3 next=sa1_vec3_add(support.point,body_offset);
+     carried_start[0]=next.x;carried_start[1]=next.y;carried_start[2]=next.z;
+     carried_movement[0]=carried_movement[1]=carried_movement[2]=0.0f;
+    }
+   }
+   SA1SurfaceFrame response_frame=sa1_surface_frame_make(previous_up,forward);
+   float response_speed=sa1_vec3_dot(delta,response_frame.forward);
+   float body_height=sa1_vec3_dot(body_offset,previous_up);
+   memcpy(carried_start,start,sizeof(carried_start));
+   memcpy(carried_movement,movement,sizeof(carried_movement));
+   for(size_t i=0;i<object_count;i++){
+    SA1Contact support=report_response_sweep(collision,tick,object_ids[order[i]],
+        carried_start,carried_movement,radius,response_frame.up,2,&response_frame,response_speed);
+    if(support.valid){
+     SA1Vec3 next=sa1_vec3_add(support.point,sa1_vec3_scale(response_frame.up,body_height));
      carried_start[0]=next.x;carried_start[1]=next.y;carried_start[2]=next.z;
      carried_movement[0]=carried_movement[1]=carried_movement[2]=0.0f;
     }
@@ -393,7 +423,7 @@ int main(int argc,char **argv){
      SA1Vec3 motion=task_angles?s.pc2004_world_motion:sa1_vec3_sub(s.pos,prev);
      SA1Vec3 end=task_angles?sa1_vec3_add(prev,motion):s.pos;
      SA1Contact confirmed=report_source_sweep(
-         &col,tick,previous_task,previous_up,motion,end,previous_instance,previous_forward);
+         &col,tick,previous_task,previous_up,motion,end,previous_instance,previous_forward,task_angles);
      if(apply_support&&confirmed.valid){
       apply_confirmed_support(&s,&before,&confirmed,task_angles);
       const SA3DSECTriangle *face=&col.triangles[confirmed.surface_id];

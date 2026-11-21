@@ -41,6 +41,10 @@ SIGNATURES = {
     "support_response_clears_sweep_motion": (0x0044A3AA, "33f6897518897514897510"),
     "support_response_plane_projection": (0x0044A3FC, "e83fe93300"),
     "support_response_projected_center_x": (0x0044A409, "d9842484000000d8442434d91f"),
+    "projection_normal_task_up_x": (0x0044A384, "8b4d1c"),
+    "projection_normal_task_up_y": (0x0044A39C, "8b5520"),
+    "projection_normal_task_up_z": (0x0044A3BC, "8b4d24"),
+    "projection_normal_stack_copy": (0x0044A3B5, "898c249c000000"),
     # Candidate polygon resolver and two arbitration helpers.
     "candidate_polygon_call": (0x00449710, "e80ba10000"),
     "candidate_arbitrate_a": (0x00449740, "e89b35ffff"),

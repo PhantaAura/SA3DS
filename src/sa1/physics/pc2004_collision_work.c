@@ -52,7 +52,8 @@ int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity
 SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
     SA1Vec3 tangent_step, SA1Vec3 plane_point, SA1Vec3 plane_normal) {
     /* 788D40 projects the center plus tangential displacement onto the
-     * selected face. The later body-offset addition and subtraction cancel
+     * plane through the selected point with the caller's task Up normal.
+     * The later body-offset addition and subtraction cancel
      * for static support before the task-position write. */
     SA1Vec3 end = {
         corrected_center.x + tangent_step.x,
