@@ -20,6 +20,9 @@ def main():
     parser.add_argument('--owner-game', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True,
                         help='new external directory; private files stay here')
+    parser.add_argument('--resolution', choices=['640x480', '800x600', '1024x768', '1152x864', '1280x1024'], default='640x480')
+    parser.add_argument('--graphics-thread', choices=['single', 'auto'], default='single')
+    parser.add_argument('--log-fps', action='store_true', help='log Wine present-rate estimates')
     parser.add_argument('--graphics-dir', type=Path,
                         help='optional external directory containing reference-only graphics DLLs')
     parser.add_argument('--fps-hud', action='store_true', help='request the DXVK FPS overlay')
@@ -56,7 +59,10 @@ def main():
     if not config.has_section('sonicDX'):
         config.add_section('sonicDX')
     config.set('sonicDX', 'screen', '0')
-    config.set('sonicDX', 'screensize', '1')  # original 800x600 preset
+    presets = ['640x480', '800x600', '1024x768', '1152x864', '1280x1024']
+    config.set('sonicDX', 'screensize', str(presets.index(args.resolution)))
+    dimensions = [int(value) for value in args.resolution.split('x')]
+    renderer = 'renderer=gl,csmt=0' if args.graphics_thread == 'single' else 'renderer=gl'
     with (game / 'sonicDX.ini').open('w', newline='\r\n') as stream:
         config.write(stream, space_around_delimiters=False)
     graphics_hashes = {}
@@ -72,11 +78,12 @@ def main():
             if name.endswith('.dll') or name == 'dxvk.conf':
                 shutil.copy2(item, game / name)
     target = 'Z:' + str(game / 'sonic.exe').replace('/', '\\')
-    command = [str(engine / 'wine64'), 'explorer', '/desktop=SADXOracle,800x600', target]
+    command = [str(engine / 'wine64'), 'explorer', '/desktop=SADXOracle,' + args.resolution, target]
     (output / 'reference.json').write_text(json.dumps({
         'schema': 'sa3ds-pc2004-macos-reference-v1',
         'source_sha256': PROFILE_SHA, 'game': str(game),
-        'renderer': 'gl', 'windowed': True, 'desktop': [800, 600], 'command': command,
+        'renderer_requested': renderer, 'windowed': True, 'desktop': dimensions, 'command': command,
+        'graphics_thread': args.graphics_thread, 'log_fps': args.log_fps,
         'graphics_sha256': graphics_hashes, 'fps_hud': args.fps_hud,
         'verification': 'prepared; gameplay comparison still required',
     }, indent=2) + '\n')
@@ -87,7 +94,8 @@ def main():
     env.update(DYLD_FALLBACK_LIBRARY_PATH=str(contents / 'Frameworks'),
                WINEPREFIX=str(contents / 'SharedSupport/prefix'),
                WINESERVER=str(engine / 'wineserver'),
-               WINE_D3D_CONFIG='renderer=gl', WINEDEBUG='err+all', MVK_CONFIG_LOG_LEVEL='0')
+               WINE_D3D_CONFIG=renderer,
+               WINEDEBUG='err+all,trace+fps' if args.log_fps else 'err+all', MVK_CONFIG_LOG_LEVEL='0')
     if graphics:
         overrides = [name[:-4] + '=n,b' for name in ['d3d8.dll', 'd3d9.dll'] if name in graphics_hashes]
         inherited = [item for item in env.get('WINEDLLOVERRIDES', '').split(';')

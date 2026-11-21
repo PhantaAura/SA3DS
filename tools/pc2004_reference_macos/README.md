@@ -39,7 +39,7 @@ python3 tools/pc2004_reference_macos/launch.py \
 `reference.json` and `wine.log` stay with the private files. The launcher waits
 for the isolated prefix's Wine processes after Explorer hands off. Use a prefix
 dedicated to the reference, since that wait includes other programs in it.
-The desktop is 800×600 and the original windowed setting is enabled. The game
+The desktop defaults to 640×480 and the original windowed setting is enabled. The game
 may activate its own Wine window during startup; the tool sends no OS input.
 
 ## Capture only Sonic's window
@@ -97,3 +97,24 @@ The older Mac D3D9 DXVK package failed device creation with the bundled
 MoltenVK. A matched modern DXVK/MoltenVK pair initialized a swapchain but
 then exited during startup; its use is experimental and not accepted.
 Never treat a created graphics device or a black window as gameplay evidence.
+
+## WCA208 working reference settings
+
+The later 640×480 experiment used a matching 640×480 virtual desktop,
+d3d8to9 v1.16.0, OpenGL, and `csmt=0`. The owner reported gameplay was
+acceptable in that smaller window. Wine's present-rate log reached the
+mid-50s during parts of the title animation and also recorded lower rates;
+this does not prove locked 60 FPS or matching simulation timing. Native 3DS
+performance is a separate acceptance check. The model DLL loaded by this
+reference matched its owner `CHRMODELS_orig.dll` backup by SHA-256.
+
+These are now the default resolution/thread settings. Use `--resolution`
+to select another original preset; the game preset and virtual desktop always
+change together. `--graphics-thread auto` retains Wine's default command-thread
+setting. `--log-fps` enables Wine's lightweight present counter. A present rate
+measured in a different scene or while unfocused is not a controlled gameplay
+comparison.
+
+The improved runtime was also dependent on the external d3d8to9 wrapper;
+provide its directory with `--graphics-dir`. It is not bundled in the repository.
+No game input, movement or animation values are changed by these settings.
