@@ -361,3 +361,19 @@ finds four hits and selects 426/23, but the speed gate rejects the
 port's positive local vertical value of 0.005993. The angle-target
 change alone does not resolve this detachment. The experiment remains
 limited to the host replay.
+
+WCA200 runs the task-angle experiment on each grounded update, using
+the pre-contact world movement for the sweep and local-speed writeback.
+The earlier probe waited until the portable endpoint query failed.
+That meant successful steps on the approach could still change the
+position, rotation, and speed that fed later sweeps.
+
+On the owner row 0 → 12 replay, row 12 still boosts at tick 6. The
+experimental path now confirms 426/23 at tick 18 and 426/29 at tick 21.
+On tick 22, both 416 and 426 contribute first-pass hits. Object 416's
+confirmation misses and object 426's confirmation accepts face 426/31.
+The experiment declines to write support with multiple participating
+objects, since the ordered response has not been reproduced. Sonic
+detaches at tick 22. This run survives the 240-tick observation window
+without traversing the loop. The ordinary replay detaches at tick 13
+and resets at tick 137.

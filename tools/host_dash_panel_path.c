@@ -140,9 +140,8 @@ static float report_source_selection(SA3DSECCollision *collision, unsigned tick,
    Clip propagation uses resident object order. The original broad phase
    and the second-pass collision response are outside this trace. */
 static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick,
-    SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 previous, SA1Vec3 end,
+    SA1Vec3 previous_task, SA1Vec3 previous_up, SA1Vec3 delta, SA1Vec3 end,
     uint32_t previous_instance, SA1Vec3 forward){
- SA1Vec3 delta=sa1_vec3_sub(end,previous);
  const SA1SteamPlayerParameters *parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
  float radius=parameters->height*0.5f;
  int fast=sa1_vec3_dot(delta,forward)>=parameters->dash_speed;
@@ -225,26 +224,30 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
 
 static void apply_confirmed_support(SA1PlayerState *player, const SA1PlayerState *before,
     const SA1Contact *support, int task_angles){
+ SA1Vec3 motion=player->vel;
  SA1SurfaceFrame frame=sa1_surface_frame_make(support->normal,player->surface_forward);
  if(task_angles){
-  SA1SurfaceFrame previous=sa1_surface_frame_make(player->ground_normal,player->surface_forward);
+  motion=player->pc2004_world_motion;
+  SA1SurfaceFrame previous=sa1_surface_frame_make(before->ground_normal,before->surface_forward);
   uint16_t target_x,target_z;
-  float forward_speed=sa1_vec3_dot(player->vel,previous.forward);
+  float forward_speed=sa1_vec3_dot(motion,previous.forward);
   if(sa1_pc2004_task_ordinary_support_target(&previous,support->normal,&target_x,&target_z)&&
       sa1_pc2004_task_approach_support(&previous,support->normal,target_x,target_z,forward_speed,
       &SA1_STEAM_SONIC_PARAMETER_EVIDENCE,NULL))frame=previous;
  }
+ if(!player->grounded){
+  player->action_state=before->action_state;
+  player->pc2004_action_state=before->pc2004_action_state;
+  player->pc2004_action_state_valid=before->pc2004_action_state_valid;
+  player->animation_airborne_request=before->animation_airborne_request;
+  player->animation_airborne_request_valid=before->animation_airborne_request_valid;
+  player->jump_ticks=before->jump_ticks;
+ }
  player->grounded=true;
- player->action_state=before->action_state;
- player->pc2004_action_state=before->pc2004_action_state;
- player->pc2004_action_state_valid=before->pc2004_action_state_valid;
- player->animation_airborne_request=before->animation_airborne_request;
- player->animation_airborne_request_valid=before->animation_airborne_request_valid;
- player->jump_ticks=before->jump_ticks;
  player->pos=sa1_vec3_add(support->point,sa1_vec3_scale(frame.up,SA3DS_EC_CONTROLLER_SUPPORT));
  SA1PC2004LocalVector local={
-     sa1_vec3_dot(player->vel,frame.forward),sa1_vec3_dot(player->vel,frame.up),
-     sa1_vec3_dot(player->vel,frame.right),
+     sa1_vec3_dot(motion,frame.forward),sa1_vec3_dot(motion,frame.up),
+     sa1_vec3_dot(motion,frame.right),
  };
  local=sa1_pc2004_grounded_reset_speed(local,0,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_accel);
  player->vel=sa1_vec3_add(sa1_vec3_scale(frame.forward,local.forward),
@@ -314,15 +317,19 @@ int main(int argc,char **argv){
     sa1_physics_step_steam_sonic_flat(&s,&in,0,&col.world,&SA1_PHYSICS_PLACEHOLDER_CONSTANTS,NULL);
     if(s.sim_frame==0){reset_from=prev;break;}
     sa3ds_spring_player_tail(&s);
-    if(chain&&(apply_support||!reported_source_sweep)&&was_grounded&&!s.grounded){
+    if(chain&&was_grounded&&(task_angles||(!s.grounded&&(apply_support||!reported_source_sweep)))){
      SA1Contact end_support=sa3ds_ec_collision_contact(&col,s.pos,
          sa1_vec3_scale(previous_up,-1),2.35f);
      printf("\n  support probe tick=%u valid=%d",tick,end_support.valid);
      if(end_support.valid)
       printf(" distance=%.4f alignment=%.4f",end_support.signed_distance,
           sa1_vec3_dot(previous_up,end_support.normal));
+     /* The point solver can snap the center and remove normal speed even
+        on a successful tick. Use the unchanged movement before that snap. */
+     SA1Vec3 motion=task_angles?s.pc2004_world_motion:sa1_vec3_sub(s.pos,prev);
+     SA1Vec3 end=task_angles?sa1_vec3_add(prev,motion):s.pos;
      SA1Contact confirmed=report_source_sweep(
-         &col,tick,previous_task,previous_up,prev,s.pos,previous_instance,previous_forward);
+         &col,tick,previous_task,previous_up,motion,end,previous_instance,previous_forward);
      if(apply_support&&confirmed.valid){
       apply_confirmed_support(&s,&before,&confirmed,task_angles);
       const SA3DSECTriangle *face=&col.triangles[confirmed.surface_id];
