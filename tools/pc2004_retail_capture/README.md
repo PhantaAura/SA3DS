@@ -53,3 +53,8 @@ python3 capture_pc2004.py --self-test --output /tmp/pc2004_synthetic.csv
 ```
 
 The self-test is explicitly `NOT VERIFIED`; it is never retail evidence.
+
+For the local Wine reference, the [native frame observer](native/README.md)
+provides the post-Sonic-main endpoint without requiring a working 32-bit Frida
+installation. Its validated output is frame-keyed original state; its first
+playback comparison is deliberately scoped separately from full port parity.
