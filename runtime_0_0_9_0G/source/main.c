@@ -1023,14 +1023,29 @@ static void log_texture_stage(const char *phase, uint32_t texture_index,
     gfxScreenSwapBuffers(GFX_BOTTOM,false);
 }
 
+static const char g_mod_enabled_path[]="sdmc:/3ds/SA3DS/mods/emerald_coast.enabled";
+
+static int mod_enabled_file(void){
+    FILE *file=fopen(g_mod_enabled_path,"rb");
+    if(!file)return 0;
+    int enabled=fgetc(file)=='1';
+    if(enabled){
+        int suffix=fgetc(file);
+        if(suffix=='\r'){
+            suffix=fgetc(file);
+            enabled=suffix=='\n';
+        }
+        if(suffix=='\n')suffix=fgetc(file);
+        enabled=enabled&&suffix==EOF&&feof(file)&&!ferror(file);
+    }
+    if(fclose(file)!=0)return 0;
+    return enabled;
+}
+
 /* Optional single-texture replacement. All GPU mutation occurs outside an
  * active frame, after pending submissions retire. Missing/invalid means original. */
 static void ec_apply_texture_override(void){
-    if(g_ec_override_requested<0){
-        FILE *enabled=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.enabled","rb");
-        g_ec_override_requested=enabled&&fgetc(enabled)=='1';
-        if(enabled)fclose(enabled);
-    }
+    if(g_ec_override_requested<0)g_ec_override_requested=mod_enabled_file();
     if(!g_ec_override_requested){
         if(g_ec_gpu.override_enabled){C3D_FrameSync();sa3ds_ec_gpu_clear_texture_override(&g_ec_gpu);}
         boot_log("MOD","Original Emerald Coast textures selected");return;
@@ -1078,9 +1093,17 @@ static void ec_apply_texture_override(void){
 static void ec_toggle_texture_override(void){
     g_ec_override_requested=!g_ec_override_requested;
     mkdir("sdmc:/3ds/SA3DS/mods",0777);
-    const char *path="sdmc:/3ds/SA3DS/mods/emerald_coast.enabled";
-    if(g_ec_override_requested){FILE *file=fopen(path,"wb");if(file){fputc('1',file);fclose(file);}}
-    else remove(path);
+    int persisted=0;
+    if(g_ec_override_requested){
+        FILE *file=fopen(g_mod_enabled_path,"wb");
+        if(file){
+            persisted=fputc('1',file)!=EOF;
+            if(fclose(file)!=0)persisted=0;
+        }
+    }else{
+        persisted=remove(g_mod_enabled_path)==0||errno==ENOENT;
+    }
+    if(!persisted)boot_log("MOD","Toggle applies for this session; saving the SD setting failed");
     ec_apply_texture_override();
     /* Optional asset reload pauses this UI operation rather than creating a
      * catch-up burst of gameplay ticks while SD/GPU resources were replaced. */
@@ -1092,7 +1115,6 @@ static void ec_toggle_texture_override(void){
  *input path (after hidScanInput) at frames 120 and 240 and records the
  *override state, persisted flag and override draws around each press.*/
 static int g_mod_toggle_probe=-1;static uint32_t g_mod_probe_draws_on,g_mod_probe_draws_off;static int g_mod_probe_on_ok,g_mod_probe_off_ok;
-static int mod_enabled_file(void){FILE*f=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.enabled","rb");int v=f&&fgetc(f)=='1';if(f)fclose(f);return v;}
 static void mod_toggle_probe_input(uint32_t frame,u32*down,u32*held){
     if(g_mod_toggle_probe<0){FILE*f=fopen("sdmc:/3ds/SA3DS/emerald_coast_mod_toggle_probe.flag","rb");g_mod_toggle_probe=f!=NULL;if(f)fclose(f);
         if(g_mod_toggle_probe)boot_log("MOD_TOGGLE_PROBE","BEGIN: SELECT+Up injected at frames 120/240 through the normal input path");}
