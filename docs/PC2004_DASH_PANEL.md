@@ -377,3 +377,19 @@ objects, since the ordered response has not been reproduced. Sonic
 detaches at tick 22. This run survives the 240-tick observation window
 without traversing the loop. The ordinary replay detaches at tick 13
 and resets at tick 137.
+
+WCA201 re-sweeps multi-object candidates in the recorded response order
+after the first pass has finished shortening travel. At tick 22 the
+ordered observations are 416/82, one hit with normal alignment -0.266380,
+then 426/31, three hits with alignment 0.966670. Both pass the source
+ground-side test.
+
+The exact executable distinguishes two confirmation branches. At
+449D75, an angle above 0x2C00 invokes 444640 and recomputes the angle
+without testing that call's return value. It records bit 2 to bypass
+the later small-angle confirmation gate at 449E4C. That later branch
+does test the helper's return value. Consequently the earlier fast
+confirmation miss on 416 does not establish rejection of that object.
+These observations still use the original response inputs for each
+object. Mutable position, velocity, and normal changes between objects
+remain to be implemented.

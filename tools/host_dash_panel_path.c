@@ -136,6 +136,33 @@ static float report_source_selection(SA3DSECCollision *collision, unsigned tick,
  return clipped;
 }
 
+/* 449500 re-sweeps each response object after first-pass travel clamps.
+   Keep this observation separate from applying a mutable object response. */
+static void report_response_sweep(const SA3DSECCollision *collision,unsigned tick,
+    uint32_t instance,const float start[3],const float movement[3],float radius,
+    SA1Vec3 up){
+ SA3DSSweepObject object={0};
+ const SA3DSECTriangle *selected=NULL;
+ for(uint32_t i=0;i<collision->triangle_count&&object.count<SA3DS_PC2004_SWEEP_MAX_HITS;i++){
+  const SA3DSECTriangle *t=&collision->triangles[i];
+  if(t->source_instance!=instance)continue;
+  SA3DSSweepTriangle triangle={.v={{t->a.x,t->a.y,t->a.z},{t->b.x,t->b.y,t->b.z},
+      {t->c.x,t->c.y,t->c.z}},.flags=t->flags};
+  SA3DSSweepHit hit;
+  if(sa3ds_pc2004_sweep_triangle(&triangle,start,movement,radius,&hit)&&
+     sa3ds_pc2004_sweep_record(&object,&hit))selected=t;
+ }
+ printf("\n  response sweep tick=%u object=%u hits=%u",tick,instance,object.count);
+ if(selected){
+  SA1Vec3 normal={object.selected.signed_normal[0],object.selected.signed_normal[1],
+      object.selected.signed_normal[2]};
+  printf(" face=%u alignment=%.6f groundSide=%d flags=%08x",selected->source_triangle,
+      sa1_vec3_dot(up,normal),
+      sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},selected->flags),
+      selected->flags);
+ }
+}
+
 /* This uses the port's movement and static candidates as sweep inputs.
    Clip propagation uses resident object order. The original broad phase
    and the second-pass collision response are outside this trace. */
@@ -215,6 +242,8 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
   sa1_pc2004_collision_response_order(object_count,promoted,previous_index,0,order);
   printf("\n  static response order tick=%u hitObjects=",tick);
   for(size_t i=0;i<object_count;i++)printf("%s%u",i?",":"",object_ids[order[i]]);
+  if(object_count>1)for(size_t i=0;i<object_count;i++)
+   report_response_sweep(collision,tick,object_ids[order[i]],start,movement,radius,previous_up);
  }
  if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);
  /* Applying an isolated confirmation is only comparable while no other

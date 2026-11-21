@@ -33,6 +33,11 @@ SIGNATURES = {
     "support_wrap_distance": (0x004383B0, "8b4424082b4424046685c07d02f7d80fb7c0"),
     "support_positive_turn_ratio": (0x007DCCC8, "0ae3e4b4305fc43f"),
     "support_negative_turn_ratio": (0x007DCCE8, "0ae3e4b4305fc4bf"),
+    "response_large_angle_threshold": (0x00449D75, "3d002c00007e23"),
+    "response_large_angle_reprobe": (0x00449D80, "e8bba8ffff6a008d451c5650e87fe6feff"),
+    "response_large_angle_marker": (0x00449D98, "83c902894c2414"),
+    "response_small_angle_reprobe_gate": (0x00449E4C, "f6442414027514"),
+    "response_small_angle_reprobe_rejection": (0x00449E57, "e8e4a7ffff83c40885c00f84d3070000"),
     # Candidate polygon resolver and two arbitration helpers.
     "candidate_polygon_call": (0x00449710, "e80ba10000"),
     "candidate_arbitrate_a": (0x00449740, "e89b35ffff"),
