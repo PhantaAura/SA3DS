@@ -405,3 +405,20 @@ incoming sweep state. The first position must participate in a mutable
 response before the next object's sweep can establish the final support.
 A confirmation miss alone is therefore insufficient to remove 416
 from the replay's response list.
+
+WCA203 verifies the response's collision-work motion clear at 44A3AA,
+followed by the plane projection and corrected-center write. The replay
+adds a separate preview that carries each accepted projected task plus
+the incoming body offset into the next sweep and sets sweep motion to
+zero. It deliberately holds incoming task rotation fixed and applies
+only the existing geometry and speed gates, so it is a sensitivity
+experiment within the host trace.
+
+At tick 22 the preview processes 416/82 first. From that carried center,
+the stationary sweep on 426 records one hit and selects face 33
+instead of the independent sweep's face 31. Its speed and ground-side
+gates pass. Its projected task is
+(2193.814697, 89.455864, 258.045715). Thus the first response's position
+and zero movement change the next selected polygon. The original angle
+update, response entry gates and 43D360 displacement effects must join
+this state transfer before enabling a mutable response in gameplay.

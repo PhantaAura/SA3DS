@@ -138,9 +138,10 @@ static float report_source_selection(SA3DSECCollision *collision, unsigned tick,
 
 /* 449500 re-sweeps each response object after first-pass travel clamps.
    Keep this observation separate from applying a mutable object response. */
-static void report_response_sweep(const SA3DSECCollision *collision,unsigned tick,
+static SA1Contact report_response_sweep(const SA3DSECCollision *collision,unsigned tick,
     uint32_t instance,const float start[3],const float movement[3],float radius,
-    SA1Vec3 up){
+    SA1Vec3 up,int carried){
+ SA1Contact support={0};
  SA3DSSweepObject object={0};
  const SA3DSECTriangle *selected=NULL;
  for(uint32_t i=0;i<collision->triangle_count&&object.count<SA3DS_PC2004_SWEEP_MAX_HITS;i++){
@@ -152,7 +153,8 @@ static void report_response_sweep(const SA3DSECCollision *collision,unsigned tic
   if(sa3ds_pc2004_sweep_triangle(&triangle,start,movement,radius,&hit)&&
      sa3ds_pc2004_sweep_record(&object,&hit))selected=t;
  }
- printf("\n  response sweep tick=%u object=%u hits=%u",tick,instance,object.count);
+ printf("\n  %sresponse sweep tick=%u object=%u hits=%u",
+     carried?"fixed-frame carried ":"",tick,instance,object.count);
  if(selected){
   SA1Vec3 normal={object.selected.signed_normal[0],object.selected.signed_normal[1],
       object.selected.signed_normal[2]};
@@ -174,7 +176,10 @@ static void report_response_sweep(const SA3DSECCollision *collision,unsigned tic
       normal);
   printf(" speed=%.6f motionDot=%.6f speedGate=%d normal=%.6f,%.6f,%.6f baseTask=%.6f,%.6f,%.6f",
       speed,toward,speed_gate,normal.x,normal.y,normal.z,projected.x,projected.y,projected.z);
+  support=(SA1Contact){.point=projected,.normal=normal,.valid=speed_gate&&
+      sa1_pc2004_collision_ground_side(up,normal,(SA1Vec3){0,-1,0},selected->flags)};
  }
+ return support;
 }
 
 /* This uses the port's movement and static candidates as sweep inputs.
@@ -256,8 +261,24 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
   sa1_pc2004_collision_response_order(object_count,promoted,previous_index,0,order);
   printf("\n  static response order tick=%u hitObjects=",tick);
   for(size_t i=0;i<object_count;i++)printf("%s%u",i?",":"",object_ids[order[i]]);
-  if(object_count>1)for(size_t i=0;i<object_count;i++)
-   report_response_sweep(collision,tick,object_ids[order[i]],start,movement,radius,previous_up);
+  if(object_count>1){
+   for(size_t i=0;i<object_count;i++)
+    report_response_sweep(collision,tick,object_ids[order[i]],start,movement,radius,previous_up,0);
+   /* Isolate 44A3xx's position/speed write while retaining the incoming
+      task orientation. Rotation and all mutable response gates remain open. */
+   float carried_start[3]={start[0],start[1],start[2]};
+   float carried_movement[3]={movement[0],movement[1],movement[2]};
+   SA1Vec3 body_offset=sa1_vec3_sub(center,previous_task);
+   for(size_t i=0;i<object_count;i++){
+    SA1Contact support=report_response_sweep(collision,tick,object_ids[order[i]],
+        carried_start,carried_movement,radius,previous_up,1);
+    if(support.valid){
+     SA1Vec3 next=sa1_vec3_add(support.point,body_offset);
+     carried_start[0]=next.x;carried_start[1]=next.y;carried_start[2]=next.z;
+     carried_movement[0]=carried_movement[1]=carried_movement[2]=0.0f;
+    }
+   }
+  }
  }
  if(!hits)printf("\n  source sweep tick=%u no polygon hit",tick);
  /* Applying an isolated confirmation is only comparable while no other

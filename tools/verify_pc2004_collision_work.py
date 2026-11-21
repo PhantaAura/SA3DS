@@ -38,6 +38,9 @@ SIGNATURES = {
     "response_large_angle_marker": (0x00449D98, "83c902894c2414"),
     "response_small_angle_reprobe_gate": (0x00449E4C, "f6442414027514"),
     "response_small_angle_reprobe_rejection": (0x00449E57, "e8e4a7ffff83c40885c00f84d3070000"),
+    "support_response_clears_sweep_motion": (0x0044A3AA, "33f6897518897514897510"),
+    "support_response_plane_projection": (0x0044A3FC, "e83fe93300"),
+    "support_response_projected_center_x": (0x0044A409, "d9842484000000d8442434d91f"),
     # Candidate polygon resolver and two arbitration helpers.
     "candidate_polygon_call": (0x00449710, "e80ba10000"),
     "candidate_arbitrate_a": (0x00449740, "e89b35ffff"),
