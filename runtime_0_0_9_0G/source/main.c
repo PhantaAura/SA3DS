@@ -1059,25 +1059,22 @@ static void ec_apply_texture_override(void){
     if(!file&&errno==ENOENT)
         file=fopen("sdmc:/3ds/SA3DS/mods/emerald_coast.sa3mod","rb");
     if(!file){boot_log("MOD","Replacement unavailable; original textures retained");return;}
-    long length=0;
-    if(fseek(file,0,SEEK_END)||((length=ftell(file))<=0)||
-       (unsigned long)length>SA3DS_TEXTURE_OVERRIDE_MAX_BYTES||fseek(file,0,SEEK_SET)){
-        fclose(file);boot_log("MOD","Replacement file size invalid; original textures retained");return;
-    }
-    uint8_t *bytes=malloc((size_t)length);
-    if(!bytes){fclose(file);boot_log("MOD","Replacement allocation failed; original textures retained");return;}
-    size_t bytes_read=fread(bytes,1,(size_t)length,file);
-    /* Check EOF too: the file may have grown since the size check. */
-    int complete=bytes_read==(size_t)length&&fgetc(file)==EOF&&feof(file)&&!ferror(file);
-    if(fclose(file)!=0)complete=0;
-    if(!complete){
-        free(bytes);
-        boot_log("MOD","Replacement file changed size or could not be read; original textures retained");
+    uint8_t *bytes;
+    size_t length;
+    SA3DSAssetReadResult read_result=sa3ds_read_asset_stream(
+        file,SA3DS_TEXTURE_OVERRIDE_MAX_BYTES,&bytes,&length);
+    if(read_result!=SA3DS_ASSET_READ_OK){
+        const char *message="Replacement file changed size or could not be read; original textures retained";
+        if(read_result==SA3DS_ASSET_READ_SIZE)
+            message="Replacement file size invalid; original textures retained";
+        if(read_result==SA3DS_ASSET_READ_MEMORY)
+            message="Replacement allocation failed; original textures retained";
+        boot_log("MOD",message);
         return;
     }
     SA3DSTextureOverride replacement;
     SA3DSTextureOverrideResult result=sa3ds_texture_override_open(
-        &replacement,bytes,(size_t)length,g_ec_act_index,&g_ec_visual.textures);
+        &replacement,bytes,length,g_ec_act_index,&g_ec_visual.textures);
     if(result==SA3DS_TEXTURE_OVERRIDE_OK&&sa3ds_ec_gpu_set_texture_override(
             &g_ec_gpu,&replacement,log_texture_stage,NULL)){
         char note[128];snprintf(note,sizeof(note),"External texture active: act=%lu texture=%lu bytes=%lu",

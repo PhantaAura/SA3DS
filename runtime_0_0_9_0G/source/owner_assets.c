@@ -3,28 +3,45 @@
 #include <stdlib.h>
 #include <string.h>
 
-int sa3ds_read_file(const char *path, uint8_t **out_data, size_t *out_size) {
-    if (!out_data || !out_size) return 0;
+SA3DSAssetReadResult sa3ds_read_asset_stream(FILE *stream, size_t limit,
+                                            uint8_t **out_data, size_t *out_size) {
+    if (!out_data || !out_size) {
+        if (stream) fclose(stream);
+        return SA3DS_ASSET_READ_IO;
+    }
     *out_data = NULL;
     *out_size = 0;
-    if (!path) return 0;
-    FILE *f = fopen(path, "rb");
-    if (!f) return 0;
-    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return 0; }
-    long n = ftell(f);
-    if (n <= 0 || (unsigned long)n > SA3DS_OWNER_ASSET_MAX_BYTES) {
-        fclose(f); return 0;
+    if (!stream) return SA3DS_ASSET_READ_IO;
+    long length = 0;
+    if (fseek(stream, 0, SEEK_END) || (length = ftell(stream)) <= 0 ||
+        (uintmax_t)length > limit || fseek(stream, 0, SEEK_SET)) {
+        fclose(stream);
+        return SA3DS_ASSET_READ_SIZE;
     }
-    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return 0; }
-    uint8_t *p = (uint8_t*)malloc((size_t)n);
-    if (!p) { fclose(f); return 0; }
-    size_t got = fread(p, 1, (size_t)n, f);
-    int bad = (got != (size_t)n) || ferror(f);
-    if (fclose(f) != 0) bad = 1;
-    if (bad) { free(p); return 0; }
-    *out_data = p;
-    *out_size = (size_t)n;
-    return 1;
+    size_t size = (size_t)length;
+    uint8_t *data = malloc(size);
+    if (!data) {
+        fclose(stream);
+        return SA3DS_ASSET_READ_MEMORY;
+    }
+    /* A file can grow between the size check and the read. */
+    int complete = fread(data, 1, size, stream) == size &&
+                   fgetc(stream) == EOF && feof(stream) && !ferror(stream);
+    if (fclose(stream) != 0) complete = 0;
+    if (!complete) {
+        free(data);
+        return SA3DS_ASSET_READ_IO;
+    }
+    *out_data = data;
+    *out_size = size;
+    return SA3DS_ASSET_READ_OK;
+}
+
+int sa3ds_read_file(const char *path, uint8_t **out_data, size_t *out_size) {
+    if (!out_data || !out_size) return 0;
+    FILE *stream = path ? fopen(path, "rb") : NULL;
+    return sa3ds_read_asset_stream(stream, SA3DS_OWNER_ASSET_MAX_BYTES,
+                                  out_data, out_size) == SA3DS_ASSET_READ_OK;
 }
 
 static int try_pair(const char *dir, uint8_t **c, size_t *cs,

@@ -65,6 +65,13 @@ int main(void) {
     uint8_t *data=(uint8_t*)1; size_t size=123;
     assert(!sa3ds_read_file(big,&data,&size) && !data && !size);
     assert(!sa3ds_read_file(NULL,&data,&size) && !data && !size);
+    f=tmpfile(); assert(f && fwrite("test",1,4,f)==4);
+    assert(sa3ds_read_asset_stream(f,3,&data,&size)==SA3DS_ASSET_READ_SIZE);
+    assert(!data && !size);
+    f=tmpfile(); assert(f && fwrite("test",1,4,f)==4);
+    assert(sa3ds_read_asset_stream(f,4,&data,&size)==SA3DS_ASSET_READ_OK);
+    assert(size==4 && memcmp(data,"test",4)==0);
+    sa3ds_free_file(data);
     assert(strcmp(sa3ds_owner_source_name(SA3DS_OWNER_SOURCE_SD),"SD")==0);
     remove_file(r,"sonic.sa3c"); remove_file(r,"sonic.sa3t");
     remove_file(s,"sonic.sa3c"); remove_file(s,"oversized");
