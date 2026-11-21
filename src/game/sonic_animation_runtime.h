@@ -48,6 +48,7 @@ typedef struct {
     SA1ActionState previous_action_state;
     /* Persistent retail request; NextAnim writes both request and index. */
     uint16_t requested_runtime_id;
+    uint16_t prior_source_runtime_id; /* PlayAnimation +128: index at entry */
     uint16_t previous_airborne_request;
     uint8_t previous_airborne_request_valid;
     uint32_t previous_script_serial;

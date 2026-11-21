@@ -258,9 +258,11 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
         if (runtime->previous_action_state == SA1_ACTION_ROLL) {
             /* 0x4930D0 and action-5 button exit both request Uncurl. */
             requested_id = 29;
-        } else if (runtime->requested_runtime_id == 29) {
-            /* 0x495CD0 / 0x491660 leave request 29 untouched. */
-            requested_id = 29;
+        } else if (runtime->requested_runtime_id == 29 ||
+                   (runtime->requested_runtime_id == 30 && player->pc2004_action_state_valid &&
+                    player->pc2004_action_state == 2)) {
+            /* 495CD0 leaves29/30 untouched; idle491660 only retains29. */
+            requested_id = runtime->requested_runtime_id;
         } else if (observation->intent == SA3DS_SONIC_ANIM_GROUNDED_IDLE &&
                    !(player->animation_input_valid && player->animation_input_active) &&
                    runtime->requested_runtime_id >= 1 &&
@@ -276,6 +278,7 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
      * 7/8, alternate-character presentation and environment events are not
      * inferred here. Return-to-idle resets the original work counter. */
     int ordinary_idle_contact = player->grounded &&
+        !(player->pc2004_action_state_valid && player->pc2004_action_state == 13) &&
         player->action_state == SA1_ACTION_GROUNDED &&
         observation->intent == SA3DS_SONIC_ANIM_GROUNDED_IDLE &&
         local_forward_speed(player) == 0.0f &&
@@ -310,6 +313,11 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
         runtime->idle_counter = (uint16_t)(runtime->idle_counter + 1u);
     }
     runtime->idle_selector_active = (normal_idle || classified_landing) && requested_id != 29;
+    if (player->animation_script_valid && (player->animation_brake_write ||
+        (player->pc2004_action_state_valid && player->pc2004_action_state == 13))) {
+        requested_id=player->animation_brake_write?player->animation_script_request:
+            runtime->requested_runtime_id;
+    }
     runtime->requested_runtime_id = requested_id;
 
     /* The second retail pointer targets stateful CharObj2.SpindashSpeed.
@@ -338,6 +346,8 @@ SA3DSSonicAnimationSelection sa3ds_sonic_animation_select(
     } else {
         uint64_t elapsed = player->sim_frame - runtime->last_sim_frame;
         for (uint64_t tick = 0; tick < elapsed; ++tick) {
+            runtime->prior_source_runtime_id=runtime->deferred_index_valid?
+                runtime->deferred_index_runtime_id:runtime->active_binding.runtime_id;
             if (runtime->transition_active) {
                 SA3DSSonicAnimationBinding request;
                 if (!sa3ds_sonic_animation_binding(requested_id, &request))

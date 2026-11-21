@@ -194,3 +194,18 @@ shared enemy decisions. Sonic49AA48 field priority, secondary enable and source
 contact response/clear implemented. Focused/owner witness/host/native gates pass;
 artifact unchanged ae538ee9. Next native actor/profile/CCL integration, not another
 unchanged proof pass. See docs/PC2004_CCL_CONTACT.md for source phase constraints.
+
+## 2026-11-21 ground braking and turn-around
+
+Connected ordinary action2 -> 13 brake entry (strict >6000 angle, speed>=jog),
+fixed-facing PGetBreak movement, request20 completion and nonpositive-speed
+reverse -> action2/request30. Ground animation retains30 through NextAnim;
+PlayAnimation now exposes the saved entry index (+128), enabling the original
+one-update jog boost after30 changes to0. Native main supplies prior playback
+state and emits ordinary brake sound12. Focused public-controller/playback
+checks and native build pass. An external owner recording supplies four
+braking-force updates: max forward error5.96e-7 with the recorded task frame.
+An upright substitution differed by0.00112 because the actual frame is tilted;
+that is not a reason to tune constants. No matched collision, native play or
+hardware claim. Status4000 task-controller reversal, exceptional contacts and
+complete Act1 entry/landing arbitration remain outside this ordinary path.

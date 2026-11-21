@@ -47,6 +47,11 @@ typedef struct {
  * the exact 2004 PSetPosition/PResetPosition bodies do not directly reference
  * the 1.16 constant. 0.0.8.8.8 additionally routes ball-state tangent motion through exact-2004 PGetBreak/PGetInertia arithmetic specializations. 0.0.8.8.9 reconstructs the exact 0x84-byte 2004 collision-work layout and initialization while keeping the synthetic lab query stand-off separate from retail polygon-solver semantics.
  */
+/* Route ordinary action2 brake entry and active action13 through the shared
+ * task-frame path. This predicate changes no state. */
+int sa1_steam_sonic_brake_dispatch(const SA1PlayerState *player,
+    const SA1Input *input, float camera_yaw);
+
 void sa1_physics_step_steam_sonic_surface(
     SA1PlayerState *player,
     const SA1Input *input,

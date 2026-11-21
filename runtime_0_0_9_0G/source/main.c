@@ -4734,6 +4734,7 @@ int main(void) {
             if(g_emerald_coast)g_ec_collision.reference_y=g_player.pos.y;
             SA1Vec3 checkpoint_previous_task=sa3ds_ec_task_origin(&g_player);
             int was_grounded=g_player.grounded;
+            uint8_t previous_player_action=g_player.pc2004_action_state;
             int numbered_step=step_numbered_panels(&tick_input);
             if(!numbered_step){
                 const SA1PhysicsWorld *world=g_emerald_coast?&g_ec_collision.world:sa3ds_parity_lab_world();
@@ -4746,11 +4747,17 @@ int main(void) {
                     fall_world.reset_max_x=fall_world.reset_max_z=INFINITY;
                     world=&fall_world;
                 }
+                g_player.animation_previous_request=g_anim_runtime.requested_runtime_id;
+                g_player.animation_prior_source=g_anim_runtime.prior_source_runtime_id;
+                g_player.animation_previous_source=g_anim_runtime.deferred_index_valid?
+                    g_anim_runtime.deferred_index_runtime_id:g_anim_runtime.active_binding.runtime_id;
+                g_player.animation_previous_request_valid=g_anim_runtime.initialized!=0;
                 sa1_physics_step_steam_sonic_flat(&g_player,&tick_input,g_camera.yaw,world,
                     &SA1_PHYSICS_PLACEHOLDER_CONSTANTS,&physics_trace);
             }
             /*495F61: jump start plays 0x11 (0x307 only when 03B18DB5 is set).*/
             if(g_emerald_coast&&was_grounded&&!g_player.grounded&&tick_input.jump_pressed)sa3ds_se_play(0x11);
+            if(g_emerald_coast&&previous_player_action!=13&&g_player.pc2004_action_state==13)sa3ds_se_play(0x12);
             if(g_player.pc2004_homing_failed){fail_screen("Native source homing context/frame failed");break;}
             if(g_saru_probe&&g_homing_probe){
                 g_homing_probe_calls+=g_player.pc2004_homing_calls;g_homing_probe_tracks+=g_player.pc2004_homing_tracks;

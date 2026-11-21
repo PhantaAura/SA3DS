@@ -154,6 +154,37 @@ static SA1Vec3 desired_surface_direction(const SA1SurfaceFrame *frame,
     return sa1_vec3_normalize(desired);
 }
 
+static int brake_opposed(const SA1PlayerState *player, const SA1Input *input,
+                         float camera_yaw, const SA1SurfaceFrame *frame) {
+    /* Ordinary 4429C0: GetAnalog plus strictly more than 0x6000 away.
+     * The status4000 task-controller branch is not an analog reversal. */
+    if (player->pc2004_status_flags & 0x6000u) return 0;
+    SA1SADXFilteredAnalog analog = sa1_sadx_filter_logical_analog(input->move_x,input->move_z);
+    if (!analog.active) return 0;
+    SA1Vec3 desired = desired_surface_direction(frame,camera_yaw,&analog);
+    return radians_to_bams_abs(signed_angle_on_plane(frame->forward,desired,frame->up)) > 0x6000u;
+}
+
+int sa1_steam_sonic_brake_dispatch(const SA1PlayerState *player,
+    const SA1Input *input,float camera_yaw) {
+    if (!player || !input || !player->pc2004_action_state_valid) return 0;
+    if (player->pc2004_action_state == 13) return 1;
+    if (!player->grounded || player->pc2004_action_state != 2 ||
+        input->jump_pressed || input->action_pressed) return 0;
+    SA1SurfaceFrame frame = player->surface_frame_active ? player_frame(player) :
+        sa1_surface_frame_make(player->ground_normal,horizontal_from_yaw(player->yaw));
+    return frame.valid && sa1_vec3_dot(player->vel,frame.forward) >=
+        SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jog_speed &&
+        brake_opposed(player,input,camera_yaw,&frame);
+}
+
+static void brake_request(SA1PlayerState *player,uint16_t request) {
+    player->animation_script_request=request;
+    player->animation_script_serial++;
+    player->animation_script_valid=true;
+    player->animation_brake_write=true;
+}
+
 static void sync_player_frame(SA1PlayerState *player,
                               const SA1SurfaceFrame *frame,
                               const SA1Contact *contact) {
@@ -247,6 +278,9 @@ static void surface_running(SA1PlayerState *player,
     SA1SADXFilteredAnalog analog =
         sa1_sadx_filter_logical_analog(input->move_x, input->move_z);
     SurfaceSpeed s = world_to_surface(frame, player->vel);
+    if(player->grounded&&player->pc2004_action_state_valid&&player->pc2004_action_state==2&&
+       player->animation_previous_request_valid&&player->animation_prior_source==30&&
+       player->animation_previous_source!=30)s.forward+=p->jog_speed;
     if (dbg) dbg->forward_speed_before = s.forward;
 
     float resistance = 0.0f;
@@ -513,11 +547,11 @@ static int handle_surface_ball_state(SA1PlayerState *player,
     return 0;
 }
 
-static int hurt_velocity(SA1PlayerState*p,const SA1Input*input,const SA1PhysicsWorld*w,SA1SurfaceFrame*f){
+static int break_velocity(SA1PlayerState*p,const SA1Input*input,const SA1PhysicsWorld*w,SA1SurfaceFrame*f,int relax_up){
     const SA1SteamPlayerParameters*parameters=&SA1_STEAM_SONIC_PARAMETER_EVIDENCE;
     SurfaceSpeed speed=world_to_surface(f,p->vel);
     double magnitude=(double)speed.forward*speed.forward+(double)speed.side*speed.side+(double)speed.normal*speed.normal;
-    if((p->grounded||p->pc2004_action_state==86)&&((p->pc2004_player_flags4&0x8000)||magnitude<=(double)parameters->dash_speed*parameters->dash_speed)){
+    if(relax_up&&(p->grounded||p->pc2004_action_state==86)&&((p->pc2004_player_flags4&0x8000)||magnitude<=(double)parameters->dash_speed*parameters->dash_speed)){
         SA1Vec3 foot=sa1_vec3_sub(p->pos,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
         if(!sa1_pc2004_task_relax_up(f,w->homing?&w->homing->math:NULL))return 0;
         p->pos=sa1_vec3_add(foot,sa1_vec3_scale(f->up,SA1_SUPPORT_OFFSET_CANDIDATE));
@@ -531,6 +565,43 @@ static int hurt_velocity(SA1PlayerState*p,const SA1Input*input,const SA1PhysicsW
     sa1_pc2004_pgetspeed_local(local,add,sa1_sadx_filter_logical_analog(input->move_x,input->move_z).active,f->up.y,0,parameters,&next);
     p->vel=surface_to_world(f,(SurfaceSpeed){next.forward,next.side,next.normal});
     p->animation_accel_residual_valid=false;return 1;
+}
+
+static int ground_brake(SA1PlayerState *player,const SA1Input *input,float camera_yaw,
+    const SA1PhysicsWorld *world,SA1SurfaceFrame *frame,SA1SteamSurfaceDebug *dbg) {
+    if (!player->pc2004_action_state_valid) return 0;
+    SurfaceSpeed speed=world_to_surface(frame,player->vel);
+    int opposed=brake_opposed(player,input,camera_yaw,frame);
+    if (player->pc2004_action_state==2 && opposed &&
+        speed.forward>=SA1_STEAM_SONIC_PARAMETER_EVIDENCE.jog_speed) {
+        player->pc2004_action_state=13;
+        player->pc2004_status_flags&=(uint16_t)~0x2000u;
+        brake_request(player,20);
+    } else if (player->pc2004_action_state==13) {
+        /* 497A80: exact nonpositive speed, then the same reversal query.
+         * This precedes testing whether PlayAnimation advanced request20. */
+        if (speed.forward<=0.f && opposed) {
+            player->pc2004_action_state=2;
+            brake_request(player,30);
+            SA1SADXFilteredAnalog analog=sa1_sadx_filter_logical_analog(input->move_x,input->move_z);
+            SA1Vec3 desired=desired_surface_direction(frame,camera_yaw,&analog);
+            rotate_frame_toward(frame,&speed,desired,0x8000u,SA1_PC2004_TURN_GENERAL,1);
+            player->vel=surface_to_world(frame,speed);
+            return 0; /* new action2 moves normally in this same update */
+        }
+        if (player->animation_previous_request_valid && player->animation_previous_request!=20) {
+            player->pc2004_action_state=1;
+            /* Ordinary upright 494840 -> 491660 return-to-idle branch. */
+            brake_request(player,0);
+            return 0;
+        }
+    }
+    if (player->pc2004_action_state!=13) return 0;
+    /* Main's action13 jumps straight to 49B083: PGetBreak/PGetSpeed,
+     * PSetPosition/PResetPosition. It does NOT call PGetRotation. */
+    (void)break_velocity(player,input,world,frame,0);
+    if (dbg) dbg->used_pc2004_pgetbreak=1;
+    return 1;
 }
 
 /*492300 is a complete source velocity update at EACH invocation, including
@@ -590,6 +661,7 @@ void sa1_physics_step_steam_sonic_surface(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;
     player->animation_landing_valid = false;
+    player->animation_brake_write = false;
     player->animation_forward_speed_valid = false;
     player->surface_frame_active = true;
 
@@ -639,7 +711,7 @@ void sa1_physics_step_steam_sonic_surface(
     }
     int source_air_attack=player->pc2004_action_state_valid&&player->pc2004_action_state==14;
     if(hurt_action){
-        if(!hurt_velocity(player,input,world,&frame)){player->pc2004_homing_failed=true;return;}
+        if(!break_velocity(player,input,world,&frame,1)){player->pc2004_homing_failed=true;return;}
     }else if(source_air_attack&&world->homing){
         if(!homing_velocity(player,input,camera_yaw,&frame,dbg,world->homing))return;
     }else if(source_air_attack){
@@ -683,9 +755,10 @@ void sa1_physics_step_steam_sonic_surface(
                 begin_surface_jump(player, &frame);
                 just_jumped = 1;
             } else {
-                int ball_handled = handle_surface_ball_state(player, input,
-                                    camera_yaw, &frame, dbg);
-                if (!ball_handled) {
+                int ball_handled = player->pc2004_action_state_valid && player->pc2004_action_state==13 ?
+                    0 : handle_surface_ball_state(player, input,camera_yaw,&frame,dbg);
+                int brake_handled = !ball_handled && ground_brake(player,input,camera_yaw,world,&frame,dbg);
+                if (!ball_handled && !brake_handled) {
                     /* Action 2 evaluates 0x494FF0 before PGetRotation /
                      * acceleration / speed.  Snapshot the local forward
                      * component in the incoming support frame. */
@@ -693,7 +766,7 @@ void sa1_physics_step_steam_sonic_surface(
                         sa1_vec3_dot(player->vel, frame.forward);
                     int selector_input_active = player->animation_input_active;
                     surface_running(player, input, camera_yaw, &frame, dbg);
-                    if (player->pc2004_action_state_valid) {
+                    if (player->pc2004_action_state_valid && !player->animation_brake_write) {
                         if (player->pc2004_action_state == 2 &&
                             !selector_input_active &&
                             selector_forward == 0.0f) {

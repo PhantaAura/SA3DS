@@ -156,6 +156,11 @@ static void steam_flat_horizontal(SA1PlayerState *player, const SA1Input *input,
     SA1SADXFilteredAnalog analog =
         sa1_sadx_filter_logical_analog(input->move_x, input->move_z);
     SA1LocalSpeed local = world_to_local(player->yaw, player->vel);
+    /*49AD69: +128 is the index saved at PlayAnimation entry, not request124.
+     * NextAnim can leave saved30 beside index0 for one movement update.*/
+    if(player->grounded&&player->pc2004_action_state_valid&&player->pc2004_action_state==2&&
+       player->animation_previous_request_valid&&player->animation_prior_source==30&&
+       player->animation_previous_source!=30)local.forward+=p->jog_speed;
     SA1LocalSpeed original_local = local;
     float speed_for_branches = local.forward;
     float resistance = 0.0f;
@@ -290,6 +295,7 @@ void sa1_physics_step_steam_sonic_flat(
         input->move_x, input->move_z).active != 0;
     player->animation_input_valid = true;
     player->animation_landing_valid = false;
+    player->animation_brake_write = false;
     player->animation_forward_speed_valid = false;
 
     /* Mirrors the per-tick clear at PC2004 0x00446F10. A path marks the value
@@ -309,7 +315,13 @@ void sa1_physics_step_steam_sonic_flat(
 
     /* A slope launch/departure does not become world-upright on its second
      * airborne tick. Continue the retained task-frame path until grounded. */
-    if ((player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==86)) ||
+    int brake_dispatch=sa1_steam_sonic_brake_dispatch(player,input,camera_yaw);
+    if(brake_dispatch&&!player->surface_frame_active){
+        SA1SurfaceFrame brake_frame=sa1_surface_frame_make(player->ground_normal,
+            (SA1Vec3){sinf(player->yaw),0,cosf(player->yaw)});
+        player->surface_forward=brake_frame.forward;player->surface_right=brake_frame.right;
+    }
+    if (brake_dispatch || (player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==86)) ||
         attack_dispatch || (!player->grounded && player->surface_frame_active) ||
         (player->pc2004_action_state_valid &&
          (player->pc2004_action_state == 9 || player->pc2004_action_state == 10))) {

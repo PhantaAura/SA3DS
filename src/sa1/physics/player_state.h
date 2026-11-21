@@ -49,6 +49,13 @@ typedef struct {
     uint32_t animation_script_serial;
     uint16_t animation_script_request;
     bool animation_script_valid;
+    /* Previous completed PlayAnimation request, supplied before movement.
+     * Brake action13 waits for request20's automatic NextAnim boundary. */
+    uint16_t animation_previous_request;
+    uint16_t animation_previous_source;
+    uint16_t animation_prior_source;
+    bool animation_previous_request_valid;
+    bool animation_brake_write;
     uint32_t jump_ticks;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
     int16_t pc2004_air_attack_timer,pc2004_air_attack_age;
