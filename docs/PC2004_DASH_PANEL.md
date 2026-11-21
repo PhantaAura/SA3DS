@@ -436,3 +436,15 @@ on 426 finds no polygon. This supersedes any inference of a successful
 handoff from the fixed-orientation preview. The trajectory still holds
 through tick 21 and detaches at tick 22. Response-entry gates and
 43D360 effects remain outside this preview.
+
+WCA205 corrects the response preview's ground-side override. The helper now
+accepts the raw response flags and tests only bit 0x4000, matching 43D360.
+Previously the preview passed all flags to a boolean parameter, so ordinary
+solid/visible flags could incorrectly make an arbitrary steep contact pass.
+The focused fixture distinguishes 0xA0000001 from 0xA0004001.
+
+The exact-owner task-angle replay still reaches tick 22 with objects 416 and
+426. Both independent contacts pass without the override because of their
+angle or improvement relative to gravity. The rotating carried preview still
+misses 426 after accepting 416. Thus this corrects diagnostic acceptance but
+does not resolve the observed loop detachment or change native gameplay.

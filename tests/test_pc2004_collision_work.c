@@ -54,9 +54,12 @@ int main(void) {
     SA1Vec3 up={0,1,0}, gravity={0,-1,0};
     assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){0.8660254f,0.5f,0},gravity,0));
     assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){0.9238795f,0.3826834f,0},gravity,0));
-    assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,1));
+    assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0x4000));
     assert(sa1_pc2004_collision_ground_side((SA1Vec3){1,0,0},up,gravity,0));
     assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0));
+    /* Ordinary visible/solid object flags do not override the steep gate. */
+    assert(!sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0xa0000001u));
+    assert(sa1_pc2004_collision_ground_side(up,(SA1Vec3){1,0,0},gravity,0xa0004001u));
 
     SA1Vec3 projected = sa1_pc2004_collision_support_position(
         (SA1Vec3){3,8,1}, (SA1Vec3){2,2,3}, (SA1Vec3){0,2,0},

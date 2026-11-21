@@ -72,7 +72,7 @@ void sa1_pc2004_collision_work_mirror_static_contact(
  * Normals are unit length. Gravity is supplied in world space. The
  * object flag 0x4000 exception applies to the 43D360 response only. */
 int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity,
-                                     int force_ground_side);
+                                     uint32_t response_flags);
 
 /* Position in the ordinary 449EE5 support response, before the task-position
  * write gate. corrected_center is the sweep's average radius-corrected point,

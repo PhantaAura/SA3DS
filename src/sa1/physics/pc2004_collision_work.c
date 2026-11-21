@@ -32,7 +32,7 @@ void sa1_pc2004_collision_work_mirror_static_contact(
 }
 
 int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity,
-                                     int force_ground_side) {
+                                     uint32_t response_flags) {
     /* 438410 stores the dot as a float before acos, then truncates BAMS. */
     float alignment = (float)((double)up.x * normal.x +
         (double)up.y * normal.y + (double)up.z * normal.z);
@@ -46,7 +46,7 @@ int sa1_pc2004_collision_ground_side(SA1Vec3 up, SA1Vec3 normal, SA1Vec3 gravity
         (double)gravity.y * up.y + (double)gravity.z * up.z);
     double candidate_gravity_dot = (double)gravity.x * normal.x +
         (double)gravity.y * normal.y + (double)gravity.z * normal.z;
-    return force_ground_side || candidate_gravity_dot < old_gravity_dot;
+    return (response_flags & 0x4000u) != 0 || candidate_gravity_dot < old_gravity_dot;
 }
 
 SA1Vec3 sa1_pc2004_collision_support_position(SA1Vec3 corrected_center,
