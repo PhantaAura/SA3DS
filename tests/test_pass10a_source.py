@@ -1,7 +1,7 @@
 from pathlib import Path
 base=Path(__file__).resolve().parents[1]
-s=(base/'runtime_0_0_9_0G/source/main.c').read_text()
-t=(base/'runtime_0_0_9_0G/source/sonic_gpu.c').read_text()
+s=(base/'runtime/source/main.c').read_text()
+t=(base/'runtime/source/sonic_gpu.c').read_text()
 assert 'g_pose_lab=(mode==5);' in s
 assert 'if(g_pose_lab) pose_lab_status(); else if(g_emerald_coast) emerald_coast_status(); else print_status();' in s
 assert 'if (!g_pose_lab && !g_emerald_coast && !sa3ds_lab_gpu_draw' in s

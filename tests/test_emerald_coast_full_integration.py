@@ -1,7 +1,7 @@
 """Native wiring only; actual full-act loading requires owner assets/emulator."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
+main=(root/'runtime/source/main.c').read_text()
 assert 'g_ec_combined&&!g_ec_replay&&sa3ds_read_file(' in main
 assert 'emerald_coast_route.sa3dspak' in main
 assert 'sa3ds_ec_gpu_init_full(&g_ec_gpu,&g_ec_visual' in main

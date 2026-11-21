@@ -15,7 +15,7 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa1/physics -Isrc/game \
 "$BUILD/inherited"
 python3 - <<'PY'
 from pathlib import Path
-main=Path('runtime_0_0_9_0F/source/main.c').read_text()
+main=Path('runtime/source/main.c').read_text()
 reset=main.split('static void reset_selected_zone(void) {',1)[1].split('static void cycle_zone(',1)[0]
 assert 'memset(&g_anim_sync' in reset
 assert 'memset(&g_anim_runtime' in reset

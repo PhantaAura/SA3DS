@@ -9,9 +9,9 @@ cc -std=c11 -O2 -Wall -Wextra -Werror -Isrc/sa3c \
 "$TMP/geometry"
 python3 - <<'PY'
 from pathlib import Path
-s = Path('runtime_0_0_9_0F/source/main.c').read_text()
-assert 'sa3ds_geometry_preflight(' in s and '&g_character, &g_geometry_report)' in s
+s = Path('runtime/source/main.c').read_text()
+assert 'sa3ds_geometry_preflight(&g_character,&g_geometry_report)' in s
 assert 'sa3ds_geometry_result_name(geometry_result)' in s
-assert s.index('sa3ds_geometry_preflight(') < s.index('sa3ds_sonic_gpu_init(')
+assert s.index('static int load_owner_packages(') < s.index('sa3ds_geometry_preflight(') < s.index('static int init_scene(')
 print('native geometry loader integration: PASS (source contract; no 3DS compilation)')
 PY

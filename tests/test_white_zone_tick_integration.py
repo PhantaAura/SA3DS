@@ -1,7 +1,7 @@
 """Host source contract only: this is not a native devkitARM compile."""
 from pathlib import Path
-p = Path('runtime_0_0_9_0G/source/main.c').read_text()
-mk = Path('runtime_0_0_9_0G/Makefile').read_text()
+p = Path('runtime/source/main.c').read_text()
+mk = Path('runtime/Makefile').read_text()
 assert 'SOURCES     := source ../src/sa3c ../src/sa1/physics ../src/game' in mk
 assert 'sa3ds_wz_tick_begin(&g_tick_clock,elapsed_ms,&in)' in p
 assert 'sa3ds_wz_tick_input(&g_tick_clock,step)' in p

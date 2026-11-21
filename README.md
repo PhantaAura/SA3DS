@@ -1,59 +1,62 @@
-# Latest: SA3DS Pass11B — audited PC2004 Sonic pose runtime
+# Sonic Adventure 3DS
 
-This tree now continues the supplied Pass10A CPU-upload/Pose Lab baseline. Pass11A reproduced the owner's hardware geometry metrics and checked hierarchy/action control flow in the private `sonic.exe.c` export. Pass11B independently samples ACTION slot 1 from the exact original `CHRMODELS_orig.dll` and compares it with the C runtime: 223 nodes, 7 frames, 14,049 scalar comparisons, maximum error approximately `4.9e-9`.
+SA3DS is a native, offline 3DS reimplementation of the owner's PC2004 Sonic
+Adventure DX. Old 3DS is the hardware baseline. The original executable and data
+remain private; the app loads packages generated from the owner's installation.
 
-Start with `MODDING_PLAN.md`, `docs/PASS11B_SOURCE_POSE_ORACLE.md`, and `docs/HANDOFF.md`. Build the code-only SD-mode app with `DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM sh tools/build_3ds.sh`. The resulting hardware-test package is under `dist/`; a new Old 3DS run is still required.
+**Next release milestone: 1.0 — normal boot → Emerald Coast clear → results.**
+This milestone is not complete. The Act 1 dash-panel/loop route still breaks,
+and an uninterrupted course clear has not been demonstrated. Nonblocking visual
+and behavioral differences remain **CANDIDATE** while the playable route is finished.
+The full fidelity goal continues after this first playable release.
 
-The older CAM and Emerald Coast reconstruction notes below remain future integration inputs; they are not yet a complete playable stage.
+Read [RESUME.md](RESUME.md) for the next work and
+[PARITY_STATUS.json](PARITY_STATUS.json) for current evidence. Git holds previous
+versions, test reports and checkpoint history. There is one active `runtime/`.
+Technical format and original-behavior evidence remains in `docs/`.
 
-# Sonic Adventure 3DS — 0.0.9.1A
+## Roadmap and release gates
 
-**Current milestone: Emerald Coast LandTable + Collision Decode**
+| Milestone | Work mapped from the original | Acceptance before release |
+| --- | --- | --- |
+| 1.0: Emerald Coast clear | Follow original starts, SET movement objects, terrain route, required events, act handoffs, goal and results. | One uninterrupted normal-start native run reaches results; death/checkpoint recovery works; known deviations are listed. |
+| Fidelity pass | Match controls and animation, loop/wall/landing collision, stage camera, objects and whale behavior against the exact original. | Matched-state comparisons and focused native checks cover each changed behavior; remaining candidates stay explicit. |
+| Old 3DS acceptance | Resolve movement freezes and validate renderer, audio and external SD replacements on the baseline hardware. | A physical Old 3DS completes the route with recorded performance and no route-breaking failures. |
 
-SA3DS remains a native 3DS port/reimplementation project: **1 P, no Rs — PORT.
-No remake. No remaster. Just a port with QoL.**  The 2004 PC/SADX lineage is the
-engineering and behavior source; Dreamcast SA1 remains the presentation/fidelity
-reference; Old 3DS / Old 3DS XL remains the baseline hardware target.
+The nine continuing work areas are controls/facing, animation, complete stage
+geometry, terrain/camera, interactive objects, scripted events/whale, gameplay
+progression/audio, renderer fidelity and external SD asset replacements. Reaching
+1.0 does not establish full PC2004 parity or complete those nine areas.
 
-0.0.9.1A advances directly from the validated White Zone codebase into the first
-real Emerald Coast source pass.  The exact 2004 executable now yields all three
-Emerald Coast LandTables, 848 collision instances, 426 unique Basic models and
-46,903 triangles.  The new owner-side converter emits pointer-free collision
-data into `.sa3dspak` without placing Sega payloads in this checkpoint.
+Before implementing a route behavior, identify its original task, placement,
+activation condition and handoff. Existing owner SET/CAM/terrain importers and
+[route-blocker evidence](docs/PC2004_DASH_PANEL.md) supply the starting map.
+Use the controllable original-game reference for uncertain behavior; video
+seconds and game-update counts are different clocks.
 
-Start with `0.0.9.1A_README.md` and
-`docs/EMERALD_COAST_LANDTABLE_RECON_0.0.9.1A.md`.
-
-## Test
+## Build and run
 
 ```sh
-./tests/run_0_0_9_1_tests.sh /path/to/sonic.exe /path/to/system-or-system.zip
+sh tools/build_3ds.sh
 ```
 
-## Owner-side collision package
+Use `dist/SA3DS.3dsx`. The script stages the code in a path without spaces and
+builds the external-SD mode. Keep the CPU texture-upload path, owner-pair loader
+and boot diagnostics. Owner-generated assets belong on external storage, never
+in this repository. Follow [the owner-pose workflow](docs/PASS11B_SOURCE_POSE_ORACLE.md)
+for its exact private input requirements; consult each converter's `--help` for
+external output paths.
 
-```sh
-python3 tools/build_pc2004_emerald_coast_collision.py \
-  /path/to/sonic.exe /tmp/emerald_coast.sa3dspak
-```
+## Verification and contribution
 
-Do not redistribute the generated stage package; it contains data reconstructed
-from the owner's Sonic Adventure files.
+Run `bash tests/run_sa3ds_current_host.sh` for owner-data-free changes. Pose or
+import changes also require `tests/run_pass11b_source_pose.sh` with the exact
+owner inputs. Use `tools/build_3ds.sh` for native changes. Add only focused checks
+that distinguish the intended original behavior; do not rerun unrelated native
+scenarios without a reason.
 
-## 0.0.9.1B — Emerald Coast Visual / Material / PVM Decode
-
-The current checkpoint extends the exact Emerald Coast LandTable decode into
-pointer-free renderable geometry, exact Basic material records, signed16/255
-UVs, and strict BEACH01/02/03 PVM texture bindings.  A generic exact-source PVM
-parser also validates OBJ_BEACH, BEACH_SEA, and BG_BEACH.  Owner-side generated
-visual packages are excluded from the source archive.
-
-See `0.0.9.1B_README.md` and `docs/EMERALD_COAST_VISUAL_FORMAT_0.0.9.1B.md`.
-
-## 0.0.9.1C — owner SET/object placement decode
-
-See `0.0.9.1C_README.md`, `SET_INVENTORY_0.0.9.1C.json`,
-`tools/importers/pc2004_set.py` and
-`tools/build_pc2004_set_packages.py`. The standalone
-`--with-set` option on the Emerald Coast visual builder embeds placement banks
-while leaving legacy 1B output unchanged. This adds no object gameplay logic.
+Finish one behavior, check it, update the handoff/status and commit it. Push
+source-only commits to `PhantaAura/SA3DS main`. Make a release when a milestone's
+acceptance run actually succeeds; do not publish a numbered success for a build
+alone. Never commit original game files, converted assets, private traces or
+compiled releases.

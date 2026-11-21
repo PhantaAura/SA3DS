@@ -37,7 +37,7 @@ fi
 grep -q 'NONFINITE.*key=1' "$TMP/bad.out"
 python3 - <<'PY'
 from pathlib import Path
-s=Path('runtime_0_0_9_0F/source/main.c').read_text()
+s=Path('runtime/source/main.c').read_text()
 assert '#include "../../src/game/sonic_action_preflight.h"' in s
 assert 'sa3ds_sonic_animation_binding_count()' in s
 assert 'sa3ds_sonic_animation_binding_at(' in s

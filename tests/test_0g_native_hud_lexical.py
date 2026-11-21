@@ -8,7 +8,7 @@ This does NOT substitute for a real devkitARM build.
 from pathlib import Path
 import re
 
-MAIN = Path(__file__).resolve().parents[1] / "runtime_0_0_9_0G/source/main.c"
+MAIN = Path(__file__).resolve().parents[1] / "runtime/source/main.c"
 s = MAIN.read_text(encoding="utf-8")
 assert 'printf("\\x1b[27;1HAssets:%s C:%luK T:%luK ",' in s, "assets HUD printf missing or corrupted"
 assert 'printf("\\x1b[28;1H60Hz:%llu Drop:%llu %s ",' in s, "tick HUD printf missing or corrupted"

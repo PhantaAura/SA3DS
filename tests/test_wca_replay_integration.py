@@ -1,6 +1,6 @@
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
+main=(root/'runtime/source/main.c').read_text()
 assert "g_wca_replay=g_ec_replay && replay_mode=='M';" in main
 assert 'if(wca.reset)reset_selected_zone();' in main
 assert 'tick_input=wca.screen_input;' in main

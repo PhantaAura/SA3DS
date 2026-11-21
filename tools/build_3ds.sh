@@ -5,9 +5,9 @@ set -eu
 # Stage only code into a private no-space path, build there, then copy the
 # resulting code-only artifacts back into dist/.
 root="$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)"
-runtime="${1:-runtime_0_0_9_0G}"
+runtime="${1:-runtime}"
 case "$runtime" in
-  runtime_0_0_9_0G) ;;
+  runtime) ;;
   *) echo "unsupported runtime directory: $runtime" >&2; exit 2 ;;
 esac
 : "${DEVKITPRO:=/opt/devkitpro}"

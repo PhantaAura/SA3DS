@@ -6,7 +6,7 @@ and guard that the live loader selects the software tile path.
 """
 from pathlib import Path
 import re, tempfile, subprocess, ctypes
-src = Path(__file__).resolve().parents[1] / 'runtime_0_0_9_0G/source/sonic_gpu.c'
+src = Path(__file__).resolve().parents[1] / 'runtime/source/sonic_gpu.c'
 t = src.read_text()
 m = re.search(r'static uint32_t morton8\(uint32_t x, uint32_t y\)\s*\{.*?\n\}', t, re.S)
 assert m, 'morton8() missing'

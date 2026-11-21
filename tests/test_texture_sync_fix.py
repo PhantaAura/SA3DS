@@ -2,9 +2,9 @@
 """Guard against the hardware-observed texture-transfer deadlock regression."""
 from pathlib import Path
 p=Path(__file__).resolve().parents[1]
-s=(p/'runtime_0_0_9_0G/source/sonic_gpu.c').read_text()
-m=(p/'runtime_0_0_9_0G/source/main.c').read_text()
-h=(p/'runtime_0_0_9_0G/include/sonic_gpu.h').read_text()
+s=(p/'runtime/source/sonic_gpu.c').read_text()
+m=(p/'runtime/source/main.c').read_text()
+h=(p/'runtime/include/sonic_gpu.h').read_text()
 assert s.count('C3D_SyncDisplayTransfer(') >= 1
 # No explicit second wait in texture upload (citro3d already waits).
 assert 'gspWaitForPPF();' not in s

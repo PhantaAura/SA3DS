@@ -2,8 +2,8 @@
 from pathlib import Path
 
 root=Path(__file__).resolve().parents[1]
-main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
-mk=(root/'runtime_0_0_9_0G/Makefile').read_text()
+main=(root/'runtime/source/main.c').read_text()
+mk=(root/'runtime/Makefile').read_text()
 lab=(root/'src/game/parity_lab.c').read_text()
 trace=(root/'src/game/parity_trace.c').read_text()
 hud=(root/'src/game/parity_hud.c').read_text()

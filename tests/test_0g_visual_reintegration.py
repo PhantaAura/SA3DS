@@ -8,30 +8,18 @@ from pathlib import Path
 import re
 
 root=Path(__file__).resolve().parents[1]
-f=root/'runtime_0_0_9_0F'
-g=root/'runtime_0_0_9_0G'
-# TextureSyncFix intentionally changes the texture upload/init sections only.
-# Retain exact 0F lab submission/cleanup outside the CP1 camera correction.
-f_lab=(f/'source/lab_gpu.c').read_text()
-g_lab=(g/'source/lab_gpu.c').read_text().replace('#include "player_view.h"\n','')
-old_camera=f_lab[f_lab.index('static void camera_relative('):f_lab.index('static void write_vertex(')]
-new_camera=g_lab[g_lab.index('static void camera_relative('):g_lab.index('static void write_vertex(')]
-assert 'sa3ds_view_point(' in new_camera
-assert g_lab.replace(new_camera,old_camera)==f_lab, 'lab submission/cleanup changed outside camera conversion'
-f_gpu=(f/'source/sonic_gpu.c').read_text()
+g=root/'runtime'
+g_lab=(g/'source/lab_gpu.c').read_text()
+assert 'sa3ds_view_point(' in g_lab
 g_gpu=(g/'source/sonic_gpu.c').read_text()
-# WCA56 permits the exact-owner781CC0/784850 constant diffuse context.
-# Normalize only that explicit addition, then retain the entire old draw guard.
-mesh=g_gpu[g_gpu.index('static void xform('):g_gpu.index('int sa3ds_sonic_gpu_init_instances_traced(')]
-constant='    if(r->constant_diffuse_enabled)return sa3ds_visual_material_rgba(r->constant_diffuse_argb);\n'
-assert mesh.count(constant)==1
-mesh=mesh.replace(constant,'',1).replace(
-    'static uint32_t material_rgba(const SA3DSSonicGpu *r, uint16_t material_index) {\n    const SA3CCharacter *c=r->character;',
-    'static uint32_t material_rgba(const SA3CCharacter *c, uint16_t material_index) {',1).replace(
-    'material_rgba(r,cmd->material_index)','material_rgba(c,cmd->material_index)',1)
-assert f_gpu[f_gpu.index('static void xform('):f_gpu.index('int sa3ds_sonic_gpu_init(')] == mesh, 'mesh draw changed outside owner constant-diffuse context'
-assert f_gpu[f_gpu.index('void sa3ds_sonic_gpu_destroy('):f_gpu.index('int sa3ds_sonic_gpu_draw(')] == \
-       g_gpu[g_gpu.index('void sa3ds_sonic_gpu_destroy('):g_gpu.index('void sa3ds_sonic_gpu_begin_frame(')], 'original GPU cleanup changed'
+# Guard the active implementation directly; obsolete runtime snapshots live
+# in Git. Functional arena/pose/texture helpers have independent C tests.
+assert 'sa3ds_gpu_batch_budget_instances(c,instances,&r->batch)' in g_gpu
+assert 'sa3ds_gpu_batch_reserve(&r->batch,cmd->index_count,&first_vertex)' in g_gpu
+assert 'SA3DSGpuVertex *dst=r->scratch+first_vertex' in g_gpu
+assert 'if(r->constant_diffuse_enabled)return sa3ds_visual_material_rgba(r->constant_diffuse_argb);' in g_gpu
+cleanup=g_gpu.split('void sa3ds_sonic_gpu_destroy(',1)[1].split('void sa3ds_sonic_gpu_begin_frame(',1)[0]
+assert 'C3D_TexDelete(' in cleanup and 'linearFree(r->scratch)' in cleanup
 # Shared multi-actor append is now explicit; the legacy wrapper must still
 # reset once then emit through the same original pose/render callback.
 wrapper=g_gpu[g_gpu.index('int sa3ds_sonic_gpu_draw('):]
@@ -42,9 +30,7 @@ assert 'gspWaitForPPF();' not in g_gpu
 assert 'C3D_SyncDisplayTransfer(' in g_gpu and 'upload_rgba8_cpu(' in g_gpu
 assert 'sa3ds_sonic_gpu_init_traced(' in g_gpu
 assert 'sa3ds_sonic_gpu_init(' in g_gpu
-f_header=(f/'include/sonic_gpu.h').read_text()
 g_header=(g/'include/sonic_gpu.h').read_text()
-assert 'int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r,' in f_header
 assert 'int sa3ds_sonic_gpu_init(SA3DSSonicGpu *r,' in g_header
 assert 'int sa3ds_sonic_gpu_init_traced(' in g_header
 

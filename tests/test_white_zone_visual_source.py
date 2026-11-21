@@ -2,9 +2,9 @@
 """Source contract: visual preflight must guard actual Old-3DS upload path."""
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-gpu = (root / 'runtime_0_0_9_0F/source/sonic_gpu.c').read_text()
-main = (root / 'runtime_0_0_9_0F/source/main.c').read_text()
-make = (root / 'runtime_0_0_9_0F/Makefile').read_text()
+gpu = (root / 'runtime/source/sonic_gpu.c').read_text()
+main = (root / 'runtime/source/main.c').read_text()
+make = (root / 'runtime/Makefile').read_text()
 for token in ('#include "sa3c_gpu_preflight.h"', 'sa3ds_visual_preflight(c,t,&visual)',
               'sa3ds_visual_material_rgba(rd32(m))', 'C3D_SyncDisplayTransfer'):
     assert token in gpu, f'missing GPU visual contract: {token}'

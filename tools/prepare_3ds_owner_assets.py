@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the 0.0.9.0E RomFS packages from the owner's exact PC2004 files.
 
-This script intentionally writes Sega-derived data only into runtime_0_0_9_0E/
+This script intentionally writes Sega-derived data only into runtime/
 romfs for a local build. Those generated files are excluded from code checkpoint
 archives.
 """
@@ -28,7 +28,7 @@ def main()->int:
     ap=argparse.ArgumentParser()
     ap.add_argument('chrmodels',type=Path,help='exact original PC2004 system/CHRMODELS.DLL')
     ap.add_argument('sonic_pvm',type=Path,help='exact PC2004 system/SONIC.PVM')
-    ap.add_argument('--runtime',type=Path,default=ROOT/'runtime_0_0_9_0E')
+    ap.add_argument('--runtime',type=Path,default=ROOT/'runtime')
     a=ap.parse_args()
     got_c=sha256(a.chrmodels); got_p=sha256(a.sonic_pvm)
     if got_c!=CHRMODELS_SHA: raise SystemExit(f'CHRMODELS.DLL hash mismatch\n expected {CHRMODELS_SHA}\n got      {got_c}')

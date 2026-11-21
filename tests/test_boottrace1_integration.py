@@ -2,8 +2,8 @@
 """Source-only BootTrace1 guard (NOT real 3DS compile or hardware test)."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-main=(root/'runtime_0_0_9_0G/source/main.c').read_text()
-make=(root/'runtime_0_0_9_0G/Makefile').read_text()
+main=(root/'runtime/source/main.c').read_text()
+make=(root/'runtime/Makefile').read_text()
 menu=main[main.index('static int boot_menu(void)'):main.index('static void boot_result')]
 checks={
  '3-mode startup': ('boot_menu()' in main and 'if (mode==1)' in main and 'if (mode==2)' in main),
