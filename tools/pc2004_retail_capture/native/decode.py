@@ -34,7 +34,7 @@ def main():
  if len(data)<HEADER.size:raise SystemExit('Truncated capture header')
  h=HEADER.unpack_from(data)
  magic,version,header_bytes,record_bytes,count,act1,errors,warmup,base,image_size,mask,start,frequency,sha=h
- if (magic,version,header_bytes,record_bytes,base,mask,sha.decode())!=('SA3DPCTR'.encode(),1,128,224,0x400000,7,PROFILE):raise SystemExit('Unsupported capture header')
+ if version not in (1,2) or (magic,header_bytes,record_bytes,base,mask,sha.decode())!=('SA3DPCTR'.encode(),128,224,0x400000,7,PROFILE):raise SystemExit('Unsupported capture header')
  if len(data)!=128+count*224 or count>60000 or errors or not frequency:raise SystemExit('Incomplete or failed capture')
  if (a.raw.parent/'capture.error.txt').exists():raise SystemExit('Capture producer reported an error')
  rows=[dict(zip([name for name,_ in fields],values)) for values in RECORD.iter_unpack(data[128:])]
@@ -50,7 +50,9 @@ def main():
  a.output.parent.mkdir(parents=True,exist_ok=True)
  with a.output.open('x',newline='') as out:
   w=csv.DictWriter(out,fieldnames=[name for name,_ in fields]+['runtime_animation_id','elapsed_ms']);w.writeheader();w.writerows(rows)
- summary={'schema':'sa3ds-original-frame-summary-v1','rows':count,'physics_updates':act1,'errors':errors,'warmup_skipped':warmup,'phase':'post_sonic_main','frame_number':'capture-local Sonic update index','executable_sha256':PROFILE,
+ summary={'schema':'sa3ds-original-frame-summary-v2','capture_version':version,
+  'normalized_input_source':'active_at_sonic_main_entry' if version==2 else 'legacy_unused_buffer_not_Sonic_control_input',
+  'rows':count,'physics_updates':act1,'errors':errors,'warmup_skipped':warmup,'phase':'post_sonic_main','frame_number':'capture-local Sonic update index','executable_sha256':PROFILE,
   'seconds_between_first_and_last_sample':(rows[-1]['qpc']-rows[0]['qpc'])/frequency,
   'actions':dict(collections.Counter(row['action'] for row in rows)),
   'runtime_animations':dict(collections.Counter(row['runtime_animation_id'] for row in rows)),

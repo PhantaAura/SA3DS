@@ -460,3 +460,30 @@ On the exact-owner tick-22 overlap, the fixed-frame next projection on 426/33
 changes to approximately (2193.061, 89.581, 258.045). The rotating preview
 still finds no polygon on 426. The 240-tick task-angle replay still detaches
 at tick 22; no native gameplay behavior or completed loop is claimed.
+
+## Controllable original reference: loop acceptance input
+
+The isolated original now starts directly in Emerald Coast. Two fresh-process
+row0 setup runs with neutral logical input both fell; expecting that coasting
+fixture to clear the loop was unsupported. Holding active logical forward instead
+produced360 original Sonic updates with zero producer errors: status2000 entered
+at update17 and cleared at96 with ground retained. The later course was not
+accepted. This is an explicit setup/controlled-input scenario, not a normal-start
+course clear, and its private producer changes only setup/input, not movement or
+animation code. Private experimental source/captures are not redistributed.
+
+The original stage creates loop tasks via49C1A0 and the PathDataPtrs table.
+4BB1F0 initializes bounds and two60-tick counters, then requests command26 through
+440E50 near path vertices. Sonic495FA0 accepts that command for action2/5 or
+sufficient forward speed and sets status2000. Ground acceleration's active-input
+path invokes43C130 for path steering and supplies a-.8 normal addend. GetAnalog's
+status2000 branch can admit active input despite the normal control timer. These
+behaviors are absent from the native route; increasing snap tolerances or changing
+dash speed cannot establish their fidelity. The next complete gameplay slice is
+owner path import, task entry, input gating and steering through the loop.
+
+The reference investigation also identified recorder version1's normalized input
+as the unused3B0E368 buffer. Sonic's43BDC0 reads3B0E7A0/4; version2 samples that
+active buffer at main entry and retains an explicit legacy warning in decoding.
+The earlier animation playback comparison remains component evidence because
+it used recorded animation requests/phases/scalars, not the mislabeled input.

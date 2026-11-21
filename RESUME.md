@@ -11,8 +11,10 @@ README remains active after 1.0.
 
 ## Next work
 
-1. Fix route-breaking Act 1 dash panels/loop support loss, using the original
-   task order and contact evidence in `docs/PC2004_DASH_PANEL.md`.
+1. Implement the original automatic-loop path entry and held-input steering,
+   including status0x2000's control-timer exception and source normal-force
+   addend. The current port lacks this behavior; terrain-only fixes do not
+   establish a valid loop clear. See `docs/PC2004_DASH_PANEL.md`.
 2. Walk each required act handoff, spring/pad chain and event from the original
    stage map; finish the whale/progression pieces that block reaching the goal.
 3. Run normal start → goal → results and death → checkpoint recovery on native
@@ -46,3 +48,21 @@ Run the required host gate once per finished source behavior, the exact-owner
 pose/import gate when applicable, and only the necessary native checks. One
 behavior per commit; update this file and `PARITY_STATUS.json` instead of making
 new checkpoint documents. Earlier baselines and evidence reports remain in Git.
+
+The controllable original now starts directly in Emerald Coast in the isolated
+small Wine window. A source-neutral physics/animation scenario at the owner pad
+placement, with active logical forward held, records360 updates: path mode enters
+at17 and exits grounded at96. The identical neutral-input scenario falls, so the
+old coasting fixture is not a loop-clear acceptance test. Neither is a full-course
+normal-start acceptance run. A straight-line scripted approach from the original
+spawn stops at shoreline geometry; it is not a verified course route.
+
+Original active analog is3B0E7A0/4, read by43BDC0. Recorder version1's filtered
+fields came from unused3B0E368; do not use them for control parity. Version2 fixes
+that timing/source and explicitly labels legacy captures. Existing playback
+component evidence does not depend on those input fields. Inject only after a
+ready player task exists; injection during Wine startup can stall initialization.
+Use one capture per fresh reference process until repeated-capture behavior is
+established. Private scenario files/recordings remain under `/private/tmp/sa3ds-ec-reference-driver`.
+Recovered loop task pseudocode is private at `/private/tmp/sa3ds-loop-task-recovery/output`;
+4BB1F0 is the automatic loop constructor/poller, not a terrain response.

@@ -39,10 +39,9 @@ static int write_new(const wchar_t *name,const void *data,DWORD length){
 static void fail(const char *message){InterlockedOr(&errors,(LONG)0x80000000u);write_new(L"capture.error.txt",message,(DWORD)strlen(message));}
 static void __cdecl filter_hook(void){
  InterlockedIncrement(&active_callbacks);original_filter();FpState fp;fp_save(&fp);
- uint32_t peripheral=0,camera=0,angle=0;unsigned char pad[0x34],filtered[8];InputSnapshot input={0};
- if(copy_memory(0x03b0e77c,&peripheral,4)&&copy_memory(peripheral,pad,sizeof(pad))&&copy_memory(0x03b0e368,filtered,sizeof(filtered))){
+ uint32_t peripheral=0,camera=0;unsigned char pad[0x34];InputSnapshot input={0};
+ if(copy_memory(0x03b0e77c,&peripheral,4)&&copy_memory(peripheral,pad,sizeof(pad))){
   input.x=s16(pad,0x1c);input.y=s16(pad,0x1e);input.held=u32(pad,8);input.pressed=u32(pad,0x10);input.released=u32(pad,0x14);
-  angle=u16(filtered,0);input.angle=angle;input.magnitude=f32(filtered,4);
   if(copy_memory(0x03b2cbb0,&camera,4)&&camera)input.camera_valid=copy_memory(camera+0x18,&input.camera,4);
   input.thread=GetCurrentThreadId();input.sequence=latest_input.sequence+1;latest_input=input;
  }
@@ -61,6 +60,14 @@ static void __cdecl main_hook(void *task){
   copy_memory(pointers[0],entity_head,sizeof(entity_head))&&entity_head[8]==0;
  if(selected&&!input.sequence){InterlockedIncrement(&warmup_skipped);selected=0;}
  if(selected&&(input.thread!=GetCurrentThreadId()||active_entity)){InterlockedOr(&errors,1);selected=0;}
+ /* 43BDC0 consumes 3B0E7A0/4. The earlier 40F170 snapshot at3B0E368
+    is the unused normalized buffer, not Sonic's active logical analog.
+    Read the active buffer at main entry, after input processing finishes. */
+ unsigned char active_analog[8];
+ if(selected){
+  if(!copy_memory(0x03b0e7a0,active_analog,sizeof(active_analog))){InterlockedOr(&errors,8);selected=0;}
+  else{input.angle=u32(active_analog,0);input.magnitude=f32(active_analog,4);}
+ }
  if(selected&&!copy_memory(0x03b0e7f8,logical,sizeof(logical))){InterlockedOr(&errors,4);selected=0;}
  uint32_t act_before=act1_sequence;uintptr_t prior_entity=active_entity;uint32_t prior_thread=active_thread;
  if(selected){active_entity=pointers[0];active_thread=GetCurrentThreadId();}
@@ -125,7 +132,7 @@ static DWORD WINAPI capture_worker(void *unused){
  if((uintptr_t)GetModuleHandleW(NULL)!=0x400000||!GetModuleFileNameW(NULL,executable,32768)||!profile_file(executable)){
   fail("Unsupported PC2004 image identity\n");return 1;
  }
- memset(&header,0,sizeof(header));memcpy(header.magic,"SA3DPCTR",8);header.version=1;
+ memset(&header,0,sizeof(header));memcpy(header.magic,"SA3DPCTR",8);header.version=2;
  header.header_bytes=sizeof(header);header.record_bytes=sizeof(CaptureRecord);header.image_base=0x400000;
  memcpy(header.executable_sha256,PROFILE_SHA,64);
  if(!original_entries_match(executable)){fail("Original observation entries already changed; hooks not installed\n");return 1;}
@@ -143,7 +150,7 @@ static DWORD WINAPI capture_worker(void *unused){
  LARGE_INTEGER start,frequency;QueryPerformanceCounter(&start);QueryPerformanceFrequency(&frequency);
  header.qpc_start=(uint64_t)start.QuadPart;header.qpc_frequency=(uint64_t)frequency.QuadPart;header.hook_mask=7;
  InterlockedExchange(&recording,1);
- const char ready[]={"{\"phase\":\"post_sonic_main\",\"hooks\":3,\"writes_gameplay_state\":false}\n"};
+ const char ready[]={"{\"phase\":\"post_sonic_main\",\"hooks\":3,\"writes_gameplay_state\":false,\"normalized_input_source\":\"active_at_sonic_main_entry\"}\n"};
  if(!write_new(L"capture.ready.json",ready,sizeof(ready)-1)){
   fail("Cannot publish capture readiness\n");goto done;
  }

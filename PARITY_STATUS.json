@@ -1,10 +1,10 @@
 {
   "milestone": "1.0 means normal boot through Emerald Coast clear and results, and is not yet achieved.",
-  "next": "Finish the Act 1 dash-panel and loop route before nonblocking polish.",
+  "next": "Implement original automatic-loop entry and held-input steering before further terrain-only loop fixes.",
   "controls": "Ordinary grounded braking and turn-around are connected as a native candidate with focused checks passing.",
   "animation": "The playback component matches 1,552 recorded updates, while selection and rendered-pose parity remain incomplete.",
   "geometry": "Owner stage import and residency exist, but the uninterrupted complete route is unverified.",
-  "collision_camera": "Loop support remains route-breaking and full original collision and camera parity are incomplete.",
+  "collision_camera": "The original held-input loop clear is recorded, while native path-mode behavior and full collision parity remain incomplete.",
   "objects": "Several original object paths are implemented, while complete pad, spring and interaction behavior still needs route acceptance.",
   "events": "Whale and event components exist, while the complete original scripted course remains unfinished.",
   "gameplay": "Normal start through goal and results, including reliable checkpoint recovery, remains unverified.",
@@ -16,5 +16,6 @@
   "brake_reference": "Four recorded braking-force updates match within 0.0000006 without establishing full terrain parity.",
   "performance": "The reported movement freezes have not been proven fixed on physical Old 3DS.",
   "music": "Use the owner local music files because the Windows reference music was replaced.",
-  "release": "No new release is justified until its milestone acceptance run succeeds."
+  "release": "No new release is justified until its milestone acceptance run succeeds.",
+  "reference_inputs": "Version2 observes active normalized controls and labels version1 filtered fields as unused legacy data."
 }

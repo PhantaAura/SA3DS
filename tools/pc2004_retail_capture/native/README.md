@@ -7,6 +7,14 @@ button states, raw axes, position, world/local velocity, task angles, animation
 request/index/state/phase, and collision-work fields. Frame numbers are local
 Sonic-update indices, not video-frame numbers or an observed global counter.
 
+Capture version2 reads the active normalized analog at `3B0E7A0/4` on Sonic-main
+entry, matching `43BDC0`'s input reads. Version1 captured the unused normalized
+buffer at `3B0E368`; its `filtered_angle`/`filtered_magnitude` fields must not be
+used as Sonic control inputs. The decoder identifies that limitation explicitly.
+Raw peripheral fields and animation/physics observations retain their original
+meaning. Forced-input branches and the control-timer gate still belong to
+`GetAnalog`; a buffer snapshot is not a hook of that function's return value.
+
 This follows RockMan3ds's useful pattern: keep frame-keyed original state in RAM,
 then compare matching updates and report the first difference. Its PS1 oracle
 RPC cannot directly drive a Windows executable, so this observer supplies the
@@ -57,6 +65,9 @@ binaries. No owner data is needed to compile it.
 First run `tools/verify_pc2004_retail_capture.py` against the exact owner EXE.
 Use the dedicated reference Wine prefix. `inject.exe --probe` only checks the
 process fingerprint and reads the current controller state; it installs no hooks.
+Wait until its player-task readiness check says yes before injecting. A running
+process during startup or on a menu is not sufficient; early Wine injection can
+stall initialization. Prefer one capture per fresh reference process.
 
 Create a fresh external run directory, copy `observer.dll` there, and write:
 

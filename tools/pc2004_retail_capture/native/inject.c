@@ -40,6 +40,12 @@ int wmain(int argc,wchar_t **argv) {
  wchar_t exe[32768];int result=1;
  if(!GetModuleFileNameExW(process,NULL,exe,32768)||!profile_file(exe)){fprintf(stderr,"Unsupported or unreadable Sonic executable\n");goto done;}
  printf("Verified PC2004 process: Windows pid=%lu\n",pid);fflush(stdout);
+ /* Loading code hooks while Wine is still constructing the process can
+  * stall startup. An admitted executable alone is not a ready gameplay task. */
+ uint32_t entity=0;SIZE_T entity_bytes=0;
+ int gameplay_ready=ReadProcessMemory(process,(LPCVOID)0x03b42e10,&entity,4,&entity_bytes)&&entity_bytes==4&&entity!=0;
+ printf("Sonic player task ready: %s\n",gameplay_ready?"yes":"no");
+ if(!probe&&!gameplay_ready){fprintf(stderr,"Wait for Sonic gameplay before loading the observer\n");goto done;}
  if(probe){uint32_t peripheral=0;SIZE_T n=0;unsigned char raw[0x34];
   if(!ReadProcessMemory(process,(LPCVOID)0x03b0e77c,&peripheral,4,&n)||n!=4||!peripheral||
      !ReadProcessMemory(process,(LPCVOID)(uintptr_t)peripheral,raw,sizeof(raw),&n)||n!=sizeof(raw)){
