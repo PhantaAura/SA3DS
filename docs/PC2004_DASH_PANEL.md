@@ -448,3 +448,15 @@ The exact-owner task-angle replay still reaches tick 22 with objects 416 and
 angle or improvement relative to gravity. The rotating carried preview still
 misses 426 after accepting 416. Thus this corrects diagnostic acceptance but
 does not resolve the observed loop detachment or change native gameplay.
+
+WCA206 corrects another carried-response preview input. After the ordinary
+support angle update, 449500 rebuilds the nominal height/2 body offset before
+projecting the center and writing the task position. The initial fast-sweep
+center is lowered by pos_error; that lower offset must not be carried as the
+body offset after an accepted response. Both carried previews now restore the
+nominal radius along their chosen task Up.
+
+On the exact-owner tick-22 overlap, the fixed-frame next projection on 426/33
+changes to approximately (2193.061, 89.581, 258.045). The rotating preview
+still finds no polygon on 426. The 240-tick task-angle replay still detaches
+at tick 22; no native gameplay behavior or completed loop is claimed.

@@ -284,7 +284,10 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
       task orientation. Rotation and all mutable response gates remain open. */
    float carried_start[3]={start[0],start[1],start[2]};
    float carried_movement[3]={movement[0],movement[1],movement[2]};
-   SA1Vec3 body_offset=sa1_vec3_sub(center,previous_task);
+   /* 44A1xx rebuilds the nominal height/2 offset after support angles.
+      The initial fast sweep may lower its center by pos_error; that
+      lowered offset is not the post-response body offset. */
+   SA1Vec3 body_offset=sa1_vec3_scale(previous_up,radius);
    for(size_t i=0;i<object_count;i++){
     SA1Contact support=report_response_sweep(collision,tick,object_ids[order[i]],
         carried_start,carried_movement,radius,previous_up,1,NULL,0);
@@ -296,14 +299,13 @@ static SA1Contact report_source_sweep(SA3DSECCollision *collision, unsigned tick
    }
    SA1SurfaceFrame response_frame=sa1_surface_frame_make(previous_up,forward);
    float response_speed=sa1_vec3_dot(delta,response_frame.forward);
-   float body_height=sa1_vec3_dot(body_offset,previous_up);
    memcpy(carried_start,start,sizeof(carried_start));
    memcpy(carried_movement,movement,sizeof(carried_movement));
    for(size_t i=0;i<object_count;i++){
     SA1Contact support=report_response_sweep(collision,tick,object_ids[order[i]],
         carried_start,carried_movement,radius,response_frame.up,2,&response_frame,response_speed);
     if(support.valid){
-     SA1Vec3 next=sa1_vec3_add(support.point,sa1_vec3_scale(response_frame.up,body_height));
+     SA1Vec3 next=sa1_vec3_add(support.point,sa1_vec3_scale(response_frame.up,radius));
      carried_start[0]=next.x;carried_start[1]=next.y;carried_start[2]=next.z;
      carried_movement[0]=carried_movement[1]=carried_movement[2]=0.0f;
     }
