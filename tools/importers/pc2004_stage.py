@@ -410,6 +410,25 @@ class PC2004StageDecoder:
             out.extend(self.mesh_triangles(model, self.meshset(model, i)))
         return out
 
+    def model_collision_triangles(self, model: ModelRecord) -> list[tuple[int, int, int]]:
+        """Preserve the original collision cache's first corner on strip flips.
+
+        A cyclic permutation preserves rendering but changes453820's edge test:
+        its inflated first corner stays in the pre-rotation coordinates.
+        Visual triangulation keeps its existing corner/UV ordering.
+        """
+        out: list[tuple[int, int, int]] = []
+        for i in range(model.meshset_count):
+            mesh = self.meshset(model, i)
+            if mesh.primitive_class != 0xC000:
+                out.extend(self.mesh_triangles(model, mesh))
+                continue
+            for reverse, corners in self.mesh_corner_indices(model, mesh):
+                for t in range(len(corners) - 2):
+                    a, b, c = corners[t:t + 3]
+                    out.append((a, c, b) if (bool(t & 1) ^ reverse) else (a, b, c))
+        return out
+
     def emerald_coast_death_surfaces(self, act: int) -> list[DeathZoneSurface]:
         """Decode the finite death-bound meshes in source world coordinates."""
         if act not in EMERALD_COAST_ACTS:

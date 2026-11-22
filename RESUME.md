@@ -103,7 +103,7 @@ no OS keyboard/mouse injection is used.
 
 `held-forward-state-v2/frames.csv` has360 original updates, zero capture errors,
 and the92-byte incoming-state sidecar. Path mode is active17..95 and exits at96
-while grounded. `capture-tools-v2/check-loop` with `compare_loop.py` checks all79
+while grounded. `capture-tools-v2/check-loop` with `compare_loop.py` checks all 79
 active updates in the portable C43C130 component: zero failures, exact distance,
 maximum heading error1 BAMS. This is component evidence, not full physics parity.
 
@@ -141,5 +141,46 @@ checks and required native build passed. A loop probe can use external marker
 `emerald_coast_panel_probe.flag` containing `0 3 1` plus `ec_loop_candidate.txt`
 containing1. This holds logical forward rather than injecting Mac input. The isolated portable Azahar run loaded the117 WALL rows and applied their
 corrections in actual gameplay, but the held-forward row0 fixture lost support
-and died/reset at tick72 (44 airborne ticks, minimum Y=-79.52). Loop acceptance
+and died/reset at tick 72 (44 airborne ticks, minimum Y=-79.52). Loop acceptance
 fails. Fix steep terrain support next; the complete route remains unresolved.
+
+## Source collision anchors and terrain snapshots
+
+Private runs `loop-ground-state/` and `loop-ground-hits/` each recorded 360
+updates with zero errors and the same original trajectory. The optional `0x449500`
+observer captures 216-byte solver state and 2504-byte cached triangle-contact
+sidecars without changing the primary 224-byte or earlier 32/92-byte formats.
+The actual source hits resolved the remaining mesh-seam mismatch.
+
+The collision importer had cyclically rotated flipped strip triangles. The
+source `0x453820` routine leaves the inflated first corner unrotated in its edge
+test, so this corner identity affects physics despite equivalent rendering.
+`model_collision_triangles()` now preserves the source corner, while visual
+triangle/UV order stays unchanged. The sweep now follows that edge-test rule.
+O JUMP and pier DynamicCOL exporters use the same source corner rule.
+Generated static collision packages use 1.1; the reader still accepts legacy 1.0.
+Regenerate owner collision data for the corrected anchors.
+
+The reusable `compare_ground.py` / `check-ground` uses recorded solver movement,
+Up and previous support identity, then selects contacts without the expected
+normal or position influencing selection. All 79 first-loop updates pass:
+maximum position difference 0.000309814, normal difference 1.38e-7. The source loop
+angle target also matches all 79 recorded raw rotations exactly. The comparator
+includes loop probe bias, confirmation radius, direct loop angles and carried
+static-object response order. Full broad phase, wall prepass, moving support,
+force integration and native gameplay remain outside this component evidence.
+
+Private package:
+`ground-contact-analysis/collision-source-anchors-v1_1.sa3dspak`.
+Code-only reference helpers and their build manifest are in `capture-ground-tools/`.
+Keep all packages, traces, triangle payloads and screenshots outside Git. Do not
+reuse a missing temporary recording as evidence.
+
+**Next:** connect this sphere motion response to native grounded movement rather
+than widening the inherited point query. That query still rejects steep/upside-
+down faces; the full native loop remains failed at the earlier tick 72 run.
+The opt-in loop candidate stays off by default. When updating isolated Azahar
+assets, unlink the collision-package symlink before copying the new candidate,
+so the owner's default SD package stays untouched. Required native build and
+focused sweep/owner chunk checks, the frozen cumulative host gate and exact-owner
+pose/import gate all pass.

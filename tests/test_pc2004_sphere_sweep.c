@@ -26,6 +26,13 @@ int main(void){
  SA3DSSweepTriangle wall={{{0,-50,-50},{0,50,0},{0,-50,50}},0};
  float s5[3]={20,0,0},d5[3]={-30,0,0};assert(sa3ds_pc2004_sweep_triangle(&wall,s5,d5,5,&h));
  assert(near(fabsf(h.normal[0]),1,1e-5f)&&near(fabsf(h.corrected[0]),5,1e-3f));
+ /*Tilted triangle near its first corner:453820 rotates corners1/2 only.
+  *Rotating corner0 too would incorrectly include this expanded-edge sample.*/
+ SA3DSSweepTriangle first_corner={{{0,0,0},{0,40,0},{0,0,40}},0};
+ float corner_out[3]={2,-.25f,0},stationary[3]={0};
+ assert(!sa3ds_pc2004_sweep_triangle(&first_corner,corner_out,stationary,5,&h));
+ float corner_in[3]={2,1,1};
+ assert(sa3ds_pc2004_sweep_triangle(&first_corner,corner_in,stationary,5,&h));
  /*Radius<=0 never hits (453820 entry test).*/
  assert(!sa3ds_pc2004_sweep_triangle(&floor,s,d,0,&h));
  /*List: chosen hit has the smallest end height.*/

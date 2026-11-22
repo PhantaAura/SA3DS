@@ -53,7 +53,7 @@ def build(exe, system):
                            'scope': 'O JUMP display components and base DynamicCOL mesh'}, sort_keys=True).encode()
     base = decoder.model(parts[0].model_va)
     points = decoder.model_points(base)
-    triangles = decoder.model_triangles(base)
+    triangles = decoder.model_collision_triangles(base)
     if base.radius <= 20.0 or sum(value * value for value in base.center) < 225.0:
         raise ValueError('O JUMP DynamicCOL profile mismatch')
     if (len(points), len(triangles)) != (94, 120):

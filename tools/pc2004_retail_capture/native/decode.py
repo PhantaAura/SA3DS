@@ -34,7 +34,7 @@ def main():
  if len(data)<HEADER.size:raise SystemExit('Truncated capture header')
  h=HEADER.unpack_from(data)
  magic,version,header_bytes,record_bytes,count,act1,errors,warmup,base,image_size,mask,start,frequency,sha=h
- if version not in (1,2) or (magic,header_bytes,record_bytes,base,mask,sha.decode())!=('SA3DPCTR'.encode(),128,224,0x400000,7,PROFILE):raise SystemExit('Unsupported capture header')
+ if version not in (1,2) or (magic,header_bytes,record_bytes,base,sha.decode())!=('SA3DPCTR'.encode(),128,224,0x400000,PROFILE) or mask not in (7,15):raise SystemExit('Unsupported capture header')
  if len(data)!=128+count*224 or count>60000 or errors or not frequency:raise SystemExit('Incomplete or failed capture')
  if (a.raw.parent/'capture.error.txt').exists():raise SystemExit('Capture producer reported an error')
  rows=[dict(zip([name for name,_ in fields],values)) for values in RECORD.iter_unpack(data[128:])]
@@ -56,6 +56,40 @@ def main():
    if values[0]!=index or any(not math.isfinite(v) for v,k in zip(values,loop_kinds) if k=='f'):
     raise SystemExit('Invalid loop sidecar state')
    rows[index].update(zip(loop_names,values))
+ ground_path=a.raw.parent/'ground-state.raw'
+ ground_data=ground_path.read_bytes() if ground_path.exists() else None
+ ground_names=['ground_frame','ground_calls']+['ground_angle_'+axis for axis in 'xyz']
+ ground_kinds='5I'
+ for prefix in ['ground_position','ground_motion','ground_local']:
+  ground_names.extend(prefix+'_'+axis for axis in 'xyz');ground_kinds+='3f'
+ ground_names.extend(['ground_status','ground_terrain_flags','ground_height','ground_pos_error',
+                      'ground_run_speed','ground_jog_speed','ground_dash_speed']);ground_kinds+='2I5f'
+ ground_names.append('ground_sweep_radius');ground_kinds+='f'
+ for prefix in ['ground_sweep_position','ground_sweep_motion','ground_up']:
+  ground_names.extend(prefix+'_'+axis for axis in 'xyz');ground_kinds+='3f'
+ ground_names.extend(['ground_count','ground_selected','ground_yt','ground_yb','ground_angx','ground_angz']);ground_kinds+='2H2f2i'
+ for prefix in ['ground_normal','ground_normal2','ground_onpoly','ground_pushback','ground_tangent','ground_normal_motion']:
+  ground_names.extend(prefix+'_'+axis for axis in 'xyz');ground_kinds+='3f'
+ ground_types='IIIII'+'f'*9+'II'+'f'*15+'HHffii'+'f'*18
+ ground_record=struct.Struct('<'+ground_kinds)
+ assert ground_record.size==216
+ if (mask==15)!=(ground_data is not None):raise SystemExit('Ground hook/sidecar mismatch')
+ if ground_data is not None:
+  if len(ground_data)!=count*ground_record.size:raise SystemExit('Incomplete ground sidecar')
+  for index,values in enumerate(ground_record.iter_unpack(ground_data)):
+   if values[0]!=index or values[1]>1 or any(not math.isfinite(v) for v,k in zip(values,ground_types) if k=='f'):
+    raise SystemExit('Invalid ground sidecar state')
+   rows[index].update(zip(ground_names,values))
+ ground_hits_path=a.raw.parent/'ground-hits.raw'
+ ground_hits=ground_hits_path.read_bytes() if ground_hits_path.exists() else None
+ if ground_hits is not None:
+  if mask!=15 or len(ground_hits)!=count*2504:raise SystemExit('Incomplete ground hit sidecar')
+  for index in range(count):
+   observed,hits=struct.unpack_from('<II',ground_hits,index*2504)
+   if observed!=index or hits>16:raise SystemExit('Invalid ground hit chronology/count')
+   for hit in range(hits):
+    vertices=struct.unpack_from('<9f',ground_hits,index*2504+8+hit*156+28)
+    if not all(math.isfinite(v) for v in vertices):raise SystemExit('Invalid ground hit geometry')
  for index,row in enumerate(rows):
   if row['frame']!=index or not row['input_sequence'] or row['act1_ran'] not in (0,1):raise SystemExit('Invalid frame chronology')
   if row['qpc']<start or (index and row['qpc']<rows[index-1]['qpc']):raise SystemExit('Invalid observation time')
@@ -67,8 +101,10 @@ def main():
  if not count or not act1:raise SystemExit('No original Sonic gameplay updates observed')
  a.output.parent.mkdir(parents=True,exist_ok=True)
  with a.output.open('x',newline='') as out:
-  w=csv.DictWriter(out,fieldnames=[name for name,_ in fields]+['runtime_animation_id','elapsed_ms']+(loop_names if loop_data is not None else []));w.writeheader();w.writerows(rows)
+  w=csv.DictWriter(out,fieldnames=[name for name,_ in fields]+['runtime_animation_id','elapsed_ms']+(loop_names if loop_data is not None else [])+(ground_names if ground_data is not None else []));w.writeheader();w.writerows(rows)
  summary={'schema':'sa3ds-original-frame-summary-v2','capture_version':version,
+  'ground_hits_observed':ground_hits is not None,
+  'ground_sidecar_observed':ground_data is not None,'ground_record_bytes':216 if ground_data is not None else None,
   'loop_sidecar_observed':loop_data is not None,'loop_record_bytes':loop_record.size if loop_data is not None else None,
   'normalized_input_source':'active_at_sonic_main_entry' if version==2 else 'legacy_unused_buffer_not_Sonic_control_input',
   'rows':count,'physics_updates':act1,'errors':errors,'warmup_skipped':warmup,'phase':'post_sonic_main','frame_number':'capture-local Sonic update index','executable_sha256':PROFILE,

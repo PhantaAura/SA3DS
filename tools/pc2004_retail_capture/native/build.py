@@ -32,10 +32,16 @@ def main():
  subprocess.run(host+['-std=c11','-O2','-ffp-contract=off','-Wall','-Wextra','-Werror',
   '-I'+str(repo/'src/game'),'-I'+str(repo/'src/sa1/physics'),'-I'+str(repo/'src/sa3dspak')]+
   [str(repo/item) for item in wall_sources]+['-lm','-o',str(output/'check-walls')],check=True)
+ ground_sources=['tools/pc2004_retail_capture/native/check_ground.c','src/game/emerald_coast_collision.c',
+  'src/game/pc2004_sphere_sweep.c','src/sa3dspak/sa3dspak.c','src/sa3c/sa3c_pose.c']
+ ground_sources += [str(item.relative_to(repo)) for item in (repo/'src/sa1/physics').glob('*.c')]
+ subprocess.run(host+['-std=c11','-O2','-ffp-contract=off','-Wall','-Wextra','-Werror',
+  '-I'+str(repo/'src/game'),'-I'+str(repo/'src/sa1/physics'),'-I'+str(repo/'src/sa3c'),'-I'+str(repo/'src/sa3dspak')]+
+  [str(repo/item) for item in ground_sources]+['-lm','-o',str(output/'check-ground')],check=True)
  shutil.copy2(hook/'LICENSE.txt',output/'LICENSE.minhook.txt')
  manifest={'schema':'sa3ds-original-observer-build-v1','compiler_version':subprocess.check_output([str(a.zig.resolve()),'version'],text=True).strip(),
   'owner_material_included':False,'source_sha256':{item.name:digest(item) for item in source.iterdir() if item.suffix in ['.c','.h','.py']},
   'minhook_sha256':{str(item.relative_to(hook)):digest(item) for item in hook.rglob('*') if item.is_file() and (item.suffix in ['.c','.h'] or item.name=='LICENSE.txt')},
-  'artifact_sha256':{name:digest(output/name) for name in ['inject.exe','observer.dll','check-playback','check-loop','check-walls']}}
+  'artifact_sha256':{name:digest(output/name) for name in ['inject.exe','observer.dll','check-playback','check-loop','check-walls','check-ground']}}
  (output/'build.json').write_text(json.dumps(manifest,indent=2)+'\n');print(output)
 if __name__=='__main__':main()

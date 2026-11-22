@@ -47,6 +47,18 @@ in this repository. Follow [the owner-pose workflow](docs/PASS11B_SOURCE_POSE_OR
 for its exact private input requirements; consult each converter's `--help` for
 external output paths.
 
+Collision packages generated before the source strip-anchor correction should
+be regenerated as v1.1 in the external SD asset directory:
+
+```sh
+python3 tools/build_pc2004_emerald_coast_collision.py /owner/sonic.exe /external/3ds/SA3DS/assets/emerald_coast_collision.sa3dspak
+python3 tools/build_pc2004_ec_jump_visual.py /owner/sonic.exe /owner/system /external/3ds/SA3DS/assets/ec_jump_visual.sa3dspak
+python3 tools/build_pc2004_ec_pier.py /owner/sonic.exe /owner/system /external/3ds/SA3DS/assets/ec_pier.sa3dspak
+```
+
+The reader retains v1.0 support. This data update preserves the corner ordering
+used by original collision tests; it does not establish complete loop gameplay.
+
 ## Verification and contribution
 
 Run `bash tests/run_sa3ds_current_host.sh` for owner-data-free changes. Pose or

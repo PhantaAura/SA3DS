@@ -23,7 +23,7 @@ from tools import sa3dspak
 
 MAGIC = b"SA3DECOL"
 VERSION_MAJOR = 1
-VERSION_MINOR = 0
+VERSION_MINOR = 1
 HEADER = struct.Struct("<8sHHIIIIIIIIII")
 ACT = struct.Struct("<IIII f III")           # 32 bytes
 MODEL = struct.Struct("<IIII ffff")          # 32 bytes
@@ -73,7 +73,7 @@ def build_collision_chunk(dec: PC2004StageDecoder, *, level_id: int = EMERALD_CO
         if len(vertices) + len(points) >= 65536:
             raise DecodeError("Emerald Coast collision vertex bank exceeds u16 range")
         vertices.extend(points)
-        for tri in dec.model_triangles(model):
+        for tri in dec.model_collision_triangles(model):
             indices.extend(first_vertex + i for i in tri)
         model_rows.append((
             first_vertex, len(points), first_index, len(indices) - first_index,
@@ -129,6 +129,7 @@ def build_collision_chunk(dec: PC2004StageDecoder, *, level_id: int = EMERALD_CO
             "triangles": len(indices) // 3,
         },
         "source_addresses_in_runtime_payload": False,
+        "triangle_corner_order": "original collision strip anchors",
     }
     if level_id != EMERALD_COAST_LEVEL_ID:
         meta["level_id"] = level_id
@@ -140,7 +141,7 @@ def parse_collision_chunk(blob: bytes):
         raise DecodeError("truncated SA3DECOL header")
     (magic, major, minor, acts, models, instances, vertices, indices,
      act_off, model_off, instance_off, vertex_off, index_off) = HEADER.unpack_from(blob)
-    if magic != MAGIC or major != VERSION_MAJOR:
+    if magic != MAGIC or major != VERSION_MAJOR or minor not in (0, 1):
         raise DecodeError("bad SA3DECOL magic/version")
     if not 1 <= acts <= LEVEL_STRIDE:
         raise DecodeError("invalid source act count")

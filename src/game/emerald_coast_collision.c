@@ -382,7 +382,7 @@ int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive*out,const void*data,
     if(sa3dspak_open(&pak,data,size)!=SA3DSPAK_OK||
        sa3dspak_find(&pak,"COLLISION",&chunk)!=SA3DSPAK_OK||chunk.size<64)return 0;
     const uint8_t*b=chunk.data;
-    if(memcmp(b,"SA3DECOL",8)||r16(b+8)!=1||r16(b+10)!=0)return 0;
+    if(memcmp(b,"SA3DECOL",8)||r16(b+8)!=1||r16(b+10)>1)return 0;
     uint32_t na=r32(b+12),nm=r32(b+16),ni=r32(b+20),nv=r32(b+24),nx=r32(b+28);
     uint32_t ao=r32(b+32),mo=r32(b+36),io=r32(b+40),vo=r32(b+44),xo=r32(b+48);
     if(!na||!nm||!ni||!nv||nv>=65536||nx%3||
@@ -405,7 +405,10 @@ int sa3ds_ec_collision_archive_open(SA3DSECCollisionArchive*out,const void*data,
         if(r32(r)>=nm||!finite3(point(r+16))||!isfinite(rf(r+28))||rf(r+28)<0||
            !finite3(point(r+32))||!finite3(point(r+44))||!finite3(point(r+56)))return 0;
     }
-    *out=(SA3DSECCollisionArchive){data,size,b,na,nm,ni,nv,nx,ao,mo,io,vo,xo};
+    *out=(SA3DSECCollisionArchive){.package=data,.package_size=size,.collision=b,
+        .act_count=na,.model_count=nm,.instance_count=ni,.vertex_count=nv,.index_count=nx,
+        .format_minor=r16(b+10),.act_offset=ao,.model_offset=mo,.instance_offset=io,
+        .vertex_offset=vo,.index_offset=xo};
     return 1;
 }
 int sa3ds_ec_collision_open_archive_region(SA3DSECCollision*s,

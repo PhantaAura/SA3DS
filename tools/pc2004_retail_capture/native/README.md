@@ -25,7 +25,7 @@ corresponding endpoint for PC2004.
 Only the exact supported PC2004 executable fingerprint is admitted. The loader
 selects a unique `sonic.exe` process in its Wine prefix and hashes its actual
 executable before loading anything. The DLL checks the profile again and compares
-the three observation entries against the owner's file before enabling hooks.
+the observation entries against the owner's file before enabling hooks.
 An existing modification at those entries causes rejection.
 
 The observer installs reversible **code hooks**, using MinHook 1.3.4. It does not
@@ -157,12 +157,12 @@ main snapshot. The main224-byte record layout stays unchanged.
 
 `check-loop` and `compare_loop.py` compare the held-input43C130 component using
 that incoming state and an external owner path package. The recovered first-loop
-recording has360 valid updates; all79 active loop updates have exact path-distance
+recording has360 valid updates; all 79 active loop updates have exact path-distance
 agreement and at most1 BAMS (about0.0055 degrees) heading error in the portable C
 component. This admits no claim about force integration, contact, route parity or
 emulator/hardware play. The original reference enters at17 and exits grounded at96.
 
-The November22 recovery rebuilt helpers with verified official Zig0.15.2 and
+The November22 recovery rebuilt helpers with verified official Zig 0.15.2 and
 MinHook1.3.4. Keep compiler caches and capture artifacts in persistent external
 storage. The source reference launcher now selects `CHRMODELS_orig.dll` for the
 private copy when available: the installed `CHRMODELS.dll` can be Mod Manager's
@@ -187,3 +187,40 @@ all match within0.000031 units. This validates the isolated soft WALL response a
 load/constructor/enqueue timing, not complete terrain physics or native gameplay.
 Hard responses have no coverage in that recording. Native loop admission still
 requires a grounded full-path exit with no active-loop support loss.
+
+## Targeted terrain-state capture
+
+Set `ground_state=1` in capture.ini, or add `--ground-state` when preparing a
+loop scenario. This adds a read-only `0x449500` entry/exit hook. It records the actual
+task angles, position, world/local motion, status, physical parameters and final
+132-byte collision work in a 216-byte sidecar per Sonic update. The optional
+2504-byte hit sidecar preserves up to 16 raw cached triangle contacts, in original
+order, so a mesh-seam difference can be traced to its actual faces. These private
+geometry records stay outside Git and are not copied into the decoded CSV.
+
+The mode is limited to 6000 updates and permits at most one `0x449500` call in a
+recorded Sonic update. Multiple calls or read failures reject the capture.
+The decoder retains existing 224-byte main and 32/92-byte loop formats, validates
+sidecar length/chronology and rejects nonfinite contact vertices. Older optional
+216-byte recordings without hit data remain readable. Neither a solver snapshot
+nor a ready marker establishes native parity.
+
+## First-loop static contact comparison
+
+Generate current owner collision data (SA3DECOL 1.1), then run:
+
+```sh
+python3 tools/pc2004_retail_capture/native/compare_ground.py \
+  /external/loop-ground-hits/frames.csv /owner/sonic.exe \
+  /external/emerald_coast_collision.sa3dspak /external/helpers/check-ground
+```
+
+The checker receives actual `0x449500` input motion, incoming Up and previous support
+identity. Expected positions/normals are used only to measure errors. It models
+the ordinary static first-loop contact path, including loop probe bias, dynamic
+confirmation radius, direct loop angle targets and carried object order. It is
+not a full broad phase, wall prepass, moving-support or integrated physics replay.
+The recovered recording checks 79 updates: zero failures, maximum position error
+0.000309814 and normal error 1.38e-7. Native full-loop acceptance remains separate.
+The current recovered helper build uses Zig 0.15.2; its external manifest records
+actual compiler, dependency, source and artifact hashes.

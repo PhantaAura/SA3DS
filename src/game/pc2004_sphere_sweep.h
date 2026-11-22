@@ -4,7 +4,8 @@
 #include <stdint.h>
 /*PC2004 453820 per-polygon sphere sweep. Each triangle is inflated by1.04
  *about its centroid, rotated so its normal is +Y (450810/4509D0, 4B8E80,
- *rotX(-ax) then rotZ(-az)), and the sweep is sampled every radius*.5 (last
+ *rotX(-ax) then rotZ(-az)); the inflated first corner retains its original
+ *coordinates in the edge test. The sweep is sampled every radius*.5 (last
  *sample exactly at start+delta). A sample within +-radius of the plane whose
  *XZ lies inside the triangle (cross-sign test) is a hit. Polygon flag
  *0x800000 is double sided: a start below the plane flips radius and normal.*/

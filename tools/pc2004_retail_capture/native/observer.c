@@ -16,6 +16,7 @@ static wchar_t directory[32768];
 static void (__cdecl *original_filter)(void);
 static void (__cdecl *original_main)(void *);
 static void (__cdecl *original_act1)(void *,uintptr_t,void *);
+static int (__cdecl *original_ground)(void *,uintptr_t,void *);
 static InputSnapshot latest_input;
 static CaptureRecord *records;
 /* Separate sidecar preserves the v1/v2 playback trace layout. */
@@ -31,6 +32,20 @@ typedef struct {
 } LoopRecord;
 _Static_assert(sizeof(LoopRecord)==92,"loop sidecar layout");
 static LoopRecord *loop_records;
+/* Optional collision-only sidecar; primary animation/input records stay stable. */
+typedef struct {
+ uint32_t frame,calls,angles[3];
+ float position[3],motion[3],local[3];
+ uint32_t status,terrain_flags;
+ float height,pos_error,run_speed,jog_speed,dash_speed;
+ unsigned char collision_after[132];
+} GroundRecord;
+_Static_assert(sizeof(GroundRecord)==216,"ground sidecar layout");
+static GroundRecord *ground_records,ground_current;
+typedef struct {uint32_t frame,count;unsigned char entries[16*156];} GroundHits;
+_Static_assert(sizeof(GroundHits)==2504,"ground hit sidecar layout");
+static GroundHits *ground_hits,ground_hits_current;
+static int ground_enabled;
 static CaptureHeader header;
 static volatile LONG active_callbacks,recording,row_count,act1_rows,errors,warmup_skipped;
 static uint32_t maximum_rows,active_thread,act1_sequence;
@@ -64,6 +79,29 @@ static void __cdecl act1_hook(void *entity,uintptr_t motion,void *player){
  InterlockedIncrement(&active_callbacks);
  if((uintptr_t)entity==active_entity&&GetCurrentThreadId()==active_thread)act1_sequence++;
  original_act1(entity,motion,player);InterlockedDecrement(&active_callbacks);
+}
+static int __cdecl ground_hook(void *entity,uintptr_t motion,void *player){
+ InterlockedIncrement(&active_callbacks);FpState before;fp_save(&before);
+ int selected=ground_enabled&&(uintptr_t)entity==active_entity&&GetCurrentThreadId()==active_thread;
+ uint32_t csts=0;
+ if(selected){
+  GroundRecord *r=&ground_current;unsigned char e[0x2c],p[0x134];r->calls++;
+  if(r->calls!=1||!copy_memory((uintptr_t)entity,e,sizeof(e))||
+     !copy_memory((uintptr_t)player,p,sizeof(p))||!copy_memory(motion+4,r->motion,12))
+   InterlockedOr(&errors,32);
+  else{
+   memcpy(r->angles,e+0x14,12);memcpy(r->position,e+0x20,12);memcpy(r->local,p+0x38,12);
+   r->status=u16(e,4);r->terrain_flags=u32(p,0x60);r->height=f32(p,0x110);r->pos_error=f32(p,0xa0);
+   r->jog_speed=f32(p,0xc0);r->run_speed=f32(p,0xc4);r->dash_speed=f32(p,0xd0);csts=u32(p,0x64);
+  }
+ }
+ fp_restore(&before);int result=original_ground(entity,motion,player);FpState after;fp_save(&after);
+ if(selected){
+  if(!csts||!copy_memory(csts,ground_current.collision_after,132)||
+     !copy_memory(0x03b42ff4,&ground_hits_current.count,4)||ground_hits_current.count>16||
+     (ground_hits_current.count&&!copy_memory(0x03b47590,ground_hits_current.entries,ground_hits_current.count*156)))InterlockedOr(&errors,32);
+ }
+ fp_restore(&after);InterlockedDecrement(&active_callbacks);return result;
 }
 static void __cdecl main_hook(void *task){
  InterlockedIncrement(&active_callbacks);FpState before;fp_save(&before);
@@ -100,7 +138,7 @@ static void __cdecl main_hook(void *task){
   if(!ok){InterlockedOr(&errors,16);selected=0;}
  }
  uint32_t act_before=act1_sequence;uintptr_t prior_entity=active_entity;uint32_t prior_thread=active_thread;
- if(selected){active_entity=pointers[0];active_thread=GetCurrentThreadId();}
+ if(selected){active_entity=pointers[0];active_thread=GetCurrentThreadId();memset(&ground_current,0,sizeof(ground_current));memset(&ground_hits_current,0,sizeof(ground_hits_current));}
  fp_restore(&before);original_main(task);FpState after;fp_save(&after);
  active_entity=prior_entity;active_thread=prior_thread;
  if(selected&&InterlockedCompareExchange(&recording,0,0)){
@@ -108,6 +146,8 @@ static void __cdecl main_hook(void *task){
   if((uint32_t)index<maximum_rows){
    if(copy_memory(pointers[0],e,sizeof(e))&&copy_memory(pointers[1],m,sizeof(m))&&copy_memory(u32(m,0),p,sizeof(p))){
     CaptureRecord *r=&records[index];memset(r,0,sizeof(*r));
+    if(ground_enabled){ground_records[index]=ground_current;ground_records[index].frame=(uint32_t)index;
+     ground_hits[index]=ground_hits_current;ground_hits[index].frame=(uint32_t)index;}
     loop_records[index]=loop_before;loop_records[index].frame=(uint32_t)index;
     loop_records[index].distance_after=f32(p,0x18);loop_records[index].head_after=u32(e,0x10);
     r->frame=(uint32_t)index;r->input_sequence=input.sequence;r->act1_ran=act1_sequence>act_before;
@@ -145,9 +185,9 @@ static int original_entries_match(const wchar_t *path){
  unsigned char *data=MapViewOfFile(mapping,FILE_MAP_READ,0,0,0);int ok=data!=NULL;
  if(data){
   IMAGE_DOS_HEADER *dos=(IMAGE_DOS_HEADER*)data;IMAGE_NT_HEADERS32 *nt=(IMAGE_NT_HEADERS32*)(data+dos->e_lfanew);
-  IMAGE_SECTION_HEADER *sections=IMAGE_FIRST_SECTION(nt);const uint32_t addresses[]={0x0040f170,0x00496f50,0x0049a9b0};
+  IMAGE_SECTION_HEADER *sections=IMAGE_FIRST_SECTION(nt);const uint32_t addresses[]={0x0040f170,0x00496f50,0x0049a9b0,0x00449500};
   header.image_size=nt->OptionalHeader.SizeOfImage;
-  for(unsigned item=0;item<3;item++){
+  for(unsigned item=0;item<4;item++){
    uint32_t rva=addresses[item]-0x400000;int found=0;
    for(unsigned i=0;i<nt->FileHeader.NumberOfSections;i++)if(rva>=sections[i].VirtualAddress&&rva+32<=sections[i].VirtualAddress+sections[i].SizeOfRawData){
     const unsigned char *disk=data+sections[i].PointerToRawData+rva-sections[i].VirtualAddress;
@@ -172,24 +212,34 @@ static DWORD WINAPI capture_worker(void *unused){
  if(maximum_rows<1||maximum_rows>60000){fail("Invalid requested frame count\n");return 1;}
  UINT seconds=GetPrivateProfileIntW(L"capture",L"timeout_seconds",180,config);
  if(seconds<1||seconds>1800){fail("Invalid capture timeout\n");return 1;}
+ ground_enabled=GetPrivateProfileIntW(L"capture",L"ground_state",0,config)!=0;
+ if(ground_enabled&&maximum_rows>6000){fail("Ground recording limit is6000 updates\n");return 1;}
  records=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*records));
  loop_records=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*loop_records));
- if(!records||!loop_records){
+ if(ground_enabled)ground_records=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*ground_records));
+ if(ground_enabled)ground_hits=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*ground_hits));
+ if(!records||!loop_records||(ground_enabled&&(!ground_records||!ground_hits))){
   if(records)HeapFree(GetProcessHeap(),0,records);
   if(loop_records)HeapFree(GetProcessHeap(),0,loop_records);
+  if(ground_records)HeapFree(GetProcessHeap(),0,ground_records);
+  if(ground_hits)HeapFree(GetProcessHeap(),0,ground_hits);
   fail("Capture allocation failed\n");return 1;
  }
  if(MH_Initialize()!=MH_OK){fail("MinHook initialization failed\n");goto done;}initialized=1;
  if(MH_CreateHook((void*)0x0040f170,filter_hook,(void**)&original_filter)!=MH_OK||
     MH_CreateHook((void*)0x00496f50,act1_hook,(void**)&original_act1)!=MH_OK||
     MH_CreateHook((void*)0x0049a9b0,main_hook,(void**)&original_main)!=MH_OK){fail("Observation hook creation failed\n");goto done;}
+ if(ground_enabled&&MH_CreateHook((void*)0x00449500,ground_hook,(void**)&original_ground)!=MH_OK){fail("Ground observation hook creation failed\n");goto done;}
  if(MH_EnableHook(MH_ALL_HOOKS)!=MH_OK){fail("Observation hook activation failed\n");goto done;}enabled=1;
  LARGE_INTEGER start,frequency;QueryPerformanceCounter(&start);QueryPerformanceFrequency(&frequency);
- header.qpc_start=(uint64_t)start.QuadPart;header.qpc_frequency=(uint64_t)frequency.QuadPart;header.hook_mask=7;
+ header.qpc_start=(uint64_t)start.QuadPart;header.qpc_frequency=(uint64_t)frequency.QuadPart;header.hook_mask=ground_enabled?15:7;
  InterlockedExchange(&recording,1);
- const char ready[]={"{\"phase\":\"post_sonic_main\",\"hooks\":3,\"writes_gameplay_state\":false,\"normalized_input_source\":\"active_at_sonic_main_entry\"}\n"};
- if(!write_new(L"capture.ready.json",ready,sizeof(ready)-1)){
+ char ready[256];snprintf(ready,sizeof(ready),"{\"phase\":\"post_sonic_main\",\"hooks\":%u,\"writes_gameplay_state\":false,\"normalized_input_source\":\"active_at_sonic_main_entry\"}\n",ground_enabled?4u:3u);
+ if(!write_new(L"capture.ready.json",ready,(DWORD)strlen(ready))){
   fail("Cannot publish capture readiness\n");goto done;
+ }
+ if(ground_enabled){const char note[]="{\"phase\":\"449500_entry_and_exit\",\"record_bytes\":216,\"hit_record_bytes\":2504}\n";
+  if(!write_new(L"ground.ready.json",note,sizeof(note)-1)){fail("Cannot publish ground readiness\n");goto done;}
  }
  ULONGLONG deadline=GetTickCount64()+(ULONGLONG)seconds*1000;
  while((uint32_t)InterlockedCompareExchange(&row_count,0,0)<maximum_rows&&GetTickCount64()<deadline)Sleep(20);
@@ -207,6 +257,10 @@ static DWORD WINAPI capture_worker(void *unused){
   header.record_count=(uint32_t)row_count;header.act1_rows=(uint32_t)act1_rows;header.errors=(uint32_t)errors;header.warmup_skipped=(uint32_t)warmup_skipped;
   if(!write_new(L"loop-state.raw",loop_records,header.record_count*sizeof(*loop_records)))
    fail("Cannot create loop sidecar\n");
+  if(ground_enabled&&!write_new(L"ground-state.raw",ground_records,header.record_count*sizeof(*ground_records)))
+   fail("Cannot create ground sidecar\n");
+  if(ground_enabled&&!write_new(L"ground-hits.raw",ground_hits,header.record_count*sizeof(*ground_hits)))
+   fail("Cannot create ground hit sidecar\n");
   wchar_t output[32768];path_for(output,L"capture.raw");
   HANDLE file=CreateFileW(output,GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,NULL);
   if(file!=INVALID_HANDLE_VALUE){DWORD written=0;DWORD bytes=header.record_count*sizeof(*records);
@@ -217,6 +271,8 @@ static DWORD WINAPI capture_worker(void *unused){
  }
  HeapFree(GetProcessHeap(),0,records);records=NULL;
  HeapFree(GetProcessHeap(),0,loop_records);loop_records=NULL;
+ if(ground_records)HeapFree(GetProcessHeap(),0,ground_records);ground_records=NULL;
+ if(ground_hits)HeapFree(GetProcessHeap(),0,ground_hits);ground_hits=NULL;
  /* Keep the disabled module loaded: unloading its code while a detour's
     epilogue returns would race the game thread. No hooks remain enabled. */
  return 0;

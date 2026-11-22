@@ -71,6 +71,7 @@ def main():
  p.add_argument('--owner-game',type=Path,required=True)
  p.add_argument('--zig',type=Path,required=True);p.add_argument('--minhook-source',type=Path,required=True)
  p.add_argument('--output',type=Path,required=True)
+ p.add_argument('--ground-state',action='store_true',help='also observe449500 entry and exit')
  a=p.parse_args();source=Path(__file__).resolve().parent;repo=source.parents[2];out=a.output.resolve()
  if out==repo or repo in out.parents:p.error('scenario output must be outside source checkout')
  read=verified_reader(a.owner_game/'sonic.exe')
@@ -87,7 +88,7 @@ def main():
  text=text.replace('\\"writes_gameplay_state\\":false','\\"writes_gameplay_state\\":true')
  (out/'scenario_observer.c').write_text(text)
  (out/'start.c').write_text(START.replace('ORIGINAL_BOOT_BYTE',str(read(0x40c10c,1)[0])))
- (out/'capture.ini').write_text('[capture]\nframes=360\ntimeout_seconds=60\n')
+ (out/'capture.ini').write_text('[capture]\nframes=360\ntimeout_seconds=60\n'+('ground_state=1\n' if a.ground_state else ''))
  hook=a.minhook_source.resolve();env=os.environ.copy()
  env.update(ZIG_GLOBAL_CACHE_DIR=str(out.parent/'zig-global'),ZIG_LOCAL_CACHE_DIR=str(out.parent/'zig-local'))
  cc=[str(a.zig.resolve()),'cc','-target','x86-windows-gnu','-msse2','-O2','-Wall','-Wextra','-Werror']

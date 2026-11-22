@@ -59,7 +59,9 @@ int sa3ds_pc2004_sweep_triangle(const SA3DSSweepTriangle*t,const float s[3],cons
  if(ax)rotx(&m,(float)((uint16_t)(-ax)*BAMS_TO_RAD));
  if(az)rotz(&m,(float)((uint16_t)(-az)*BAMS_TO_RAD));
  float la[3],lb[3],lc[3],ls[3],ld[3],rs[3]={s[0]-o[0],s[1]-o[1],s[2]-o[2]};
- apply(&m,a,la);apply(&m,b,lb);apply(&m,c,lc);apply(&m,rs,ls);apply(&m,d,ld);
+ /*453D62/70 transform only the second/third inflated corners. The first
+  *stays in pre-rotation coordinates; its identity must survive import.*/
+ memcpy(la,a,sizeof(la));apply(&m,b,lb);apply(&m,c,lc);apply(&m,rs,ls);apply(&m,d,ld);
  float length=sqrtf(d[0]*d[0]+d[1]*d[1]+d[2]*d[2]),step=r*.5f;
  float signed_r=r;int flip=(t->flags&0x800000u)&&ls[1]<0;if(flip)signed_r=-r;
  float dir[3]={ld[0],ld[1],ld[2]},dl=sqrtf(dir[0]*dir[0]+dir[1]*dir[1]+dir[2]*dir[2]);

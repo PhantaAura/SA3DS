@@ -31,6 +31,7 @@ typedef struct {
     size_t package_size;
     const uint8_t *collision;
     uint32_t act_count,model_count,instance_count,vertex_count,index_count;
+    uint16_t format_minor; /*0 legacy visual strip anchors;1 source collision anchors*/
     uint32_t act_offset,model_offset,instance_offset,vertex_offset,index_offset;
 } SA3DSECCollisionArchive;
 typedef struct {

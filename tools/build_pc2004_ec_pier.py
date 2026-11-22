@@ -45,7 +45,7 @@ def build(exe,system):
  assert r(0x4fef39,3)==bytes.fromhex('894314') #break clears task display
  break_d2=struct.unpack('<f',r(0x7ec96c,4))[0];assert break_d2==5625.
  model_va=struct.unpack('<I',r(0x1091ef0,4))[0];collision=d.model(model_va)
- points=d.model_points(collision);tris=d.model_triangles(collision)
+ points=d.model_points(collision);tris=d.model_collision_triangles(collision)
  assert len(points)==4 and len(tris)==2
  table=struct.unpack('<I',r(0x90eb68+4,4))[0];name,tex=struct.unpack('<2I',r(table,8))
  assert r(name,10)==b'OBJ_BEACH\0' and d.resolve_texture_archive(tex)=='OBJ_BEACH'
