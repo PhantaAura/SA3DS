@@ -168,3 +168,22 @@ storage. The source reference launcher now selects `CHRMODELS_orig.dll` for the
 private copy when available: the installed `CHRMODELS.dll` can be Mod Manager's
 proxy and otherwise blocks on missing private mod profiles. The owner install is
 unchanged; the selected original DLL path/hash is recorded in `reference.json`.
+
+## Between-update invisible WALL comparison
+
+`check-walls` consumes an external owner WALL package and quarter-sine table.
+`compare_walls.py` verifies the exact executable identity, extracts that table
+into a temporary directory, and pairs post-Sonic positions with the next incoming
+positions through the first EC loop. No owner bytes enter the checkout.
+
+```sh
+python3 tools/pc2004_retail_capture/native/compare_walls.py \
+  /external/capture/frames.csv /owner/sonic.exe \
+  /external/ec_wall.sa3dspak /external/helpers/check-walls
+```
+
+The recovered360-update recording supplies96 consecutive pairs before loop exit;
+all match within0.000031 units. This validates the isolated soft WALL response and
+load/constructor/enqueue timing, not complete terrain physics or native gameplay.
+Hard responses have no coverage in that recording. Native loop admission still
+requires a grounded full-path exit with no active-loop support loss.

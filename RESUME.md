@@ -120,3 +120,26 @@ The candidate stays off by default. Build/checker sources and private scenario
 preparation are in tools/pc2004_retail_capture/native; fresh capture requires a
 fresh reference process and the expected-game binding. Old capture formats
 remain supported; all original data, DLLs, screenshots and traces stay external.
+
+## Original invisible WALL response
+
+The recovered first-loop trace exposed missing registry20/category8 WALL tasks.
+Their117 owner SET rows now export through `build_pc2004_ec_ccube.py --wall` into
+external `ec_wall.sa3dspak`. Native loading shares the original invisible actor
+lifetime, keeps CCL append order, and processes category8 after ordinary contacts.
+Newly loaded WALL tasks wait for the next traversal before construction.
+
+The form9 plane uses Sonic's radius, not the wall depth. Sampling takes history1
+and live task position; both responses update live X/Z, while only hard responses
+rewrite history0. Source world-space rounding and owner Ninja sine lookup are
+preserved. `compare_walls.py` with the96 saved inter-update pairs passes with
+maximum error0.0000305176,37 soft corrections and no hard corrections. This is
+isolated response evidence; hard contact and full native terrain remain separate.
+
+The cumulative host gate, exact-owner pose/import gate, C CUBE/WALL owner task
+checks and required native build passed. A loop probe can use external marker
+`emerald_coast_panel_probe.flag` containing `0 3 1` plus `ec_loop_candidate.txt`
+containing1. This holds logical forward rather than injecting Mac input. The isolated portable Azahar run loaded the117 WALL rows and applied their
+corrections in actual gameplay, but the held-forward row0 fixture lost support
+and died/reset at tick72 (44 airborne ticks, minimum Y=-79.52). Loop acceptance
+fails. Fix steep terrain support next; the complete route remains unresolved.

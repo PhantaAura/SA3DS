@@ -35,6 +35,7 @@
 #include "ec_pier.h"
 #include "ccl_box_push.h"
 #include "ec_ccube.h"
+#include "ccl_wall.h"
 #include "ec_itembox.h"
 #include "ccl_cylinder.h"
 #include <3ds.h>
@@ -327,6 +328,11 @@ static unsigned g_pier_break_requests,g_pier_draws;
 static uint8_t*g_cube_bytes;static size_t g_cube_size;static SA3DSCubeAssets g_cube_assets;
 static SA3DSCubeRuntime g_cubes;static SA3DSCubeEntry g_cube_entries[CUBE_CAPACITY];static int g_cubes_ready;
 static SA3DSCubeFrame g_cube_frame;
+#define WALL_CAPACITY 256u
+static uint8_t *g_wall_bytes;static size_t g_wall_size;static SA3DSCubeAssets g_wall_assets;
+static SA3DSCubeRuntime g_walls;static SA3DSCubeEntry g_wall_entries[WALL_CAPACITY];
+static int g_walls_ready;static unsigned g_wall_soft,g_wall_hard;
+static int wall_ccl_pass(const SA1PlayerState *player);
 #define ITEMBOX_CAPACITY 32u
 static uint8_t*g_ibox_bytes;static size_t g_ibox_size;static SA3DSItemBoxAssets g_ibox_assets;static SA3DSCCLRules g_ibox_rules[2];
 static SA3DSItemBoxRuntime g_iboxes;static SA3DSItemBoxEntry g_ibox_entries[ITEMBOX_CAPACITY];static int g_iboxes_ready;
@@ -349,7 +355,8 @@ static int g_saru_probe;
 static unsigned g_saru_probe_ticks,g_saru_probe_draws,g_saru_probe_actions,g_saru_probe_max_actors;
 static void reset_saru(void);
 static int g_panels_ready;
-static int g_panel_probe,g_panel_probe_jump;
+static int g_panel_probe,g_panel_probe_jump,g_panel_probe_loop;
+static unsigned g_panel_probe_loop_started,g_panel_probe_loop_air;
 static unsigned g_panel_probe_rise,g_panel_probe_landed,g_panel_probe_air_ticks;
 static float g_panel_probe_low_y;
 static unsigned g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_mask,g_panel_probe_draws,g_panel_probe_sim_mask;
@@ -2096,9 +2103,12 @@ static void begin_numbered_panel_probe(void){
 static void begin_panel_probe(void){
     FILE *file=fopen("sdmc:/3ds/SA3DS/emerald_coast_panel_probe.flag","rb");
     if(!file)return;
-    unsigned row=0,kind=3;
-    int parsed=fscanf(file,"%u %u",&row,&kind);fclose(file);
+    unsigned row=0,kind=3,loop=0;
+    int parsed=fscanf(file,"%u %u %u",&row,&kind,&loop);fclose(file);
     if(parsed<1||(kind!=3&&kind!=40)||!g_panel_states||(kind==3&&!g_panels_ready)||!g_ec_full_route){boot_log("PANEL_PROBE","FAIL: full owner route/resources required");g_paused=1;return;}
+    if(loop&&(kind!=3||!g_automatic_loops.count||!g_walls_ready)){
+        boot_log("LOOP_PROBE","FAIL: owner loop paths and WALL package required");g_paused=1;return;
+    }
     SA3DSMovementPlacement target={0};int found=0;
     for(uint32_t i=0;i<g_movement.count;i++){
         SA3DSMovementPlacement p;sa3ds_movement_objects_placement(&g_movement,i,&p);
@@ -2115,7 +2125,8 @@ static void begin_panel_probe(void){
     g_player.vel=(SA1Vec3){0};g_player.grounded=grounded;g_player.surface_id=grounded?floor.surface_id:-1;
     g_player.ground_normal=grounded?floor.normal:(SA1Vec3){0,1,0};g_player.surface_frame_active=false;
     g_player.yaw=0;g_player.surface_forward=(SA1Vec3){0,0,1};g_player.surface_right=(SA1Vec3){1,0,0};
-    reset_springs();g_panel_probe=1;g_panel_probe_jump=kind==40;
+    reset_springs();g_panel_probe=1;g_panel_probe_jump=kind==40;g_panel_probe_loop=loop!=0;
+    g_panel_probe_loop_started=g_panel_probe_loop_air=0;
     g_panel_probe_rise=g_panel_probe_landed=g_panel_probe_air_ticks=0;g_panel_probe_ticks=0;
     g_panel_probe_low_y=g_player.pos.y;
     g_panel_probe_row=target.source_row;g_panel_probe_boosts=g_panel_probe_mask=g_panel_probe_draws=g_panel_probe_sim_mask=0;
@@ -2239,6 +2250,7 @@ static int saru_ccl_pass(const SA1PlayerState*queued_player,SA1Vec3 previous_tas
     }
     if(!scatter_ccl_pass()||!checkpoint_ccl_pass(queued_player,previous_task))return 0;
     if(!whale_ccl_pass(queued_player,1)||!pier_ccl_pass(queued_player,previous_task)||!cube_ccl_pass(queued_player,previous_task)||!itembox_ccl_pass(queued_player,previous_task))return 0;
+    if(!wall_ccl_pass(queued_player))return 0;
     if(g_player_enemy_ccl.status&4)g_saru_player_hurt_contacts++;
     return 1;
 }
@@ -2639,6 +2651,7 @@ static void whale_world_clear(void){
         if(!sa3ds_owned_task_release(&g_world_tasks,g_world_tasks.head,NULL)){g_whale_error=1;return;}
 }
 static int world_prepare_cubes(int restart);
+static int world_prepare_walls(int restart);
 static int world_tasks_ensure(void){
     return g_world_tasks.slots||sa3ds_owned_tasks_init(&g_world_tasks,g_world_task_slots,sizeof(g_world_task_slots)/sizeof(g_world_task_slots[0]));
 }
@@ -2716,7 +2729,7 @@ static void world_prepare(int restart){
            !sa3ds_piers_init(&g_piers,&g_pier_assets,&g_world_tasks,g_pier_entries,flags,PIER_CAPACITY,&g_pier_services)){g_whale_error=1;return;}
         for(uint32_t i=0;i<count;i++)g_pier_entries[i].lifetime.loads=set[i].loads;
     }
-    if(!world_prepare_cubes(restart)){g_whale_error=1;return;}
+    if(!world_prepare_cubes(restart)||!world_prepare_walls(restart)){g_whale_error=1;return;}
     if(!world_prepare_itemboxes(restart)){g_whale_error=1;return;}
     g_ec_dynamic_applied=g_ec_dynamic.changes-1u;
     if(!world_apply_dynamic())g_whale_error=1;
@@ -2924,7 +2937,7 @@ static void begin_ec_goal_probe(void){
 static int tick_world(const SA1PlayerState*done){
     int goal_active=g_ec_full_route&&g_ec_route.has_goal&&g_ec_act_index==g_ec_route.goal.act_index;
     if(goal_active&&!world_tasks_ensure())return 0;
-    if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_iboxes_ready)){
+    if(!g_world_tasks.slots||(!goal_active&&!g_whale_ready&&!g_piers_ready&&!g_cubes_ready&&!g_walls_ready&&!g_iboxes_ready)){
         (void)world_apply_dynamic();
         return !g_whale_error;
     }
@@ -2943,17 +2956,21 @@ static int tick_world(const SA1PlayerState*done){
         if(g_whale_ready){memcpy(g_pier_frame.whale_tip,g_whales.shared.tip,sizeof(g_pier_frame.whale_tip));memcpy(g_pier_frame.whale_movement,g_whales.movement,sizeof(g_pier_frame.whale_movement));}
         if(!sa3ds_piers_load(&g_piers))return 0;
     }
-    if(g_cubes_ready){
+    if(g_cubes_ready||g_walls_ready){
         memset(&g_cube_frame,0,sizeof(g_cube_frame));
         g_cube_frame.act=g_ec_act_index;g_cube_frame.clip_level=g_rings.clip_level;g_cube_frame.clip=clip;
-        if(!sa3ds_cubes_load(&g_cubes))return 0;
+        if(g_cubes_ready&&!sa3ds_cubes_load(&g_cubes))return 0;
     }
     if(g_iboxes_ready){
         memset(&g_ibox_frame,0,sizeof(g_ibox_frame));
         g_ibox_frame.act=g_ec_act_index;g_ibox_frame.clip_level=g_rings.clip_level;g_ibox_frame.clip=clip;
         if(!sa3ds_itemboxes_load(&g_iboxes))return 0;
     }
+    sa3ds_cubes_clear_queue(&g_cubes);sa3ds_cubes_clear_queue(&g_walls);
     if(!sa3ds_owned_tasks_run(&g_world_tasks,NULL)||g_whale_error)return 0;
+    /*New source SET tasks are prepended after the current traversal has
+     *passed their insertion point: constructor next update, CCL after that.*/
+    if(g_walls_ready&&!sa3ds_cubes_load(&g_walls))return 0;
     /* A failed rebuild leaves the last applied grid valid. Its generation
      * stays pending, so the next world tick can retry without stopping play. */
     (void)world_apply_dynamic();
@@ -3103,6 +3120,51 @@ static int pier_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
 /*C CUBE (registry24) on the shared list; queued boxes join the CCL pass.*/
 static int cube_read_frame(void*context,SA3DSCubeFrame*f){(void)context;*f=g_cube_frame;return 1;}
 static const SA3DSCubeServices g_cube_services={NULL,cube_read_frame};
+/*Category8 is processed after ordinary CCL groups (4200xx). The live task
+ *can already differ from Sonic's queued snapshot; history1 stays independent.*/
+static int wall_ccl_pass(const SA1PlayerState *player){
+    if(!g_walls_ready||!player->pc2004_ccl_state_valid)return 1;
+    if(g_player_enemy_shapes[0].attributes&0x10u)return 1;
+    const uint8_t *primary=g_saru_ready?g_saru_definitions.player_colliders:g_checkpoint_assets.player_colliders;
+    float half_height=checkpoint_float(primary+24),radius=g_player_enemy_shapes[0].radius;
+    float old[3];if(!sa3ds_player_position_history_read(&g_player_position_history,1,old))return 0;
+    SA1Vec3 previous={old[0],old[1],old[2]};
+    for(SA3DSCubeEntry *entry=g_walls.queue_head;entry;entry=entry->queue_next){
+        SA3DSCubePlacement placement;
+        if(!entry->queued||!sa3ds_cube_placement(&g_wall_assets,entry->row,&placement))return 0;
+        uint32_t attributes=(uint32_t)g_wall_assets.cci[4]|((uint32_t)g_wall_assets.cci[5]<<8)|
+            ((uint32_t)g_wall_assets.cci[6]<<16)|((uint32_t)g_wall_assets.cci[7]<<24);
+        /*Owner category8 exclusion mask is0, verified by the exporter.*/
+        if((attributes&0x10u)||(g_player_enemy_ccl.rules.excluded_attributes&attributes))continue;
+        SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
+        SA1Vec3 center={placement.position[0],placement.position[1],placement.position[2]};
+        float d[3];sa3ds_cube_dimensions(&placement,d);
+        SA1Vec3 dimensions={d[0],d[1],d[2]};
+        double dx=(double)task.x-center.x,dy=(double)task.y-center.y,dz=(double)task.z-center.z;
+        double range=(double)g_player_enemy_ccl.broad_radius+sa3ds_ccl_wall_broad_radius(dimensions);
+        if(dx*dx+dy*dy+dz*dz>=range*range)continue;
+        uint16_t yaw=(uint16_t)((uint16_t)g_wall_assets.cci[40]|((uint16_t)g_wall_assets.cci[41]<<8));
+        if(!(attributes&0x8020u))yaw=(uint16_t)(yaw+placement.angles[1]);
+        SA1Vec3 corrected;
+        SA3DSWallResponse result=sa3ds_ccl_wall_world_sweep(previous,task,center,yaw,radius,half_height,
+            dimensions,spring_source_sin,&g_rings,&corrected);
+        if(result==SA3DS_WALL_MISS)continue;
+        g_player.pos.x+=corrected.x-task.x;g_player.pos.z+=corrected.z-task.z;
+        if(result==SA3DS_WALL_HARD){
+            float now[3]={corrected.x,task.y,corrected.z};
+            if(!sa3ds_player_position_history_write(&g_player_position_history,0,now))return 0;
+            g_wall_hard++;
+        }else g_wall_soft++;
+        if(g_panel_probe){
+            char note[190];snprintf(note,sizeof(note),"tick=%llu row=%lu response=%u before=%.4f,%.4f after=%.4f,%.4f",
+                (unsigned long long)g_player.sim_frame,(unsigned long)placement.source_row,(unsigned)result,
+                task.x,task.z,corrected.x,corrected.z);log_movement_event("WALL",note,1);
+        }
+    }
+    g_player_enemy_ccl.task_position=sa3ds_ec_task_origin(&g_player);
+    return 1;
+}
+
 static int cube_ccl_pass(const SA1PlayerState*player,SA1Vec3 previous){
     if(!g_cubes_ready||!g_checkpoints_ready||!player->pc2004_ccl_state_valid||(g_player_enemy_shapes[0].attributes&0x10))return 1;
     for(uint32_t i=0;i<g_cube_assets.count;i++){
@@ -3286,6 +3348,32 @@ static int world_prepare_cubes(int restart){
        !sa3ds_cubes_init(&g_cubes,&g_cube_assets,&g_world_tasks,g_cube_entries,flags,CUBE_CAPACITY,&g_cube_services))return 0;
     for(uint32_t i=0;i<count;i++)g_cube_entries[i].lifetime.loads=set[i].loads;
     return 1;
+}
+static void destroy_walls(void){
+    sa3ds_free_file(g_wall_bytes);g_wall_bytes=NULL;memset(&g_wall_assets,0,sizeof(g_wall_assets));g_walls_ready=0;
+}
+static void load_walls(void){
+    if(!g_ec_combined||!g_rings_ready||!g_rings.quarter_lut||
+       !sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_wall.sa3dspak",&g_wall_bytes,&g_wall_size)||
+       !sa3ds_wall_assets_open(&g_wall_assets,g_wall_bytes,g_wall_size)||
+       g_wall_assets.count>WALL_CAPACITY||!world_tasks_ensure())goto fail;
+    g_walls_ready=1;world_prepare(0);if(g_whale_error)goto fail;
+    char note[100];snprintf(note,sizeof(note),"Owner WALL rows=%lu loaded; form9/category8 CANDIDATE",(unsigned long)g_wall_assets.count);
+    boot_log("WALL",note);return;
+fail:destroy_walls();boot_log("WALL","Owner WALL package unavailable/invalid; invisible wall tasks absent");
+}
+static int world_prepare_walls(int restart){
+    if(!g_walls_ready)return 1;
+    uint32_t count=g_wall_assets.count;SA3DSSetTaskLifetime set[WALL_CAPACITY];
+    uint16_t types[WALL_CAPACITY],flags[WALL_CAPACITY];uint8_t current[WALL_CAPACITY];
+    for(uint32_t i=0;i<count;i++){
+        SA3DSCubePlacement placement;if(!sa3ds_cube_placement(&g_wall_assets,i,&placement))return 0;
+        types[i]=placement.type;current[i]=placement.act==g_ec_act_index;
+    }
+    if(!world_set_flags(restart,count,types,current,&g_wall_entries[0].lifetime,sizeof(g_wall_entries[0]),set,flags)||
+       !sa3ds_cubes_init(&g_walls,&g_wall_assets,&g_world_tasks,g_wall_entries,flags,WALL_CAPACITY,&g_cube_services))return 0;
+    for(uint32_t i=0;i<count;i++)g_wall_entries[i].lifetime.loads=set[i].loads;
+    g_wall_soft=g_wall_hard=0;return 1;
 }
 /*4FE8E0: T*Rz*Rx*Ry (only yaw in the owner rows), intact object0 at identity.*/
 static int draw_piers(void){
@@ -4226,7 +4314,7 @@ static int init_scene(void) {
         load_checkpoints();
         load_whale();
         load_piers();
-        load_cubes();
+        load_cubes();load_walls();
         load_itemboxes();
         load_camera_regions();
         start_stage_bgm();
@@ -4385,7 +4473,7 @@ static void cleanup(void) {
     trace_stop();
     clear_scatter();sa3ds_free_file(g_scatter_bytes);g_scatter_bytes=NULL;
     whale_world_clear();memset(&g_world_tasks,0,sizeof(g_world_tasks));
-    destroy_itemboxes();destroy_cubes();destroy_piers();destroy_whale();
+    destroy_itemboxes();destroy_walls();destroy_cubes();destroy_piers();destroy_whale();
     destroy_saru();
     destroy_finish_tails();
     destroy_jump_visual();
@@ -4657,6 +4745,7 @@ int main(void) {
                 tick_input=sa3ds_ring_replay_input_mode(&g_rings,&g_player,0,g_ring_probe_tick,g_ring_probe_groups);
             }
             if(g_spring_probe||g_panel_probe||g_saru_probe){tick_input=(SA1Input){0};g_camera.yaw=0;}
+            if(g_panel_probe&&g_panel_probe_loop)tick_input.move_z=1.f;
             if(g_death_probe&&g_stage_restart.restart_count&&g_stage_restart.state==15){tick_input.move_z=.6f;}
             if(g_saru_probe&&g_saru_probe_combat){tick_input.jump_pressed=g_saru_probe_ticks==0;tick_input.jump_held=g_saru_probe_ticks<20;}
             if(g_saru_probe&&g_scatter_probe&&g_saru_probe_ticks>=80&&!g_scatter_awards){
@@ -4934,6 +5023,23 @@ int main(void) {
                 boot_log("SARU_PROBE",note);g_saru_probe=0;g_paused=1;
                 }
             }
+            if(g_panel_probe&&g_panel_probe_loop){
+                if(g_player.pc2004_status_flags&0x2000u){
+                    g_panel_probe_loop_started++;
+                    if(!g_player.grounded)g_panel_probe_loop_air++;
+                }else if(g_panel_probe_loop_started){
+                    const SA1PC2004Loop *path=g_player.pc2004_loop;
+                    SA1Vec3 task=sa3ds_ec_task_origin(&g_player);
+                    float end_distance=path?sa1_vec3_length(sa1_vec3_sub(task,path->points[path->count-1].position)):INFINITY;
+                    int cleared=path&&g_player.pc2004_loop_distance>=path->length&&g_player.grounded&&
+                        !g_panel_probe_loop_air&&end_distance<40.f&&!g_walls.allocation_failures;
+                    char note[240];snprintf(note,sizeof(note),"%s ticks=%u active=%u air=%u grounded=%u distance=%.3f/%.3f end=%.3f walls=%u/%u poolFail=%lu",
+                        cleared?"PASS":"FAIL",g_panel_probe_ticks,g_panel_probe_loop_started,g_panel_probe_loop_air,
+                        (unsigned)g_player.grounded,g_player.pc2004_loop_distance,path?path->length:0.f,end_distance,
+                        g_wall_soft,g_wall_hard,(unsigned long)g_walls.allocation_failures);
+                    boot_log("LOOP_PROBE",note);g_panel_probe=0;g_paused=1;
+                }
+            }
             if(g_panel_probe&&g_panel_probe_boosts){
                 if(!g_player.grounded)g_panel_probe_air_ticks++;
                 g_panel_probe_low_y=fminf(g_panel_probe_low_y,g_player.pos.y);
@@ -4953,7 +5059,9 @@ int main(void) {
                     g_panel_probe_boosts&&g_panel_probe_draws&&g_panel_probe_sim_mask==255?"PASS":"FAIL",
                     g_panel_probe_ticks,g_panel_probe_boosts,g_panel_probe_draws,g_panel_probe_sim_mask,g_panel_probe_mask,
                     g_panel_probe_air_ticks,g_panel_probe_low_y,(unsigned)g_player.grounded);
-                boot_log("PANEL_PROBE",note);g_panel_probe=0;g_paused=1;
+                boot_log("PANEL_PROBE",note);
+                if(g_panel_probe_loop)boot_log("LOOP_PROBE","FAIL: timed out before a grounded source-path exit");
+                g_panel_probe=0;g_paused=1;
             }
             if(g_spring_probe&&++g_spring_probe_ticks>=180){
                 char note[160];snprintf(note,sizeof(note),"%s: ticks=%u launches=%u riseTicks=%u fallTicks=%u unsupported=%u; controlled fixture only",

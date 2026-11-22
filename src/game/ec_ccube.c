@@ -5,24 +5,31 @@
 static uint16_t r16(const uint8_t*p){return (uint16_t)(p[0]|(p[1]<<8));}
 static uint32_t r32(const uint8_t*p){return p[0]|((uint32_t)p[1]<<8)|((uint32_t)p[2]<<16)|((uint32_t)p[3]<<24);}
 static float rf(const uint8_t*p){uint32_t u=r32(p);float f;memcpy(&f,&u,4);return f;}
-int sa3ds_cube_assets_open(SA3DSCubeAssets*out,const void*bytes,size_t size){
+static int invisible_assets_open(SA3DSCubeAssets*out,const void*bytes,size_t size,
+ const char *chunk,const char *magic,uint32_t kind,uint32_t category,uint8_t form){
  if(!out)return 0;
  memset(out,0,sizeof(*out));SA3DSPak p;SA3DSPakChunk c;
- if(!bytes||sa3dspak_open(&p,bytes,size)!=SA3DSPAK_OK||sa3dspak_find(&p,"CCUBE",&c)!=SA3DSPAK_OK||c.flags||c.size<84)return 0;
- const uint8_t*b=c.data;SA3DSCubeAssets n={0};
- if(memcmp(b,"SA3CUBE\0",8)||r32(b+8)!=1||r32(b+24)!=4)return 0;
+ if(!bytes||sa3dspak_open(&p,bytes,size)!=SA3DSPAK_OK||sa3dspak_find(&p,chunk,&c)!=SA3DSPAK_OK||c.flags||c.size<84)return 0;
+ const uint8_t*b=c.data;SA3DSCubeAssets n={.registry_kind=kind,.category=category};
+ if(memcmp(b,magic,8)||r32(b+8)!=1||r32(b+24)!=category)return 0;
  n.count=r32(b+12);uint32_t ro=r32(b+16);n.stride=r32(b+20);uint32_t total=r32(b+28);n.load_distance_squared=rf(b+32);
- if(total!=c.size||ro!=84||n.stride!=42||!n.count||n.count>1024||ro+n.count*n.stride!=total||!(n.load_distance_squared>0)||b[37]!=3)return 0;
+ if(total!=c.size||ro!=84||n.stride!=42||!n.count||n.count>1024||ro+n.count*n.stride!=total||!(n.load_distance_squared>0)||b[37]!=form)return 0;
  n.cci=b+36;n.rows=b+ro;
  for(uint32_t i=0;i<n.count;i++){SA3DSCubePlacement pl;if(!sa3ds_cube_placement(&n,i,&pl))return 0;}
  *out=n;return 1;
+}
+int sa3ds_cube_assets_open(SA3DSCubeAssets*out,const void*bytes,size_t size){
+ return invisible_assets_open(out,bytes,size,"CCUBE","SA3CUBE\0",24,4,3);
+}
+int sa3ds_wall_assets_open(SA3DSCubeAssets*out,const void*bytes,size_t size){
+ return invisible_assets_open(out,bytes,size,"WALL","SA3WALL\0",20,8,9);
 }
 int sa3ds_cube_placement(const SA3DSCubeAssets*a,uint32_t i,SA3DSCubePlacement*o){
  if(!a||!a->rows||!o||i>=a->count)return 0;
  const uint8_t*r=a->rows+(size_t)i*a->stride;SA3DSCubePlacement p={0};
  p.act=r32(r);p.source_row=r32(r+4);p.type=r16(r+8);
  for(unsigned k=0;k<3;k++){p.angles[k]=(int16_t)r16(r+10+k*2);p.position[k]=rf(r+18+k*4);p.scale[k]=rf(r+30+k*4);}
- if((p.type&4095)!=24||p.act>2)return 0;
+ if((p.type&4095)!=a->registry_kind||p.act>2)return 0;
  for(unsigned k=0;k<3;k++)if(!isfinite(p.position[k])||!isfinite(p.scale[k]))return 0;
  *o=p;return 1;
 }
@@ -44,7 +51,11 @@ static int main_cube(SA3DSOwnedTaskList*l,uint32_t id,void*context){
  uint8_t unload;if(!sa3ds_set_object_clip(&clip,&unload))return 0;
  if(unload)return sa3ds_set_task_defer_free(&e->lifetime,id)&&sa3ds_owned_task_set_main(l,id,free_cube);
  if(e->action==0){e->action=1;r->initializations++;}  /*41CAF0+4D46C0, no enqueue this update*/
- else if(e->action==1)e->queued=1;                     /*41C280*/
+ else if(e->action==1){
+  e->queued=1;e->queue_next=NULL;
+  if(r->queue_tail)r->queue_tail->queue_next=e;else r->queue_head=e;
+  r->queue_tail=e;
+ }                     /*41C280*/
  else e->action=0;
  return 1;
 }
@@ -76,3 +87,5 @@ int sa3ds_cubes_load(SA3DSCubeRuntime*r){
  }
  return 1;
 }
+
+void sa3ds_cubes_clear_queue(SA3DSCubeRuntime*r){if(r)r->queue_head=r->queue_tail=NULL;}
