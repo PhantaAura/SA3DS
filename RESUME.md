@@ -1,8 +1,9 @@
 # SA3DS handoff
 
 Authoritative branch: `PhantaAura/SA3DS main`. The current working checkout is
-`/private/tmp/sa3ds-package-check.C7aBCm`; the older Documents workspace is not
-this checkout. Current behavior commit: `b790297` (ground braking/turn-around).
+`/Users/emeraldhunter/Documents/ChatGPT/Sonic Adventure 3DS/work/SA3DS`.
+The temporary checkout disappeared; this persistent checkout was recovered from
+pushed9726ecd. The older Desktop/Documents baselines are not this checkout.
 
 Next milestone is **1.0: normal boot → Emerald Coast clear → results**.
 It remains incomplete. Finish the playable route before polishing nonblocking
@@ -11,10 +12,10 @@ README remains active after 1.0.
 
 ## Next work
 
-1. Implement the original automatic-loop path entry and held-input steering,
-   including status0x2000's control-timer exception and source normal-force
-   addend. The current port lacks this behavior; terrain-only fixes do not
-   establish a valid loop clear. See `docs/PC2004_DASH_PANEL.md`.
+1. Finish the automatic-loop collision response and compare it with the original.
+   Owner paths, deferred command26, input-timer exception and held-input steering
+   now exist as an opt-in CANDIDATE. Steep support is still unresolved; the native
+   candidate is off by default. See `docs/PC2004_DASH_PANEL.md`.
 2. Walk each required act handoff, spring/pad chain and event from the original
    stage map; finish the whale/progression pieces that block reaching the goal.
 3. Run normal start → goal → results and death → checkpoint recovery on native
@@ -66,3 +67,26 @@ Use one capture per fresh reference process until repeated-capture behavior is
 established. Private scenario files/recordings remain under `/private/tmp/sa3ds-ec-reference-driver`.
 Recovered loop task pseudocode is private at `/private/tmp/sa3ds-loop-task-recovery/output`;
 4BB1F0 is the automatic loop constructor/poller, not a terrain response.
+
+## Automatic-loop candidate and workspace recovery
+
+The converter `tools/build_pc2004_loop_paths.py` reads five supported4BB1F0 paths
+(405 points) across both acts from the exact executable. Other path callbacks
+are explicitly omitted in package metadata; this is not complete path support.
+The player command retains action, defers activation to the next player update,
+and bypasses the control timer only while status2000 is active. Held input
+advances path distance, turns the task frame and adds the original-.8 normal
+force; neutral input does not advance the path. Commands share priority with
+spring commands, and resets clear borrowed path references.
+
+Native experiments require BOTH external `assets/ec_loop_paths.sa3dspak` and
+`ec_loop_candidate.txt` containing1 under the SA3DS SD folder. The flag remains
+necessary because the isolated candidate still loses steep support; no completed
+loop, normal-start course, emulator play or physical hardware check is claimed.
+The unaccepted generic contact-tolerance experiment was discarded.
+
+The previous temporary checkout and private recordings disappeared before the
+pending path-distance capture could be inspected. Source was recovered from Git,
+the candidate was restored here, and required checks were rerun here. Regenerate
+reference captures before relying on missing private files. Keep long-lived
+reference artifacts in the external persistent reference lab, outside this tree.

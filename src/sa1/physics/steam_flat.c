@@ -321,7 +321,7 @@ void sa1_physics_step_steam_sonic_flat(
             (SA1Vec3){sinf(player->yaw),0,cosf(player->yaw)});
         player->surface_forward=brake_frame.forward;player->surface_right=brake_frame.right;
     }
-    if (brake_dispatch || (player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==86)) ||
+    if ((player->pc2004_status_flags&0x2000u) || brake_dispatch || (player->pc2004_action_state_valid&&(player->pc2004_action_state==16||player->pc2004_action_state==86)) ||
         attack_dispatch || (!player->grounded && player->surface_frame_active) ||
         (player->pc2004_action_state_valid &&
          (player->pc2004_action_state == 9 || player->pc2004_action_state == 10))) {

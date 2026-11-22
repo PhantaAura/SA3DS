@@ -57,6 +57,9 @@ typedef struct {
     bool animation_previous_request_valid;
     bool animation_brake_write;
     uint32_t jump_ticks;
+    const struct SA1PC2004Loop *pc2004_loop;
+    float pc2004_loop_distance;
+    bool pc2004_loop_pending;
     int16_t pc2004_control_timer; /* GetAnalog gate; tail decrements after movement. */
     int16_t pc2004_air_attack_timer,pc2004_air_attack_age;
     bool ball_form;

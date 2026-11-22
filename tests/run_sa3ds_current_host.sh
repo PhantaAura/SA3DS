@@ -240,3 +240,6 @@ sh tests/run_item_box.sh
 
 printf '\n== Original CCL cylinder contact ==\n'
 sh tests/run_ccl_cylinder.sh
+
+printf "\n== Automatic loop entry and steering ==\n"
+sh tests/run_automatic_loop.sh

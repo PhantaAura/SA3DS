@@ -1,6 +1,7 @@
 #include "player_view.h"
 #include "wca_replay.h"
 #include "emerald_coast_route.h"
+#include "automatic_loop.h"
 #include "emerald_coast_residency.h"
 #include "ring_runtime.h"
 #include "ring_groups.h"
@@ -116,6 +117,7 @@ enum { PC2004_EMERALD_COAST_LEVEL_ID=1 };
 static uint8_t *g_ec_collision_bytes;
 static size_t g_ec_collision_size;
 static SA3DSECRoute g_ec_route;
+static SA3DSAutomaticLoops g_automatic_loops;
 enum { EC_GOAL_RUNNING, EC_GOAL_WAIT_GROUND, EC_GOAL_FINISHED };
 static unsigned g_ec_goal_result,g_ec_clear_audio_ticks;
 static uint8_t g_ec_goal_action,g_ec_goal_draw;
@@ -1340,6 +1342,7 @@ static double spring_source_sin(void *context,uint16_t angle){
 }
 static void reset_springs(void){
     g_spring_head=-1;reset_panels();reset_saru();
+    sa3ds_automatic_loops_reset(&g_automatic_loops,&g_player);
     g_tikal_remaining=0;g_tikal_cooldown=0;
     sa3ds_numbered_panels_open(&g_numbered_panels,&g_movement,g_ec_act_index);
     g_numbered_target=g_numbered_contact=-1;g_numbered_contact_age=0;
@@ -4203,6 +4206,16 @@ static int init_scene(void) {
         load_rings();
         load_background();
         ec_update_terrain_projection();
+        /* Opt-in until the source steep-contact response passes acceptance. */
+        FILE *loop_flag=fopen("sdmc:/3ds/SA3DS/ec_loop_candidate.txt","rb");
+        int loop_candidate=0;
+        if(loop_flag){loop_candidate=fgetc(loop_flag)=='1';fclose(loop_flag);}
+        uint8_t *loop_bytes=NULL;size_t loop_size=0;
+        if(loop_candidate&&sa3ds_read_file("sdmc:/3ds/SA3DS/assets/ec_loop_paths.sa3dspak",&loop_bytes,&loop_size)&&
+           sa3ds_automatic_loops_open(&g_automatic_loops,loop_bytes,loop_size))
+            boot_log("LOOP_PATHS","Owner automatic-loop paths loaded; CANDIDATE steering");
+        else boot_log("LOOP_PATHS","Candidate disabled or owner paths missing/invalid; loop unresolved");
+        sa3ds_free_file(loop_bytes);
         load_springs();
         load_panels();
         load_jump_visual();
@@ -4873,6 +4886,8 @@ int main(void) {
              * movement/animation phase; consume them next player tick. */
             if(!tick_scatter()){fail_screen("Native scattered-ring task/CCL failed");break;}
             tick_springs();
+            if(sa3ds_automatic_loops_tick(&g_automatic_loops,g_ec_act_index,
+                    sa3ds_ec_task_origin(&g_player),&g_player))g_spring_pending.valid=0;
             tick_panels(&physics_done,checkpoint_previous_task);
             if(g_emerald_coast)tick_tikal();
             int panel_contact=g_numbered_panels.present?numbered_panel_contact(&physics_done):-1;

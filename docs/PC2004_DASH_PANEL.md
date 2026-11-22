@@ -487,3 +487,34 @@ as the unused3B0E368 buffer. Sonic's43BDC0 reads3B0E7A0/4; version2 samples that
 active buffer at main entry and retains an explicit legacy warning in decoding.
 The earlier animation playback comparison remains component evidence because
 it used recorded animation requests/phases/scalars, not the mislabeled input.
+
+## External automatic-loop candidate
+
+The portable actor/import path now decodes the supported4BB1F0 automatic loops
+from both owner acts, retains source list insertion order, polls the expanded
+bounds and strict40-unit point test, and schedules command26 for the next player
+update. It retains the source60-update rearm timer after path mode clears.
+The player consumer preserves the action and applies the original action2/5 or
+speed eligibility; active path mode bypasses the analog control timer.
+
+The candidate adds43C130-style path-distance progression and task-frame steering
+with the-.8 normal addend, not direct position railing. The focused public-kernel
+check distinguishes held input from neutral and checks that the timer exception
+reaches the movement kernel. The owner converter emits five paths/405 points;
+other callbacks remain explicit omissions, not silently approximated ramps.
+
+Generate outside the source checkout:
+
+```sh
+python3 tools/build_pc2004_loop_paths.py /owner/sonic.exe /external/ec_loop_paths.sa3dspak
+```
+
+For an intentional native experiment place the package at
+`sdmc:/3ds/SA3DS/assets/ec_loop_paths.sa3dspak` and a file containing1 at
+`sdmc:/3ds/SA3DS/ec_loop_candidate.txt`. Leave the flag absent for the default
+build. Steep support remains unresolved, so this is not a loop-clear fix or a
+release acceptance result. Generic support-range relaxation was not retained.
+
+The temporary worktree/private recordings disappeared during recovery. The
+pushed reference findings remain history, but another matched capture is needed
+before attributing the next divergence to path distance, task angles or contact.

@@ -2,6 +2,7 @@
 #include "pc2004_ground_accel.h"
 #include "pc2004_air_attack.h"
 #include "steam_surface.h"
+#include "pc2004_loop.h"
 
 #include "steam_air.h"
 #include "steam_ball.h"
@@ -326,7 +327,22 @@ static void surface_running(SA1PlayerState *player,
     float side_resistance = s.side * p->air_resist_z;
 
     float force = 0.0f;
-    if (analog.active) {
+    float loop_normal=0.f;
+    if (analog.active && (player->pc2004_status_flags&0x2000u)) {
+        SurfaceSpeed old=s;
+        /* Resistance/gravity precede the source path turn. */
+        sa1_pc2004_loop_steer(player,frame,&s.forward,p->dash_speed,world_motion);
+        old.forward=s.forward;
+        SurfaceSpeed transformed=world_to_surface(frame,world_motion);
+        SA1PC2004LocalVector blend=sa1_pc2004_turn_velocity(
+            (SA1PC2004LocalVector){old.forward,old.normal,old.side},
+            (SA1PC2004LocalVector){transformed.forward,transformed.normal,transformed.side},
+            s.forward>=p->jog_speed?SA1_PC2004_TURN_SLOW:SA1_PC2004_TURN_GENERAL,
+            player->grounded,1,frame->up.y,1.f);
+        force=select_analog_force(s.forward,analog.magnitude,p);
+        s=(SurfaceSpeed){blend.forward,blend.side,blend.normal};
+        loop_normal=-.8f;
+    } else if (analog.active) {
         SA1Vec3 desired = desired_surface_direction(frame, camera_yaw, &analog);
         float signed_delta = signed_angle_on_plane(frame->forward, desired, frame->up);
         unsigned delta_bams = radians_to_bams_abs(signed_delta);
@@ -370,7 +386,7 @@ static void surface_running(SA1PlayerState *player,
         .input_force = force,
         .speed_after_turn = {s.forward, s.normal, s.side},
         .up = support_up, .friction_multiplier = 1.0f,
-        .analog_active = analog.active
+        .analog_active = analog.active, .normal_addend=loop_normal
     };
     SA1PC2004GroundAccelResult acceleration;
     SA1PC2004LocalVector integrated;

@@ -1,4 +1,5 @@
 #include "spring_player.h"
+#include "../sa1/physics/pc2004_loop.h"
 #include <math.h>
 int sa3ds_spring_player_apply(SA1PlayerState *p,
     const SA3DSMovementPlacement *placement,const SA3DSSpringTrig *trig,
@@ -23,6 +24,7 @@ int sa3ds_spring_player_apply(SA1PlayerState *p,
     p->surface_frame_active=true;
     if(frame.forward.x*frame.forward.x+frame.forward.z*frame.forward.z>1e-8f)
         p->yaw=atan2f(frame.forward.x,frame.forward.z);
+    p->pc2004_loop_pending=false; /* Later source command replaces command26. */
     *pending=(SA3DSSpringPendingCommand){launch->command,status,1};return 1;
 }
 int sa3ds_spring_player_begin(SA1PlayerState *p,
@@ -38,6 +40,8 @@ int sa3ds_spring_player_begin(SA1PlayerState *p,
         p->pc2004_control_timer=command.control_timer;
         p->animation_airborne_request=command.animation_request;
         p->animation_airborne_request_valid=true;
+        p->pc2004_status_flags&=(uint16_t)~0x2000u;
+        p->pc2004_loop=0;p->pc2004_loop_pending=false;
         pending->valid=0;
     }
     if(p->pc2004_action_state_valid&&
@@ -50,7 +54,10 @@ int sa3ds_spring_player_begin(SA1PlayerState *p,
         p->animation_airborne_request=action.animation_request;
         p->animation_airborne_request_valid=true;
     }
-    *input=sa3ds_spring_filter_analog(*input,p->pc2004_control_timer);return 1;
+    sa1_pc2004_loop_begin(p,SA1_STEAM_SONIC_PARAMETER_EVIDENCE.run_speed);
+    if(!(p->pc2004_status_flags&0x2000u))
+        *input=sa3ds_spring_filter_analog(*input,p->pc2004_control_timer);
+    return 1;
 }
 void sa3ds_spring_player_tail(SA1PlayerState *p){
     if(p)p->pc2004_control_timer=sa3ds_spring_control_timer_tail(p->pc2004_control_timer);
