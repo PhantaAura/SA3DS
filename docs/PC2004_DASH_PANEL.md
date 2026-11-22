@@ -518,3 +518,20 @@ release acceptance result. Generic support-range relaxation was not retained.
 The temporary worktree/private recordings disappeared during recovery. The
 pushed reference findings remain history, but another matched capture is needed
 before attributing the next divergence to path distance, task angles or contact.
+
+## Incoming-state trace and portable steering comparison
+
+The restored clean reference, using the owner original character DLL rather than
+the installed Mod Manager proxy, repeats the360-update held-input recording with
+zero errors. Its extended sidecar observes incoming player state. This confirms
+that the prior post-Sonic-main position is not the next main's input position:
+world tasks move it in between. Before update17 the original task X is2114.154,
+whereas the preceding post-main snapshot is2125.607. A fixture omitting those
+world tasks cannot establish full-loop equivalence by seeding from that snapshot.
+
+`check-loop` runs the portable43C130 component against all79 active updates using
+the true incoming position, motion, task angles and collision Up. Path distance
+matches exactly; maximum raw heading error is1 BAMS (approximately0.0055 degrees).
+This does not validate the acceleration/contact path, actual native play or full
+course. It narrows the next work to the remaining integration/terrain response
+and correct world-task execution, not invented path speed or widened snap limits.

@@ -2,7 +2,7 @@
 
 This launcher uses the owner's existing Wine app and exact PC2004 installation.
 It prepares a new **external** game directory, copies the executable, settings
-and saves, and links the two data directories. Nothing from that directory may
+and saves, and links owner data into a private system directory. Nothing from that directory may
 be committed. The original executable and installation are unchanged.
 
 The November 21 investigation found an early exit in `7943C0`, after `7941D0`
@@ -118,3 +118,12 @@ comparison.
 The improved runtime was also dependent on the external d3d8to9 wrapper;
 provide its directory with `--graphics-dir`. It is not bundled in the repository.
 No game input, movement or animation values are changed by these settings.
+
+## Original character DLL selection
+
+When `system/CHRMODELS_orig.dll` exists, the private `system/CHRMODELS.dll` link
+uses it. The installed CHRMODELS DLL may be a Mod Manager loader proxy that waits
+for a missing `mods/.modloader/Profiles` tree in the fresh reference directory.
+The launcher records its choice and hash; it does not change the owner DLLs or
+install mod profiles. November22's restored reference rendered Emerald Coast and
+completed a360-update controlled loop capture after this correction.

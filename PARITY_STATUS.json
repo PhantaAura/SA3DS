@@ -1,10 +1,10 @@
 {
   "milestone": "1.0 means normal boot through Emerald Coast clear and results, and is not yet achieved.",
-  "next": "Finish original loop collision response and compare the opt-in path-steering candidate with a regenerated reference capture.",
+  "next": "Use the regenerated incoming-state trace to finish steep loop contact and validate the full native loop with world tasks.",
   "controls": "Ordinary grounded braking and turn-around are connected as a native candidate with focused checks passing.",
   "animation": "The playback component matches 1,552 recorded updates, while selection and rendered-pose parity remain incomplete.",
   "geometry": "Owner stage import and residency exist, but the uninterrupted complete route is unverified.",
-  "collision_camera": "Owner loop paths, command26 and held-input steering are implemented as an opt-in candidate, while steep support and loop clearance remain unresolved.",
+  "collision_camera": "The loop steering component matches79 original active updates within one angle unit, while collision and native loop clearance remain incomplete.",
   "objects": "Several original object paths are implemented, while complete pad, spring and interaction behavior still needs route acceptance.",
   "events": "Whale and event components exist, while the complete original scripted course remains unfinished.",
   "gameplay": "Normal start through goal and results, including reliable checkpoint recovery, remains unverified.",
@@ -17,6 +17,7 @@
   "performance": "The reported movement freezes have not been proven fixed on physical Old 3DS.",
   "music": "Use the owner local music files because the Windows reference music was replaced.",
   "release": "No new release is justified until its milestone acceptance run succeeds.",
-  "reference_inputs": "Version2 observes active normalized controls and labels version1 filtered fields as unused legacy data.",
-  "reference_storage": "The earlier temporary recordings disappeared and must be regenerated before further matched-frame claims."
+  "reference_inputs": "The recorder captures active controls and incoming state, and confirms that world objects move Sonic between player updates.",
+  "reference_storage": "The clean original reference and360-update incoming-state trace are restored in persistent private storage outside Git.",
+  "reference_startup": "The private reference selects the owner original character DLL to avoid the installed mod-loader proxy."
 }

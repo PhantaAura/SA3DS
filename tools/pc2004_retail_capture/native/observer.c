@@ -18,6 +18,19 @@ static void (__cdecl *original_main)(void *);
 static void (__cdecl *original_act1)(void *,uintptr_t,void *);
 static InputSnapshot latest_input;
 static CaptureRecord *records;
+/* Separate sidecar preserves the v1/v2 playback trace layout. */
+typedef struct {
+ uint32_t frame;
+ float distance_before,distance_after;
+ uint32_t head_before,head_after;
+ int32_t control_timer_before;
+ uint32_t task_yaw_before,motion_yaw_before;
+ float position_before[3],local_velocity_before[3],world_velocity_before[3];
+ uint32_t task_angles_before[3];
+ float collision_up_before[3];
+} LoopRecord;
+_Static_assert(sizeof(LoopRecord)==92,"loop sidecar layout");
+static LoopRecord *loop_records;
 static CaptureHeader header;
 static volatile LONG active_callbacks,recording,row_count,act1_rows,errors,warmup_skipped;
 static uint32_t maximum_rows,active_thread,act1_sequence;
@@ -69,6 +82,23 @@ static void __cdecl main_hook(void *task){
   else{input.angle=u32(active_analog,0);input.magnitude=f32(active_analog,4);}
  }
  if(selected&&!copy_memory(0x03b0e7f8,logical,sizeof(logical))){InterlockedOr(&errors,4);selected=0;}
+ LoopRecord loop_before={0};
+ if(selected){
+  uint32_t player=0,csts=0;int16_t timer=0;
+  int ok=copy_memory(pointers[1],&player,4)&&player&&
+    copy_memory(player+0x18,&loop_before.distance_before,4)&&
+    copy_memory(player+0x0a,&timer,2)&&
+    copy_memory(pointers[0]+0x10,&loop_before.head_before,4)&&
+    copy_memory(pointers[0]+0x18,&loop_before.task_yaw_before,4)&&
+    copy_memory(pointers[1]+0x20,&loop_before.motion_yaw_before,4)&&
+    copy_memory(pointers[0]+0x20,loop_before.position_before,12)&&
+    copy_memory(pointers[0]+0x14,loop_before.task_angles_before,12)&&
+    copy_memory(player+0x38,loop_before.local_velocity_before,12)&&
+    copy_memory(pointers[1]+4,loop_before.world_velocity_before,12)&&
+    copy_memory(player+0x64,&csts,4)&&csts&&copy_memory(csts+0x1c,loop_before.collision_up_before,12);
+  loop_before.control_timer_before=timer;
+  if(!ok){InterlockedOr(&errors,16);selected=0;}
+ }
  uint32_t act_before=act1_sequence;uintptr_t prior_entity=active_entity;uint32_t prior_thread=active_thread;
  if(selected){active_entity=pointers[0];active_thread=GetCurrentThreadId();}
  fp_restore(&before);original_main(task);FpState after;fp_save(&after);
@@ -78,6 +108,8 @@ static void __cdecl main_hook(void *task){
   if((uint32_t)index<maximum_rows){
    if(copy_memory(pointers[0],e,sizeof(e))&&copy_memory(pointers[1],m,sizeof(m))&&copy_memory(u32(m,0),p,sizeof(p))){
     CaptureRecord *r=&records[index];memset(r,0,sizeof(*r));
+    loop_records[index]=loop_before;loop_records[index].frame=(uint32_t)index;
+    loop_records[index].distance_after=f32(p,0x18);loop_records[index].head_after=u32(e,0x10);
     r->frame=(uint32_t)index;r->input_sequence=input.sequence;r->act1_ran=act1_sequence>act_before;
     r->raw_x=input.x;r->raw_y=input.y;r->filtered_magnitude=input.magnitude;r->filtered_angle=input.angle;
     r->camera_yaw=input.camera;r->camera_valid=input.camera_valid;
@@ -141,7 +173,12 @@ static DWORD WINAPI capture_worker(void *unused){
  UINT seconds=GetPrivateProfileIntW(L"capture",L"timeout_seconds",180,config);
  if(seconds<1||seconds>1800){fail("Invalid capture timeout\n");return 1;}
  records=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*records));
- if(!records){fail("Capture allocation failed\n");return 1;}
+ loop_records=HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY,(SIZE_T)maximum_rows*sizeof(*loop_records));
+ if(!records||!loop_records){
+  if(records)HeapFree(GetProcessHeap(),0,records);
+  if(loop_records)HeapFree(GetProcessHeap(),0,loop_records);
+  fail("Capture allocation failed\n");return 1;
+ }
  if(MH_Initialize()!=MH_OK){fail("MinHook initialization failed\n");goto done;}initialized=1;
  if(MH_CreateHook((void*)0x0040f170,filter_hook,(void**)&original_filter)!=MH_OK||
     MH_CreateHook((void*)0x00496f50,act1_hook,(void**)&original_act1)!=MH_OK||
@@ -168,6 +205,8 @@ static DWORD WINAPI capture_worker(void *unused){
     could be in a detour prologue before incrementing active_callbacks. */
  if(enabled){
   header.record_count=(uint32_t)row_count;header.act1_rows=(uint32_t)act1_rows;header.errors=(uint32_t)errors;header.warmup_skipped=(uint32_t)warmup_skipped;
+  if(!write_new(L"loop-state.raw",loop_records,header.record_count*sizeof(*loop_records)))
+   fail("Cannot create loop sidecar\n");
   wchar_t output[32768];path_for(output,L"capture.raw");
   HANDLE file=CreateFileW(output,GENERIC_WRITE,FILE_SHARE_READ,NULL,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,NULL);
   if(file!=INVALID_HANDLE_VALUE){DWORD written=0;DWORD bytes=header.record_count*sizeof(*records);
@@ -177,6 +216,7 @@ static DWORD WINAPI capture_worker(void *unused){
   }else fail("Cannot create capture result\n");
  }
  HeapFree(GetProcessHeap(),0,records);records=NULL;
+ HeapFree(GetProcessHeap(),0,loop_records);loop_records=NULL;
  /* Keep the disabled module loaded: unloading its code while a detour's
     epilogue returns would race the game thread. No hooks remain enabled. */
  return 0;

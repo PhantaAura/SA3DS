@@ -12,7 +12,7 @@ README remains active after 1.0.
 
 ## Next work
 
-1. Finish the automatic-loop collision response and compare it with the original.
+1. Finish the automatic-loop collision response using the regenerated incoming-state trace.
    Owner paths, deferred command26, input-timer exception and held-input steering
    now exist as an opt-in CANDIDATE. Steep support is still unresolved; the native
    candidate is off by default. See `docs/PC2004_DASH_PANEL.md`.
@@ -87,6 +87,36 @@ The unaccepted generic contact-tolerance experiment was discarded.
 
 The previous temporary checkout and private recordings disappeared before the
 pending path-distance capture could be inspected. Source was recovered from Git,
-the candidate was restored here, and required checks were rerun here. Regenerate
-reference captures before relying on missing private files. Keep long-lived
-reference artifacts in the external persistent reference lab, outside this tree.
+the candidate was restored here, and required checks were rerun here. The reference was then regenerated in the persistent external lab; missing older
+files are not acceptance evidence. Keep long-lived reference artifacts outside
+this tree.
+
+## Restored controllable original and matched loop steering
+
+Persistent private lab:
+`/Users/emeraldhunter/Documents/Codex/2026-11-22/sa3ds-reference-lab`.
+The clean private reference uses the owner's CHRMODELS_orig.dll in place of the
+installed Mod Manager proxy, without modifying the owner install. This fixes
+its startup dialog about missing mods/.modloader/Profiles. The game now renders
+Emerald Coast in a474x360 captured window and accepts game-local logical control;
+no OS keyboard/mouse injection is used.
+
+`held-forward-state-v2/frames.csv` has360 original updates, zero capture errors,
+and the92-byte incoming-state sidecar. Path mode is active17..95 and exits at96
+while grounded. `capture-tools-v2/check-loop` with `compare_loop.py` checks all79
+active updates in the portable C43C130 component: zero failures, exact distance,
+maximum heading error1 BAMS. This is component evidence, not full physics parity.
+
+The incoming-state fields resolve an important replay error: source world tasks
+move Sonic between main updates. For example, before17 the actual X is2114.154,
+while update16's post-main X was2125.607. Do not use the previous post-main
+position as the next input state. A row0/12 boost replay omitting world tasks is
+not a matched full-stage loop acceptance run.
+
+Next compare the actual native loop candidate with the proper world-task order
+and replace the incomplete steep-contact response. Force integration, terrain
+response, normal start-to-goal/results and Old3DS freezes remain unverified.
+The candidate stays off by default. Build/checker sources and private scenario
+preparation are in tools/pc2004_retail_capture/native; fresh capture requires a
+fresh reference process and the expected-game binding. Old capture formats
+remain supported; all original data, DLLs, screenshots and traces stay external.

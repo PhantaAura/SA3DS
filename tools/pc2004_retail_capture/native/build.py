@@ -20,10 +20,16 @@ def main():
  subprocess.run(compiler+['-Wno-unused-parameter','-shared','-I'+str(hook/'include'),str(source/'observer.c')]+[str(x) for x in dependencies]+['-lbcrypt','-lpsapi','-o',str(output/'observer.dll')],env=env,check=True)
  host=shlex.split(os.environ.get('CC','cc'))
  subprocess.run(host+['-std=c11','-O2','-ffp-contract=off','-Wall','-Wextra','-Werror','-I'+str(repo/'src/game'),'-I'+str(repo/'src/sa1/physics'),str(source/'check_playback.c'),str(repo/'src/game/sonic_animation_runtime.c'),str(repo/'src/sa1/physics/surface_frame.c'),str(repo/'src/sa1/physics/steam_player_parameters.c'),'-lm','-o',str(output/'check-playback')],check=True)
+ loop_sources=['tools/pc2004_retail_capture/native/check_loop.c','src/game/automatic_loop.c',
+  'src/sa1/physics/pc2004_loop.c','src/sa1/physics/pc2004_task_frame.c',
+  'src/sa1/physics/surface_frame.c','src/sa1/physics/steam_player_parameters.c','src/sa3dspak/sa3dspak.c']
+ subprocess.run(host+['-std=c11','-O2','-ffp-contract=off','-Wall','-Wextra','-Werror',
+  '-I'+str(repo/'src/game'),'-I'+str(repo/'src/sa1/physics'),'-I'+str(repo/'src/sa3dspak')]+
+  [str(repo/item) for item in loop_sources]+['-lm','-o',str(output/'check-loop')],check=True)
  shutil.copy2(hook/'LICENSE.txt',output/'LICENSE.minhook.txt')
  manifest={'schema':'sa3ds-original-observer-build-v1','compiler_version':subprocess.check_output([str(a.zig.resolve()),'version'],text=True).strip(),
   'owner_material_included':False,'source_sha256':{item.name:digest(item) for item in source.iterdir() if item.suffix in ['.c','.h','.py']},
   'minhook_sha256':{str(item.relative_to(hook)):digest(item) for item in hook.rglob('*') if item.is_file() and (item.suffix in ['.c','.h'] or item.name=='LICENSE.txt')},
-  'artifact_sha256':{name:digest(output/name) for name in ['inject.exe','observer.dll','check-playback']}}
+  'artifact_sha256':{name:digest(output/name) for name in ['inject.exe','observer.dll','check-playback','check-loop']}}
  (output/'build.json').write_text(json.dumps(manifest,indent=2)+'\n');print(output)
 if __name__=='__main__':main()

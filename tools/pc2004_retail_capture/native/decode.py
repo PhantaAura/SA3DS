@@ -38,6 +38,24 @@ def main():
  if len(data)!=128+count*224 or count>60000 or errors or not frequency:raise SystemExit('Incomplete or failed capture')
  if (a.raw.parent/'capture.error.txt').exists():raise SystemExit('Capture producer reported an error')
  rows=[dict(zip([name for name,_ in fields],values)) for values in RECORD.iter_unpack(data[128:])]
+ loop_path=a.raw.parent/'loop-state.raw'
+ loop_data=loop_path.read_bytes() if loop_path.exists() else None
+ loop_kinds='IffIIiII'
+ loop_names=['loop_frame','loop_distance_before','loop_distance_after','loop_head_before',
+             'loop_head_after','control_timer_before','task_yaw_before','motion_yaw_before']
+ if loop_data is not None and len(loop_data)==count*92:
+  for prefix,kind in [('before_position','f'),('before_local_velocity','f'),
+                      ('before_world_velocity','f'),('before_task_angle','I'),('before_collision_up','f')]:
+   for axis in ('x','y','z'):
+    loop_names.append(prefix+'_'+axis);loop_kinds+=kind
+ loop_record=struct.Struct('<'+loop_kinds)
+ if loop_data is not None and len(loop_data)!=count*loop_record.size:
+  raise SystemExit('Incomplete loop sidecar')
+ if loop_data is not None:
+  for index,values in enumerate(loop_record.iter_unpack(loop_data)):
+   if values[0]!=index or any(not math.isfinite(v) for v,k in zip(values,loop_kinds) if k=='f'):
+    raise SystemExit('Invalid loop sidecar state')
+   rows[index].update(zip(loop_names,values))
  for index,row in enumerate(rows):
   if row['frame']!=index or not row['input_sequence'] or row['act1_ran'] not in (0,1):raise SystemExit('Invalid frame chronology')
   if row['qpc']<start or (index and row['qpc']<rows[index-1]['qpc']):raise SystemExit('Invalid observation time')
@@ -49,8 +67,9 @@ def main():
  if not count or not act1:raise SystemExit('No original Sonic gameplay updates observed')
  a.output.parent.mkdir(parents=True,exist_ok=True)
  with a.output.open('x',newline='') as out:
-  w=csv.DictWriter(out,fieldnames=[name for name,_ in fields]+['runtime_animation_id','elapsed_ms']);w.writeheader();w.writerows(rows)
+  w=csv.DictWriter(out,fieldnames=[name for name,_ in fields]+['runtime_animation_id','elapsed_ms']+(loop_names if loop_data is not None else []));w.writeheader();w.writerows(rows)
  summary={'schema':'sa3ds-original-frame-summary-v2','capture_version':version,
+  'loop_sidecar_observed':loop_data is not None,'loop_record_bytes':loop_record.size if loop_data is not None else None,
   'normalized_input_source':'active_at_sonic_main_entry' if version==2 else 'legacy_unused_buffer_not_Sonic_control_input',
   'rows':count,'physics_updates':act1,'errors':errors,'warmup_skipped':warmup,'phase':'post_sonic_main','frame_number':'capture-local Sonic update index','executable_sha256':PROFILE,
   'seconds_between_first_and_last_sample':(rows[-1]['qpc']-rows[0]['qpc'])/frequency,

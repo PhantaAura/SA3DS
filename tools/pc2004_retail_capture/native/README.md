@@ -124,3 +124,47 @@ spans**; 240 updates were excluded. This is component evidence, not port parity.
 The capture was mid-session and did not record a stage ID or matched SA3DS spawn.
 A complete position/physics comparison still needs matching stage, initial state,
 inputs and update alignment. The original code entries were restored after capture.
+
+## Targeted original loop scenario
+
+`prepare_loop_scenario.py` builds an explicitly state-writing reference variant
+outside Git. It validates the executable, derives its one-time start from owner
+SET row0, boots the original Trial dispatcher in memory, and holds logical forward.
+It changes no movement/animation code or OS input. It is not a normal-start course
+acceptance run. The ordinary `observer.dll` remains passive.
+
+```sh
+python3 tools/pc2004_retail_capture/native/prepare_loop_scenario.py \
+  --owner-game /owner/PC2004 \
+  --zig /external/zig/zig --minhook-source /external/minhook-v1.3.4 \
+  --output /external/fresh-loop-scenario
+```
+
+Launch its `start.exe /external/reference/game/sonic.exe` in the isolated Wine
+virtual desktop. Wait for a ready player, then load its `scenario_observer.dll`
+using `inject.exe ... --expected-game /external/reference/game/sonic.exe`.
+The optional expected-game argument binds both probe and injection to that exact
+copy, in addition to the existing unique-process and executable-hash checks.
+Use one capture per fresh reference process.
+
+New recordings include `loop-state.raw`, an optional92-byte-per-update sidecar.
+The decoder also accepts the earlier32-byte loop sidecar and recordings without
+one. It joins by capture index and checks length, chronology and finite values.
+The extended fields record incoming position, local/world velocity, task angles
+and collision Up, alongside path distance, pointer, control timer and headings.
+Incoming position matters: world tasks can change it after the previous Sonic
+main snapshot. The main224-byte record layout stays unchanged.
+
+`check-loop` and `compare_loop.py` compare the held-input43C130 component using
+that incoming state and an external owner path package. The recovered first-loop
+recording has360 valid updates; all79 active loop updates have exact path-distance
+agreement and at most1 BAMS (about0.0055 degrees) heading error in the portable C
+component. This admits no claim about force integration, contact, route parity or
+emulator/hardware play. The original reference enters at17 and exits grounded at96.
+
+The November22 recovery rebuilt helpers with verified official Zig0.15.2 and
+MinHook1.3.4. Keep compiler caches and capture artifacts in persistent external
+storage. The source reference launcher now selects `CHRMODELS_orig.dll` for the
+private copy when available: the installed `CHRMODELS.dll` can be Mod Manager's
+proxy and otherwise blocks on missing private mod profiles. The owner install is
+unchanged; the selected original DLL path/hash is recorded in `reference.json`.

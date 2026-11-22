@@ -29,7 +29,7 @@ static DWORD unique_sonic_pid(void) {
  CloseHandle(snapshot);return result;
 }
 int wmain(int argc,wchar_t **argv) {
- if(argc!=2){fprintf(stderr,"usage: inject.exe --probe | Z:\\external\\observer.dll\n");return 2;}
+ if(argc!=2&&(argc!=4||wcscmp(argv[2],L"--expected-game"))){fprintf(stderr,"usage: inject.exe (--probe | observer.dll) [--expected-game sonic.exe]\n");return 2;}
  DWORD pid=unique_sonic_pid();
  if(!pid){fprintf(stderr,"No unique Sonic process in this Wine prefix\n");return 2;}
  int probe=!wcscmp(argv[1],L"--probe");
@@ -39,6 +39,12 @@ int wmain(int argc,wchar_t **argv) {
  if(!process){fprintf(stderr,"OpenProcess failed: %lu\n",GetLastError());return 1;}
  wchar_t exe[32768];int result=1;
  if(!GetModuleFileNameExW(process,NULL,exe,32768)||!profile_file(exe)){fprintf(stderr,"Unsupported or unreadable Sonic executable\n");goto done;}
+ if(argc==4){
+  wchar_t expected[32768];DWORD n=GetFullPathNameW(argv[3],32768,expected,NULL);
+  if(!n||n>=32768||_wcsicmp(exe,expected)){
+   fprintf(stderr,"Sonic executable path differs from the requested reference copy\n");goto done;
+  }
+ }
  printf("Verified PC2004 process: Windows pid=%lu\n",pid);fflush(stdout);
  /* Loading code hooks while Wine is still constructing the process can
   * stall startup. An admitted executable alone is not a ready gameplay task. */

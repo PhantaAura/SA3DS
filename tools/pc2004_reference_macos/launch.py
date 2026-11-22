@@ -49,8 +49,20 @@ def main():
     game = output / 'game'
     game.mkdir()
     shutil.copy2(exe, game / 'sonic.exe')
-    for name in ['system', 'SoundData']:
-        (game / name).symlink_to(source / name, target_is_directory=True)
+    # Mod Manager can replace system/CHRMODELS.dll with its loader proxy.
+    # A wholesale system symlink then blocks this isolated copy on missing mod
+    # profiles. Stage links separately and select the owner's original backup.
+    system = game / 'system'
+    system.mkdir()
+    original_character = source / 'system/CHRMODELS_orig.dll'
+    character_selection = None
+    for item in (source / 'system').iterdir():
+        selected = original_character if item.name.upper() == 'CHRMODELS.DLL' and original_character.is_file() else item
+        (system / item.name).symlink_to(selected, target_is_directory=selected.is_dir())
+        if item.name.upper() == 'CHRMODELS.DLL':
+            character_selection = {'source': str(selected), 'sha256': hashlib.sha256(selected.read_bytes()).hexdigest(),
+                                   'used_original_backup': selected == original_character}
+    (game / 'SoundData').symlink_to(source / 'SoundData', target_is_directory=True)
     if (source / 'SAVEDATA').is_dir():
         shutil.copytree(source / 'SAVEDATA', game / 'SAVEDATA')
     config = configparser.ConfigParser()
@@ -85,6 +97,7 @@ def main():
         'renderer_requested': renderer, 'windowed': True, 'desktop': dimensions, 'command': command,
         'graphics_thread': args.graphics_thread, 'log_fps': args.log_fps,
         'graphics_sha256': graphics_hashes, 'fps_hud': args.fps_hud,
+        'character_dll_selection': character_selection,
         'verification': 'prepared; gameplay comparison still required',
     }, indent=2) + '\n')
     print(f'Private reference prepared: {output}', flush=True)
